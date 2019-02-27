@@ -14,15 +14,14 @@ Status: Aplha
 ### Container Images & CSI Compatibility:
 |Azure File CSI Driver Version  | Image                                              | v0.3.0| v1.0.0 |
 |-------------------------------|----------------------------------------------------|-------|--------|
-|v0.1.0-alpha                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.1.0-alpha| yes   | no     |
-|v0.2.0-alpha                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.2.0-alpha| no    | yes    |
+|v0.1.0-alpha                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.1.0-alpha| no    | yes    |
 |master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest      | no    | yes    |
 
 ### Kubernetes Compatibility
 | Azure File CSI Driver\Kubernetes Version | 1.12 | 1.13+ | 
 |------------------------------------------|------|-------|
 | v0.1.0-alpha                             | yes  | yes    |
-| v0.2.0-alpha                             | no   | yes    |
+| v0.1.0-alpha                             | no   | yes    |
 | master branch                            | no   | yes    |
 
 ### Driver parameters
