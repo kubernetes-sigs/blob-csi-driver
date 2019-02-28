@@ -29,7 +29,7 @@ spec:
           args:
             - --v=5
             - --csi-address=/csi/csi.sock
-            - --kubelet-registration-path=/var/lib/kubelet/plugins/file.csi.azure.com/csi.sock
+            - --kubelet-registration-path=/var/lib/kubelet/plugins/blobfuse.csi.azure.com/csi.sock
           lifecycle:
             preStop:
               exec:
@@ -95,7 +95,7 @@ spec:
               name: msi
       volumes:
         - hostPath:
-            path: /var/lib/kubelet/plugins/file.csi.azure.com
+            path: /var/lib/kubelet/plugins/blobfuse.csi.azure.com
             type: DirectoryOrCreate
           name: socket-dir
         - hostPath:

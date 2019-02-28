@@ -1,5 +1,5 @@
-## `file.csi.azure.com` driver parameters
- > storage class `file.csi.azure.com` parameters are compatible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin
+## `blobfuse.csi.azure.com` driver parameters
+ > storage class `blobfuse.csi.azure.com` parameters are compatible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin
 
  - Dynamic Provisioning
   > get a quick example [here](../deploy/example/storageclass-blobfuse-csi.yaml)

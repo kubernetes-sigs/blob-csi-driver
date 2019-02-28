@@ -18,7 +18,7 @@ Enable CI on Windows | done |  |
 Complete all unit tests | In Progress |  |
 Set up E2E test | to-do |  |
 Implement NodeStage/NodeUnstage functions | to-do | two pods on same node could share same mount |
-Implement azure file csi driver on Windows | to-do |  |
+Implement azure blobfuse.csi driver on Windows | to-do |  |
 
 ### Implementation details
 To prevent possible regression issues, blobfuse CSI driver use [azure cloud provider](https://github.com/kubernetes/kubernetes/tree/v1.13.0/pkg/cloudprovider/providers/azure) library. Thus, all bug fixes in the built-in azure file plugin would be incorporated into this driver.

@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	driverName       = "file.csi.azure.com"
+	driverName       = "blobfuse.csi.azure.com"
 	vendorVersion    = "v0.1.0-alpha"
 	seperator        = "#"
 	volumeIDTemplate = "%s#%s#%s"

@@ -6,7 +6,7 @@
 **WARNING**: This driver is in ALPHA currently. Do NOT use this driver in a production environment in its current state.
 
 ### About
-This driver allows Kubernetes to use [azure file](https://docs.microsoft.com/en-us/azure/storage/files/storage-files-introduction) volume, csi plugin name: `file.csi.azure.com`
+This driver allows Kubernetes to use [azure file](https://docs.microsoft.com/en-us/azure/storage/files/storage-files-introduction) volume, csi plugin name: `blobfuse.csi.azure.com`
 
 ### Project Status
 Status: Aplha
@@ -25,8 +25,8 @@ Status: Aplha
 | master branch                            | no   | yes    |
 
 ### Driver parameters
-Please refer to [`file.csi.azure.com` driver parameters](./docs/driver-parameters.md)
- > storage class `file.csi.azure.com` parameters are compatible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin
+Please refer to [`blobfuse.csi.azure.com` driver parameters](./docs/driver-parameters.md)
+ > storage class `blobfuse.csi.azure.com` parameters are compatible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin
 
 ### Prerequisite
  - The driver initialization depends on a [Cloud provider config file](https://github.com/kubernetes/cloud-provider-azure/blob/master/docs/cloud-provider-config.md), usually it's `/etc/kubernetes/azure.json` on all k8s nodes deployed by AKS or aks-engine, here is an [azure.json example](./deploy/example/azure.json)

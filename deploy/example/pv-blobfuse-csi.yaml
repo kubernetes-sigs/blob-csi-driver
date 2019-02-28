@@ -9,7 +9,7 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   csi:
-    driver: file.csi.azure.com
+    driver: blobfuse.csi.azure.com
     readOnly: false
     volumeHandle: arbitrary-volumeid
     volumeAttributes:
