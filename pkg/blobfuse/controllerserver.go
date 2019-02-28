@@ -32,7 +32,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// CreateVolume provisions an azure file
+// CreateVolume provisions an blobfuse
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	if err := d.ValidateControllerServiceRequest(csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME); err != nil {
 		klog.Errorf("invalid create volume req: %v", req)
@@ -73,7 +73,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	// when use azure file premium, account kind should be specified as FileStorage
+	// when use blobfuse premium, account kind should be specified as FileStorage
 	accountKind := string(storage.StorageV2)
 	if strings.HasPrefix(strings.ToLower(sku), "premium") {
 		accountKind = string(storage.FileStorage)
@@ -110,7 +110,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}, nil
 }
 
-// DeleteVolume delete an azure file
+// DeleteVolume delete an blobfuse
 func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
@@ -135,11 +135,11 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
 	}
 
-	klog.V(2).Infof("deleting azure file(%s) rg(%s) account(%s) volumeID(%s)", fileShareName, resourceGroupName, accountName, volumeID)
+	klog.V(2).Infof("deleting blobfuse(%s) rg(%s) account(%s) volumeID(%s)", fileShareName, resourceGroupName, accountName, volumeID)
 	if err := d.cloud.DeleteFileShare(accountName, accountKey, fileShareName); err != nil {
 		return nil, err
 	}
-	klog.V(2).Infof("azure file(%s) under rg(%s) account(%s) volumeID(%s) is deleted successfully", fileShareName, resourceGroupName, accountName, volumeID)
+	klog.V(2).Infof("blobfuse(%s) under rg(%s) account(%s) volumeID(%s) is deleted successfully", fileShareName, resourceGroupName, accountName, volumeID)
 
 	return &csi.DeleteVolumeResponse{}, nil
 }
@@ -155,7 +155,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 
 	// todo: we may check file share existence here
 
-	// azure file supports all AccessModes, no need to check capabilities here
+	// blobfuse supports all AccessModes, no need to check capabilities here
 	return &csi.ValidateVolumeCapabilitiesResponse{Message: ""}, nil
 }
 
@@ -179,13 +179,13 @@ func (d *Driver) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (
 }
 
 // ControllerPublishVolume make a volume available on some required node
-// N/A for azure file
+// N/A for blobfuse
 func (d *Driver) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
 }
 
 // ControllerUnpublishVolume make the volume unavailable on a specified node
-// N/A for azure file
+// N/A for blobfuse
 func (d *Driver) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
 }

@@ -56,7 +56,7 @@ if [ -v aadClientSecret ]; then
 	echo "got volume id: $volumeid"
 
 	if [ "$cloud" != "AzureChinaCloud" ]; then
-		# azure file mount/unmount on travis VM does not work against AzureChinaCloud
+		# blobfuse mount/unmount on travis VM does not work against AzureChinaCloud
 		echo "mount volume test:"
 		$csc node publish --endpoint $endpoint --cap 1,block --target-path $target_path $volumeid
 		retcode=$?

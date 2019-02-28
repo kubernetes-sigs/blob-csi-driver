@@ -183,7 +183,7 @@ func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublish
 }
 
 // NodeStageVolume mount the volume to a staging path
-// todo: we may implement this for azure file
+// todo: we may implement this for blobfuse
 // The reason that mounting is a two step operation is
 // because Kubernetes allows you to use a single volume by multiple pods.
 // This is allowed when the storage system supports it or if all pods run on the same node.
@@ -199,7 +199,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 }
 
 // NodeUnstageVolume unmount the volume from the staging path
-// todo: we may implement this for azure file
+// todo: we may implement this for blobfuse
 // The reason that mounting is a two step operation is
 // because Kubernetes allows you to use a single volume by multiple pods.
 // This is allowed when the storage system supports it or if all pods run on the same node.

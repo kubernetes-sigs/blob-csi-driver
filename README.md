@@ -6,7 +6,7 @@
 **WARNING**: This driver is in ALPHA currently. Do NOT use this driver in a production environment in its current state.
 
 ### About
-This driver allows Kubernetes to use [azure file](https://docs.microsoft.com/en-us/azure/storage/files/storage-files-introduction) volume, csi plugin name: `blobfuse.csi.azure.com`
+This driver allows Kubernetes to use [blobfuse](https://docs.microsoft.com/en-us/azure/storage/files/storage-files-introduction) volume, csi plugin name: `blobfuse.csi.azure.com`
 
 ### Project Status
 Status: Aplha
@@ -47,7 +47,7 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
 ```
 
-##### Option#2: Azurefile Static Provisioning(use an existing azure file share)
+##### Option#2: Azurefile Static Provisioning(use an existing blobfuse share)
  - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
 ```
 kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
