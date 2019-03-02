@@ -32,7 +32,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const blobfuseAccountNamePrefix = "fuse"
+// const blobfuseAccountNamePrefix = "fuse"
 
 // CreateVolume provisions an blobfuse
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
