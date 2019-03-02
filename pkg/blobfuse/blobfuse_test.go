@@ -68,7 +68,7 @@ func TestAppendDefaultMountOptions(t *testing.T) {
 	}
 }
 
-func TestGetFileShareInfo(t *testing.T) {
+func TestGetContainerInfo(t *testing.T) {
 	tests := []struct {
 		options   string
 		expected1 string
@@ -107,10 +107,10 @@ func TestGetFileShareInfo(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result1, result2, result3, result4 := getFileShareInfo(test.options)
+		result1, result2, result3, result4 := getContainerInfo(test.options)
 		if !reflect.DeepEqual(result1, test.expected1) || !reflect.DeepEqual(result2, test.expected2) ||
 			!reflect.DeepEqual(result3, test.expected3) || !reflect.DeepEqual(result4, test.expected4) {
-			t.Errorf("input: %q, getFileShareInfo result1: %q, expected1: %q, result2: %q, expected2: %q, result3: %q, expected3: %q, result4: %q, expected4: %q", test.options, result1, test.expected1, result2, test.expected2,
+			t.Errorf("input: %q, getContainerInfo result1: %q, expected1: %q, result2: %q, expected2: %q, result3: %q, expected3: %q, result4: %q, expected4: %q", test.options, result1, test.expected1, result2, test.expected2,
 				result3, test.expected3, result4, test.expected4)
 		}
 	}

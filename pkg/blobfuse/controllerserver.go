@@ -60,6 +60,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	// the values to the cloud provider.
 	for k, v := range parameters {
 		switch strings.ToLower(k) {
+		case "skuname":
+			storageAccountType = v
 		case "storageaccounttype":
 			storageAccountType = v
 		case "location":
@@ -92,7 +94,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	containerName := util.GenerateVolumeName("pvc-fuse", uuid.NewUUID().String(), 63)
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
-
 	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
 	if err != nil {
 		return nil, err
@@ -135,7 +136,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 
 	volumeID := req.VolumeId
-	resourceGroupName, accountName, fileShareName, err := getFileShareInfo(volumeID)
+	resourceGroupName, accountName, containerName, err := getContainerInfo(volumeID)
 	if err != nil {
 		return nil, err
 	}
@@ -149,11 +150,20 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
 	}
 
-	klog.V(2).Infof("deleting blobfuse(%s) rg(%s) account(%s) volumeID(%s)", fileShareName, resourceGroupName, accountName, volumeID)
-	if err := d.cloud.DeleteFileShare(accountName, accountKey, fileShareName); err != nil {
+	klog.V(2).Infof("deleting container(%s) rg(%s) account(%s) volumeID(%s)", containerName, resourceGroupName, accountName, volumeID)
+	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
+	if err != nil {
 		return nil, err
 	}
-	klog.V(2).Infof("blobfuse(%s) under rg(%s) account(%s) volumeID(%s) is deleted successfully", fileShareName, resourceGroupName, accountName, volumeID)
+	blobClient := client.GetBlobService()
+	container := blobClient.GetContainerReference(containerName)
+	// todo: check what value to add into DeleteContainerOptions
+	_, err = container.DeleteIfExists(nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete container(%s) on account(%s), error: %v", containerName, accountName, err)
+	}
+
+	klog.V(2).Infof("container(%s) under rg(%s) account(%s) volumeID(%s) is deleted successfully", containerName, resourceGroupName, accountName, volumeID)
 
 	return &csi.DeleteVolumeResponse{}, nil
 }

@@ -81,7 +81,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	secrets := req.GetSecrets()
 	if len(secrets) == 0 {
 		var resourceGroupName string
-		resourceGroupName, accountName, fileShareName, err = getFileShareInfo(volumeID)
+		resourceGroupName, accountName, fileShareName, err = getContainerInfo(volumeID)
 		if err != nil {
 			return nil, err
 		}

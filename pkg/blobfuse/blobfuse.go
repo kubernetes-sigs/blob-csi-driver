@@ -105,10 +105,10 @@ func (d *Driver) Run(endpoint string) {
 	s.Wait()
 }
 
-// get file share info according to volume id, e.g.
-// input: "rg#f5713de20cde511e8ba4900#pvc-file-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-// output: rg, f5713de20cde511e8ba4900, pvc-file-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41
-func getFileShareInfo(id string) (string, string, string, error) {
+// get container info according to volume id, e.g.
+// input: "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+// output: rg, f5713de20cde511e8ba4900, pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41
+func getContainerInfo(id string) (string, string, string, error) {
 	segments := strings.Split(id, seperator)
 	if len(segments) < 3 {
 		return "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
