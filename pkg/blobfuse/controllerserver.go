@@ -23,7 +23,7 @@ import (
 
 	"k8s.io/kubernetes/pkg/volume/util"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2018-07-01/storage"
+	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pborman/uuid"
 	"k8s.io/klog"
@@ -31,6 +31,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+const blobfuseAccountNamePrefix = "fuse"
 
 // CreateVolume provisions an blobfuse
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
@@ -52,20 +54,18 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	requestGiB := int(util.RoundUpSize(volSizeBytes, 1024*1024*1024))
 
 	parameters := req.GetParameters()
-	var sku, resourceGroup, location, account string
+	var storageAccountType, resourceGroup, location, accountName string
 
 	// Apply ProvisionerParameters (case-insensitive). We leave validation of
 	// the values to the cloud provider.
 	for k, v := range parameters {
 		switch strings.ToLower(k) {
-		case "skuname":
-			sku = v
 		case "storageaccounttype":
-			sku = v
+			storageAccountType = v
 		case "location":
 			location = v
 		case "storageaccount":
-			account = v
+			accountName = v
 		case "resourcegroup":
 			resourceGroup = v
 		default:
@@ -73,24 +73,38 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	// when use blobfuse premium, account kind should be specified as FileStorage
-	accountKind := string(storage.StorageV2)
-	if strings.HasPrefix(strings.ToLower(sku), "premium") {
-		accountKind = string(storage.FileStorage)
+	/* to-do
+	account, key, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, string(storage.StorageV2), resourceGroup, location, blobfuseAccountNamePrefix)
+	if err != nil {
+		return nil, fmt.Errorf("could not get storage key for storage account %s: %v", accountName, err)
+	}
+	*/
+
+	// now we only use existing storage account, will switch to create storage account with EnsureStorageAccount interface
+	accountKey, err := GetStorageAccesskey(d.cloud, accountName, resourceGroup)
+	if err != nil {
+		return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroup, err)
 	}
 
 	// dynamic provisioning since storage account is not provided by secrets
-	// File share name has a length limit of 63, and it cannot contain two consecutive '-'s.
+	// now we set as 63 for maximum container name length
 	// todo: get cluster name
-	fileShareName := util.GenerateVolumeName("pvc-file", uuid.NewUUID().String(), 63)
-	fileShareName = strings.Replace(fileShareName, "--", "-", -1)
+	containerName := util.GenerateVolumeName("pvc-fuse", uuid.NewUUID().String(), 63)
 
-	klog.V(2).Infof("begin to create file share(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", fileShareName, account, sku, resourceGroup, location, requestGiB)
-	retAccount, _, err := d.cloud.CreateFileShare(fileShareName, account, sku, accountKind, resourceGroup, location, requestGiB)
+	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
+
+	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create file share(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", fileShareName, account, sku, resourceGroup, location, requestGiB, err)
+		return nil, err
 	}
-	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, retAccount, fileShareName)
+	blobClient := client.GetBlobService()
+	container := blobClient.GetContainerReference(containerName)
+	_, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
+	}
+
+	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, containerName)
 
 	/* todo: snapshot support
 	if req.GetVolumeContentSource() != nil {
@@ -99,7 +113,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 	*/
-	klog.V(2).Infof("create file share %s on storage account %s successfully", fileShareName, retAccount)
+	klog.V(2).Infof("create container %s on storage account %s successfully", containerName, accountName)
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
