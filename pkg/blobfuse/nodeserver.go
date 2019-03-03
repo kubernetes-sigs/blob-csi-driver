@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime"
+	"os/exec"
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -30,8 +30,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"golang.org/x/net/context"
-
-	"k8s.io/kubernetes/pkg/volume/util"
 )
 
 // NodePublishVolume mount the volume from staging to target path
@@ -76,12 +74,12 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	klog.V(2).Infof("target %v\nfstype %v\n\nreadonly %v\nvolumeId %v\ncontext %v\nmountflags %v\n",
 		targetPath, fsType, readOnly, volumeID, attrib, mountFlags)
 
-	var accountName, accountKey, fileShareName string
+	var accountName, accountKey, containerName string
 
 	secrets := req.GetSecrets()
 	if len(secrets) == 0 {
 		var resourceGroupName string
-		resourceGroupName, accountName, fileShareName, err = getContainerInfo(volumeID)
+		resourceGroupName, accountName, containerName, err = getContainerInfo(volumeID)
 		if err != nil {
 			return nil, err
 		}
@@ -97,12 +95,12 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	} else {
 		for k, v := range attrib {
 			switch strings.ToLower(k) {
-			case "sharename":
-				fileShareName = v
+			case "containername":
+				containerName = v
 			}
 		}
-		if fileShareName == "" {
-			return nil, fmt.Errorf("could not find sharename from attributes(%v)", attrib)
+		if containerName == "" {
+			return nil, fmt.Errorf("could not find containerName from attributes(%v)", attrib)
 		}
 
 		accountName, accountKey, err = getStorageAccount(secrets)
@@ -111,27 +109,10 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		}
 	}
 
-	var mountOptions []string
-	source := ""
-	osSeparator := string(os.PathSeparator)
-	source = fmt.Sprintf("%s%s%s.file.%s%s%s", osSeparator, osSeparator, accountName, d.cloud.Environment.StorageEndpointSuffix, osSeparator, fileShareName)
-
-	if runtime.GOOS == "windows" {
-		mountOptions = []string{fmt.Sprintf("AZURE\\%s", accountName), accountKey}
-	} else {
-		if err := os.MkdirAll(targetPath, 0700); err != nil {
-			return nil, err
-		}
-		// parameters suggested by https://azure.microsoft.com/en-us/documentation/articles/storage-how-to-use-files-linux/
-		options := []string{fmt.Sprintf("username=%s,password=%s", accountName, accountKey)}
-		if readOnly {
-			options = append(options, "ro")
-		}
-		mountOptions = util.JoinMountOptions(mountFlags, options)
-		mountOptions = appendDefaultMountOptions(mountOptions)
-	}
-
-	err = d.mounter.Mount(source, targetPath, "cifs", mountOptions)
+	// todo: use could set tmp-path and other mountOptions
+	cmd := exec.Command("/usr/bin/blobfuse", targetPath, "--tmp-path=/tmp/blobfuse/", "--container-name="+containerName)
+	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
+	err = cmd.Run()
 	if err != nil {
 		notMnt, mntErr := d.mounter.IsLikelyNotMountPoint(targetPath)
 		if mntErr != nil {
