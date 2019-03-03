@@ -21,7 +21,6 @@ Status: Aplha
 | Azure File CSI Driver\Kubernetes Version | 1.12 | 1.13+ | 
 |------------------------------------------|------|-------|
 | v0.1.0-alpha                             | yes  | yes    |
-| v0.1.0-alpha                             | no   | yes    |
 | master branch                            | no   | yes    |
 
 ### Driver parameters

@@ -7,9 +7,9 @@
 Name | Meaning | Example | Mandatory | Default value 
 --- | --- | --- | --- | ---
 skuName | blobfuse storage account type (alias: `storageAccountType`) | `Standard_LRS`, `Standard_GRS`, `Standard_RAGRS` | No | `Standard_LRS`
-storageAccount | specify the storage account name in which blobfuse share will be created | STORAGE_ACCOUNT_NAME | No | if empty, driver will find a suitable storage account that matches `skuName` in the same resource group; if a storage account name is provided, it means that storage account must exist otherwise there would be error
+storageAccount | specify the storage account name in which blobfuse share will be created | STORAGE_ACCOUNT_NAME | Yes | if empty(to-do), driver will find a suitable storage account that matches `skuName` in the same resource group; if a storage account name is provided, it means that storage account must exist otherwise there would be error
 location | specify the location in which blobfuse share will be created | `eastus`, `westus`, etc. | No | if empty, driver will use the same location name as current k8s cluster
-resourceGroup | specify the resource group in which blobfuse share will be created | existing resource group name | No | if empty, driver will use the same resource group name as current k8s cluster
+resourceGroup | specify the resource group in which blobfuse share will be created | existing resource group name | Yes | if empty(to-do), driver will use the same resource group name as current k8s cluster
 
  - Static Provisioning(use existing azure disk)
   > get a quick example [here](../deploy/example/pv-blobfuse-csi.yaml)
