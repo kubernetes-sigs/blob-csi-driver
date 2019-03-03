@@ -6,7 +6,7 @@
 **WARNING**: This driver is in ALPHA currently. Do NOT use this driver in a production environment in its current state.
 
 ### About
-This driver allows Kubernetes to use [blobfuse](https://docs.microsoft.com/en-us/azure/storage/files/storage-files-introduction) volume, csi plugin name: `blobfuse.csi.azure.com`
+This driver allows Kubernetes to use [Azure Blob storage](https://github.com/Azure/azure-storage-fuse), csi plugin name: `blobfuse.csi.azure.com`
 
 ### Project Status
 Status: Aplha
