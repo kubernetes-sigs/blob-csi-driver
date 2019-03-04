@@ -49,6 +49,11 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	if err != nil && !os.IsNotExist(err) {
 		return nil, err
 	}
+
+	if err := d.mounter.MakeDir(targetPath); err != nil {
+		return nil, err
+	}
+
 	if !notMnt {
 		// testing original mount point, make sure the mount link is valid
 		if _, err := ioutil.ReadDir(targetPath); err == nil {

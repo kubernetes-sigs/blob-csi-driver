@@ -45,7 +45,7 @@ fi
 # begin to run CSI functions one by one
 if [ -v aadClientSecret ]; then
 	echo "create volume test:"
-	value=`$csc controller new --endpoint $endpoint --cap 1,block CSIVolumeName --req-bytes 2147483648 --params skuname=Standard_LRS`
+	value=`$csc controller new --endpoint $endpoint --cap 1,block CSIVolumeName --req-bytes 2147483648 --params skuname=Standard_LRS,storageAccount=$storageAccountName,resourceGroup=$resourceGroup`
 	retcode=$?
 	if [ $retcode -gt 0 ]; then
 		exit $retcode
