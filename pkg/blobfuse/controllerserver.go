@@ -54,7 +54,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	requestGiB := int(util.RoundUpSize(volSizeBytes, 1024*1024*1024))
 
 	parameters := req.GetParameters()
-	var storageAccountType, resourceGroup, location, accountName string
+	var storageAccountType, resourceGroup, location, accountName, containerName string
 
 	// Apply ProvisionerParameters (case-insensitive). We leave validation of
 	// the values to the cloud provider.
@@ -70,6 +70,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			accountName = v
 		case "resourcegroup":
 			resourceGroup = v
+		case "containername":
+			containerName = v
 		default:
 			return nil, fmt.Errorf("invalid option %q", k)
 		}
@@ -88,10 +90,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroup, err)
 	}
 
-	// dynamic provisioning since storage account is not provided by secrets
-	// now we set as 63 for maximum container name length
-	// todo: get cluster name
-	containerName := util.GenerateVolumeName("pvc-fuse", uuid.NewUUID().String(), 63)
+	if containerName == "" {
+		// now we set as 63 for maximum container name length
+		// todo: get cluster name
+		containerName = util.GenerateVolumeName("pvc-fuse", uuid.NewUUID().String(), 63)
+	}
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
 	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
