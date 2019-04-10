@@ -25,6 +25,7 @@ import (
 
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	volumehelper "github.com/csi-driver/blobfuse-csi-driver/pkg/util"
 	"github.com/pborman/uuid"
 	"k8s.io/klog"
 
@@ -51,7 +52,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	volSizeBytes := int64(req.GetCapacityRange().GetRequiredBytes())
-	requestGiB := int(util.RoundUpSize(volSizeBytes, 1024*1024*1024))
+	requestGiB := int(volumehelper.RoundUpGiB(volSizeBytes))
 
 	parameters := req.GetParameters()
 	var storageAccountType, resourceGroup, location, accountName, containerName string
