@@ -23,6 +23,7 @@
 [prune]
   go-tests = true
   unused-packages = true
+  non-go = true
 
 [[constraint]]
   name = "github.com/container-storage-interface/spec"
