@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/kubernetes/pkg/volume/util"
 
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2018-07-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	volumehelper "github.com/csi-driver/blobfuse-csi-driver/pkg/util"
@@ -33,7 +34,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// const blobfuseAccountNamePrefix = "fuse"
+const blobfuseAccountNamePrefix = "fuse"
 
 // CreateVolume provisions an blobfuse
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
@@ -78,18 +79,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	/* to-do
-	account, key, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, string(storage.StorageV2), resourceGroup, location, blobfuseAccountNamePrefix)
+	if resourceGroup == "" {
+		resourceGroup = d.cloud.ResourceGroup
+	}
+
+	account, accountKey, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, string(storage.StorageV2), resourceGroup, location, blobfuseAccountNamePrefix)
 	if err != nil {
 		return nil, fmt.Errorf("could not get storage key for storage account %s: %v", accountName, err)
 	}
-	*/
-
-	// now we only use existing storage account, will switch to create storage account with EnsureStorageAccount interface
-	accountKey, err := GetStorageAccesskey(d.cloud, accountName, resourceGroup)
-	if err != nil {
-		return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroup, err)
-	}
+	accountName = account
 
 	if containerName == "" {
 		// now we set as 63 for maximum container name length

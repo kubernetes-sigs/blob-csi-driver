@@ -45,7 +45,7 @@ fi
 # begin to run CSI functions one by one
 if [ -v aadClientSecret ]; then
 	echo "create volume test:"
-	value=`$csc controller new --endpoint $endpoint --cap 1,block CSIVolumeName --req-bytes 2147483648 --params skuname=Standard_LRS,storageAccount=$storageAccountName,resourceGroup=$resourceGroup`
+	value=`$csc controller new --endpoint $endpoint --cap 1,block CSIVolumeName --req-bytes 2147483648 --params skuname=Standard_LRS`
 	retcode=$?
 	if [ $retcode -gt 0 ]; then
 		exit $retcode
@@ -79,6 +79,25 @@ if [ -v aadClientSecret ]; then
 		fi
 		sleep 2
 	fi
+
+	echo "delete volume test:"
+	$csc controller del --endpoint $endpoint $volumeid
+	retcode=$?
+	if [ $retcode -gt 0 ]; then
+		exit $retcode
+	fi
+	sleep 15
+
+	echo "create volume in a specified storage account under a specified resource group:"
+	value=`$csc controller new --endpoint $endpoint --cap 1,block CSIVolumeName --req-bytes 2147483648 --params skuname=Standard_LRS,storageAccount=$storageAccountName,resourceGroup=$resourceGroup`
+	retcode=$?
+	if [ $retcode -gt 0 ]; then
+		exit $retcode
+	fi
+	sleep 15
+
+	volumeid=`echo $value | awk '{print $1}' | sed 's/"//g'`
+	echo "got volume id: $volumeid"
 
 	echo "delete volume test:"
 	$csc controller del --endpoint $endpoint $volumeid

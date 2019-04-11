@@ -25,9 +25,16 @@
   unused-packages = true
   non-go = true
 
-[[constraint]]
+[[override]]
   name = "github.com/container-storage-interface/spec"
-  version = "1.0.0"
+  revision = "ed0bb0e1557548aa028307f48728767cfe8f6345"
+  # it's strange that "version = 1.0.0" does not work, use revision instead
+  #version = "v1.0.0"
+
+[[constraint]]
+  name = "github.com/kubernetes-csi/csi-test"
+  revision = "5b1e3786b7c8f7ca514b40e882a0b5dc36e4c842"
+  #version = "v1.1.0"
 
 [[override]]
   revision = "5db89f0ca68677abc5eefce8f2a0a772c98ba52d"

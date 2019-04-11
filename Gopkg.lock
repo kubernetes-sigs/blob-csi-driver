@@ -69,7 +69,6 @@
   packages = ["lib/go/csi"]
   pruneopts = "NUT"
   revision = "ed0bb0e1557548aa028307f48728767cfe8f6345"
-  version = "v1.0.0"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -209,7 +208,6 @@
   ]
   pruneopts = "NUT"
   revision = "5b1e3786b7c8f7ca514b40e882a0b5dc36e4c842"
-  version = "v1.1.0"
 
 [[projects]]
   digest = "1:13ada91f079028d1b4ca88e10a16439dcfa6541d26ed2e61e770f56d06301933"
@@ -335,8 +333,8 @@
     "model",
   ]
   pruneopts = "NUT"
-  revision = "cfeb6f9992ffa54aaa4f2170ade4067ee478b250"
-  version = "v0.2.0"
+  revision = "a82f4c12f983cc2649298185f296632953e50d3e"
+  version = "v0.3.0"
 
 [[projects]]
   branch = "master"
@@ -458,14 +456,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:27de45f3a245d407b62b2d4fb48b9e6e6dd45d06168c2168f8ffc9cd9a57b033"
+  digest = "1:24716f8aaf7b32dfefa5247cd2af5c998b66667bd06b2ce4d440f15849839e35"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "4b34438f7a67ee5f45cc6132e2bad873a20324e9"
+  revision = "0ad05ae3009d6413d3363aa09b350b2ec37daf09"
 
 [[projects]]
   digest = "1:8a12cbc891b7130d3f660f8a309e5c0b083f831e6ac38cdaa1f12e63c12d6bea"
@@ -974,6 +972,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2018-07-01/storage",
     "github.com/Azure/azure-sdk-for-go/storage",
     "github.com/container-storage-interface/spec/lib/go/csi",
     "github.com/golang/protobuf/ptypes/wrappers",
