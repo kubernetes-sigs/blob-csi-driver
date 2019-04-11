@@ -12,10 +12,10 @@ This driver allows Kubernetes to use [Azure Blob storage](https://github.com/Azu
 Status: Aplha
 
 ### Container Images & CSI Compatibility:
-|Azure File CSI Driver Version  | Image                                              | v0.3.0| v1.0.0 |
-|-------------------------------|----------------------------------------------------|-------|--------|
-|v0.1.0-alpha                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.1.0-alpha| no    | yes    |
-|master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest      | no    | yes    |
+|Azure File CSI Driver Version  | Image                                              | v1.0.0 |
+|-------------------------------|----------------------------------------------------|--------|
+|v0.1.0-alpha                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.1.0-alpha | yes    |
+|master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
 
 ### Kubernetes Compatibility
 | Azure File CSI Driver\Kubernetes Version | 1.12 | 1.13+ | 
@@ -77,15 +77,13 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 
 #### 3. enter the pod container to do validation
  - watch the status of pod until its Status changed from `Pending` to `Running` and then enter the pod container
-```
+```sh
 $ watch kubectl describe po nginx-blobfuse
 $ kubectl exec -it nginx-blobfuse -- bash
-root@nginx-blobfuse:/# df -h
-Filesystem                                                                                             Size  Used Avail Use% Mounted on
-overlay                                                                                                 30G   19G   11G  65% /
-tmpfs                                                                                                  3.5G     0  3.5G   0% /dev
+Filesystem      Size  Used Avail Use% Mounted on
 ...
-//f571xxx.file.core.windows.net/pvc-file-dynamic-e2ade9f3-f88b-11e8-8429-000d3a03e7d7  1.0G   64K  1.0G   1% /mnt/blobfuse
+blobfuse         30G  8.9G   21G  31% /mnt/blobfuse
+/dev/sda1        30G  8.9G   21G  31% /etc/hosts
 ...
 ```
 In the above example, there is a `/mnt/blobfuse` directory mounted as dysk filesystem.
