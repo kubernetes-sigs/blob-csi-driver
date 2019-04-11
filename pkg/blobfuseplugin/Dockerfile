@@ -6,6 +6,5 @@ RUN apt-get update && apt-get install -y ca-certificates pkg-config libfuse-dev 
 LABEL maintainers="andyzhangx"
 LABEL description="Blobfuse CSI Driver"
 
-COPY ./_output/blobfuse /usr/bin/
 COPY ./_output/blobfuseplugin /blobfuseplugin
 ENTRYPOINT ["/blobfuseplugin"]
