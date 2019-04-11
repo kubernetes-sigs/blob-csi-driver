@@ -27,6 +27,7 @@
 
 [[override]]
   name = "github.com/container-storage-interface/spec"
+  # it's strage that "version = 1.0.0" does not work, use revision instead
   revision = "ed0bb0e1557548aa028307f48728767cfe8f6345"
 
 [[override]]
