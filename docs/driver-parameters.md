@@ -7,11 +7,12 @@
 Name | Meaning | Example | Mandatory | Default value 
 --- | --- | --- | --- | ---
 skuName | blobfuse storage account type (alias: `storageAccountType`) | `Standard_LRS`, `Standard_GRS`, `Standard_RAGRS` | No | `Standard_LRS`
-storageAccount | specify the storage account name in which blobfuse share will be created | STORAGE_ACCOUNT_NAME | Yes | if empty(to-do), driver will find a suitable storage account that matches `skuName` in the same resource group; if a storage account name is provided, it means that storage account must exist otherwise there would be error
+storageAccount | specify the storage account name in which blobfuse share will be created | STORAGE_ACCOUNT_NAME | Yes | if empty, driver will find a suitable storage account that matches `skuName` in the same resource group; if a storage account name is provided, it means that storage account must exist otherwise there would be error
 location | specify the location in which blobfuse share will be created | `eastus`, `westus`, etc. | No | if empty, driver will use the same location name as current k8s cluster
-resourceGroup | specify the resource group in which blobfuse share will be created | existing resource group name | Yes | if empty(to-do), driver will use the same resource group name as current k8s cluster
+resourceGroup | specify the existing resource group name where the container is | existing resource group name | Yes | if empty, driver will use the same resource group name as current k8s cluster
+containername | specify the existing container name where blob storage will be created | existing container name | No | if empty, driver will create a new container name, starting with `pvc-fuse`
 
- - Static Provisioning(use existing azure disk)
+ - Static Provisioning(use existing storage container)
   > get a quick example [here](../deploy/example/pv-blobfuse-csi.yaml)
 
 Name | Meaning | Available Value | Mandatory | Default value
