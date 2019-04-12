@@ -140,7 +140,8 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	volumeID := req.VolumeId
 	resourceGroupName, accountName, containerName, err := getContainerInfo(volumeID)
 	if err != nil {
-		return nil, err
+		klog.Errorf("getContainerInfo(%s) in DeleteVolume failed with error: %v", volumeID, err)
+		return &csi.DeleteVolumeResponse{}, nil
 	}
 
 	if resourceGroupName == "" {
