@@ -12,16 +12,16 @@ This driver allows Kubernetes to use [Azure Blob storage](https://github.com/Azu
 Status: Aplha
 
 ### Container Images & CSI Compatibility:
-|Azure File CSI Driver Version  | Image                                              | v1.0.0 |
+|Blobfuse CSI Driver Version  | Image                                                | v1.0.0 |
 |-------------------------------|----------------------------------------------------|--------|
 |v0.1.0-alpha                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.1.0-alpha | yes    |
 |master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
 
 ### Kubernetes Compatibility
-| Azure File CSI Driver\Kubernetes Version | 1.12 | 1.13+ | 
-|------------------------------------------|------|-------|
-| v0.1.0-alpha                             | yes  | yes    |
-| master branch                            | no   | yes    |
+| Blobfuse CSI Driver\Kubernetes Version   | 1.13+ | 
+|------------------------------------------|-------|
+| v0.1.0-alpha                             | yes   |
+| master branch                            | yes   |
 
 ### Driver parameters
 Please refer to [`blobfuse.csi.azure.com` driver parameters](./docs/driver-parameters.md)
@@ -35,7 +35,7 @@ Please refer to [install blobfuse csi driver](https://github.com/csi-driver/blob
 
 ### E2E Usage example
 #### 1. create a pod with csi blobfuse driver mount on linux
-##### Option#1: Azurefile Dynamic Provisioning
+##### Option#1: Blobfuse Dynamic Provisioning
  - Create an blobfuse CSI storage class
 ```
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml
@@ -46,13 +46,13 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
 ```
 
-##### Option#2: Azurefile Static Provisioning(use an existing blobfuse share)
+##### Option#2: Blobfuse Static Provisioning(use an existing storage container)
  - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
 ```
 kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
 ```
 
- - Create an blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `sharename` in `volumeAttributes`
+ - Create an blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `containerName` in `volumeAttributes`
 ```
 wget https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml
 vi pv-blobfuse-csi.yaml
