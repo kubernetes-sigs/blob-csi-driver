@@ -180,7 +180,36 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities missing in request")
 	}
 
-	// todo: we may check file share existence here
+	volumeID := req.VolumeId
+	resourceGroupName, accountName, containerName, err := getContainerInfo(volumeID)
+	if err != nil {
+		klog.Errorf("getContainerInfo(%s) in ValidateVolumeCapabilities failed with error: %v", volumeID, err)
+		return nil, status.Error(codes.NotFound, err.Error())
+	}
+
+	if resourceGroupName == "" {
+		resourceGroupName = d.cloud.ResourceGroup
+	}
+
+	accountKey, err := GetStorageAccesskey(d.cloud, accountName, resourceGroupName)
+	if err != nil {
+		return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
+	}
+
+	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
+	if err != nil {
+		return nil, err
+	}
+	blobClient := client.GetBlobService()
+	container := blobClient.GetContainerReference(containerName)
+
+	exist, err := container.Exists()
+	if err != nil {
+		return nil, err
+	}
+	if !exist {
+		return nil, status.Error(codes.NotFound, "the requested volume does not exist")
+	}
 
 	// blobfuse supports all AccessModes, no need to check capabilities here
 	return &csi.ValidateVolumeCapabilitiesResponse{Message: ""}, nil
