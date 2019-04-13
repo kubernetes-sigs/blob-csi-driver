@@ -114,8 +114,8 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		}
 	}
 
-	// todo: use could set tmp-path and other mountOptions
-	cmd := exec.Command("/usr/blob/blobfuse", targetPath, "--tmp-path=/mnt/blobfuse/", "--container-name="+containerName)
+	// todo: user could set tmp-path and other mountOptions
+	cmd := exec.Command("/usr/blob/blobfuse", targetPath, "--tmp-path=/mnt/"+volumeID, "--container-name="+containerName)
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
 	err = cmd.Run()
 	if err != nil {
