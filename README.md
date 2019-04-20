@@ -35,7 +35,7 @@ Please refer to [install blobfuse csi driver](https://github.com/csi-driver/blob
 
 ## E2E Usage example
 ### 1. create a pod with csi blobfuse driver mount on linux
-#### Blobfuse Dynamic Provisioning
+#### Dynamic Provisioning (create storage account and container by blobfuse driver)
  - Create an blobfuse CSI storage class
 ```sh
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml
@@ -46,7 +46,7 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
 ```
 
-#### Blobfuse Static Provisioning(use an existing storage container)
+#### Static Provisioning(use an existing storage account)
 ##### Option#1: use existing credentials in k8s cluster
  > make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
  - Download an blobfuse CSI storage class, edit `resourceGroup`, `storageAccount`, `containerName` to use existing storage container
