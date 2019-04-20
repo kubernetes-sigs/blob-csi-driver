@@ -1,0 +1,12 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blobfuse.csi.azure.com
+provisioner: blobfuse.csi.azure.com
+parameters:
+  skuName: Standard_LRS  #available values: Standard_LRS, Standard_GRS, Standard_RAGRS
+  resourceGroup: EXISTING_RESOURCE_GROUP
+  storageAccount: EXISTING_STORAGE_ACCOUNT
+  containerName: EXISTING_CONTAINER_NAME
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
