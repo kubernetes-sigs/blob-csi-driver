@@ -33,20 +33,35 @@ Please refer to [`blobfuse.csi.azure.com` driver parameters](./docs/driver-param
 ### Install blobfuse CSI driver on a kubernetes cluster
 Please refer to [install blobfuse csi driver](https://github.com/csi-driver/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
 
-### E2E Usage example
-#### 1. create a pod with csi blobfuse driver mount on linux
-##### Option#1: Blobfuse Dynamic Provisioning
+## E2E Usage example
+### 1. create a pod with csi blobfuse driver mount on linux
+#### Blobfuse Dynamic Provisioning
  - Create an blobfuse CSI storage class
-```
+```sh
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml
 ```
 
  - Create an blobfuse CSI PVC
-```
+```sh
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
 ```
 
-##### Option#2: Blobfuse Static Provisioning(use an existing storage container)
+#### Blobfuse Static Provisioning(use an existing storage container)
+##### Option#1: use existing credentials in k8s cluster
+ > make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
+ - Download an blobfuse CSI storage class, edit `resourceGroup`, `storageAccount`, `containerName` to use existing storage container
+```sh
+wget -O storageclass-blobfuse-csi-existing-container.yaml https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi-existing-container.yaml
+vi storageclass-blobfuse-csi-existing-container.yaml
+kubectl create -f storageclass-blobfuse-csi-existing-container.yaml
+```
+
+ - Create an blobfuse CSI PVC
+```sh
+kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
+```
+
+##### Option#2: provide storage account name and key
  - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
 ```
 kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
@@ -64,7 +79,7 @@ kubectl create -f pv-blobfuse-csi.yaml
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi-static.yaml
 ```
 
-#### 2. validate PVC status and create an nginx pod
+#### 2. Validate PVC status and create an nginx pod
  - make sure pvc is created and in `Bound` status finally
 ```
 watch kubectl describe pvc pvc-blobfuse
