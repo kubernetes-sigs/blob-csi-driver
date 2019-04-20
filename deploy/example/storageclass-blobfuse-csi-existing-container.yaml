@@ -8,5 +8,5 @@ parameters:
   resourceGroup: EXISTING_RESOURCE_GROUP
   storageAccount: EXISTING_STORAGE_ACCOUNT
   containerName: EXISTING_CONTAINER_NAME
-reclaimPolicy: Delete
+reclaimPolicy: Retain
 volumeBindingMode: Immediate
