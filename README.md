@@ -36,12 +36,12 @@ Please refer to [install blobfuse csi driver](https://github.com/csi-driver/blob
 ## E2E Usage example
 ### 1. create a pod with csi blobfuse driver mount on linux
 #### Dynamic Provisioning (create storage account and container by blobfuse driver)
- - Create an blobfuse CSI storage class
+ - Create a blobfuse CSI storage class
 ```sh
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml
 ```
 
- - Create an blobfuse CSI PVC
+ - Create a blobfuse CSI PVC
 ```sh
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
 ```
@@ -49,14 +49,14 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 #### Static Provisioning(use an existing storage account)
 ##### Option#1: use existing credentials in k8s cluster
  > make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
- - Download an blobfuse CSI storage class, edit `resourceGroup`, `storageAccount`, `containerName` to use existing storage container
+ - Download a blobfuse CSI storage class, edit `resourceGroup`, `storageAccount`, `containerName` to use existing storage container
 ```sh
 wget -O storageclass-blobfuse-csi-existing-container.yaml https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi-existing-container.yaml
 vi storageclass-blobfuse-csi-existing-container.yaml
 kubectl create -f storageclass-blobfuse-csi-existing-container.yaml
 ```
 
- - Create an blobfuse CSI PVC
+ - Create a blobfuse CSI PVC
 ```sh
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
 ```
@@ -67,14 +67,14 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
 ```
 
- - Create an blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `containerName` in `volumeAttributes`
-```
+ - Create a blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `containerName` in `volumeAttributes`
+```sh
 wget https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml
 vi pv-blobfuse-csi.yaml
 kubectl create -f pv-blobfuse-csi.yaml
 ```
 
- - Create an blobfuse CSI PVC which would be bound to the above PV
+ - Create a blobfuse CSI PVC which would be bound to the above PV
 ```
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi-static.yaml
 ```
