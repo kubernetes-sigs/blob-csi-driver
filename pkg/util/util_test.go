@@ -53,3 +53,30 @@ func TestGiBToBytes(t *testing.T) {
 		t.Fatalf("Wrong result for GiBToBytes. Got: %d", actual)
 	}
 }
+
+func TestGetMountOptions(t *testing.T) {
+	tests := []struct {
+		options  []string
+		expected string
+	}{
+		{
+			options:  []string{"-o allow_other", "-o ro", "--use-https=true"},
+			expected: "-o allow_other -o ro --use-https=true",
+		},
+		{
+			options:  []string{"-o allow_other"},
+			expected: "-o allow_other",
+		},
+		{
+			options:  []string{""},
+			expected: "",
+		},
+	}
+
+	for _, test := range tests {
+		result := GetMountOptions(test.options)
+		if result != test.expected {
+			t.Errorf("getMountOptions(%v) result: %s, expected: %s", test.options, result, test.expected)
+		}
+	}
+}
