@@ -67,7 +67,7 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
 ```
 
- - Create a blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `resourceGroup`, `storageAccount`, `containerName` in `volumeAttributes`
+ - Create a blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `containerName` in `volumeAttributes`
 ```sh
 wget https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml
 vi pv-blobfuse-csi.yaml

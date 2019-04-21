@@ -13,8 +13,6 @@ spec:
     readOnly: false
     volumeHandle: arbitrary-volumeid
     volumeAttributes:
-      resourceGroup: EXISTING_RESOURCE_GROUP
-      storageAccount: EXISTING_STORAGE_ACCOUNT
       containerName: EXISTING_CONTAINER_NAME
     nodePublishSecretRef:
       name: azure-secret
