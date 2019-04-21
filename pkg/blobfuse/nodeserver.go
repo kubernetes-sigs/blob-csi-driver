@@ -128,7 +128,8 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		klog.Errorf("Mount failed with error: %v", string(output))
+		err = fmt.Errorf("Mount failed with error: %v, output: %v", err, string(output))
+		klog.Errorf("%v", err)
 		notMnt, mntErr := d.mounter.IsLikelyNotMountPoint(targetPath)
 		if mntErr != nil {
 			klog.Errorf("IsLikelyNotMountPoint check failed: %v", mntErr)
