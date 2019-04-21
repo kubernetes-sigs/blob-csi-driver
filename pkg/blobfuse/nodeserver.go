@@ -24,7 +24,9 @@ import (
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/csi-driver/blobfuse-csi-driver/pkg/util"
 	"k8s.io/klog"
+	k8sutil "k8s.io/kubernetes/pkg/volume/util"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -114,8 +116,15 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		}
 	}
 
-	// todo: user could set tmp-path and other mountOptions
-	cmd := exec.Command("/usr/blob/blobfuse", targetPath, "--tmp-path=/mnt/"+volumeID, "--container-name="+containerName)
+	// "allow_other" option refer to http://manpages.ubuntu.com/manpages/xenial/man8/mount.fuse.8.html
+	options := []string{"-o allow_other"}
+	if readOnly {
+		options = append(options, "-o ro")
+	}
+	mountOptions := k8sutil.JoinMountOptions(mountFlags, options)
+
+	cmd := exec.Command("/usr/blob/blobfuse", targetPath, "--tmp-path=/mnt/"+volumeID,
+		"--container-name="+containerName, util.GetMountOptions(mountOptions))
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
 	err = cmd.Run()
 	if err != nil {
