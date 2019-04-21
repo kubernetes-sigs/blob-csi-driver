@@ -49,9 +49,9 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 ### Static Provisioning(use an existing storage account)
 #### Option#1: use existing credentials in k8s cluster
  > make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
- - Download a blobfuse CSI storage class, edit `resourceGroup`, `storageAccount`, `containerName` to use existing storage container
+ - Download a blobfuse CSI storage class, edit `resourceGroup`, `storageAccount`, `containerName` in storage class
 ```sh
-wget -O storageclass-blobfuse-csi-existing-container.yaml https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi-existing-container.yaml
+wget https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi-existing-container.yaml
 vi storageclass-blobfuse-csi-existing-container.yaml
 kubectl create -f storageclass-blobfuse-csi-existing-container.yaml
 ```
@@ -67,7 +67,7 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
 ```
 
- - Create a blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `containerName` in `volumeAttributes`
+ - Create a blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `resourceGroup`, `storageAccount`, `containerName` in `volumeAttributes`
 ```sh
 wget https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml
 vi pv-blobfuse-csi.yaml

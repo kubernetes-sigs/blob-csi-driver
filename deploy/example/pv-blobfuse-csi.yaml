@@ -7,13 +7,15 @@ spec:
     storage: 10Gi
   accessModes:
     - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain
+  persistentVolumeReclaimPolicy: Retain #If set as "Delete" container would be removed after pvc deletion
   csi:
     driver: blobfuse.csi.azure.com
     readOnly: false
     volumeHandle: arbitrary-volumeid
     volumeAttributes:
-      sharename: k8stest
+      resourceGroup: EXISTING_RESOURCE_GROUP
+      storageAccount: EXISTING_STORAGE_ACCOUNT
+      containerName: EXISTING_CONTAINER_NAME
     nodePublishSecretRef:
       name: azure-secret
       namespace: default
