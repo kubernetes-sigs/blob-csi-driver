@@ -78,9 +78,6 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	attrib := req.GetVolumeContext()
 	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
 
-	klog.V(2).Infof("target %v\nfstype %v\n\nreadonly %v\nvolumeId %v\ncontext %v\nmountflags %v\n",
-		targetPath, fsType, readOnly, volumeID, attrib, mountFlags)
-
 	var accountName, accountKey, containerName string
 
 	secrets := req.GetSecrets()
@@ -116,18 +113,22 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		}
 	}
 
-	// "allow_other" option refer to http://manpages.ubuntu.com/manpages/xenial/man8/mount.fuse.8.html
-	options := []string{"-o allow_other"}
+	// todo: option allow_other only allowed if 'user_allow_other' is set in /etc/fuse.conf
+	options := []string{}
 	if readOnly {
 		options = append(options, "-o ro")
 	}
 	mountOptions := k8sutil.JoinMountOptions(mountFlags, options)
 
+	klog.V(2).Infof("target %v\nfstype %v\n\nreadonly %v\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\n",
+		targetPath, fsType, readOnly, volumeID, attrib, mountFlags, mountOptions)
+
 	cmd := exec.Command("/usr/blob/blobfuse", targetPath, "--tmp-path=/mnt/"+volumeID,
 		"--container-name="+containerName, util.GetMountOptions(mountOptions))
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
-	err = cmd.Run()
+	output, err := cmd.CombinedOutput()
 	if err != nil {
+		klog.Errorf("Mount failed with error: %v", string(output))
 		notMnt, mntErr := d.mounter.IsLikelyNotMountPoint(targetPath)
 		if mntErr != nil {
 			klog.Errorf("IsLikelyNotMountPoint check failed: %v", mntErr)
