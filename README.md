@@ -6,7 +6,7 @@
 **WARNING**: This driver is in ALPHA currently. Do NOT use this driver in a production environment in its current state.
 
 ### About
-This driver allows Kubernetes to use [Azure Blob storage](https://github.com/Azure/azure-storage-fuse), csi plugin name: `blobfuse.csi.azure.com`
+This driver allows Kubernetes to use [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse), csi plugin name: `blobfuse.csi.azure.com`
 
 ### Project Status
 Status: Aplha
@@ -34,8 +34,8 @@ Please refer to [`blobfuse.csi.azure.com` driver parameters](./docs/driver-param
 Please refer to [install blobfuse csi driver](https://github.com/csi-driver/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
 
 ## E2E Usage example
-### 1. create a pod with csi blobfuse driver mount on linux
-#### Dynamic Provisioning (create storage account and container by blobfuse driver)
+create a pod with blobfuse mount on linux
+### Dynamic Provisioning (create storage account and container automatically by blobfuse driver)
  - Create a blobfuse CSI storage class
 ```sh
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml
@@ -46,8 +46,8 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
 ```
 
-#### Static Provisioning(use an existing storage account)
-##### Option#1: use existing credentials in k8s cluster
+### Static Provisioning(use an existing storage account)
+#### Option#1: use existing credentials in k8s cluster
  > make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
  - Download a blobfuse CSI storage class, edit `resourceGroup`, `storageAccount`, `containerName` to use existing storage container
 ```sh
@@ -61,7 +61,7 @@ kubectl create -f storageclass-blobfuse-csi-existing-container.yaml
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
 ```
 
-##### Option#2: provide storage account name and key
+#### Option#2: provide storage account name and key
  - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
 ```
 kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
@@ -108,6 +108,7 @@ Please refer to [development guide](./docs/csi-dev.md)
 
 
 ### Links
+ - [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse)
  - [Kubernetes CSI Documentation](https://kubernetes-csi.github.io/docs/Home.html)
  - [Analysis of the CSI Spec](https://blog.thecodeteam.com/2017/11/03/analysis-csi-spec/)
  - [CSI Drivers](https://github.com/kubernetes-csi/drivers)
