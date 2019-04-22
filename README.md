@@ -80,7 +80,7 @@ kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driv
 ```
 
 #### 2. Validate PVC status and create an nginx pod
- - make sure pvc is created and in `Bound` status finally
+ > make sure pvc is created and in `Bound` status
 ```
 watch kubectl describe pvc pvc-blobfuse
 ```
