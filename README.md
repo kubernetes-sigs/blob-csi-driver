@@ -24,7 +24,7 @@ Status: Aplha
 | master branch                            | yes   |
 
 ### Driver parameters
-Please refer to [`blobfuse.csi.azure.com` driver parameters](./docs/driver-parameters.md)
+Please refer to `blobfuse.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
  > storage class `blobfuse.csi.azure.com` parameters are compatible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin
 
 ### Prerequisite
