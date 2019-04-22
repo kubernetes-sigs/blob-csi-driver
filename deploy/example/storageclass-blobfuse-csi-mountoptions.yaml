@@ -8,5 +8,5 @@ parameters:
 reclaimPolicy: Retain #If set as "Delete" container would be removed after pvc deletion
 volumeBindingMode: Immediate
 mountOptions:
-  - file-cache-timeout-in-seconds=120
-  - use-https=true
+  - --file-cache-timeout-in-seconds=120
+  - --use-https=true
