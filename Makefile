@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+PKG=github.com/csi-driver/blobfuse-csi-driver
 REGISTRY_NAME=andyzhangx
 IMAGE_NAME=blobfuse-csi
 IMAGE_VERSION=v0.1.0-alpha
 IMAGE_TAG=$(REGISTRY_NAME)/$(IMAGE_NAME):$(IMAGE_VERSION)
 IMAGE_TAG_LATEST=$(REGISTRY_NAME)/$(IMAGE_NAME):latest
-REV=$(shell git describe --long --tags --dirty)
+GIT_COMMIT?=$(shell git rev-parse HEAD)
+BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+LDFLAGS?="-X ${PKG}/pkg/blobfuse.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blobfuse.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blobfuse.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
 
 .PHONY: all blobfuse blobfuse-container clean
 
@@ -32,10 +35,10 @@ test-sanity:
 	go test -v ./test/sanity/...
 blobfuse:
 	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-X github.com/csi-driver/blobfuse-csi-driver/pkg/blobfuse.vendorVersion=$(IMAGE_VERSION) -extldflags "-static"' -o _output/blobfuseplugin ./pkg/blobfuseplugin
+	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin ./pkg/blobfuseplugin
 blobfuse-windows:
 	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
-	CGO_ENABLED=0 GOOS=windows go build -a -ldflags '-X github.com/csi-driver/blobfuse-csi-driver/pkg/blobfuse.vendorVersion=$(IMAGE_VERSION) -extldflags "-static"' -o _output/blobfuseplugin.exe ./pkg/blobfuseplugin
+	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin.exe ./pkg/blobfuseplugin
 blobfuse-container: blobfuse
 	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/Dockerfile .
 push: blobfuse-container
