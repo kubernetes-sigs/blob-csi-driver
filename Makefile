@@ -15,7 +15,7 @@
 PKG=github.com/csi-driver/blobfuse-csi-driver
 REGISTRY_NAME=andyzhangx
 IMAGE_NAME=blobfuse-csi
-IMAGE_VERSION=v0.1.0-alpha
+IMAGE_VERSION=v0.2.0
 IMAGE_TAG=$(REGISTRY_NAME)/$(IMAGE_NAME):$(IMAGE_VERSION)
 IMAGE_TAG_LATEST=$(REGISTRY_NAME)/$(IMAGE_NAME):latest
 GIT_COMMIT?=$(shell git rev-parse HEAD)
