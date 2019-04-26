@@ -21,23 +21,25 @@ IMAGE_TAG_LATEST=$(REGISTRY_NAME)/$(IMAGE_NAME):latest
 GIT_COMMIT?=$(shell git rev-parse HEAD)
 BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS?="-X ${PKG}/pkg/blobfuse.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blobfuse.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blobfuse.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
+GO111MODULE=on
+
+.EXPORT_ALL_VARIABLES:
 
 .PHONY: all blobfuse blobfuse-container clean
-
 all: blobfuse
 
+.PHONY: test
 test:
-	go test -covermode=count -coverprofile=profile.cov ./pkg/...
-	$GOPATH/bin/goveralls -coverprofile=profile.cov -service=travis-ci
+	go test -v -race ./pkg/...
 integration-test:
 	sudo test/integration/run-tests-all-clouds.sh
 test-sanity:
 	go test -v ./test/sanity/...
+# e2e-test:
+# 	hack/run-e2e-test.sh
 blobfuse:
-	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
 	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin ./pkg/blobfuseplugin
 blobfuse-windows:
-	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
 	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin.exe ./pkg/blobfuseplugin
 blobfuse-container: blobfuse
 	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/Dockerfile .
@@ -50,3 +52,7 @@ push-latest: blobfuse-container
 clean:
 	go clean -r -x
 	-rm -rf _output
+update:
+	hack/update-dependencies.sh
+test-update: update
+	hack/verify-update.sh

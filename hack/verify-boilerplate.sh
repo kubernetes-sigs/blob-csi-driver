@@ -18,7 +18,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-
 REPO_ROOT=$(dirname "${BASH_SOURCE}")/..
 
 boilerDir="${REPO_ROOT}/hack/boilerplate"
@@ -30,7 +29,7 @@ files_need_boilerplate=($(${boiler} --rootdir=${REPO_ROOT}))
 unitTestOut="$(mktemp)"
 trap cleanup EXIT
 cleanup() {
-	rm "${unitTestOut}"
+  rm "${unitTestOut}"
 }
 
 # Run boilerplate check
