@@ -113,8 +113,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		}
 	}
 
-	// todo: option allow_other only allowed if 'user_allow_other' is set in /etc/fuse.conf
-	options := []string{}
+	options := []string{"--use-https=true"}
 	if readOnly {
 		options = append(options, "-o ro")
 	}
