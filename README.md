@@ -26,7 +26,8 @@ Please refer to `blobfuse.csi.azure.com` [driver parameters](./docs/driver-param
  > storage class `blobfuse.csi.azure.com` parameters are compatible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin
 
 ### Prerequisite
- - The driver initialization depends on a [Cloud provider config file](https://github.com/kubernetes/cloud-provider-azure/blob/master/docs/cloud-provider-config.md), usually it's `/etc/kubernetes/azure.json` on all k8s nodes deployed by AKS or aks-engine, here is an [azure.json example](./deploy/example/azure.json)
+ - The driver initialization depends on a [Cloud provider config file](https://github.com/kubernetes/cloud-provider-azure/blob/master/docs/cloud-provider-config.md), usually it's `/etc/kubernetes/azure.json` on all kubernetes nodes deployed by AKS or aks-engine, here is an [azure.json example](./deploy/example/azure.json)
+ > if cluster is based on Managed Service Identity(MSI), make sure all agent nodes have `Contributor` role for current resource group
 
 ### Install blobfuse CSI driver on a kubernetes cluster
 Please refer to [install blobfuse csi driver](https://github.com/csi-driver/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
