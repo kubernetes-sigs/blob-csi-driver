@@ -1,9 +1,9 @@
 {
     "cloud":"AzurePublicCloud",
-    "tenantId": "72f988bf-xxxx-xxxx-xxxx-2d7cd011db47",
-    "subscriptionId": "b9d2281e-xxxx-xxxx-xxxx-0d50377cdf76",
-    "aadClientId": "df7269f2-xxxx-xxxx-xxxx-0f12a7d97404",
-    "aadClientSecret": "8c416dc5-xxxx-xxxx-xxxx-d77069e2a255",
+    "tenantId": "xxxx-xxxx-xxxx-xxxx-xxxx",
+    "subscriptionId": "xxxx-xxxx-xxxx-xxxx-xxxx",
+    "aadClientId": "xxxx-xxxx-xxxx-xxxx-xxxx",
+    "aadClientSecret": "xxxx-xxxx-xxxx-xxxx-xxxx",
     "resourceGroup": "resource-group-name",
     "location": "eastus2",
     "vmType": "standard",
