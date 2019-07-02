@@ -18,5 +18,6 @@ script:
   - hack/verify-all.sh
   - go test -covermode=count -coverprofile=profile.cov ./pkg/...
   - make blobfuse
+  - make sanity-test
   - make integration-test
   - make blobfuse-windows

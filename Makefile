@@ -31,8 +31,8 @@ test:
 	$GOPATH/bin/goveralls -coverprofile=profile.cov -service=travis-ci
 integration-test:
 	sudo test/integration/run-tests-all-clouds.sh
-test-sanity:
-	go test -v ./test/sanity/...
+sanity-test:
+	test/sanity/run-tests-all-clouds.sh
 blobfuse:
 	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
 	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin ./pkg/blobfuseplugin
