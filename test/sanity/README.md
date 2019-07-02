@@ -13,6 +13,6 @@ export set AZURE_CREDENTIAL_FILE=
 
 ### Run integration tests
 ```
-make test-sanity
+make sanity-test
 ```
 
