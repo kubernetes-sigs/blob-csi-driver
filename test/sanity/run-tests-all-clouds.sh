@@ -16,13 +16,19 @@
 
 # set -euo pipefail
 
-if [ -z ${AZURE_CREDENTIAL_FILE} ]; then
+if [ ! -v AZURE_CREDENTIAL_FILE ]; then
 	export set AZURE_CREDENTIAL_FILE=/tmp/azure.json
 fi
 
+GO_BIN_PATH=`which go`
+
 # run test on AzurePublicCloud
 if [ -v aadClientSecret ]; then
+	# run test in CI env
 	cp test/integration/azure.json $AZURE_CREDENTIAL_FILE
+	# copy blobfuse binary
+	sudo mkdir /usr/blob
+	sudo cp test/sanity/blobfuse /usr/blob/blobfuse
 
 	sed -i "s/tenantId-input/$tenantId/g" $AZURE_CREDENTIAL_FILE
 	sed -i "s/subscriptionId-input/$subscriptionId/g" $AZURE_CREDENTIAL_FILE
@@ -31,7 +37,7 @@ if [ -v aadClientSecret ]; then
 	sed -i "s/resourceGroup-input/$resourceGroup/g" $AZURE_CREDENTIAL_FILE
 	sed -i "s/location-input/$location/g" $AZURE_CREDENTIAL_FILE
 
-	go test -v ./test/sanity/...
+	sudo ${GO_BIN_PATH} test -v ./test/sanity/...
 	# make it always succeed for now until enabled sanity test on CI
 	exit 0
 else
