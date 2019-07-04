@@ -18,6 +18,8 @@
 set -euo pipefail
 
 csc=$GOPATH/bin/csc
+volname=`date +%s`
+volname="citest-$volname"
 volSize="2147483648"
 
 endpoint="tcp://127.0.0.1:10000"
@@ -47,7 +49,7 @@ fi
 # begin to run CSI functions one by one
 if [ -v aadClientSecret ]; then
 	echo "create volume test:"
-	value=`$csc controller new --endpoint $endpoint --cap 1,block CSIVolumeName --req-bytes $volSize --params skuname=Standard_LRS`
+	value=`$csc controller new --endpoint $endpoint --cap 1,block $volname --req-bytes $volSize --params skuname=Standard_LRS`
 	retcode=$?
 	if [ $retcode -gt 0 ]; then
 		exit $retcode
@@ -91,7 +93,7 @@ if [ -v aadClientSecret ]; then
 	sleep 15
 
 	echo "create volume in storage account($storageAccountName) under resource group($resourceGroup):"
-	value=`$csc controller new --endpoint $endpoint --cap 1,block CSIVolumeName --req-bytes $volSize --params skuname=Standard_LRS,storageAccount=$storageAccountName,resourceGroup=$resourceGroup`
+	value=`$csc controller new --endpoint $endpoint --cap 1,block $volname --req-bytes $volSize --params skuname=Standard_LRS,storageAccount=$storageAccountName,resourceGroup=$resourceGroup`
 	retcode=$?
 	if [ $retcode -gt 0 ]; then
 		exit $retcode
