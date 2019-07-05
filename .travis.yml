@@ -22,11 +22,11 @@ jobs:
         - make blobfuse-windows
         - go test -covermode=count -coverprofile=profile.cov ./pkg/...
     - stage: test
-      name: "sanity Test"
+      name: "sanity test"
       script: make sanity-test
       after_failure: TRAVIS_TEST_RESULT=0
     - stage: test
-      name: "integration Test"
+      name: "integration test"
       install:
         - GO111MODULE=off go get github.com/rexray/gocsi/csc
       script:
