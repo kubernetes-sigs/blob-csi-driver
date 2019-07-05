@@ -25,7 +25,7 @@ if [ -v aadClientSecret ]; then
 	cp test/integration/azure.json $AZURE_CREDENTIAL_FILE
 
         # copy blobfuse binary
-        sudo mkdir /usr/blob
+        sudo mkdir -p /usr/blob
         sudo cp test/sanity/blobfuse /usr/blob/blobfuse
 
 	sed -i "s/tenantId-input/$tenantId/g" $AZURE_CREDENTIAL_FILE
