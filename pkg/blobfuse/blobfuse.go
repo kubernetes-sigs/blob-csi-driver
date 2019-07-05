@@ -22,9 +22,11 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	csicommon "github.com/csi-driver/blobfuse-csi-driver/pkg/csi-common"
+	"github.com/pborman/uuid"
 
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/util/mount"
+	k8sutil "k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/legacy-cloud-providers/azure"
 )
 
@@ -39,6 +41,10 @@ const (
 	defaultFileMode  = "0777"
 	defaultDirMode   = "0777"
 	defaultVers      = "3.0"
+
+	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
+	containerNameMinLength = 3
+	containerNameMaxLength = 63
 )
 
 // Driver implements all interfaces of CSI drivers
@@ -180,4 +186,39 @@ func getStorageAccount(secrets map[string]string) (string, string, error) {
 	}
 
 	return accountName, accountKey, nil
+}
+
+// A container name must be a valid DNS name, conforming to the following naming rules:
+//	1. Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
+//	2. Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.
+//	3. All letters in a container name must be lowercase.
+//	4. Container names must be from 3 through 63 characters long.
+//
+// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
+func getValidContainerName(volumeName string) string {
+	containerName := strings.ToLower(volumeName)
+	if len(containerName) > containerNameMaxLength {
+		containerName = containerName[0:containerNameMaxLength]
+	}
+	if !checkContainerNameBeginAndEnd(containerName) || len(containerName) < containerNameMinLength {
+		// now we set as 63 for maximum container name length
+		// todo: get cluster name
+		containerName = k8sutil.GenerateVolumeName("pvc-fuse", uuid.NewUUID().String(), 63)
+		klog.Warningf("the requested volume name (%q) is invalid, so it is regenerated as (%q)", volumeName, containerName)
+	}
+	containerName = strings.Replace(containerName, "--", "-", -1)
+
+	return containerName
+}
+
+func checkContainerNameBeginAndEnd(containerName string) bool {
+	length := len(containerName)
+	if (('a' <= containerName[0] && containerName[0] <= 'z') ||
+		('0' <= containerName[0] && containerName[0] <= '9')) &&
+		(('a' <= containerName[length-1] && containerName[length-1] <= 'z') ||
+			('0' <= containerName[length-1] && containerName[length-1] <= '9')) {
+		return true
+	}
+
+	return false
 }

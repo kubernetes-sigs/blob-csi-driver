@@ -21,13 +21,11 @@ import (
 	"fmt"
 	"strings"
 
-	k8sutil "k8s.io/kubernetes/pkg/volume/util"
-
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2018-07-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/csi-driver/blobfuse-csi-driver/pkg/util"
-	"github.com/pborman/uuid"
+
 	"k8s.io/klog"
 
 	"google.golang.org/grpc/codes"
@@ -90,9 +88,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	accountName = account
 
 	if containerName == "" {
-		// now we set as 63 for maximum container name length
-		// todo: get cluster name
-		containerName = k8sutil.GenerateVolumeName("pvc-fuse", uuid.NewUUID().String(), 63)
+		containerName = getValidContainerName(name)
 	}
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB)

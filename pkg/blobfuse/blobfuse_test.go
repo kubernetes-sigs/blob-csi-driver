@@ -214,3 +214,77 @@ func TestGetStorageAccount(t *testing.T) {
 		}
 	}
 }
+
+func TestGetValidContainerName(t *testing.T) {
+	tests := []struct {
+		volumeName string
+		expected   string
+	}{
+		{
+			volumeName: "aqz",
+			expected:   "aqz",
+		},
+		{
+			volumeName: "029",
+			expected:   "029",
+		},
+		{
+			volumeName: "a--z",
+			expected:   "a-z",
+		},
+		{
+			volumeName: "A2Z",
+			expected:   "a2z",
+		},
+		{
+			volumeName: "1234567891234567891234567891234567891234567891234567891234567891",
+			expected:   "123456789123456789123456789123456789123456789123456789123456789",
+		},
+	}
+
+	for _, test := range tests {
+		result := getValidContainerName(test.volumeName)
+		if !reflect.DeepEqual(result, test.expected) {
+			t.Errorf("input: %q, getValidContainerName result: %q, expected: %q", test.volumeName, result, test.expected)
+		}
+	}
+}
+
+func TestCheckContainerNameBeginAndEnd(t *testing.T) {
+	tests := []struct {
+		containerName string
+		expected      bool
+	}{
+		{
+			containerName: "aqz",
+			expected:      true,
+		},
+		{
+			containerName: "029",
+			expected:      true,
+		},
+		{
+			containerName: "a-9",
+			expected:      true,
+		},
+		{
+			containerName: "0-z",
+			expected:      true,
+		},
+		{
+			containerName: "-1-",
+			expected:      false,
+		},
+		{
+			containerName: ":1p",
+			expected:      false,
+		},
+	}
+
+	for _, test := range tests {
+		result := checkContainerNameBeginAndEnd(test.containerName)
+		if !reflect.DeepEqual(result, test.expected) {
+			t.Errorf("input: %q, checkContainerNameBeginAndEnd result: %v, expected: %v", test.containerName, result, test.expected)
+		}
+	}
+}
