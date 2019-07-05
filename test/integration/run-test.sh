@@ -72,7 +72,7 @@ if [ -v aadClientSecret ]; then
 	if [ "$cloud" != "AzureChinaCloud" ]; then
 		# blobfuse mount/unmount on travis VM does not work against AzureChinaCloud
 		echo "mount volume test:"
-		sudo $csc node publish --endpoint $endpoint --cap 1,block --target-path $target_path $volumeid
+		$csc node publish --endpoint $endpoint --cap 1,block --target-path $target_path $volumeid
 		retcode=$?
 		if [ $retcode -gt 0 ]; then
 			exit $retcode
@@ -80,7 +80,7 @@ if [ -v aadClientSecret ]; then
 		sleep 2
 
 		echo "unmount volume test:"
-		sudo $csc node unpublish --endpoint $endpoint --target-path $target_path $volumeid
+		$csc node unpublish --endpoint $endpoint --target-path $target_path $volumeid
 		retcode=$?
 		if [ $retcode -gt 0 ]; then
 			exit $retcode
