@@ -16,11 +16,18 @@
 
 set -euo pipefail
 
-export set AZURE_CREDENTIAL_FILE=/tmp/azure.json
+if [ ! -v AZURE_CREDENTIAL_FILE ]; then
+        export set AZURE_CREDENTIAL_FILE=/tmp/azure.json
+fi
 
 # run test on AzurePublicCloud
-cp test/integration/azure.json $AZURE_CREDENTIAL_FILE
 if [ -v aadClientSecret ]; then
+	cp test/integration/azure.json $AZURE_CREDENTIAL_FILE
+
+        # copy blobfuse binary
+        sudo mkdir /usr/blob
+        sudo cp test/sanity/blobfuse /usr/blob/blobfuse
+
 	sed -i "s/tenantId-input/$tenantId/g" $AZURE_CREDENTIAL_FILE
 	sed -i "s/subscriptionId-input/$subscriptionId/g" $AZURE_CREDENTIAL_FILE
 	sed -i "s/aadClientId-input/$aadClientId/g" $AZURE_CREDENTIAL_FILE

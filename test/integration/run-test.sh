@@ -17,7 +17,11 @@
 
 set -euo pipefail
 
-csc=$GOPATH/bin/csc
+csc="csc"
+if [ -v GOPATH ]; then
+        csc=$GOPATH/bin/csc
+fi
+
 volname=`date +%s`
 volname="citest-$volname"
 volSize="2147483648"
@@ -68,7 +72,7 @@ if [ -v aadClientSecret ]; then
 	if [ "$cloud" != "AzureChinaCloud" ]; then
 		# blobfuse mount/unmount on travis VM does not work against AzureChinaCloud
 		echo "mount volume test:"
-		$csc node publish --endpoint $endpoint --cap 1,block --target-path $target_path $volumeid
+		sudo $csc node publish --endpoint $endpoint --cap 1,block --target-path $target_path $volumeid
 		retcode=$?
 		if [ $retcode -gt 0 ]; then
 			exit $retcode
@@ -76,7 +80,7 @@ if [ -v aadClientSecret ]; then
 		sleep 2
 
 		echo "unmount volume test:"
-		$csc node unpublish --endpoint $endpoint --target-path $target_path $volumeid
+		sudo $csc node unpublish --endpoint $endpoint --target-path $target_path $volumeid
 		retcode=$?
 		if [ $retcode -gt 0 ]; then
 			exit $retcode
