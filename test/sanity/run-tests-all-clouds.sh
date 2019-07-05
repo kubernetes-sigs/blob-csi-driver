@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# set -euo pipefail
+set -euo pipefail
 
 if [ ! -v AZURE_CREDENTIAL_FILE ]; then
 	export set AZURE_CREDENTIAL_FILE=/tmp/azure.json
@@ -38,8 +38,6 @@ if [ -v aadClientSecret ]; then
 	sed -i "s/location-input/$location/g" $AZURE_CREDENTIAL_FILE
 
 	sudo ${GO_BIN_PATH} test -v ./test/sanity/...
-	# make it always succeed for now until enabled sanity test on CI
-	exit 0
 else
 	if [ -v subscriptionId ]; then
 		echo "skip sanity test in CI env"

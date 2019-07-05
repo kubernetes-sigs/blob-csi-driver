@@ -30,7 +30,7 @@ test:
 	go test -covermode=count -coverprofile=profile.cov ./pkg/...
 	$GOPATH/bin/goveralls -coverprofile=profile.cov -service=travis-ci
 integration-test:
-	sudo test/integration/run-tests-all-clouds.sh
+	test/integration/run-tests-all-clouds.sh
 sanity-test:
 	test/sanity/run-tests-all-clouds.sh
 blobfuse:

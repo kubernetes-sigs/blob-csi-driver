@@ -17,7 +17,11 @@
 
 set -euo pipefail
 
-csc=$GOPATH/bin/csc
+csc="csc"
+if [ -v GOPATH ]; then
+        csc=$GOPATH/bin/csc
+fi
+
 volname=`date +%s`
 volname="citest-$volname"
 volSize="2147483648"
