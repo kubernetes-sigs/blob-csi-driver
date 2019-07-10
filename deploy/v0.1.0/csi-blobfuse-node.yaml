@@ -1,19 +1,20 @@
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: csi-blobfuse
+  name: csi-blobfuse-node
   namespace: kube-system
 spec:
   selector:
     matchLabels:
-      app: csi-blobfuse
+      app: csi-blobfuse-node
   template:
     metadata:
       labels:
-        app: csi-blobfuse
+        app: csi-blobfuse-node
     spec:
-      serviceAccountName: csi-driver-registrar
       hostNetwork: true
+      nodeSelector:
+        beta.kubernetes.io/os: linux
       containers:
         - name: liveness-probe
           imagePullPolicy: Always
@@ -24,33 +25,27 @@ spec:
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
-        - name: driver-registrar
-          image: quay.io/k8scsi/csi-node-driver-registrar:v1.0.2
+            - --health-port=9802
+        - name: node-driver-registrar
+          image: quay.io/k8scsi/csi-node-driver-registrar:v1.1.0
           args:
+            - --csi-address=$(ADDRESS)
+            - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
             - --v=5
-            - --csi-address=/csi/csi.sock
-            - --kubelet-registration-path=/var/lib/kubelet/plugins/blobfuse.csi.azure.com/csi.sock
           lifecycle:
             preStop:
               exec:
-                command:
-                  [
-                    "/bin/sh",
-                    "-c",
-                    "rm -rf /registration/disk.csi.azure.com /registration/disk.csi.azure.com-reg.sock",
-                  ]
+                command: ["/bin/sh", "-c", "rm -rf /registration/blobfuse.csi.azure.com-reg.sock /csi/csi.sock"]
           env:
-            - name: KUBE_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  apiVersion: v1
-                  fieldPath: spec.nodeName
-          imagePullPolicy: Always
+            - name: ADDRESS
+              value: /csi/csi.sock
+            - name: DRIVER_REG_SOCK_PATH
+              value: /var/lib/kubelet/plugins/blobfuse.csi.azure.com/csi.sock
           volumeMounts:
-            - mountPath: /csi
-              name: socket-dir
-            - mountPath: /registration
-              name: registration-dir
+            - name: socket-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
         - name: blobfuse
           image: mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.1.0-alpha
           args:
@@ -58,7 +53,7 @@ spec:
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
           ports:
-            - containerPort: 9808
+            - containerPort: 9802
               name: healthz
               protocol: TCP
           livenessProbe:
@@ -85,7 +80,7 @@ spec:
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
-            - mountPath: /var/lib/kubelet/pods
+            - mountPath: /var/lib/kubelet/
               mountPropagation: Bidirectional
               name: mountpoint-dir
             - mountPath: /etc/kubernetes/
@@ -103,7 +98,7 @@ spec:
             type: DirectoryOrCreate
           name: socket-dir
         - hostPath:
-            path: /var/lib/kubelet/pods
+            path: /var/lib/kubelet/
             type: DirectoryOrCreate
           name: mountpoint-dir
         - hostPath:
