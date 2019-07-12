@@ -107,7 +107,7 @@
   revision = "869f871628b6baa9cfbc11732cdf6546b17c1298"
 
 [[projects]]
-  digest = "1:27d8aff388ac8ea2d4057097ef4aad2f98a6a8796477213096160b72b6c87cf2"
+  digest = "1:1e21a0bbb10d73b781e87a9a123b96f6ebe08d0451e50f1b97c1213b302af46f"
   name = "github.com/golang/protobuf"
   packages = [
     "jsonpb",
@@ -124,8 +124,8 @@
     "ptypes/wrappers",
   ]
   pruneopts = "NUT"
-  revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
-  version = "v1.3.1"
+  revision = "6c65a5562fc06764971b7c5d05c76c75e84bdbf7"
+  version = "v1.3.2"
 
 [[projects]]
   digest = "1:bf40199583e5143d1472fc34d10d6f4b69d97572142acf343b3e43136da40823"
@@ -170,7 +170,7 @@
   version = "v0.3.0"
 
 [[projects]]
-  digest = "1:960e8004095e3be6cff988becc8cc9ec1dc0e06887144ed46ff2da86e7c0efea"
+  digest = "1:f265c189bc5100aceef27bda873cacc5b26f56f36999eb667ca67c102998127b"
   name = "github.com/grpc-ecosystem/grpc-gateway"
   packages = [
     "internal",
@@ -178,8 +178,8 @@
     "utilities",
   ]
   pruneopts = "NUT"
-  revision = "d54b3615f714b03edde6d9206fa0476a9169c966"
-  version = "v1.9.3"
+  revision = "bebc7374a79e1105d786ef3468b474e47d652511"
+  version = "v1.9.4"
 
 [[projects]]
   digest = "1:52094d0f8bdf831d1a2401e9b6fee5795fdc0b2a2d1f8bb1980834c289e79129"
@@ -475,14 +475,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:04a5fe5e30285936ae29208ad5752b5ad761f2638f96a45daa5fe0eee34a3547"
+  digest = "1:b99b84ac1fff772afc41f461e26970416f45f2450a74023d974f15482fee06ae"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "04f50cda93cbb67f2afa353c52f342100e80e625"
+  revision = "6ec70d6a5542cba804c6d16ebe8392601a0b7b60"
 
 [[projects]]
   digest = "1:28deae5fe892797ff37a317b5bcda96d11d1c90dadd89f1337651df3bc4c586e"
@@ -919,7 +919,7 @@
     "volume/helpers",
   ]
   pruneopts = "NUT"
-  revision = "02ef7372f6c090f5a90430f1b178b38f1fba2b1e"
+  revision = "0d51509e0ef595d3bb6dde7d7d2a18bc1629aeee"
 
 [[projects]]
   branch = "master"
@@ -927,7 +927,7 @@
   name = "k8s.io/component-base"
   packages = ["featuregate"]
   pruneopts = "NUT"
-  revision = "65d72cfeb85d7715a40c73efae516013d28cb865"
+  revision = "4ad84870f76c26068e679f112232c841d54d5d1d"
 
 [[projects]]
   digest = "1:43099cc4ed575c40f80277c7ba7168df37d0c663bdc4f541325430bd175cce8a"
@@ -943,7 +943,7 @@
   name = "k8s.io/kube-openapi"
   packages = ["pkg/util/proto"]
   pruneopts = "NUT"
-  revision = "db7b694dc208eead64d38030265f702db593fcf2"
+  revision = "33be087ad058f99c78e067996202b60230737e49"
 
 [[projects]]
   digest = "1:e7e6a1b6aca5178f8a604a5ac6f0baeba6edfb813d897042da761f5c80c3f7a1"
@@ -972,14 +972,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:6cf154f83bb7623bea77afdc5d7e7b4c498aef0767bcf46ba4bf1c0e0bbf3296"
+  digest = "1:830872fd1569b34b30d72c14ff78947eae9c8bc759b68316cd96824b19681922"
   name = "k8s.io/legacy-cloud-providers"
   packages = [
     "azure",
     "azure/auth",
   ]
   pruneopts = "NUT"
-  revision = "24befeb85c5f4e6ff80021f17f1549bccd3afd74"
+  revision = "fab1d29e2e315ac4a8ca40a04d8d8aa27d10f420"
 
 [[projects]]
   branch = "master"
