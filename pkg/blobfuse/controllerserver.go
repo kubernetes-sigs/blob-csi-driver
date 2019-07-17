@@ -26,6 +26,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/csi-driver/blobfuse-csi-driver/pkg/util"
 
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
 
 	"google.golang.org/grpc/codes"
@@ -157,9 +158,15 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	blobClient := client.GetBlobService()
 	container := blobClient.GetContainerReference(containerName)
 	// todo: check what value to add into DeleteContainerOptions
-	_, err = container.DeleteIfExists(nil)
+	err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+		_, err := container.DeleteIfExists(nil)
+		if err != nil && !strings.Contains(err.Error(), "ContainerBeingDeleted") {
+			return false, fmt.Errorf("failed to delete container(%s) on account(%s), error: %v", containerName, accountName, err)
+		}
+		return true, nil
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete container(%s) on account(%s), error: %v", containerName, accountName, err)
+		return nil, err
 	}
 
 	klog.V(2).Infof("container(%s) under rg(%s) account(%s) volumeID(%s) is deleted successfully", containerName, resourceGroupName, accountName, volumeID)
