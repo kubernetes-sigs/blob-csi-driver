@@ -16,7 +16,7 @@ Status: Alpha
 |master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
 
 ### Kubernetes Compatibility
-| Blobfuse CSI Driver\Kubernetes Version   | 1.13+ | 
+| Blobfuse CSI Driver\Kubernetes Version   | 1.13+ |
 |------------------------------------------|-------|
 | v0.1.0-alpha                             | yes   |
 | master branch                            | yes   |
