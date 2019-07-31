@@ -33,6 +33,8 @@ integration-test:
 	test/integration/run-tests-all-clouds.sh
 sanity-test:
 	test/sanity/run-tests-all-clouds.sh
+e2e-test:
+	test/e2e/run-test.sh
 blobfuse:
 	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
 	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin ./pkg/blobfuseplugin
