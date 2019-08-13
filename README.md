@@ -7,18 +7,20 @@
 This driver allows Kubernetes to use [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse), csi plugin name: `blobfuse.csi.azure.com`
 
 ### Project Status
-Status: Alpha
+Status: Beta
 
 ### Container Images & CSI Compatibility:
 |Blobfuse CSI Driver Version  | Image                                                | v1.0.0 |
 |-------------------------------|----------------------------------------------------|--------|
 |v0.1.0-alpha                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.1.0-alpha | yes    |
+|v0.2.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.2.0       | yes    |
 |master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
 
 ### Kubernetes Compatibility
 | Blobfuse CSI Driver\Kubernetes Version   | 1.13+ |
 |------------------------------------------|-------|
 | v0.1.0-alpha                             | yes   |
+| v0.2.0                                   | yes   |
 | master branch                            | yes   |
 
 ### Driver parameters
