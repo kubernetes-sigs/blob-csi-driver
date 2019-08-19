@@ -2,33 +2,22 @@
 
 Quick start instructions for the setup and configuration of blobfuse CSI driver using Helm.
 
-Choose one of the following two mutually exclusive options described below.
+## Prerequisites
 
-## Option#1: Install with Helm via `helm template`
+1. [install Helm Client](https://helm.sh/docs/using_helm/#installing-the-helm-client)
 
-```shell
-$ helm template charts/blobfuse-csi-driver --name blobfuse-csi-driver --namespace kube-system > $HOME/blobfuse-csi-driver.yaml
-$ kubectl apply -f $HOME/blobfuse-csi-driver.yaml
-```
+2. [initialize Helm and install Tiller](https://helm.sh/docs/using_helm/#initialize-helm-and-install-tiller)
 
-## Option#2: Install with Helm and Tiller via `helm install`
+## Install BlobFuse via `helm install`
 
-This option need to install [Tiller](https://github.com/kubernetes/helm/blob/master/docs/architecture.md#components), please see [Using Helm](https://helm.sh/docs/using_helm/#example-service-account-with-cluster-admin-role) for more information.
-
-```shell
-$ helm install charts/blobfuse-csi-driver --name blobfuse-csi-driver --namespace kube-system
+```console
+$ cd $GOPATH/src/github.com/csi-driver/blobfuse-csi-driver/charts/latest
+$ helm package blobfuse-csi-driver
+$ helm install blobfuse-csi-driver-latest.tgz --name blobfuse-csi-driver --namespace kube-system
 ```
 
 ## Uninstall
 
-- For option#1, uninstall using `kubectl`:
-
-```shell
-$ kubectl delete -f $HOME/blobfuse-csi-driver.yaml
-```
-
-- For option#2, uninstall using `helm`:
-
-```shell
+```console
 $ helm delete --purge blobfuse-csi-driver
 ```
