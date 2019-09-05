@@ -24,7 +24,6 @@ import (
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/csi-driver/blobfuse-csi-driver/pkg/util"
 	"k8s.io/klog"
 	k8sutil "k8s.io/kubernetes/pkg/volume/util"
 
@@ -122,8 +121,11 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	klog.V(2).Infof("target %v\nfstype %v\n\nreadonly %v\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\n",
 		targetPath, fsType, readOnly, volumeID, attrib, mountFlags, mountOptions)
 
-	cmd := exec.Command("/usr/blob/blobfuse", targetPath, "--tmp-path=/mnt/"+volumeID,
-		"--container-name="+containerName, util.GetMountOptions(mountOptions))
+	args := targetPath + " " + "--tmp-path=/mnt/" + volumeID + " " + "--container-name=" + containerName
+	for _, opt := range mountOptions {
+		args = args + " " + opt
+	}
+	cmd := exec.Command("/usr/blob/blobfuse", strings.Split(args, " ")...)
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
