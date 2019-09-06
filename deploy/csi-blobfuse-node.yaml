@@ -93,6 +93,8 @@ spec:
               name: blobfuse-bin
             - mountPath: /mnt
               name: blobfuse-cache
+            - mountPath: /etc/fuse.conf
+              name: fuse-conf
       volumes:
         - hostPath:
             path: /var/lib/kubelet/plugins/blobfuse.csi.azure.com
@@ -119,3 +121,7 @@ spec:
         - hostPath:
             path: /mnt
           name: blobfuse-cache
+        - hostPath:
+            path: /etc/fuse.conf
+            type: FileOrCreate
+          name: fuse-conf
