@@ -77,7 +77,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	attrib := req.GetVolumeContext()
 	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
 
-	var accountName, accountKey, containerName string
+	var accountName, accountKey, accountSasToken, containerName string
 
 	secrets := req.GetSecrets()
 	if len(secrets) == 0 {
@@ -106,7 +106,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 			return nil, fmt.Errorf("could not find containerName from attributes(%v)", attrib)
 		}
 
-		accountName, accountKey, err = getStorageAccount(secrets)
+		accountName, accountKey, accountSasToken, err = getStorageAccount(secrets)
 		if err != nil {
 			return nil, err
 		}
@@ -126,7 +126,14 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		args = args + " " + opt
 	}
 	cmd := exec.Command("/usr/blob/blobfuse", strings.Split(args, " ")...)
-	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
+	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName)
+
+	if accountSasToken != "" {
+		cmd.Env = append(cmd.Env, "AZURE_STORAGE_SAS_TOKEN="+accountSasToken)
+	} else {
+		cmd.Env = append(cmd.Env, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
+	}
+
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		err = fmt.Errorf("Mount failed with error: %v, output: %v", err, string(output))

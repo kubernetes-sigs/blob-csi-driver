@@ -159,12 +159,13 @@ func appendDefaultMountOptions(mountOptions []string) []string {
 }
 
 // get storage account from secrets map
-func getStorageAccount(secrets map[string]string) (string, string, error) {
+// returns <accountName, accountKey, accountSasToken>
+func getStorageAccount(secrets map[string]string) (string, string, string, error) {
 	if secrets == nil {
-		return "", "", fmt.Errorf("unexpected: getStorageAccount secrets is nil")
+		return "", "", "", fmt.Errorf("unexpected: getStorageAccount secrets is nil")
 	}
 
-	var accountName, accountKey string
+	var accountName, accountKey, accountSasToken string
 	for k, v := range secrets {
 		switch strings.ToLower(k) {
 		case "accountname":
@@ -175,17 +176,22 @@ func getStorageAccount(secrets map[string]string) (string, string, error) {
 			accountKey = v
 		case "azurestorageaccountkey": // for compatability with built-in blobfuse plugin
 			accountKey = v
+		case "azurestorageaccountsastoken":
+			accountSasToken = v
 		}
 	}
 
 	if accountName == "" {
-		return "", "", fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", secrets)
+		return "", "", "", fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", secrets)
 	}
-	if accountKey == "" {
-		return "", "", fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets(%v)", secrets)
+	if accountKey == "" && accountSasToken == "" {
+		return "", "", "", fmt.Errorf("could not find accountkey, azurestorageaccountkey or azurestorageaccountsastoken field in secrets(%v)", secrets)
+	}
+	if accountKey != "" && accountSasToken != "" {
+		return "", "", "", fmt.Errorf("could not specify Access Key and SAS Token together")
 	}
 
-	return accountName, accountKey, nil
+	return accountName, accountKey, accountSasToken, nil
 }
 
 // A container name must be a valid DNS name, conforming to the following naming rules:

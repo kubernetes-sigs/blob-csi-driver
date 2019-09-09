@@ -123,8 +123,8 @@ func TestGetStorageAccount(t *testing.T) {
 	}
 
 	emptyAccountNameMap := map[string]string{
-		"azurestorageaccountname": "",
-		"azurestorageaccountkey":  "testkey",
+		"accountname": "",
+		"accountkey":  "testkey",
 	}
 
 	emptyAzureAccountKeyMap := map[string]string{
@@ -137,11 +137,23 @@ func TestGetStorageAccount(t *testing.T) {
 		"azurestorageaccountkey":  "testkey",
 	}
 
+	emptyAccountSasTokenMap := map[string]string{
+		"azurestorageaccountname":     "testaccount",
+		"azurestorageaccountsastoken": "",
+	}
+
+	accesskeyAndaccountSasTokenMap := map[string]string{
+		"azurestorageaccountname":     "testaccount",
+		"azurestorageaccountkey":      "testkey",
+		"azurestorageaccountsastoken": "testkey",
+	}
+
 	tests := []struct {
 		options   map[string]string
 		expected1 string
 		expected2 string
-		expected3 error
+		expected3 string
+		expected4 error
 	}{
 		{
 			options: map[string]string{
@@ -150,7 +162,8 @@ func TestGetStorageAccount(t *testing.T) {
 			},
 			expected1: "testaccount",
 			expected2: "testkey",
-			expected3: nil,
+			expected3: "",
+			expected4: nil,
 		},
 		{
 			options: map[string]string{
@@ -159,7 +172,8 @@ func TestGetStorageAccount(t *testing.T) {
 			},
 			expected1: "testaccount",
 			expected2: "testkey",
-			expected3: nil,
+			expected3: "",
+			expected4: nil,
 		},
 		{
 			options: map[string]string{
@@ -168,48 +182,68 @@ func TestGetStorageAccount(t *testing.T) {
 			},
 			expected1: "",
 			expected2: "",
-			expected3: fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(map[accountname: accountkey:])"),
+			expected3: "",
+			expected4: fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(map[accountname: accountkey:])"),
 		},
 		{
 			options:   emptyAccountKeyMap,
 			expected1: "",
 			expected2: "",
-			expected3: fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets(%v)", emptyAccountKeyMap),
+			expected3: "",
+			expected4: fmt.Errorf("could not find accountkey, azurestorageaccountkey or azurestorageaccountsastoken field in secrets(%v)", emptyAccountKeyMap),
 		},
 		{
 			options:   emptyAccountNameMap,
 			expected1: "",
 			expected2: "",
-			expected3: fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", emptyAccountNameMap),
+			expected3: "",
+			expected4: fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", emptyAccountNameMap),
 		},
 		{
 			options:   emptyAzureAccountKeyMap,
 			expected1: "",
 			expected2: "",
-			expected3: fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets(%v)", emptyAzureAccountKeyMap),
+			expected3: "",
+			expected4: fmt.Errorf("could not find accountkey, azurestorageaccountkey or azurestorageaccountsastoken field in secrets(%v)", emptyAzureAccountKeyMap),
 		},
 		{
 			options:   emptyAzureAccountNameMap,
 			expected1: "",
 			expected2: "",
-			expected3: fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", emptyAzureAccountNameMap),
+			expected3: "",
+			expected4: fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", emptyAzureAccountNameMap),
+		},
+		{
+			options:   emptyAccountSasTokenMap,
+			expected1: "",
+			expected2: "",
+			expected3: "",
+			expected4: fmt.Errorf("could not find accountkey, azurestorageaccountkey or azurestorageaccountsastoken field in secrets(%v)", emptyAzureAccountKeyMap),
+		},
+		{
+			options:   accesskeyAndaccountSasTokenMap,
+			expected1: "",
+			expected2: "",
+			expected3: "",
+			expected4: fmt.Errorf("could not specify Access Key and SAS Token together"),
 		},
 		{
 			options:   nil,
 			expected1: "",
 			expected2: "",
-			expected3: fmt.Errorf("unexpected: getStorageAccount secrets is nil"),
+			expected3: "",
+			expected4: fmt.Errorf("unexpected: getStorageAccount secrets is nil"),
 		},
 	}
 
 	for _, test := range tests {
-		result1, result2, result3 := getStorageAccount(test.options)
-		if !reflect.DeepEqual(result1, test.expected1) || !reflect.DeepEqual(result2, test.expected2) {
-			t.Errorf("input: %q, getStorageAccount result1: %q, expected1: %q, result2: %q, expected2: %q, result3: %q, expected3: %q", test.options, result1, test.expected1, result2, test.expected2,
-				result3, test.expected3)
+		result1, result2, result3, result4 := getStorageAccount(test.options)
+		if !reflect.DeepEqual(result1, test.expected1) || !reflect.DeepEqual(result2, test.expected2) || !reflect.DeepEqual(result3, test.expected3) {
+			t.Errorf("input: %q, getStorageAccount result1: %q, expected1: %q, result2: %q, expected2: %q, result3: %q, expected3: %q, result4: %q, expected4: %q", test.options, result1, test.expected1, result2, test.expected2,
+				result3, test.expected3, result4, test.expected4)
 		} else {
-			if result1 == "" || result2 == "" {
-				assert.Error(t, result3)
+			if result1 == "" || (result2 == "" && result3 == "") {
+				assert.Error(t, result4)
 			}
 		}
 	}
