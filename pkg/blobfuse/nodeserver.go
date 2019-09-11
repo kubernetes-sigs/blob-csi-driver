@@ -76,40 +76,11 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	volumeID := req.GetVolumeId()
 	attrib := req.GetVolumeContext()
 	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
-
-	var accountName, accountKey, accountSasToken, containerName string
-
 	secrets := req.GetSecrets()
-	if len(secrets) == 0 {
-		var resourceGroupName string
-		resourceGroupName, accountName, containerName, err = getContainerInfo(volumeID)
-		if err != nil {
-			return nil, err
-		}
 
-		if resourceGroupName == "" {
-			resourceGroupName = d.cloud.ResourceGroup
-		}
-
-		accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
-		if err != nil {
-			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
-		}
-	} else {
-		for k, v := range attrib {
-			switch strings.ToLower(k) {
-			case "containername":
-				containerName = v
-			}
-		}
-		if containerName == "" {
-			return nil, fmt.Errorf("could not find containerName from attributes(%v)", attrib)
-		}
-
-		accountName, accountKey, accountSasToken, err = getStorageAccount(secrets)
-		if err != nil {
-			return nil, err
-		}
+	accountName, accountKey, accountSasToken, containerName, err := d.getStorageAccountAndContainer(ctx, volumeID, attrib, secrets)
+	if err != nil {
+		return nil, err
 	}
 
 	options := []string{"--use-https=true"}

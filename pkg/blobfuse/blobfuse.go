@@ -28,6 +28,8 @@ import (
 	"k8s.io/kubernetes/pkg/util/mount"
 	k8sutil "k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/legacy-cloud-providers/azure"
+
+	"golang.org/x/net/context"
 )
 
 const (
@@ -160,9 +162,9 @@ func appendDefaultMountOptions(mountOptions []string) []string {
 
 // get storage account from secrets map
 // returns <accountName, accountKey, accountSasToken>
-func getStorageAccount(secrets map[string]string) (string, string, string, error) {
+func getStorageAccountFromSecretsMap(secrets map[string]string) (string, string, string, error) {
 	if secrets == nil {
-		return "", "", "", fmt.Errorf("unexpected: getStorageAccount secrets is nil")
+		return "", "", "", fmt.Errorf("unexpected: getStorageAccountFromSecretsMap secrets is nil")
 	}
 
 	var accountName, accountKey, accountSasToken string
@@ -227,4 +229,85 @@ func checkContainerNameBeginAndEnd(containerName string) bool {
 	}
 
 	return false
+}
+
+// isSASToken checks if the key contains the patterns. Because a SAS Token must have these strings, use them to judge.
+func isSASToken(key string) bool {
+	return strings.Contains(key, "?sv=")
+}
+
+// getStorageAccountAndContainer: get storage account and container info
+// returns <accountName, accountKey, accountSasToken, containerName>
+func (d *Driver) getStorageAccountAndContainer(ctx context.Context, volumeID string, attrib, secrets map[string]string) (string, string, string, string, error) {
+	var (
+		accountName     string
+		accountKey      string
+		accountSasToken string
+
+		containerName string
+
+		keyVaultURL           string
+		keyVaultSecretName    string
+		keyVaultSecretVersion string
+
+		err error
+	)
+
+	for k, v := range attrib {
+		switch strings.ToLower(k) {
+		case "containername":
+			containerName = v
+		case "keyvaulturl":
+			keyVaultURL = v
+		case "keyvaultsecretname":
+			keyVaultSecretName = v
+		case "keyvaultsecretversion":
+			keyVaultSecretVersion = v
+		case "storageaccountname":
+			accountName = v
+		}
+	}
+
+	// 1. If keyVaultURL is not nil, preferentially use the key stored in key vault.
+	// 2. Then if secrets map is not nil, use the key stored in the secrets map.
+	// 3. Finally if both keyVaultURL and secrets map are nil, get the key from Azure.
+	if keyVaultURL != "" {
+		key, err := d.getKeyVaultSecretContent(ctx, keyVaultURL, keyVaultSecretName, keyVaultSecretVersion)
+		if err != nil {
+			return "", "", "", "", err
+		}
+		if isSASToken(key) {
+			accountSasToken = key
+		} else {
+			accountKey = key
+		}
+	} else {
+		if len(secrets) == 0 {
+			var resourceGroupName string
+			resourceGroupName, accountName, containerName, err = getContainerInfo(volumeID)
+			if err != nil {
+				return "", "", "", "", err
+			}
+
+			if resourceGroupName == "" {
+				resourceGroupName = d.cloud.ResourceGroup
+			}
+
+			accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
+			if err != nil {
+				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
+			}
+		} else {
+			accountName, accountKey, accountSasToken, err = getStorageAccountFromSecretsMap(secrets)
+			if err != nil {
+				return "", "", "", "", err
+			}
+		}
+	}
+
+	if containerName == "" {
+		return "", "", "", "", fmt.Errorf("could not find containerName from attributes(%v) or volumeID(%v)", attrib, volumeID)
+	}
+
+	return accountName, accountKey, accountSasToken, containerName, nil
 }
