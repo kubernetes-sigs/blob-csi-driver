@@ -116,7 +116,7 @@ func TestGetContainerInfo(t *testing.T) {
 	}
 }
 
-func TestGetStorageAccount(t *testing.T) {
+func TestGetStorageAccountFromSecretsMap(t *testing.T) {
 	emptyAccountKeyMap := map[string]string{
 		"accountname": "testaccount",
 		"accountkey":  "",
@@ -232,14 +232,14 @@ func TestGetStorageAccount(t *testing.T) {
 			expected1: "",
 			expected2: "",
 			expected3: "",
-			expected4: fmt.Errorf("unexpected: getStorageAccount secrets is nil"),
+			expected4: fmt.Errorf("unexpected: getStorageAccountFromSecretsMap secrets is nil"),
 		},
 	}
 
 	for _, test := range tests {
-		result1, result2, result3, result4 := getStorageAccount(test.options)
+		result1, result2, result3, result4 := getStorageAccountFromSecretsMap(test.options)
 		if !reflect.DeepEqual(result1, test.expected1) || !reflect.DeepEqual(result2, test.expected2) || !reflect.DeepEqual(result3, test.expected3) {
-			t.Errorf("input: %q, getStorageAccount result1: %q, expected1: %q, result2: %q, expected2: %q, result3: %q, expected3: %q, result4: %q, expected4: %q", test.options, result1, test.expected1, result2, test.expected2,
+			t.Errorf("input: %q, getStorageAccountFromSecretsMap result1: %q, expected1: %q, result2: %q, expected2: %q, result3: %q, expected3: %q, result4: %q, expected4: %q", test.options, result1, test.expected1, result2, test.expected2,
 				result3, test.expected3, result4, test.expected4)
 		} else {
 			if result1 == "" || (result2 == "" && result3 == "") {
@@ -319,6 +319,33 @@ func TestCheckContainerNameBeginAndEnd(t *testing.T) {
 		result := checkContainerNameBeginAndEnd(test.containerName)
 		if !reflect.DeepEqual(result, test.expected) {
 			t.Errorf("input: %q, checkContainerNameBeginAndEnd result: %v, expected: %v", test.containerName, result, test.expected)
+		}
+	}
+}
+
+func TestIsSASToken(t *testing.T) {
+	tests := []struct {
+		key      string
+		expected bool
+	}{
+		{
+			key:      "?sv=2017-03-28&ss=bfqt&srt=sco&sp=rwdlacup",
+			expected: true,
+		},
+		{
+			key:      "&ss=bfqt&srt=sco&sp=rwdlacup",
+			expected: false,
+		},
+		{
+			key:      "123456789vbDWANIJ319Fqabcded3wwLRnxK70zRJ",
+			expected: false,
+		},
+	}
+
+	for _, test := range tests {
+		result := isSASToken(test.key)
+		if !reflect.DeepEqual(result, test.expected) {
+			t.Errorf("input: %q, isSASToken result: %v, expected: %v", test.key, result, test.expected)
 		}
 	}
 }

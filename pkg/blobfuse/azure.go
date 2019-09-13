@@ -19,13 +19,21 @@ package blobfuse
 import (
 	"fmt"
 	"os"
+	"strings"
+
+	kv "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"k8s.io/klog"
-	"k8s.io/legacy-cloud-providers/azure"
+	azureprovider "k8s.io/legacy-cloud-providers/azure"
+
+	"golang.org/x/net/context"
 )
 
 // GetCloudProvider get Azure Cloud Provider
-func GetCloudProvider() (*azure.Cloud, error) {
+func GetCloudProvider() (*azureprovider.Cloud, error) {
 	credFile, ok := os.LookupEnv("AZURE_CREDENTIAL_FILE")
 	if ok {
 		klog.V(2).Infof("AZURE_CREDENTIAL_FILE env var set as %v", credFile)
@@ -41,14 +49,66 @@ func GetCloudProvider() (*azure.Cloud, error) {
 	}
 	defer f.Close()
 
-	cloud, err := azure.NewCloud(f)
+	cloud, err := azureprovider.NewCloud(f)
 	if err != nil {
 		return nil, err
 	}
 
-	az, ok := cloud.(*azure.Cloud)
+	az, ok := cloud.(*azureprovider.Cloud)
 	if !ok || az == nil {
 		return nil, fmt.Errorf("failed to get Azure Cloud Provider. GetCloudProvider returned %v instead", cloud)
 	}
 	return az, nil
+}
+
+// getKeyVaultSecretContent get content of the keyvault secret
+func (d *Driver) getKeyVaultSecretContent(ctx context.Context, vaultURL string, secretName string, secretVersion string) (content string, err error) {
+	kvClient, err := d.initializeKvClient()
+	if err != nil {
+		return "", fmt.Errorf("failed to get keyvaultClient: %v", err)
+	}
+
+	secret, err := kvClient.GetSecret(ctx, vaultURL, secretName, secretVersion)
+	if err != nil {
+		return "", fmt.Errorf("failed to use vaultURL(%v), sercretName(%v), secretVersion(%v) to get secret: %v", vaultURL, secretName, secretVersion, err)
+	}
+	return *secret.Value, nil
+}
+
+func (d *Driver) initializeKvClient() (*kv.BaseClient, error) {
+	kvClient := kv.New()
+	token, err := d.getKeyvaultToken()
+	if err != nil {
+		return nil, err
+	}
+
+	kvClient.Authorizer = token
+	return &kvClient, nil
+}
+
+// getKeyvaultToken retrieves a new service principal token to access keyvault
+func (d *Driver) getKeyvaultToken() (authorizer autorest.Authorizer, err error) {
+	env := d.cloud.Environment
+
+	kvEndPoint := strings.TrimSuffix(env.KeyVaultEndpoint, "/")
+	servicePrincipalToken, err := d.getServicePrincipalToken(env, kvEndPoint)
+	if err != nil {
+		return nil, err
+	}
+	authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
+	return authorizer, nil
+}
+
+// getServicePrincipalToken creates a new service principal token based on the configuration
+func (d *Driver) getServicePrincipalToken(env azure.Environment, resource string) (*adal.ServicePrincipalToken, error) {
+	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, d.cloud.TenantID)
+	if err != nil {
+		return nil, fmt.Errorf("creating the OAuth config: %v", err)
+	}
+
+	return adal.NewServicePrincipalToken(
+		*oauthConfig,
+		d.cloud.AADClientID,
+		d.cloud.AADClientSecret,
+		resource)
 }

@@ -10,10 +10,11 @@
   version = "v0.4.12"
 
 [[projects]]
-  digest = "1:8d4645122a69d632abb4fd09f0f8b1bc6efd327b7626b47aef4c33a8652cdf0d"
+  digest = "1:a07f429daed6ae8b9f7385adce4b136de16f9ea327b01dc42ee34ddc1a52b43a"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "services/compute/mgmt/2019-03-01/compute",
+    "services/keyvault/2016-10-01/keyvault",
     "services/network/mgmt/2018-08-01/network",
     "services/storage/mgmt/2018-07-01/storage",
     "storage",
@@ -1495,8 +1496,12 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2018-07-01/storage",
     "github.com/Azure/azure-sdk-for-go/storage",
+    "github.com/Azure/go-autorest/autorest",
+    "github.com/Azure/go-autorest/autorest/adal",
+    "github.com/Azure/go-autorest/autorest/azure",
     "github.com/container-storage-interface/spec/lib/go/csi",
     "github.com/golang/protobuf/ptypes/wrappers",
     "github.com/kubernetes-csi/csi-test/pkg/sanity",
