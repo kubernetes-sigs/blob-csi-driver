@@ -24,6 +24,8 @@ import (
 	"github.com/csi-driver/blobfuse-csi-driver/test/e2e/driver"
 	"github.com/csi-driver/blobfuse-csi-driver/test/e2e/testsuites"
 	. "github.com/onsi/ginkgo"
+	"github.com/pborman/uuid"
+
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
@@ -40,7 +42,7 @@ var _ = Describe("Dynamic Provisioning", func() {
 
 	nodeid := os.Getenv("nodeid")
 	blobfuseDriver := blobfuse.NewDriver(nodeid)
-	endpoint := "unix:///tmp/csi.sock"
+	endpoint := fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String())
 
 	go func() {
 		blobfuseDriver.Run(endpoint)
