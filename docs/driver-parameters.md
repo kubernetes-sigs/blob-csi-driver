@@ -16,9 +16,16 @@ containerName | specify the existing container name where blob storage will be c
 
  - Static Provisioning(use existing storage container)
   > get a quick example [here](../deploy/example/pv-blobfuse-csi.yaml)
+  >
+  > get a key vault example [here](../deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml)
 
 Name | Meaning | Available Value | Mandatory | Default value
 --- | --- | --- | --- | ---
 volumeAttributes.containerName | existing container name | existing container name | Yes |
+volumeAttributes.storageAccountName | existing storage account name | existing storage account name | Yes |
+volumeAttributes.keyVaultURL | url of the key vault | the key vault which has been created | Yes |
+volumeAttributes.keyVaultSecretName | name of the secret in key vault | the secret which has been created | Yes |
+volumeAttributes.keyVaultSecretVersion | existing container name | existing container name | No |if empty, driver will use "current versoin"
 nodePublishSecretRef.name | secret name that stores storage account name and key | existing secret name |  Yes  | 
 nodePublishSecretRef.namespace | namespace where the secret is | k8s namespace  |  No  | `default`
+
