@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-blobfuse-keyvault
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain #If set as "Delete" container would be removed after pvc deletion
+  csi:
+    driver: blobfuse.csi.azure.com
+    readOnly: false
+    volumeHandle: arbitrary-volumeid
+    volumeAttributes:
+      containerName: EXISTING_CONTAINER_NAME
+      storageAccountName: EXISTING_STORAGE_ACCOUNT_NAME
+      keyVaultURL: xxx
+      keyVaultSecretName: xxx
+      keyVaultSecretVersion: xxx  # use "current versoin" if empty
+    nodePublishSecretRef:
+      name: azure-secret
+      namespace: default
