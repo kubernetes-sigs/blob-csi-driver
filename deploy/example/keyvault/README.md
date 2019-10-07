@@ -4,48 +4,37 @@
 
 ## Prepare Key Vault
 
-1. Create a Key Vault in the [portal](https://ms.portal.azure.com/#blade/HubsExtension/BrowseResourceBlade/resourceType/Microsoft.KeyVault%2Fvaults).
+1. Create an Azure Key Vault
 
-2. Store `storage account key` or `SAS token` in Key Vault's Secret.
+2. Store `storage account key` or `SAS token` as `secret` in Azure Key Vault.
 
-3. Ensure the service principal has all the required permissions to access content in your Azure key vault instance. If not, you can run the following using the Azure CLI:
+3. Ensure service principal in cluster has all the required permissions to access content in your Azure key vault instance. If not, run the following commands:
 
    ```console
    # Assign Reader Role to the service principal for your keyvault
-   az role assignment create --role Reader --assignee <aadClientId> --scope /subscriptions/<subscriptionid>/resourcegroups/<resourcegroup>/providers/Microsoft.KeyVault/vaults/<keyvaultname>
+   az role assignment create --role Reader --assignee <YOUR SPN CLIENT ID> --scope /subscriptions/<subscriptionid>/resourcegroups/<resourcegroup>/providers/Microsoft.KeyVault/vaults/$keyvaultname
    
-   az keyvault set-policy -n $KV_NAME --key-permissions get --spn <YOUR SPN CLIENT ID>
-   az keyvault set-policy -n $KV_NAME --secret-permissions get --spn <YOUR SPN CLIENT ID>
-   az keyvault set-policy -n $KV_NAME --certificate-permissions get --spn <YOUR CLIENT ID>
+   az keyvault set-policy -n $keyvaultname --key-permissions get --spn <YOUR SPN CLIENT ID>
+   az keyvault set-policy -n $keyvaultname --secret-permissions get --spn <YOUR SPN CLIENT ID>
+   az keyvault set-policy -n $keyvaultname --certificate-permissions get --spn <YOUR CLIENT ID>
    ```
 
-## Install Blobfuse CSI Driver
+## Install blobfuse CSI driver on a kubernetes cluster
+Please refer to [install blobfuse csi driver](https://github.com/csi-driver/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
 
-### Option #1
-
-Use the [script](https://github.com/csi-driver/blobfuse-csi-driver/blob/master/deploy/install-driver.sh) to install.
-
-### Option #2
-
-Use [helm](https://github.com/csi-driver/blobfuse-csi-driver/blob/master/charts/README.md) to install.
+## Create PV
+1.  Download a `pv-blobfuse-csi-keyvault.yaml`, edit `keyVaultURL`, `keyVaultSecretName`, `containerName` in PV
+> `keyVaultSecretVersion` is the optional parameter. If not specified, it will be *current versoin*.
+```
+wget https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml
+vi pv-blobfuse-csi-keyvault.yaml
+kubectl apply -f pv-blobfuse-csi-keyvault.yaml
+```
 
 ## Create PVC 
 
-Use default pvc file to create.
-
 ```console
-kubectl apply -f pvc-blobfuse-csi-static-keyvault.yaml
+kubectl apply -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/keyvault/pvc-blobfuse-csi-static-keyvault.yaml
 ```
 
-## Create PV
 
-1. Replace your Key Vault infomation in the yaml.
-
-   `keyVaultURL`  and `keyVaultSecretName` are the required parameters.
-
-   `keyVaultSecretVersion` is the optional parameter. If not specified, it will be *current versoin*.
-2. Create pv 
-
-    ```console
-    kubectl apply -f pv-blobfuse-csi-static-keyvault.yaml
-    ```
