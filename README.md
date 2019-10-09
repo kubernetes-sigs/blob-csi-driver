@@ -62,11 +62,15 @@ kubectl create -f storageclass-blobfuse-csi-existing-container.yaml
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
 ```
 
-#### Option#2: provide storage account name and key
- - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
+#### Option#2: provide storage account name and key(or sastoken)
+ - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key(or sastoken)
 ```
-kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
+kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountkey="KEY" --type=Opaque
+#kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountsastoken
+="sastoken" --type=Opaque
 ```
+
+> storage account key(or sastoken) could also be stored in Azure Key Vault, check example here: [read-from-keyvault](./docs/read-from-keyvault.md)
 
  - Create a blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `containerName` in `volumeAttributes`
 ```sh

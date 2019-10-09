@@ -15,9 +15,5 @@ spec:
     volumeAttributes:
       containerName: EXISTING_CONTAINER_NAME
       storageAccountName: EXISTING_STORAGE_ACCOUNT_NAME
-      keyVaultURL: xxx
+      keyVaultURL: https://xxx.vault.azure.net/
       keyVaultSecretName: xxx
-      keyVaultSecretVersion: xxx  # use "current versoin" if empty
-    nodePublishSecretRef:
-      name: azure-secret
-      namespace: default

@@ -23,9 +23,8 @@ Name | Meaning | Available Value | Mandatory | Default value
 --- | --- | --- | --- | ---
 volumeAttributes.containerName | existing container name | existing container name | Yes |
 volumeAttributes.storageAccountName | existing storage account name | existing storage account name | Yes |
-volumeAttributes.keyVaultURL | url of the key vault | the key vault which has been created | Yes |
-volumeAttributes.keyVaultSecretName | name of the secret in key vault | the secret which has been created | Yes |
-volumeAttributes.keyVaultSecretVersion | existing container name | existing container name | No |if empty, driver will use "current versoin"
-nodePublishSecretRef.name | secret name that stores storage account name and key | existing secret name |  Yes  | 
+volumeAttributes.keyVaultURL | Azure Key Vault DNS name | existing Azure Key Vault DNS name | No |
+volumeAttributes.keyVaultSecretName | Azure Key Vault secret name | existing Azure Key Vault secret name | No |
+volumeAttributes.keyVaultSecretVersion | Azure Key Vault secret version | existing version | No |if empty, driver will use "current versoin"
+nodePublishSecretRef.name | secret name that stores storage account name and key(or sastoken) | existing kubernetes secret name |  No  |
 nodePublishSecretRef.namespace | namespace where the secret is | k8s namespace  |  No  | `default`
-
