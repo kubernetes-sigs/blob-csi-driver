@@ -1,6 +1,4 @@
-# Use Blobfuse CSI Driver with storage account key(or sastoken) stored in Azure Key Vault
-
-> Attention: Currently, we just support use Key Vault in static provisioning scenario.
+# Read storage account key(or sastoken) from Azure Key Vault
 
 ## Prerequisite
 
@@ -28,7 +26,7 @@ Please refer to [install blobfuse csi driver](https://github.com/csi-driver/blob
 ## Create PV
 1.  Download a `pv-blobfuse-csi-keyvault.yaml`, edit `keyVaultURL`, `keyVaultSecretName`, `containerName` in PV
 > `keyVaultSecretVersion` is the optional parameter. If not specified, it will be *current versoin*.
-```
+```console
 wget https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi-keyvault.yaml
 vi pv-blobfuse-csi-keyvault.yaml
 kubectl apply -f pv-blobfuse-csi-keyvault.yaml
