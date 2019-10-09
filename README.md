@@ -14,6 +14,7 @@ Status: Beta
 |-------------------------------|----------------------------------------------------|--------|
 |v0.1.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.1.0       | yes    |
 |v0.2.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.2.0       | yes    |
+|v0.3.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.3.0       | yes    |
 |master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
 
 ### Kubernetes Compatibility
@@ -21,6 +22,7 @@ Status: Beta
 |------------------------------------------|-------|
 | v0.1.0                                   | yes   |
 | v0.2.0                                   | yes   |
+| v0.3.0                                   | yes   |
 | master branch                            | yes   |
 
 ### Driver parameters
