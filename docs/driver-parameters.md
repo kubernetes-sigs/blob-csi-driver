@@ -14,6 +14,10 @@ resourceGroup | specify the existing resource group name where the container is 
 storageAccount | specify the storage account name in which blobfuse share will be created | STORAGE_ACCOUNT_NAME | No | if empty, driver will find a suitable storage account that matches `skuName` in the same resource group; if a storage account name is provided, it means that storage account must exist otherwise there would be error
 containerName | specify the existing container name where blob storage will be created | existing container name | No | if empty, driver will create a new container name, starting with `pvc-fuse`
 
+ - `fsGroup` securityContext setting
+
+Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check https://github.com/Azure/azure-storage-fuse#mount-options for more mountoptions.
+
  - Static Provisioning(use existing storage container)
   > get a quick example [here](../deploy/example/pv-blobfuse-csi.yaml)
   >
