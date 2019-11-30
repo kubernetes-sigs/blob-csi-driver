@@ -12,18 +12,16 @@ Status: Beta
 ### Container Images & CSI Compatibility:
 |Blobfuse CSI Driver Version    | Image                                              | v1.0.0 |
 |-------------------------------|----------------------------------------------------|--------|
-|v0.1.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.1.0       | yes    |
-|v0.2.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.2.0       | yes    |
-|v0.3.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.3.0       | yes    |
 |master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
+|v0.3.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.3.0       | yes    |
+|v0.2.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.2.0       | yes    |
 
 ### Kubernetes Compatibility
 | Blobfuse CSI Driver\Kubernetes Version   | 1.13+ |
 |------------------------------------------|-------|
-| v0.1.0                                   | yes   |
-| v0.2.0                                   | yes   |
-| v0.3.0                                   | yes   |
 | master branch                            | yes   |
+| v0.3.0                                   | yes   |
+| v0.2.0                                   | yes   |
 
 ### Driver parameters
 Please refer to `blobfuse.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
