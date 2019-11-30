@@ -13,7 +13,7 @@
 # limitations under the License.
 
 PKG=github.com/csi-driver/blobfuse-csi-driver
-REGISTRY_NAME=andyzhangx
+REGISTRY_NAME?=andyzhangx
 IMAGE_NAME=blobfuse-csi
 IMAGE_VERSION=v0.4.0
 IMAGE_TAG=$(REGISTRY_NAME)/$(IMAGE_NAME):$(IMAGE_VERSION)
