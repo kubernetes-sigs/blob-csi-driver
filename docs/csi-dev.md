@@ -1,30 +1,52 @@
-# Azure file CSI driver development guide
+# Blobfuse CSI driver development guide
 
- - Build blobfuse plugin
+ - Clone repo
 ```
+$ mkdir -p $GOPATH/src/github.com/csi-driver
+$ git clone https://github.com/csi-driver/blobfuse-csi-driver $GOPATH/src/github.com/csi-driver
+```
+
+ - Build blobfuse driver
+```
+$ cd $GOPATH/src/github.com/csi-driver/blobfuse-csi-driver
 $ make blobfuse
 ```
-> Before running CSI driver, create "/etc/kubernetes/azure.json" file under testing server(it's better copy `azure.json` file from a k8s cluster with service principle configured correctly) and set `AZURE_CREDENTIAL_FILE` as following:
-```
-export set AZURE_CREDENTIAL_FILE=/etc/kubernetes/azure.json
-```
+
  - Run test
 ```
 $ make test
 ```
 
-### Start CSI driver
+ - Build continer image and push to dockerhub
 ```
-$ ./_output/blobfuseplugin --endpoint tcp://127.0.0.1:10000 --nodeid CSINode -v=5
+export REGISTRY_NAME=<dockerhub-alias>
+make push-latest
 ```
 
-### Test using csc
-Get ```csc``` tool from https://github.com/rexray/gocsi/tree/master/csc
+### Test locally using csc tool
+Install `csc` tool according to https://github.com/rexray/gocsi/tree/master/csc:
+```
+$ mkdir -p $GOPATH/src/github.com
+$ cd $GOPATH/src/github.com
+$ git clone https://github.com/rexray/gocsi.git
+$ cd rexray/gocsi/csc
+$ make build
+```
+
+#### Start CSI driver locally
+```
+$ cd $GOPATH/src/github.com/csi-driver/blobfuse-csi-driver
+$ ./_output/blobfuseplugin --endpoint tcp://127.0.0.1:10000 --nodeid CSINode -v=5 &
+```
+> Before running CSI driver, create "/etc/kubernetes/azure.json" file under testing server(it's better copy `azure.json` file from a k8s cluster with service principle configured correctly) and set `AZURE_CREDENTIAL_FILE` as following:
+```
+export set AZURE_CREDENTIAL_FILE=/etc/kubernetes/azure.json
+```
 
 #### 1. Get plugin info
 ```
 $ csc identity plugin-info --endpoint tcp://127.0.0.1:10000
-"csi-blobfuse" "v0.5.0-alpha"
+"blobfuse.csi.azure.com"        "v0.4.0"
 ```
 
 #### 2. Create an blobfuse volume
