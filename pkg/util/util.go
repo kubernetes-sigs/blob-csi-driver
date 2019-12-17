@@ -55,7 +55,7 @@ func roundUpSize(volumeSizeBytes int64, allocationUnitBytes int64) int64 {
 	return roundedUp
 }
 
-// GetMountOptions return options with string list seperated by space
+// GetMountOptions return options with string list separated by space
 func GetMountOptions(options []string) string {
 	if len(options) == 0 {
 		return ""
