@@ -2,13 +2,13 @@
 
  - Clone repo
 ```
-$ mkdir -p $GOPATH/src/github.com/csi-driver
-$ git clone https://github.com/csi-driver/blobfuse-csi-driver $GOPATH/src/github.com/csi-driver
+$ mkdir -p $GOPATH/src/github.com/kubernetes-sigs
+$ git clone https://github.com/kubernetes-sigs/blobfuse-csi-driver $GOPATH/src/github.com/kubernetes-sigs
 ```
 
  - Build blobfuse driver
 ```
-$ cd $GOPATH/src/github.com/csi-driver/blobfuse-csi-driver
+$ cd $GOPATH/src/github.com/kubernetes-sigs/blobfuse-csi-driver
 $ make blobfuse
 ```
 
@@ -35,7 +35,7 @@ $ make build
 
 #### Start CSI driver locally
 ```
-$ cd $GOPATH/src/github.com/csi-driver/blobfuse-csi-driver
+$ cd $GOPATH/src/github.com/kubernetes-sigs/blobfuse-csi-driver
 $ ./_output/blobfuseplugin --endpoint tcp://127.0.0.1:10000 --nodeid CSINode -v=5 &
 ```
 > Before running CSI driver, create "/etc/kubernetes/azure.json" file under testing server(it's better copy `azure.json` file from a k8s cluster with service principle configured correctly) and set `AZURE_CREDENTIAL_FILE` as following:

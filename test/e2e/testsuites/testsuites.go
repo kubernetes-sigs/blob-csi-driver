@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/csi-driver/blobfuse-csi-driver/pkg/blobfuse"
+	"github.com/kubernetes-sigs/blobfuse-csi-driver/pkg/blobfuse"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 
 	snapshotclientset "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned"

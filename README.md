@@ -32,7 +32,7 @@ Please refer to `blobfuse.csi.azure.com` [driver parameters](./docs/driver-param
  > if cluster is based on Managed Service Identity(MSI), make sure all agent nodes have `Contributor` role for current resource group
 
 ### Install blobfuse CSI driver on a kubernetes cluster
-Please refer to [install blobfuse csi driver](https://github.com/csi-driver/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
+Please refer to [install blobfuse csi driver](https://github.com/kubernetes-sigs/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
 
 ### Examples
  - [Basic usage](./deploy/example/e2e_usage.md)

@@ -19,7 +19,7 @@ package driver
 import (
 	"fmt"
 
-	blobfuse "github.com/csi-driver/blobfuse-csi-driver/pkg/blobfuse"
+	blobfuse "github.com/kubernetes-sigs/blobfuse-csi-driver/pkg/blobfuse"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
