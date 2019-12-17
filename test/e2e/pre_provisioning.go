@@ -22,9 +22,9 @@ import (
 	"os"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/csi-driver/blobfuse-csi-driver/pkg/blobfuse"
-	"github.com/csi-driver/blobfuse-csi-driver/test/e2e/driver"
-	"github.com/csi-driver/blobfuse-csi-driver/test/e2e/testsuites"
+	"github.com/kubernetes-sigs/blobfuse-csi-driver/pkg/blobfuse"
+	"github.com/kubernetes-sigs/blobfuse-csi-driver/test/e2e/driver"
+	"github.com/kubernetes-sigs/blobfuse-csi-driver/test/e2e/testsuites"
 	. "github.com/onsi/ginkgo"
 	"github.com/pborman/uuid"
 

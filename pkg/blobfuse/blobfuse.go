@@ -21,7 +21,7 @@ import (
 	"strings"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	csicommon "github.com/csi-driver/blobfuse-csi-driver/pkg/csi-common"
+	csicommon "github.com/kubernetes-sigs/blobfuse-csi-driver/pkg/csi-common"
 	"github.com/pborman/uuid"
 
 	"k8s.io/klog"

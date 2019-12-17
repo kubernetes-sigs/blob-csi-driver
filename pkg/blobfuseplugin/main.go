@@ -25,7 +25,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/csi-driver/blobfuse-csi-driver/pkg/blobfuse"
+	"github.com/kubernetes-sigs/blobfuse-csi-driver/pkg/blobfuse"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"k8s.io/klog"
 )

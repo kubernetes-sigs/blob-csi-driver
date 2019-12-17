@@ -24,7 +24,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2018-07-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/csi-driver/blobfuse-csi-driver/pkg/util"
+	"github.com/kubernetes-sigs/blobfuse-csi-driver/pkg/util"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"

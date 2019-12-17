@@ -21,7 +21,7 @@ import (
 
 	sanity "github.com/kubernetes-csi/csi-test/pkg/sanity"
 
-	blobfuse "github.com/csi-driver/blobfuse-csi-driver/pkg/blobfuse"
+	blobfuse "github.com/kubernetes-sigs/blobfuse-csi-driver/pkg/blobfuse"
 )
 
 const (

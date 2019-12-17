@@ -18,7 +18,7 @@ package testsuites
 
 import (
 	"fmt"
-	"github.com/csi-driver/blobfuse-csi-driver/test/e2e/driver"
+	"github.com/kubernetes-sigs/blobfuse-csi-driver/test/e2e/driver"
 	"k8s.io/kubernetes/test/e2e/framework"
 
 	"k8s.io/api/core/v1"

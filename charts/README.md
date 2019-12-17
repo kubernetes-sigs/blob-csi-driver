@@ -11,7 +11,7 @@ Quick start instructions for the setup and configuration of blobfuse CSI driver 
 ## Install BlobFuse via `helm install`
 
 ```console
-$ cd $GOPATH/src/github.com/csi-driver/blobfuse-csi-driver/charts/latest
+$ cd $GOPATH/src/github.com/kubernetes-sigs/blobfuse-csi-driver/charts/latest
 $ helm package blobfuse-csi-driver
 $ helm install blobfuse-csi-driver-latest.tgz --name blobfuse-csi-driver --namespace kube-system
 ```
