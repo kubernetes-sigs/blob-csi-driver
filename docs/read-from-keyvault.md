@@ -25,7 +25,7 @@ Please refer to [install blobfuse csi driver](https://github.com/kubernetes-sigs
 
 ## Create PV
 1.  Download a `pv-blobfuse-csi-keyvault.yaml`, edit `keyVaultURL`, `keyVaultSecretName`, `containerName` in PV
-> `keyVaultSecretVersion` is the optional parameter. If not specified, it will be *current versoin*.
+> `keyVaultSecretVersion` is the optional parameter. If not specified, it will be *current version*.
 ```console
 wget https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi-keyvault.yaml
 vi pv-blobfuse-csi-keyvault.yaml

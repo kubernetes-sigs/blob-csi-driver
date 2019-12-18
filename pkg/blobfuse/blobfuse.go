@@ -35,7 +35,7 @@ import (
 const (
 	// DriverName holds the name of the csi-driver
 	DriverName       = "blobfuse.csi.azure.com"
-	seperator        = "#"
+	separator        = "#"
 	volumeIDTemplate = "%s#%s#%s"
 	fileMode         = "file_mode"
 	dirMode          = "dir_mode"
@@ -114,7 +114,7 @@ func (d *Driver) Run(endpoint string) {
 // input: "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
 // output: rg, f5713de20cde511e8ba4900, pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41
 func getContainerInfo(id string) (string, string, string, error) {
-	segments := strings.Split(id, seperator)
+	segments := strings.Split(id, separator)
 	if len(segments) < 3 {
 		return "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
 	}
@@ -172,11 +172,11 @@ func getStorageAccountFromSecretsMap(secrets map[string]string) (string, string,
 		switch strings.ToLower(k) {
 		case "accountname":
 			accountName = v
-		case "azurestorageaccountname": // for compatability with built-in blobfuse plugin
+		case "azurestorageaccountname": // for compatibility with built-in blobfuse plugin
 			accountName = v
 		case "accountkey":
 			accountKey = v
-		case "azurestorageaccountkey": // for compatability with built-in blobfuse plugin
+		case "azurestorageaccountkey": // for compatibility with built-in blobfuse plugin
 			accountKey = v
 		case "azurestorageaccountsastoken":
 			accountSasToken = v
