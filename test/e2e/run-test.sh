@@ -16,20 +16,11 @@
 
 set -uo pipefail
 
-kubectl get daemonsets csi-blobfuse-node -n kube-system; checkBlobFuseDriver=$?;
-if [ $checkBlobFuseDriver -ne 0 ]; then
-    echo "BlobFuse csi driver daemonset not found";
-    echo "Installing BlobFuse csi driver";
-    deploy/install-driver.sh
-    echo "BlobFuse csi driver installed";    
-fi
-
 # Fetching ginkgo for running the test
 GO111MODULE=off go get -u github.com/onsi/ginkgo/ginkgo
-# Exporting KUBECONFIG path
-export KUBECONFIG=$HOME/.kube/config
+
 # Running the e2e test
-ginkgo test/e2e
+ginkgo -v test/e2e
 # Checking for test status
 TEST_PASS=$?
 if [[ $TEST_PASS -ne 0 ]]; then

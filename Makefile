@@ -46,6 +46,14 @@ integration-test:
 e2e-test:
 	test/e2e/run-test.sh
 
+.PHONY: e2e-bootstrap
+e2e-bootstrap:
+	deploy/install-driver.sh
+
+.PHONY: e2e-teardown
+e2e-teardown:
+	deploy/uninstall-driver.sh
+
 .PHONY: blobfuse
 blobfuse:
 	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
