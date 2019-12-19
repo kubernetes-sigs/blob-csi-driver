@@ -10,12 +10,13 @@
   version = "v0.4.12"
 
 [[projects]]
-  digest = "1:a07f429daed6ae8b9f7385adce4b136de16f9ea327b01dc42ee34ddc1a52b43a"
+  digest = "1:85ae1019b6c64b54c718b83326901ca292f65628691fe44819b50b0b11b5730f"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "services/compute/mgmt/2019-03-01/compute",
     "services/keyvault/2016-10-01/keyvault",
     "services/network/mgmt/2018-08-01/network",
+    "services/resources/mgmt/2018-05-01/resources",
     "services/storage/mgmt/2018-07-01/storage",
     "storage",
     "version",
@@ -376,17 +377,6 @@
   version = "v1.1.7"
 
 [[projects]]
-  digest = "1:432fea868210b05faefdd757e43a33ccafb2ff52d5279cb97e3d46803b476107"
-  name = "github.com/kubernetes-csi/csi-test"
-  packages = [
-    "pkg/sanity",
-    "utils",
-  ]
-  pruneopts = "NUT"
-  revision = "d6050bc370c91c9bc777acbeb66bfb38da14a4a6"
-  version = "v1.1.1"
-
-[[projects]]
   digest = "1:aa5b698b0274a8b8ea3ede91f4f0284ba1b3b2ff9c8525651b9b6857aafdfac1"
   name = "github.com/kubernetes-csi/external-snapshotter"
   packages = [
@@ -506,6 +496,14 @@
   pruneopts = "NUT"
   revision = "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1"
   version = "v1.2"
+
+[[projects]]
+  digest = "1:efec7b15c9f6f20c96a5710fea5d946aabf13018d9e2d2c50a4746f850514f9d"
+  name = "github.com/pelletier/go-toml"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "903d9455db9ff1d7ac1ab199062eca7266dd11a3"
+  version = "v1.6.0"
 
 [[projects]]
   branch = "master"
@@ -1498,6 +1496,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault",
+    "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",
     "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2018-07-01/storage",
     "github.com/Azure/azure-sdk-for-go/storage",
     "github.com/Azure/go-autorest/autorest",
@@ -1505,12 +1504,12 @@
     "github.com/Azure/go-autorest/autorest/azure",
     "github.com/container-storage-interface/spec/lib/go/csi",
     "github.com/golang/protobuf/ptypes/wrappers",
-    "github.com/kubernetes-csi/csi-test/pkg/sanity",
     "github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1",
     "github.com/kubernetes-csi/external-snapshotter/pkg/client/clientset/versioned",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
     "github.com/pborman/uuid",
+    "github.com/pelletier/go-toml",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/stretchr/testify/assert",
     "golang.org/x/net/context",

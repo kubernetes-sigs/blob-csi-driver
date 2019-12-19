@@ -32,15 +32,15 @@ verify:
 
 .PHONY: unit-test
 unit-test:
-	go test -covermode=count -coverprofile=profile.cov ./pkg/...
+	go test -covermode=count -coverprofile=profile.cov ./pkg/... ./test/utils/credentials
 
 .PHONY: sanity-test
-sanity-test:
-	test/sanity/run-tests-all-clouds.sh
+sanity-test: blobfuse
+	go test -v -timeout=30m ./test/sanity
 
 .PHONY: integration-test
-integration-test:
-	test/integration/run-tests-all-clouds.sh
+integration-test: blobfuse
+	go test -v -timeout=30m ./test/integration
 
 .PHONY: e2e-test
 e2e-test:
