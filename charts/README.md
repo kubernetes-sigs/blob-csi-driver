@@ -13,7 +13,7 @@ Quick start instructions for the setup and configuration of blobfuse CSI driver 
 ```console
 $ cd $GOPATH/src/sigs.k8s.io/blobfuse-csi-driver/charts/latest
 $ helm package blobfuse-csi-driver
-$ helm install blobfuse-csi-driver-latest.tgz --name blobfuse-csi-driver --namespace kube-system
+$ helm install blobfuse-csi-driver blobfuse-csi-driver-latest.tgz --namespace kube-system
 ```
 
 ## Uninstall

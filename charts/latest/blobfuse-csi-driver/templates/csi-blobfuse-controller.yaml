@@ -5,7 +5,7 @@ metadata:
   namespace: {{ .Release.Namespace }}
 {{ include "blobfuse.labels" . | indent 2 }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.controller.replicas }}
   selector:
     matchLabels:
       app: csi-blobfuse-controller
@@ -20,28 +20,32 @@ spec:
       priorityClassName: system-cluster-critical
       containers:
         - name: csi-provisioner
-          image: quay.io/k8scsi/csi-provisioner:v1.0.1
+          image: {{ .Values.image.csiProvisioner.repository }}:{{ .Values.image.csiProvisioner.tag }}
           args:
             - "--provisioner=blobfuse.csi.azure.com"
             - "--csi-address=$(ADDRESS)"
             - "--connection-timeout=15s"
+            - "--enable-leader-election"
+            - "--leader-election-type=leases"
           env:
             - name: ADDRESS
               value: /csi/csi.sock
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.image.csiProvisioner.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
         - name: csi-attacher
           image: "{{ .Values.image.csiAttacher.repository }}:{{ .Values.image.csiAttacher.tag }}"
           args:
-            - --v=5
-            - --csi-address=$(ADDRESS)
-            - --timeout=120s
+            - "-v=5"
+            - "-csi-address=$(ADDRESS)"
+            - "-timeout=120s"
+            - "-leader-election"
+            - "-leader-election-type=leases"
           env:
             - name: ADDRESS
               value: /csi/csi.sock
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.image.csiAttacher.pullPolicy }}
           volumeMounts:
           - mountPath: /csi
             name: socket-dir
@@ -54,6 +58,7 @@ spec:
           env:
             - name: ADDRESS
               value: /csi/csi.sock
+          imagePullPolicy: {{ .Values.image.clusterDriverRegistrar.pullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -63,6 +68,7 @@ spec:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
             - --health-port=9802
+          imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -89,7 +95,7 @@ spec:
               value: "/etc/kubernetes/azure.json"
             - name: CSI_ENDPOINT
               value: unix:///csi/csi.sock
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.image.blobfuse.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir

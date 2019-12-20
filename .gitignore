@@ -69,3 +69,6 @@ cscope.*
 /bazel-*
 *.pyc
 profile.cov
+
+# helm packaged chart
+/charts/*/*.tgz
