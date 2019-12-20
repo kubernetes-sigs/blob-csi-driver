@@ -1,7 +1,28 @@
 image:
-  repository: mcr.microsoft.com/k8s/csi/blobfuse-csi
-  tag: latest
-  pullPolicy: Always
+  blobfuse:
+    repository: mcr.microsoft.com/k8s/csi/blobfuse-csi
+    tag: latest
+    pullPolicy: Always
+  csiProvisioner:
+    repository: quay.io/k8scsi/csi-provisioner
+    tag: v1.0.1
+    pullPolicy: Always
+  csiAttacher:
+    repository: quay.io/k8scsi/csi-attacher
+    tag: v1.0.1
+    pullPolicy: Always
+  clusterDriverRegistrar:
+    repository: quay.io/k8scsi/csi-cluster-driver-registrar
+    tag: v1.0.1
+    pullPolicy: Always
+  livenessProbe:
+    repository: quay.io/k8scsi/livenessprobe
+    tag: v1.1.0
+    pullPolicy: Always
+  nodeDriverRegistrar:
+    repository: quay.io/k8scsi/csi-node-driver-registrar
+    tag: v1.1.0
+    pullPolicy: Always
 
 serviceAccount:
   create: true

@@ -17,5 +17,6 @@
 set -euo pipefail
 
 echo "Verifying dep check"
+go get github.com/golang/dep/cmd/dep
 dep check
 echo "No issue found"

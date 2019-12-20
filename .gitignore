@@ -68,4 +68,4 @@ cscope.*
 
 /bazel-*
 *.pyc
-
+profile.cov
