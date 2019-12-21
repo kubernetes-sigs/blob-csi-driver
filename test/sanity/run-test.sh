@@ -14,35 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+set -eo pipefail
 
-set -euo pipefail
-
-if [ -v GOPATH ]; then
-		mkdir $GOPATH/src/github.com/kubernetes-csi
-		pushd $GOPATH/src/github.com/kubernetes-csi
-		git clone https://github.com/kubernetes-csi/csi-test.git -b v1.1.0
-        pushd $GOPATH/src/github.com/kubernetes-csi/csi-test/cmd/csi-sanity
-		make && make install 
-		popd
-		popd
+readonly endpoint="unix:///tmp/csi.sock"
+nodeid="CSINode"
+if [[ "$#" -gt 0 ]] && [[ -n "$1" ]]; then
+  nodeid="$1"
 fi
 
-endpoint="unix:///tmp/csi.sock"
+_output/blobfuseplugin --endpoint "$endpoint" --nodeid "$nodeid" -v=5 &
 
-echo "being to run sanity test ..."
-
-sudo _output/blobfuseplugin --endpoint $endpoint --nodeid CSINode -v=5 &
-
-sudo $GOPATH/src/github.com/kubernetes-csi/csi-test/cmd/csi-sanity/csi-sanity --ginkgo.v --csi.endpoint=$endpoint -ginkgo.skip='should fail when requesting to create a volume with already existing name and different capacity'
-
-retcode=$?
-
-if [ $retcode -ne 0 ]; then
-	exit $retcode
-fi
-
-# kill blobfuseplugin first
-echo "pkill -f blobfuseplugin"
-sudo /usr/bin/pkill -f blobfuseplugin
-
-echo "sanity test is completed."
+echo "Begin to run sanity test..."
+csi-sanity --ginkgo.v --csi.endpoint=$endpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity"

@@ -14,35 +14,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -euo pipefail
+set -eo pipefail
 
-if [ ! -v AZURE_CREDENTIAL_FILE ]; then
-	export set AZURE_CREDENTIAL_FILE=/tmp/azure.json
-fi
+function install_csi_sanity_bin {
+  mkdir -p $GOPATH/src/github.com/kubernetes-csi/csi-test
+  git clone https://github.com/kubernetes-csi/csi-test.git -b v1.1.0 $GOPATH/src/github.com/kubernetes-csi/csi-test
+  pushd $GOPATH/src/github.com/kubernetes-csi/csi-test/cmd/csi-sanity
+  make && make install
+  popd
+}
 
-GO_BIN_PATH=`which go`
+function cleanup {
+  echo 'pkill -f blobfuseplugin'
+  pkill -f blobfuseplugin
+  echo 'Deleting CSI sanity test binary'
+  rm -rf $GOPATH/src/github.com/kubernetes-csi
+}
 
-# run test on AzurePublicCloud
-if [ -v aadClientSecret ]; then
-	# run test in CI env
-	cp test/integration/azure.json $AZURE_CREDENTIAL_FILE
-	# copy blobfuse binary
-	sudo mkdir -p /usr/blob
-	sudo cp test/sanity/blobfuse /usr/blob/blobfuse
+trap cleanup EXIT
 
-	sed -i "s/tenantId-input/$tenantId/g" $AZURE_CREDENTIAL_FILE
-	sed -i "s/subscriptionId-input/$subscriptionId/g" $AZURE_CREDENTIAL_FILE
-	sed -i "s/aadClientId-input/$aadClientId/g" $AZURE_CREDENTIAL_FILE
-	sed -i "s#aadClientSecret-input#$aadClientSecret#g" $AZURE_CREDENTIAL_FILE
-	sed -i "s/resourceGroup-input/$resourceGroup/g" $AZURE_CREDENTIAL_FILE
-	sed -i "s/location-input/$location/g" $AZURE_CREDENTIAL_FILE
+# copy blobfuse binary
+mkdir -p /usr/blob
+cp test/artifacts/blobfuse /usr/blob/blobfuse
 
-	test/sanity/run-test.sh
-else
-	if [ -v subscriptionId ]; then
-		echo "skip sanity test in CI env"
-	else
-		# run test in user mode
-		go test -v ./test/sanity/...
-	fi
-fi
+install_csi_sanity_bin
+apt update && apt install libfuse2 -y
+test/sanity/run-test.sh "$nodeid"

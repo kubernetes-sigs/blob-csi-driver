@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package sanity
+package integration
 
 import (
 	"context"
@@ -26,11 +26,13 @@ import (
 
 	"github.com/kubernetes-sigs/blobfuse-csi-driver/test/utils/azure"
 	"github.com/kubernetes-sigs/blobfuse-csi-driver/test/utils/credentials"
+	"github.com/kubernetes-sigs/blobfuse-csi-driver/test/utils/testutil"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSanity(t *testing.T) {
+func TestIntegrationOnAzurePublicCloud(t *testing.T) {
+	// Test on AzurePublicCloud
 	creds, err := credentials.CreateAzureCredentialFile(false)
 	defer func() {
 		err := credentials.DeleteAzureCredentialFile()
@@ -39,13 +41,37 @@ func TestSanity(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, creds)
 
+	testIntegration(t, creds)
+}
+
+func TestIntegrationOnAzureChinaCloud(t *testing.T) {
+	if testutil.IsRunningInProw() {
+		t.Skipf("Skipping integration test on Azure China Cloud because Prow only tests on Azure Public Cloud at the moment")
+	}
+
+	// Test on AzureChinaCloud
+	creds, err := credentials.CreateAzureCredentialFile(true)
+	defer func() {
+		err := credentials.DeleteAzureCredentialFile()
+		assert.NoError(t, err)
+	}()
+
+	if err != nil {
+		// Skip the test if Azure China Cloud credentials are not supplied
+		t.Skipf("Skipping integration test on Azure China Cloud due to the following error %v", err)
+	}
+	assert.NotNil(t, creds)
+	testIntegration(t, creds)
+}
+
+func testIntegration(t *testing.T, creds *credentials.Credentials) {
 	os.Setenv("AZURE_CREDENTIAL_FILE", credentials.TempAzureCredentialFilePath)
 
 	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret)
 	assert.NoError(t, err)
 
 	ctx := context.Background()
-	// Create an empty resource group for sanity test
+	// Create an empty resource group for integration test
 	log.Printf("Creating resource group %s in %s", creds.ResourceGroup, creds.Cloud)
 	_, err = azureClient.EnsureResourceGroup(ctx, creds.ResourceGroup, creds.Location, nil)
 	assert.NoError(t, err)
@@ -61,21 +87,22 @@ func TestSanity(t *testing.T) {
 	// Execute the script from project root
 	err = os.Chdir("../..")
 	assert.NoError(t, err)
-	// Change directory back to test/sanity
+	// Change directory back to test/integration in preparation for next test
 	defer func() {
-		err := os.Chdir("test/sanity")
+		err := os.Chdir("test/integration")
 		assert.NoError(t, err)
 	}()
 
-	projectRoot, err := os.Getwd()
+	cwd, err := os.Getwd()
 	assert.NoError(t, err)
-	assert.True(t, strings.HasSuffix(projectRoot, "blobfuse-csi-driver"))
+	assert.True(t, strings.HasSuffix(cwd, "blobfuse-csi-driver"))
 
-	cmd := exec.Command("./test/sanity/run-tests-all-clouds.sh")
-	cmd.Dir = projectRoot
+	// Pass in resource group name, storage account name and cloud type
+	cmd := exec.Command("./test/integration/run-tests-all-clouds.sh", creds.ResourceGroup, creds.Cloud)
+	cmd.Dir = cwd
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		t.Fatalf("Sanity test failed %v", err)
+		t.Fatalf("Integration test failed %v", err)
 	}
 }

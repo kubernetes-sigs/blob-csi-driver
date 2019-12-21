@@ -17,119 +17,67 @@
 
 set -euo pipefail
 
-csc="csc"
-if [ -v GOPATH ]; then
-        csc=$GOPATH/bin/csc
-fi
+function cleanup {
+  echo "pkill -f blobfuseplugin"
+  pkill -f blobfuseplugin
+}
 
-volname=`date +%s`
-volname="citest-$volname"
-volSize="2147483648"
+readonly volname="citest-$(date +%s)"
+readonly volsize="2147483648"
+readonly endpoint="$1"
+readonly target_path="$2"
+readonly resource_group="$3"
+readonly cloud="$4"
 
-endpoint="tcp://127.0.0.1:10000"
-if [ $# -gt 0 ]; then
-	endpoint=$1
-fi
+echo "Begin to run integration test on $cloud..."
 
-target_path="/tmp/testmount"
-if [ $# -gt 1 ]; then
-	target_path=$2
-fi
+# Run CSI driver as a background service
+_output/blobfuseplugin --endpoint "$endpoint" --nodeid CSINode -v=5 &
+trap cleanup EXIT
 
-cloud="AzurePublicCloud"
-if [ $# -gt 2 ]; then
-        cloud=$3
-fi
-
-echo "being to run integration test on $cloud ..."
-# run CSI driver as a background service
-_output/blobfuseplugin --endpoint $endpoint --nodeid CSINode -v=5 &
-if [ $cloud = "AzureChinaCloud" ]; then
-	sleep 25
+if [[ "$cloud" == "AzureChinaCloud" ]]; then
+  sleep 25
 else
-	sleep 5
+  sleep 5
 fi
 
-# begin to run CSI functions one by one
-if [ -v aadClientSecret ]; then
-	echo "create volume test:"
-	value=`$csc controller new --endpoint $endpoint --cap 1,block $volname --req-bytes $volSize --params skuname=Standard_LRS`
-	retcode=$?
-	if [ $retcode -gt 0 ]; then
-		exit $retcode
-	fi
-	sleep 15
+# Begin to run CSI functions one by one
+echo "Create volume test:"
+value="$(csc controller new --endpoint "$endpoint" --cap 1,block "$volname" --req-bytes "$volsize" --params skuname=Standard_LRS)"
+sleep 15
 
-	volumeid=`echo $value | awk '{print $1}' | sed 's/"//g'`
-	echo "got volume id: $volumeid"
+volumeid="$(echo "$value" | awk '{print $1}' | sed 's/"//g')"
+echo "Got volume id: $volumeid"
+storage_account_name="$(echo "$volumeid" | awk -F# '{print $2}')"
 
-	$csc controller validate-volume-capabilities --endpoint $endpoint --cap 1,block $volumeid
-	retcode=$?
-	if [ $retcode -gt 0 ]; then
-		exit $retcode
-	fi
+csc controller validate-volume-capabilities --endpoint "$endpoint" --cap 1,block "$volumeid"
 
-	if [ "$cloud" != "AzureChinaCloud" ]; then
-		# blobfuse mount/unmount on travis VM does not work against AzureChinaCloud
-		echo "mount volume test:"
-		$csc node publish --endpoint $endpoint --cap 1,block --target-path $target_path $volumeid
-		retcode=$?
-		if [ $retcode -gt 0 ]; then
-			exit $retcode
-		fi
-		sleep 2
+if [[ "$cloud" != "AzureChinaCloud" ]]; then
+  echo "mount volume test:"
+  csc node publish --endpoint "$endpoint" --cap 1,block --target-path "$target_path" "$volumeid"
+  sleep 2
 
-		echo "unmount volume test:"
-		$csc node unpublish --endpoint $endpoint --target-path $target_path $volumeid
-		retcode=$?
-		if [ $retcode -gt 0 ]; then
-			exit $retcode
-		fi
-		sleep 2
-	fi
-
-	echo "delete volume test:"
-	$csc controller del --endpoint $endpoint $volumeid
-	retcode=$?
-	if [ $retcode -gt 0 ]; then
-		exit $retcode
-	fi
-	sleep 15
-
-	echo "create volume in storage account($storageAccountName) under resource group($resourceGroup):"
-	value=`$csc controller new --endpoint $endpoint --cap 1,block $volname --req-bytes $volSize --params skuname=Standard_LRS,storageAccount=$storageAccountName,resourceGroup=$resourceGroup`
-	retcode=$?
-	if [ $retcode -gt 0 ]; then
-		exit $retcode
-	fi
-	sleep 15
-
-	volumeid=`echo $value | awk '{print $1}' | sed 's/"//g'`
-	echo "got volume id: $volumeid"
-
-	echo "delete volume test:"
-	$csc controller del --endpoint $endpoint $volumeid
-	retcode=$?
-	if [ $retcode -gt 0 ]; then
-		exit $retcode
-	fi
-	sleep 15
+  echo "Unmount volume test:"
+  csc node unpublish --endpoint "$endpoint" --target-path "$target_path" "$volumeid"
+  sleep 2
 fi
 
-$csc identity plugin-info --endpoint $endpoint
-retcode=$?
-if [ $retcode -gt 0 ]; then
-	exit $retcode
-fi
+echo "Delete volume test:"
+csc controller del --endpoint "$endpoint" "$volumeid"
+sleep 15
 
-$csc node get-info --endpoint $endpoint
-retcode=$?
-if [ $retcode -gt 0 ]; then
-	exit $retcode
-fi
+echo "Create volume in storage account($storage_account_name) under resource group($resource_group):"
+value="$(csc controller new --endpoint "$endpoint" --cap 1,block "$volname" --req-bytes "$volsize" --params skuname=Standard_LRS,storageAccount=$storage_account_name,resourceGroup=$resource_group)"
+sleep 15
 
-# kill blobfuseplugin first
-echo "pkill -f blobfuseplugin"
-/usr/bin/pkill -f blobfuseplugin
+volumeid="$(echo "$value" | awk '{print $1}' | sed 's/"//g')"
+echo "got volume id: $volumeid"
 
-echo "integration test on $cloud is completed."
+echo "Delete volume test:"
+csc controller del --endpoint "$endpoint" "$volumeid"
+sleep 15
+
+csc identity plugin-info --endpoint "$endpoint"
+csc node get-info --endpoint "$endpoint"
+
+echo "Integration test on $cloud is completed."
