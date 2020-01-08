@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-PKG=github.com/kubernetes-sigs/blobfuse-csi-driver
+PKG=sigs.k8s.io/blobfuse-csi-driver
 REGISTRY_NAME?=andyzhangx
 IMAGE_NAME=blobfuse-csi
 IMAGE_VERSION=v0.4.0

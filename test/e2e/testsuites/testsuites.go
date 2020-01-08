@@ -22,7 +22,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/kubernetes-sigs/blobfuse-csi-driver/pkg/blobfuse"
+	"sigs.k8s.io/blobfuse-csi-driver/pkg/blobfuse"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/external-snapshotter/pkg/apis/volumesnapshot/v1alpha1"
