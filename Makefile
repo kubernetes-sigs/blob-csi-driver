@@ -12,15 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-PKG=sigs.k8s.io/blobfuse-csi-driver
-REGISTRY_NAME?=andyzhangx
-IMAGE_NAME=blobfuse-csi
-IMAGE_VERSION=v0.4.0
-IMAGE_TAG=$(REGISTRY_NAME)/$(IMAGE_NAME):$(IMAGE_VERSION)
-IMAGE_TAG_LATEST=$(REGISTRY_NAME)/$(IMAGE_NAME):latest
-GIT_COMMIT?=$(shell git rev-parse HEAD)
-BUILD_DATE?=$(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
-LDFLAGS?="-X ${PKG}/pkg/blobfuse.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blobfuse.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blobfuse.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
+PKG = sigs.k8s.io/blobfuse-csi-driver
+REGISTRY ?= andyzhangx
+IMAGE_NAME = blobfuse-csi
+IMAGE_VERSION ?= v0.4.0
+# Use a custom version for E2E tests if we are in Prow
+ifdef AZURE_CREDENTIALS
+override IMAGE_VERSION := e2e-$(GIT_COMMIT)
+endif
+IMAGE_TAG = $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
+IMAGE_TAG_LATEST = $(REGISTRY_NAME)/$(IMAGE_NAME):latest
+GIT_COMMIT ?= $(shell git rev-parse HEAD)
+BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+LDFLAGS ?= "-X ${PKG}/pkg/blobfuse.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blobfuse.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blobfuse.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
+GINKGO_FLAGS = -ginkgo.noColor -ginkgo.v
 GO111MODULE = off
 export GO111MODULE
 
@@ -44,7 +49,28 @@ integration-test: blobfuse
 
 .PHONY: e2e-test
 e2e-test:
-	test/e2e/run-test.sh
+	go test -v -timeout=0 ./test/e2e ${GINKGO_FLAGS}
+
+.PHONY: e2e-bootstrap
+e2e-bootstrap: install-helm
+	# Only build and push the image if it does not exist in the registry
+	docker pull $(IMAGE_TAG) || make blobfuse-container push
+	helm install charts/latest/blobfuse-csi-driver -n blobfuse-csi-driver --namespace kube-system --wait \
+		--set image.blobfuse.pullPolicy=IfNotPresent \
+		--set image.blobfuse.repository=$(REGISTRY)/$(IMAGE_NAME) \
+		--set image.blobfuse.tag=$(IMAGE_VERSION)
+
+.PHONY: install-helm
+install-helm:
+	# Use v2.11.0 helm to match tiller's version in clusters made by aks-engine
+	curl https://raw.githubusercontent.com/helm/helm/master/scripts/get | DESIRED_VERSION=v2.11.0 bash
+	# Make sure tiller is ready
+	kubectl wait pod -l name=tiller --namespace kube-system --for condition=ready --timeout 5m
+	helm version
+
+.PHONY: e2e-teardown
+e2e-teardown:
+	helm delete --purge blobfuse-csi-driver
 
 .PHONY: blobfuse
 blobfuse:
