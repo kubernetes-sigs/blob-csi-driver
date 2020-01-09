@@ -23,7 +23,7 @@ readonly cloud="$2"
 
 # copy blobfuse binary
 mkdir -p /usr/blob
-cp test/artifacts/blobfuse /usr/blob/blobfuse
+cp test/artifacts/blobfuse /usr/bin/blobfuse
 
 apt update && apt install libfuse2 -y
 test/integration/run-test.sh "tcp://127.0.0.1:10000" "/tmp/testmount1" "$resource_group" "$cloud"

@@ -96,7 +96,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	for _, opt := range mountOptions {
 		args = args + " " + opt
 	}
-	cmd := exec.Command("/usr/blob/blobfuse", strings.Split(args, " ")...)
+	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName)
 
 	if accountSasToken != "" {
