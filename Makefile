@@ -13,6 +13,7 @@
 # limitations under the License.
 
 PKG = sigs.k8s.io/blobfuse-csi-driver
+GIT_COMMIT ?= $(shell git rev-parse HEAD)
 REGISTRY ?= andyzhangx
 IMAGE_NAME = blobfuse-csi
 IMAGE_VERSION ?= v0.4.0
@@ -22,7 +23,6 @@ override IMAGE_VERSION := e2e-$(GIT_COMMIT)
 endif
 IMAGE_TAG = $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
 IMAGE_TAG_LATEST = $(REGISTRY_NAME)/$(IMAGE_NAME):latest
-GIT_COMMIT ?= $(shell git rev-parse HEAD)
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS ?= "-X ${PKG}/pkg/blobfuse.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blobfuse.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blobfuse.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
 GINKGO_FLAGS = -ginkgo.noColor -ginkgo.v
