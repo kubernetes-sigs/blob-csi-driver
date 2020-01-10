@@ -35,7 +35,7 @@ trap cleanup EXIT
 
 # copy blobfuse binary
 mkdir -p /usr/blob
-cp test/artifacts/blobfuse /usr/blob/blobfuse
+cp test/artifacts/blobfuse /usr/bin/blobfuse
 
 install_csi_sanity_bin
 apt update && apt install libfuse2 -y

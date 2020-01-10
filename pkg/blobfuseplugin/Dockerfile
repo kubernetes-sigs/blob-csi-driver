@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:16.04
-RUN apt-get update && apt-get install -y ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev
+FROM mcr.microsoft.com/aks/fundamental/base-ubuntu:v0.0.5
+RUN wget -O /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
+RUN dpkg -i /tmp/packages-microsoft-prod.deb && apt-get update && apt-get install -y ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev blobfuse
 LABEL maintainers="andyzhangx"
 LABEL description="Blobfuse CSI Driver"
 
