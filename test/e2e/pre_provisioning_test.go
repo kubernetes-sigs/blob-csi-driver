@@ -19,15 +19,12 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"os"
 
-	"sigs.k8s.io/blobfuse-csi-driver/pkg/blobfuse"
 	"sigs.k8s.io/blobfuse-csi-driver/test/e2e/driver"
 	"sigs.k8s.io/blobfuse-csi-driver/test/e2e/testsuites"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	. "github.com/onsi/ginkgo"
-	"github.com/pborman/uuid"
+	"github.com/onsi/ginkgo"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
@@ -41,7 +38,7 @@ var (
 	defaultVolumeSizeBytes int64 = defaultVolumeSize * 1024 * 1024 * 1024
 )
 
-var _ = Describe("[blobfuse-csi-e2e] [single-az] Pre-Provisioned", func() {
+var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 	f := framework.NewDefaultFramework("blobfuse")
 
 	var (
@@ -52,40 +49,33 @@ var _ = Describe("[blobfuse-csi-e2e] [single-az] Pre-Provisioned", func() {
 		// Set to true if the volume should be deleted automatically after test
 		skipManuallyDeletingVolume bool
 	)
-	nodeid := os.Getenv("nodeid")
-	blobfuseDriver := blobfuse.NewDriver(nodeid)
-	endpoint := fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String())
 
-	go func() {
-		blobfuseDriver.Run(endpoint)
-	}()
-
-	BeforeEach(func() {
+	ginkgo.BeforeEach(func() {
 		cs = f.ClientSet
 		ns = f.Namespace
 		testDriver = driver.InitBlobFuseCSIDriver()
 	})
 
-	AfterEach(func() {
+	ginkgo.AfterEach(func() {
 		if !skipManuallyDeletingVolume {
 			req := &csi.DeleteVolumeRequest{
 				VolumeId: volumeID,
 			}
 			_, err := blobfuseDriver.DeleteVolume(context.Background(), req)
 			if err != nil {
-				Fail(fmt.Sprintf("create volume %q error: %v", volumeID, err))
+				ginkgo.Fail(fmt.Sprintf("create volume %q error: %v", volumeID, err))
 			}
 		}
 	})
 
-	It("[env] should use a pre-provisioned volume and mount it as readOnly in a pod", func() {
+	ginkgo.It("[env] should use a pre-provisioned volume and mount it as readOnly in a pod", func() {
 		req := makeCreateVolumeReq("pre-provisioned-readOnly")
 		resp, err := blobfuseDriver.CreateVolume(context.Background(), req)
 		if err != nil {
-			Fail(fmt.Sprintf("create volume error: %v", err))
+			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
 		volumeID = resp.Volume.VolumeId
-		By(fmt.Sprintf("Successfully provisioned BloBFuse volume: %q\n", volumeID))
+		ginkgo.By(fmt.Sprintf("Successfully provisioned BloBFuse volume: %q\n", volumeID))
 
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		pods := []testsuites.PodDetails{
@@ -112,14 +102,14 @@ var _ = Describe("[blobfuse-csi-e2e] [single-az] Pre-Provisioned", func() {
 		test.Run(cs, ns)
 	})
 
-	It(fmt.Sprintf("[env] should use a pre-provisioned volume and retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
+	ginkgo.It(fmt.Sprintf("[env] should use a pre-provisioned volume and retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
 		req := makeCreateVolumeReq("pre-provisioned-retain-reclaimPolicy")
 		resp, err := blobfuseDriver.CreateVolume(context.Background(), req)
 		if err != nil {
-			Fail(fmt.Sprintf("create volume error: %v", err))
+			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
 		volumeID = resp.Volume.VolumeId
-		By(fmt.Sprintf("Successfully provisioned BlobFuse volume: %q\n", volumeID))
+		ginkgo.By(fmt.Sprintf("Successfully provisioned BlobFuse volume: %q\n", volumeID))
 
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain

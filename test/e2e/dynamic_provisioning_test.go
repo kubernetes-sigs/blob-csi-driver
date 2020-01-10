@@ -18,20 +18,17 @@ package e2e
 
 import (
 	"fmt"
-	"os"
 
-	"sigs.k8s.io/blobfuse-csi-driver/pkg/blobfuse"
 	"sigs.k8s.io/blobfuse-csi-driver/test/e2e/driver"
 	"sigs.k8s.io/blobfuse-csi-driver/test/e2e/testsuites"
 
-	. "github.com/onsi/ginkgo"
-	"github.com/pborman/uuid"
+	"github.com/onsi/ginkgo"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 )
 
-var _ = Describe("Dynamic Provisioning", func() {
+var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 	f := framework.NewDefaultFramework("blobfuse")
 
 	var (
@@ -40,21 +37,13 @@ var _ = Describe("Dynamic Provisioning", func() {
 		testDriver driver.PVTestDriver
 	)
 
-	nodeid := os.Getenv("nodeid")
-	blobfuseDriver := blobfuse.NewDriver(nodeid)
-	endpoint := fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String())
-
-	go func() {
-		blobfuseDriver.Run(endpoint)
-	}()
-
-	BeforeEach(func() {
+	ginkgo.BeforeEach(func() {
 		cs = f.ClientSet
 		ns = f.Namespace
 	})
 
 	testDriver = driver.InitBlobFuseCSIDriver()
-	It(fmt.Sprintf("should create a volume on demand"), func() {
+	ginkgo.It(fmt.Sprintf("should create a volume on demand"), func() {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
@@ -76,7 +65,7 @@ var _ = Describe("Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	It("should create a deployment object, write and read to it, delete the pod and write and read to it again", func() {
+	ginkgo.It("should create a deployment object, write and read to it, delete the pod and write and read to it again", func() {
 		pod := testsuites.PodDetails{
 			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 1; done",
 			Volumes: []testsuites.VolumeDetails{
@@ -102,7 +91,7 @@ var _ = Describe("Dynamic Provisioning", func() {
 	})
 
 	// Track issue https://github.com/kubernetes/kubernetes/issues/70505
-	It("should create a volume on demand and mount it as readOnly in a pod", func() {
+	ginkgo.It("should create a volume on demand and mount it as readOnly in a pod", func() {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "touch /mnt/test-1/data",
@@ -126,7 +115,7 @@ var _ = Describe("Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	It("should create multiple PV objects, bind to PVCs and attach all to different pods on the same node", func() {
+	ginkgo.It("should create multiple PV objects, bind to PVCs and attach all to different pods on the same node", func() {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "while true; do echo $(date -u) >> /mnt/test-1/data; sleep 1; done",
@@ -163,7 +152,7 @@ var _ = Describe("Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	It(fmt.Sprintf("should delete PV with reclaimPolicy %q", v1.PersistentVolumeReclaimDelete), func() {
+	ginkgo.It(fmt.Sprintf("should delete PV with reclaimPolicy %q", v1.PersistentVolumeReclaimDelete), func() {
 		reclaimPolicy := v1.PersistentVolumeReclaimDelete
 		volumes := []testsuites.VolumeDetails{
 			{
@@ -179,7 +168,7 @@ var _ = Describe("Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	It(fmt.Sprintf("[env] should retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
+	ginkgo.It(fmt.Sprintf("[env] should retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
 		volumes := []testsuites.VolumeDetails{
 			{
