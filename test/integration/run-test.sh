@@ -25,9 +25,10 @@ function cleanup {
 readonly volname="citest-$(date +%s)"
 readonly volsize="2147483648"
 readonly endpoint="$1"
-readonly target_path="$2"
-readonly resource_group="$3"
-readonly cloud="$4"
+readonly staging_target_path="$2"
+readonly target_path="$3"
+readonly resource_group="$4"
+readonly cloud="$5"
 
 echo "Begin to run integration test on $cloud..."
 
@@ -53,12 +54,19 @@ storage_account_name="$(echo "$volumeid" | awk -F# '{print $2}')"
 csc controller validate-volume-capabilities --endpoint "$endpoint" --cap 1,block "$volumeid"
 
 if [[ "$cloud" != "AzureChinaCloud" ]]; then
-  echo "mount volume test:"
-  csc node publish --endpoint "$endpoint" --cap 1,block --target-path "$target_path" "$volumeid"
+  echo "stage volume test:"
+  csc node stage --endpoint "$endpoint" --cap 1,block --staging-target-path "$staging_target_path" "$volumeid"
+
+  echo "publish volume test:"
+  csc node publish --endpoint "$endpoint" --cap 1,block --staging-target-path "$staging_target_path" --target-path "$target_path" "$volumeid"
   sleep 2
 
-  echo "Unmount volume test:"
+  echo "unpublish volume test:"
   csc node unpublish --endpoint "$endpoint" --target-path "$target_path" "$volumeid"
+  sleep 2
+
+  echo "unstage volume test:"
+  csc node unstage --endpoint "$endpoint" --staging-target-path "$staging_target_path" "$volumeid"
   sleep 2
 fi
 

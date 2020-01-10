@@ -117,6 +117,16 @@ var _ = ginkgo.AfterSuite(func() {
 		projectRoot, err := os.Getwd()
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		gomega.Expect(strings.HasSuffix(projectRoot, "blobfuse-csi-driver")).To(gomega.Equal(true))
+
+		log.Println("===================blobfuse log===================")
+		cmdSh := exec.Command("sh", "test/utils/blobfuse_log.sh")
+		cmdSh.Dir = projectRoot
+		cmdSh.Stdout = os.Stdout
+		cmdSh.Stderr = os.Stderr
+		err = cmdSh.Run()
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		log.Println("===================================================")
+
 		cmd := exec.Command("make", "e2e-teardown")
 		cmd.Dir = projectRoot
 		cmd.Stdout = os.Stdout
