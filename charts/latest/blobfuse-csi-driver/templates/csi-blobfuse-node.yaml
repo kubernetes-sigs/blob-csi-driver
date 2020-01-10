@@ -19,7 +19,7 @@ spec:
       priorityClassName: system-node-critical
       containers:
         - name: liveness-probe
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
