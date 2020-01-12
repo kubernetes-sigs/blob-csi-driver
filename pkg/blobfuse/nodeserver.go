@@ -161,13 +161,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	options := []string{"--use-https=true"}
 	mountOptions := util.JoinMountOptions(mountFlags, options)
 
-	klog.V(2).Infof("target %v\nfstype %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\n",
-		targetPath, fsType, volumeID, attrib, mountFlags, mountOptions)
-
 	args := targetPath + " " + "--tmp-path=/mnt/" + volumeID + " " + "--container-name=" + containerName
 	for _, opt := range mountOptions {
 		args = args + " " + opt
 	}
+	klog.V(2).Infof("target %v\nfstype %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\n",
+		targetPath, fsType, volumeID, attrib, mountFlags, mountOptions, args)
 	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName)
 
