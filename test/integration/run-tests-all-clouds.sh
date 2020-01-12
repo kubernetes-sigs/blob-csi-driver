@@ -26,4 +26,4 @@ mkdir -p /usr/blob
 cp test/artifacts/blobfuse /usr/bin/blobfuse
 
 apt update && apt install libfuse2 -y
-test/integration/run-test.sh "tcp://127.0.0.1:10000" "/tmp/testmount1" "$resource_group" "$cloud"
+test/integration/run-test.sh "tcp://127.0.0.1:10000" "/tmp/stagingtargetpath" "/tmp/targetpath" "$resource_group" "$cloud"
