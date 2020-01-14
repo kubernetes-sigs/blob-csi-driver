@@ -34,10 +34,6 @@
   #revision = "5b1e3786b7c8f7ca514b40e882a0b5dc36e4c842"
   version = "v1.1.0"
 
-[[override]]
-  revision = "5db89f0ca68677abc5eefce8f2a0a772c98ba52d"
-  name = "github.com/docker/distribution"
-
 [[constraint]]
   name = "github.com/pborman/uuid"
   version = "1.1.0"
@@ -100,7 +96,7 @@
 
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "v21.3.0"
+  version = "v35.0.0"
 
 [[override]]
   name = "github.com/kubernetes-csi/external-snapshotter"
@@ -109,3 +105,7 @@
 [[override]]
   name = "github.com/prometheus/client_golang"
   version = "=v1.0.0"
+
+[[constraint]]
+  branch = "master"
+  name = "k8s.io/legacy-cloud-providers"
