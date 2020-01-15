@@ -49,16 +49,7 @@ func GetCloudProvider() (*azureprovider.Cloud, error) {
 	}
 	defer f.Close()
 
-	cloud, err := azureprovider.NewCloud(f)
-	if err != nil {
-		return nil, err
-	}
-
-	az, ok := cloud.(*azureprovider.Cloud)
-	if !ok || az == nil {
-		return nil, fmt.Errorf("failed to get Azure Cloud Provider. GetCloudProvider returned %v instead", cloud)
-	}
-	return az, nil
+	return azureprovider.NewCloudWithoutFeatureGates(f)
 }
 
 // getKeyVaultSecretContent get content of the keyvault secret

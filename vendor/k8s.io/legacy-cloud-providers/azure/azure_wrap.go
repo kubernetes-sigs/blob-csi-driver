@@ -1,3 +1,5 @@
+// +build !providerless
+
 /*
 Copyright 2016 The Kubernetes Authors.
 
@@ -21,88 +23,90 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2018-08-01/network"
-	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-06-01/network"
+
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog"
+	"k8s.io/legacy-cloud-providers/azure/retry"
 )
 
 var (
-	vmCacheTTL  = time.Minute
-	lbCacheTTL  = 2 * time.Minute
-	nsgCacheTTL = 2 * time.Minute
-	rtCacheTTL  = 2 * time.Minute
+	vmCacheTTLDefaultInSeconds           = 60
+	loadBalancerCacheTTLDefaultInSeconds = 120
+	nsgCacheTTLDefaultInSeconds          = 120
+	routeTableCacheTTLDefaultInSeconds   = 120
 
 	azureNodeProviderIDRE    = regexp.MustCompile(`^azure:///subscriptions/(?:.*)/resourceGroups/(?:.*)/providers/Microsoft.Compute/(?:.*)`)
 	azureResourceGroupNameRE = regexp.MustCompile(`.*/subscriptions/(?:.*)/resourceGroups/(.+)/providers/(?:.*)`)
 )
 
+const vmListCacheKey = "vmListCacheKey"
+
 // checkExistsFromError inspects an error and returns a true if err is nil,
 // false if error is an autorest.Error with StatusCode=404 and will return the
 // error back if error is another status code or another type of error.
-func checkResourceExistsFromError(err error) (bool, string, error) {
+func checkResourceExistsFromError(err *retry.Error) (bool, *retry.Error) {
 	if err == nil {
-		return true, "", nil
+		return true, nil
 	}
-	v, ok := err.(autorest.DetailedError)
-	if !ok {
-		return false, "", err
-	}
-	if v.StatusCode == http.StatusNotFound {
-		return false, err.Error(), nil
-	}
-	return false, "", v
-}
 
-// If it is StatusNotFound return nil,
-// Otherwise, return what it is
-func ignoreStatusNotFoundFromError(err error) error {
-	if err == nil {
-		return nil
+	if err.HTTPStatusCode == http.StatusNotFound {
+		return false, nil
 	}
-	v, ok := err.(autorest.DetailedError)
-	if ok && v.StatusCode == http.StatusNotFound {
-		return nil
-	}
-	return err
-}
 
-// ignoreStatusForbiddenFromError returns nil if the status code is StatusForbidden.
-// This happens when AuthorizationFailed is reported from Azure API.
-func ignoreStatusForbiddenFromError(err error) error {
-	if err == nil {
-		return nil
-	}
-	v, ok := err.(autorest.DetailedError)
-	if ok && v.StatusCode == http.StatusForbidden {
-		return nil
-	}
-	return err
+	return false, err
 }
 
 /// getVirtualMachine calls 'VirtualMachinesClient.Get' with a timed cache
 /// The service side has throttling control that delays responses if there're multiple requests onto certain vm
 /// resource request in short period.
-func (az *Cloud) getVirtualMachine(nodeName types.NodeName) (vm compute.VirtualMachine, err error) {
+func (az *Cloud) getVirtualMachine(nodeName types.NodeName, crt cacheReadType) (compute.VirtualMachine, error) {
 	vmName := string(nodeName)
-	cachedVM, err := az.vmCache.Get(vmName)
+	getter := func(vmName string) (*compute.VirtualMachine, error) {
+		cachedVM, err := az.vmCache.Get(vmListCacheKey, crt)
+		if err != nil {
+			return nil, err
+		}
+
+		virtualMachines := cachedVM.(*sync.Map)
+		if vm, ok := virtualMachines.Load(vmName); ok {
+			result := vm.(*vmEntry)
+			return result.vm, nil
+		}
+
+		return nil, nil
+	}
+
+	vm, err := getter(vmName)
 	if err != nil {
-		return vm, err
+		return compute.VirtualMachine{}, err
 	}
 
-	if cachedVM == nil {
-		return vm, cloudprovider.InstanceNotFound
+	if vm != nil {
+		return *vm, nil
 	}
 
-	return *(cachedVM.(*compute.VirtualMachine)), nil
+	klog.V(2).Infof("Couldn't find VM with name %s, refreshing the cache", vmName)
+	az.vmCache.Delete(vmListCacheKey)
+
+	vm, err = getter(vmName)
+	if err != nil {
+		return compute.VirtualMachine{}, err
+	}
+
+	if vm == nil {
+		return compute.VirtualMachine{}, cloudprovider.InstanceNotFound
+	}
+	return *vm, nil
 }
 
-func (az *Cloud) getRouteTable() (routeTable network.RouteTable, exists bool, err error) {
-	cachedRt, err := az.rtCache.Get(az.RouteTableName)
+func (az *Cloud) getRouteTable(crt cacheReadType) (routeTable network.RouteTable, exists bool, err error) {
+	cachedRt, err := az.rtCache.Get(az.RouteTableName, crt)
 	if err != nil {
 		return routeTable, false, err
 	}
@@ -114,35 +118,30 @@ func (az *Cloud) getRouteTable() (routeTable network.RouteTable, exists bool, er
 	return *(cachedRt.(*network.RouteTable)), true, nil
 }
 
-func (az *Cloud) getPublicIPAddress(pipResourceGroup string, pipName string) (pip network.PublicIPAddress, exists bool, err error) {
+func (az *Cloud) getPublicIPAddress(pipResourceGroup string, pipName string) (network.PublicIPAddress, bool, error) {
 	resourceGroup := az.ResourceGroup
 	if pipResourceGroup != "" {
 		resourceGroup = pipResourceGroup
 	}
 
-	var realErr error
-	var message string
 	ctx, cancel := getContextWithCancel()
 	defer cancel()
-	pip, err = az.PublicIPAddressesClient.Get(ctx, resourceGroup, pipName, "")
-	exists, message, realErr = checkResourceExistsFromError(err)
-	if realErr != nil {
-		return pip, false, realErr
+	pip, err := az.PublicIPAddressesClient.Get(ctx, resourceGroup, pipName, "")
+	exists, rerr := checkResourceExistsFromError(err)
+	if rerr != nil {
+		return pip, false, rerr.Error()
 	}
 
 	if !exists {
-		klog.V(2).Infof("Public IP %q not found with message: %q", pipName, message)
+		klog.V(2).Infof("Public IP %q not found", pipName)
 		return pip, false, nil
 	}
 
-	return pip, exists, err
+	return pip, exists, nil
 }
 
-func (az *Cloud) getSubnet(virtualNetworkName string, subnetName string) (subnet network.Subnet, exists bool, err error) {
-	var realErr error
-	var message string
+func (az *Cloud) getSubnet(virtualNetworkName string, subnetName string) (network.Subnet, bool, error) {
 	var rg string
-
 	if len(az.VnetResourceGroup) > 0 {
 		rg = az.VnetResourceGroup
 	} else {
@@ -151,22 +150,22 @@ func (az *Cloud) getSubnet(virtualNetworkName string, subnetName string) (subnet
 
 	ctx, cancel := getContextWithCancel()
 	defer cancel()
-	subnet, err = az.SubnetsClient.Get(ctx, rg, virtualNetworkName, subnetName, "")
-	exists, message, realErr = checkResourceExistsFromError(err)
-	if realErr != nil {
-		return subnet, false, realErr
+	subnet, err := az.SubnetsClient.Get(ctx, rg, virtualNetworkName, subnetName, "")
+	exists, rerr := checkResourceExistsFromError(err)
+	if rerr != nil {
+		return subnet, false, rerr.Error()
 	}
 
 	if !exists {
-		klog.V(2).Infof("Subnet %q not found with message: %q", subnetName, message)
+		klog.V(2).Infof("Subnet %q not found", subnetName)
 		return subnet, false, nil
 	}
 
-	return subnet, exists, err
+	return subnet, exists, nil
 }
 
-func (az *Cloud) getAzureLoadBalancer(name string) (lb network.LoadBalancer, exists bool, err error) {
-	cachedLB, err := az.lbCache.Get(name)
+func (az *Cloud) getAzureLoadBalancer(name string, crt cacheReadType) (lb network.LoadBalancer, exists bool, err error) {
+	cachedLB, err := az.lbCache.Get(name, crt)
 	if err != nil {
 		return lb, false, err
 	}
@@ -178,12 +177,13 @@ func (az *Cloud) getAzureLoadBalancer(name string) (lb network.LoadBalancer, exi
 	return *(cachedLB.(*network.LoadBalancer)), true, nil
 }
 
-func (az *Cloud) getSecurityGroup() (nsg network.SecurityGroup, err error) {
+func (az *Cloud) getSecurityGroup(crt cacheReadType) (network.SecurityGroup, error) {
+	nsg := network.SecurityGroup{}
 	if az.SecurityGroupName == "" {
 		return nsg, fmt.Errorf("securityGroupName is not configured")
 	}
 
-	securityGroup, err := az.nsgCache.Get(az.SecurityGroupName)
+	securityGroup, err := az.nsgCache.Get(az.SecurityGroupName, crt)
 	if err != nil {
 		return nsg, err
 	}
@@ -193,6 +193,11 @@ func (az *Cloud) getSecurityGroup() (nsg network.SecurityGroup, err error) {
 	}
 
 	return *(securityGroup.(*network.SecurityGroup)), nil
+}
+
+type vmEntry struct {
+	vm         *compute.VirtualMachine
+	lastUpdate time.Time
 }
 
 func (az *Cloud) newVMCache() (*timedCache, error) {
@@ -211,21 +216,36 @@ func (az *Cloud) newVMCache() (*timedCache, error) {
 			return nil, err
 		}
 
-		vm, err := az.VirtualMachinesClient.Get(ctx, resourceGroup, key, compute.InstanceView)
-		exists, message, realErr := checkResourceExistsFromError(err)
-		if realErr != nil {
-			return nil, realErr
+		vmList, verr := az.VirtualMachinesClient.List(ctx, resourceGroup)
+		exists, rerr := checkResourceExistsFromError(verr)
+		if rerr != nil {
+			return nil, rerr.Error()
 		}
 
 		if !exists {
-			klog.V(2).Infof("Virtual machine %q not found with message: %q", key, message)
+			klog.V(2).Infof("Virtual machine under resource group %q not found", resourceGroup)
 			return nil, nil
 		}
 
-		return &vm, nil
+		localCache := &sync.Map{}
+		for _, vm := range vmList {
+			if vm.Name == nil || *vm.Name == "" {
+				klog.Warning("failed to get the name of VM")
+				continue
+			}
+			localCache.Store(*vm.Name, &vmEntry{
+				vm:         &vm,
+				lastUpdate: time.Now().UTC(),
+			})
+		}
+
+		return localCache, nil
 	}
 
-	return newTimedcache(vmCacheTTL, getter)
+	if az.VMCacheTTLInSeconds == 0 {
+		az.VMCacheTTLInSeconds = vmCacheTTLDefaultInSeconds
+	}
+	return newTimedcache(time.Duration(az.VMCacheTTLInSeconds)*time.Second, getter)
 }
 
 func (az *Cloud) newLBCache() (*timedCache, error) {
@@ -233,21 +253,24 @@ func (az *Cloud) newLBCache() (*timedCache, error) {
 		ctx, cancel := getContextWithCancel()
 		defer cancel()
 
-		lb, err := az.LoadBalancerClient.Get(ctx, az.ResourceGroup, key, "")
-		exists, message, realErr := checkResourceExistsFromError(err)
-		if realErr != nil {
-			return nil, realErr
+		lb, err := az.LoadBalancerClient.Get(ctx, az.getLoadBalancerResourceGroup(), key, "")
+		exists, rerr := checkResourceExistsFromError(err)
+		if rerr != nil {
+			return nil, rerr.Error()
 		}
 
 		if !exists {
-			klog.V(2).Infof("Load balancer %q not found with message: %q", key, message)
+			klog.V(2).Infof("Load balancer %q not found", key)
 			return nil, nil
 		}
 
 		return &lb, nil
 	}
 
-	return newTimedcache(lbCacheTTL, getter)
+	if az.LoadBalancerCacheTTLInSeconds == 0 {
+		az.LoadBalancerCacheTTLInSeconds = loadBalancerCacheTTLDefaultInSeconds
+	}
+	return newTimedcache(time.Duration(az.LoadBalancerCacheTTLInSeconds)*time.Second, getter)
 }
 
 func (az *Cloud) newNSGCache() (*timedCache, error) {
@@ -255,20 +278,23 @@ func (az *Cloud) newNSGCache() (*timedCache, error) {
 		ctx, cancel := getContextWithCancel()
 		defer cancel()
 		nsg, err := az.SecurityGroupsClient.Get(ctx, az.ResourceGroup, key, "")
-		exists, message, realErr := checkResourceExistsFromError(err)
-		if realErr != nil {
-			return nil, realErr
+		exists, rerr := checkResourceExistsFromError(err)
+		if rerr != nil {
+			return nil, rerr.Error()
 		}
 
 		if !exists {
-			klog.V(2).Infof("Security group %q not found with message: %q", key, message)
+			klog.V(2).Infof("Security group %q not found", key)
 			return nil, nil
 		}
 
 		return &nsg, nil
 	}
 
-	return newTimedcache(nsgCacheTTL, getter)
+	if az.NsgCacheTTLInSeconds == 0 {
+		az.NsgCacheTTLInSeconds = nsgCacheTTLDefaultInSeconds
+	}
+	return newTimedcache(time.Duration(az.NsgCacheTTLInSeconds)*time.Second, getter)
 }
 
 func (az *Cloud) newRouteTableCache() (*timedCache, error) {
@@ -276,20 +302,23 @@ func (az *Cloud) newRouteTableCache() (*timedCache, error) {
 		ctx, cancel := getContextWithCancel()
 		defer cancel()
 		rt, err := az.RouteTablesClient.Get(ctx, az.RouteTableResourceGroup, key, "")
-		exists, message, realErr := checkResourceExistsFromError(err)
-		if realErr != nil {
-			return nil, realErr
+		exists, rerr := checkResourceExistsFromError(err)
+		if rerr != nil {
+			return nil, rerr.Error()
 		}
 
 		if !exists {
-			klog.V(2).Infof("Route table %q not found with message: %q", key, message)
+			klog.V(2).Infof("Route table %q not found", key)
 			return nil, nil
 		}
 
 		return &rt, nil
 	}
 
-	return newTimedcache(rtCacheTTL, getter)
+	if az.RouteTableCacheTTLInSeconds == 0 {
+		az.RouteTableCacheTTLInSeconds = routeTableCacheTTLDefaultInSeconds
+	}
+	return newTimedcache(time.Duration(az.RouteTableCacheTTLInSeconds)*time.Second, getter)
 }
 
 func (az *Cloud) useStandardLoadBalancer() bool {
@@ -347,7 +376,7 @@ func isBackendPoolOnSameLB(newBackendPoolID string, existingBackendPools []strin
 	}
 
 	newLBName := matches[1]
-	newLBNameTrimmed := strings.TrimRight(newLBName, InternalLoadBalancerNameSuffix)
+	newLBNameTrimmed := strings.TrimSuffix(newLBName, InternalLoadBalancerNameSuffix)
 	for _, backendPool := range existingBackendPools {
 		matches := backendPoolIDRE.FindStringSubmatch(backendPool)
 		if len(matches) != 2 {
@@ -355,7 +384,7 @@ func isBackendPoolOnSameLB(newBackendPoolID string, existingBackendPools []strin
 		}
 
 		lbName := matches[1]
-		if !strings.EqualFold(strings.TrimRight(lbName, InternalLoadBalancerNameSuffix), newLBNameTrimmed) {
+		if !strings.EqualFold(strings.TrimSuffix(lbName, InternalLoadBalancerNameSuffix), newLBNameTrimmed) {
 			return false, lbName, nil
 		}
 	}
