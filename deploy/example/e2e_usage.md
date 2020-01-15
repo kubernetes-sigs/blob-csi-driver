@@ -3,7 +3,7 @@ create a pod with blobfuse mount on linux
 ### Dynamic Provisioning (create storage account and container automatically by blobfuse driver)
  - Create a blobfuse CSI storage class
 ```console
-kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi-mountoptions.yaml
+kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml
 ```
 
  - Create a blobfuse CSI PVC
