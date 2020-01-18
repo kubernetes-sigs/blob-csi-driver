@@ -67,7 +67,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 
 	ginkgo.It("should create a deployment object, write and read to it, delete the pod and write and read to it again", func() {
 		pod := testsuites.PodDetails{
-			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 1; done",
+			Cmd: "echo 'hello world' >> /mnt/wrong-dir/data && while true; do sleep 1; done",
 			Volumes: []testsuites.VolumeDetails{
 				{
 					FSType:    "ext3",
