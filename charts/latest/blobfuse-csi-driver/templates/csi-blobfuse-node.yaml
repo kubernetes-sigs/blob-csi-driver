@@ -108,8 +108,8 @@ spec:
               name: blobfuse-cache
           resources:
             limits:
-              cpu: 200m
-              memory: 200Mi
+              cpu: 4
+              memory: 6Gi
             requests:
               cpu: 10m
               memory: 20Mi
