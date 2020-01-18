@@ -55,23 +55,13 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
 	}
 
-	mountOptions := getNodePublishMountOptions(req)
+	mountOptions := []string{"bind"}
+	if req.GetReadonly() {
+		mountOptions = append(mountOptions, "ro")
+	}
 
 	if err := d.ensureMountPoint(target); err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", target, err)
-	}
-
-	readOnly := req.GetReadonly()
-	volumeID := req.GetVolumeId()
-	attrib := req.GetVolumeContext()
-	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
-
-	klog.V(2).Infof("target %v\n\nreadonly %v\nvolumeId %v\nContext %v\nmountflags %v\n",
-		target, readOnly, volumeID, attrib, mountFlags)
-
-	klog.V(2).Infof("NodePublishVolume: creating dir %s", target)
-	if err := d.mounter.MakeDir(target); err != nil {
-		return nil, status.Errorf(codes.Internal, "Could not create dir %q: %v", target, err)
 	}
 
 	klog.V(2).Infof("NodePublishVolume: mounting %s at %s with mountOptions: %v", source, target, mountOptions)
@@ -259,19 +249,7 @@ func (d *Driver) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolume
 	return nil, status.Error(codes.Unimplemented, fmt.Sprintf("NodeExpandVolume is not yet implemented"))
 }
 
-func getNodePublishMountOptions(req *csi.NodePublishVolumeRequest) []string {
-	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
-	mountOptions := []string{"bind"}
-	if req.GetReadonly() {
-		mountOptions = append(mountOptions, "ro")
-	}
-	mountOptions = util.JoinMountOptions(mountFlags, mountOptions)
-
-	return mountOptions
-}
-
-// ensureMountPoint: ensure mount point to be valid.
-// If it is not existed, it will be created.
+// ensureMountPoint: create mount point if not exists
 func (d *Driver) ensureMountPoint(target string) error {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
@@ -294,8 +272,8 @@ func (d *Driver) ensureMountPoint(target string) error {
 		// notMnt = true
 	}
 
-	if err := os.MkdirAll(target, 0750); err != nil {
-		klog.Errorf("mkdir failed on target: %s (%v)", target, err)
+	if err := d.mounter.MakeDir(target); err != nil {
+		klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
 		return err
 	}
 
