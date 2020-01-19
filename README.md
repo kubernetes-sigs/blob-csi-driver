@@ -1,5 +1,4 @@
 # blobfuse CSI driver for Kubernetes
-![TravisCI](https://travis-ci.com/csi-driver/blobfuse-csi-driver.svg?branch=master)
 [![Coverage Status](https://coveralls.io/repos/github/csi-driver/blobfuse-csi-driver/badge.svg?branch=master)](https://coveralls.io/github/csi-driver/blobfuse-csi-driver?branch=master)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcsi-driver%2Fblobfuse-csi-driver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcsi-driver%2Fblobfuse-csi-driver?ref=badge_shield)
 
@@ -17,7 +16,7 @@ Status: Beta
 |v0.2.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.2.0       | yes    |
 
 ### Kubernetes Compatibility
-| Blobfuse CSI Driver\Kubernetes Version   | 1.13+ |
+| Blobfuse CSI Driver\Kubernetes Version   | 1.14+ |
 |------------------------------------------|-------|
 | master branch                            | yes   |
 | v0.3.0                                   | yes   |
