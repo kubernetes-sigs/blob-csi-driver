@@ -28,7 +28,7 @@ csi-blobfuse-node-cvgbs                        3/3     Running   0          7m4s
 csi-blobfuse-node-dr4s4                        3/3     Running   0          7m4s    10.240.0.4     k8s-agentpool-22533604-0
 ```
 
-- clean up azure file CSI driver
+- clean up blobfuse CSI driver
 
 ```
 kubectl delete -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.4.0/csi-blobfuse-controller.yaml
