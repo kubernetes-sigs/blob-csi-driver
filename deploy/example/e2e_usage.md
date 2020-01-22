@@ -1,6 +1,6 @@
 ## CSI driver E2E usage example
 create a pod with blobfuse mount on linux
-### Dynamic Provisioning (create storage account and container automatically by blobfuse driver)
+### Dynamic Provisioning (create storage account and container by blobfuse driver)
  - Create a blobfuse CSI storage class
 ```console
 kubectl create -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml
@@ -34,7 +34,7 @@ kubectl create secret generic azure-secret --from-literal azurestorageaccountnam
 ="sastoken" --type=Opaque
 ```
 
-> storage account key(or sastoken) could also be stored in Azure Key Vault, check example here: [read-from-keyvault](./docs/read-from-keyvault.md)
+> storage account key(or sastoken) could also be stored in Azure Key Vault, check example here: [read-from-keyvault](../../docs/read-from-keyvault.md)
 
  - Create a blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `containerName` in `volumeAttributes`
 ```console
