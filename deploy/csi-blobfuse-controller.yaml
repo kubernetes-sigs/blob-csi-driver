@@ -5,7 +5,7 @@ metadata:
   name: csi-blobfuse-controller
   namespace: kube-system
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: csi-blobfuse-controller
