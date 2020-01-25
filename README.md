@@ -1,5 +1,5 @@
 # blobfuse CSI driver for Kubernetes
-[![Coverage Status](https://coveralls.io/repos/github/csi-driver/blobfuse-csi-driver/badge.svg?branch=master)](https://coveralls.io/github/csi-driver/blobfuse-csi-driver?branch=master)
+[![Coverage Status](https://coveralls.io/github/kubernetes-sigs/blobfuse-csi-driver?branch=master)](https://coveralls.io/github/kubernetes-sigs/blobfuse-csi-driver?branch=master)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcsi-driver%2Fblobfuse-csi-driver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcsi-driver%2Fblobfuse-csi-driver?ref=badge_shield)
 
 ### About
