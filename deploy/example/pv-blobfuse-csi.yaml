@@ -14,6 +14,6 @@ spec:
     volumeHandle: arbitrary-volumeid
     volumeAttributes:
       containerName: EXISTING_CONTAINER_NAME
-    nodePublishSecretRef:
+    nodeStageSecretRef:
       name: azure-secret
       namespace: default
