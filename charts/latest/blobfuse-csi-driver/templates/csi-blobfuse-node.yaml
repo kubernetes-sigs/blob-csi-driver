@@ -13,7 +13,6 @@ spec:
 {{ include "blobfuse.labels" . | indent 6 }}
         app: csi-blobfuse-node
     spec:
-      hostNetwork: true
       nodeSelector:
         beta.kubernetes.io/os: linux
       priorityClassName: system-node-critical
@@ -27,7 +26,7 @@ spec:
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
-            - --health-port=9802
+            - --health-port=29623
             - --v=5
           resources:
             limits:
@@ -70,7 +69,7 @@ spec:
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
           ports:
-            - containerPort: 9802
+            - containerPort: 29623
               name: healthz
               protocol: TCP
           livenessProbe:

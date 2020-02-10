@@ -88,7 +88,7 @@ spec:
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
-            - --health-port=9802
+            - --health-port=29622
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -106,8 +106,11 @@ spec:
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
           ports:
-            - containerPort: 9802
+            - containerPort: 29622
               name: healthz
+              protocol: TCP
+            - containerPort: 29624
+              name: metrics
               protocol: TCP
           livenessProbe:
             failureThreshold: 5
