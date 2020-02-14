@@ -17,9 +17,9 @@
 set -uo pipefail
 
 echo 'Uninstalling Blobfuse CSI driver...'
+kubectl delete -f deploy/csi-blobfuse-controller.yaml
+kubectl delete -f deploy/csi-blobfuse-node.yaml
 kubectl delete -f deploy/crd-csi-driver-registry.yaml
 kubectl delete -f deploy/crd-csi-node-info.yaml
 kubectl delete -f deploy/rbac-csi-blobfuse-controller.yaml
-kubectl delete -f deploy/csi-blobfuse-controller.yaml
-kubectl delete -f deploy/csi-blobfuse-node.yaml
 echo 'Blobfuse CSI driver uninstalled'
