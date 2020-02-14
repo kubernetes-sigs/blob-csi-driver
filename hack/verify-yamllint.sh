@@ -19,6 +19,7 @@ if [[ -z "$(command -v yamllint)" ]]; then
 fi
 
 LOG=/tmp/yamllint.log
+helmPath=charts/latest/blobfuse-csi-driver/templates
 
 yamllint -f parsable deploy/*.yaml | grep -v "line too long" > $LOG
 cat $LOG
@@ -29,10 +30,10 @@ if [ $linecount -gt 0 ]; then
 	exit 1
 fi
 
-yamllint -f parsable charts/latest/blobfuse-csi-driver/templates/*.yaml | grep -v "line too long" | grep -v "too many spaces inside braces" | grep -v "missing document start" | grep -v "syntax error" > $LOG
+yamllint -f parsable $helmPath/*.yaml | grep -v "line too long" | grep -v "too many spaces inside braces" | grep -v "missing document start" | grep -v "syntax error" > $LOG
 linecount=`cat $LOG | wc -l`
 if [ $linecount -gt 0 ]; then
-	echo "yaml files under charts/latest/azuredisk-csi-driver/templates/ are not linted, failed with: "
+	echo "yaml files under $helmPath/ are not linted, failed with: "
 	cat $LOG
 	exit 1
 fi
