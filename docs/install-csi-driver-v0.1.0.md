@@ -5,11 +5,11 @@ If you have already installed Helm, you can also use it to install blobfuse CSI 
 ## Installation with kubectl
 
 ```
-kubectl apply -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/crd-csi-driver-registry.yaml
-kubectl apply -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/crd-csi-node-info.yaml
-kubectl apply -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/rbac-csi-blobfuse-controller.yaml
-kubectl apply -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/csi-blobfuse-controller.yaml
-kubectl apply -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/csi-blobfuse-node.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/crd-csi-driver-registry.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/crd-csi-node-info.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/rbac-csi-blobfuse-controller.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/csi-blobfuse-controller.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/csi-blobfuse-node.yaml
 ```
 
 - check pods status:
@@ -30,9 +30,9 @@ csi-blobfuse-node-dr4s4                        3/3     Running   0          7m4s
 - clean up blobfuse CSI driver
 
 ```
-kubectl delete -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/csi-blobfuse-controller.yaml
-kubectl delete -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/csi-blobfuse-node.yaml
-kubectl delete -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/crd-csi-driver-registry.yaml
-kubectl delete -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/crd-csi-node-info.yaml
-kubectl delete -f https://raw.githubusercontent.com/csi-driver/blobfuse-csi-driver/master/deploy/v0.1.0/rbac-csi-blobfuse-controller.yaml
+kubectl delete -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/csi-blobfuse-controller.yaml
+kubectl delete -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/csi-blobfuse-node.yaml
+kubectl delete -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/crd-csi-driver-registry.yaml
+kubectl delete -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/crd-csi-node-info.yaml
+kubectl delete -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/v0.1.0/rbac-csi-blobfuse-controller.yaml
 ```
