@@ -1,11 +1,12 @@
+---
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: blobfuse.csi.azure.com
 provisioner: blobfuse.csi.azure.com
 parameters:
-  skuName: Standard_LRS  #available values: Standard_LRS, Standard_GRS, Standard_RAGRS
-reclaimPolicy: Retain #If set as "Delete" container would be removed after pvc deletion
+  skuName: Standard_LRS  # available values: Standard_LRS, Standard_GRS, Standard_RAGRS
+reclaimPolicy: Retain  # if set as "Delete" container would be removed after pvc deletion
 volumeBindingMode: Immediate
 mountOptions:
   - -o allow_other
