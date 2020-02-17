@@ -124,13 +124,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	if !notMnt {
 		// testing original mount point, make sure the mount link is valid
 		if _, err := ioutil.ReadDir(targetPath); err == nil {
-			klog.V(2).Infof("azureFile - already mounted to target %s", targetPath)
+			klog.V(2).Infof("blobfuse - already mounted to target %s", targetPath)
 			return &csi.NodeStageVolumeResponse{}, nil
 		}
 		// todo: mount link is invalid, now unmount and remount later (built-in functionality)
-		klog.Warningf("azureFile - ReadDir %s failed with %v, unmount this directory", targetPath, err)
+		klog.Warningf("blobfuse - ReadDir %s failed with %v, unmount this directory", targetPath, err)
 		if err := d.mounter.Unmount(targetPath); err != nil {
-			klog.Errorf("azureFile - Unmount directory %s failed with %v", targetPath, err)
+			klog.Errorf("blobfuse - Unmount directory %s failed with %v", targetPath, err)
 			return nil, err
 		}
 		// notMnt = true
