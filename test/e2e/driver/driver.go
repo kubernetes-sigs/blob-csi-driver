@@ -44,6 +44,8 @@ type DynamicPVTestDriver interface {
 type PreProvisionedVolumeTestDriver interface {
 	// GetPersistentVolume returns a PersistentVolume with pre-provisioned volumeHandle
 	GetPersistentVolume(volumeID string, fsType string, size string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, namespace string) *v1.PersistentVolume
+	// GetPreProvisionStorageClass returns a StorageClass with existing container
+	GetPreProvisionStorageClass(parameters map[string]string, mountOptions []string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, bindingMode *storagev1.VolumeBindingMode, allowedTopologyValues []string, namespace string) *storagev1.StorageClass
 }
 
 type VolumeSnapshotTestDriver interface {

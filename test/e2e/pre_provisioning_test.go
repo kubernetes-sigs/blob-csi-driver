@@ -26,6 +26,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/onsi/ginkgo"
 	v1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 )
@@ -132,6 +133,44 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 		test := testsuites.PreProvisionedReclaimPolicyTest{
 			CSIDriver: testDriver,
 			Volumes:   volumes,
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("use existing credentials in k8s cluster", func() {
+		req := makeCreateVolumeReq("pre-provisioned-existing-credentials")
+		resp, err := blobfuseDriver.CreateVolume(context.Background(), req)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
+		}
+		volumeID = resp.Volume.VolumeId
+		ginkgo.By(fmt.Sprintf("Successfully provisioned BlobFuse volume: %q\n", volumeID))
+
+		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
+		reclaimPolicy := v1.PersistentVolumeReclaimRetain
+		volumeBindingMode := storagev1.VolumeBindingImmediate
+
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeID:          volumeID,
+						FSType:            "ext4",
+						ClaimSize:         volumeSize,
+						ReclaimPolicy:     &reclaimPolicy,
+						VolumeBindingMode: &volumeBindingMode,
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		test := testsuites.PreProvisionedExistingCredentialsTest{
+			CSIDriver: testDriver,
+			Pods:      pods,
 		}
 		test.Run(cs, ns)
 	})

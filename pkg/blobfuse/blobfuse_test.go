@@ -107,10 +107,10 @@ func TestGetContainerInfo(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result1, result2, result3, result4 := getContainerInfo(test.options)
+		result1, result2, result3, result4 := GetContainerInfo(test.options)
 		if !reflect.DeepEqual(result1, test.expected1) || !reflect.DeepEqual(result2, test.expected2) ||
 			!reflect.DeepEqual(result3, test.expected3) || !reflect.DeepEqual(result4, test.expected4) {
-			t.Errorf("input: %q, getContainerInfo result1: %q, expected1: %q, result2: %q, expected2: %q, result3: %q, expected3: %q, result4: %q, expected4: %q", test.options, result1, test.expected1, result2, test.expected2,
+			t.Errorf("input: %q, GetContainerInfo result1: %q, expected1: %q, result2: %q, expected2: %q, result3: %q, expected3: %q, result4: %q, expected4: %q", test.options, result1, test.expected1, result2, test.expected2,
 				result3, test.expected3, result4, test.expected4)
 		}
 	}

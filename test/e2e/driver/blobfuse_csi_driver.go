@@ -86,6 +86,12 @@ func (d *blobFuseCSIDriver) GetPersistentVolume(volumeID string, fsType string, 
 	}
 }
 
+func (d *blobFuseCSIDriver) GetPreProvisionStorageClass(parameters map[string]string, mountOptions []string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, bindingMode *storagev1.VolumeBindingMode, allowedTopologyValues []string, namespace string) *storagev1.StorageClass {
+	provisioner := d.driverName
+	generateName := fmt.Sprintf("%s-%s-pre-provisioned-sc-", namespace, provisioner)
+	return getStorageClass(generateName, provisioner, parameters, mountOptions, reclaimPolicy, bindingMode, nil)
+}
+
 func GetParameters() map[string]string {
 	return map[string]string{
 		"skuName": "Standard_LRS",

@@ -113,7 +113,7 @@ func (d *Driver) Run(endpoint string) {
 // get container info according to volume id, e.g.
 // input: "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
 // output: rg, f5713de20cde511e8ba4900, pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41
-func getContainerInfo(id string) (string, string, string, error) {
+func GetContainerInfo(id string) (string, string, string, error) {
 	segments := strings.Split(id, separator)
 	if len(segments) < 3 {
 		return "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
@@ -284,7 +284,7 @@ func (d *Driver) getStorageAccountAndContainer(ctx context.Context, volumeID str
 	} else {
 		if len(secrets) == 0 {
 			var resourceGroupName string
-			resourceGroupName, accountName, containerName, err = getContainerInfo(volumeID)
+			resourceGroupName, accountName, containerName, err = GetContainerInfo(volumeID)
 			if err != nil {
 				return "", "", "", "", err
 			}
