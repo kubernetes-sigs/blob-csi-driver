@@ -35,6 +35,7 @@ import (
 
 // NodePublishVolume mount the volume from staging to target path
 func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+	klog.V(2).Infof("NodePublishVolume: called with args %+v", *req)
 	if req.GetVolumeCapability() == nil {
 		return nil, status.Error(codes.InvalidArgument, "Volume capability missing in request")
 	}
@@ -100,6 +101,7 @@ func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublish
 
 // NodeStageVolume mount the volume to a staging path
 func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
+	klog.V(2).Infof("NodeStageVolume: called with args %+v", *req)
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
 	}
@@ -112,28 +114,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not provided")
 	}
 
-	notMnt, err := d.mounter.IsLikelyNotMountPoint(targetPath)
-	if err != nil && !os.IsNotExist(err) {
-		return nil, err
-	}
-
-	if err := d.mounter.MakeDir(targetPath); err != nil {
-		return nil, err
-	}
-
-	if !notMnt {
-		// testing original mount point, make sure the mount link is valid
-		if _, err := ioutil.ReadDir(targetPath); err == nil {
-			klog.V(2).Infof("blobfuse - already mounted to target %s", targetPath)
-			return &csi.NodeStageVolumeResponse{}, nil
-		}
-		// todo: mount link is invalid, now unmount and remount later (built-in functionality)
-		klog.Warningf("blobfuse - ReadDir %s failed with %v, unmount this directory", targetPath, err)
-		if err := d.mounter.Unmount(targetPath); err != nil {
-			klog.Errorf("blobfuse - Unmount directory %s failed with %v", targetPath, err)
-			return nil, err
-		}
-		// notMnt = true
+	if err := d.ensureMountPoint(targetPath); err != nil {
+		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", targetPath, err)
 	}
 
 	volumeID := req.GetVolumeId()
@@ -223,7 +205,7 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 
 // NodeGetCapabilities return the capabilities of the Node plugin
 func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
-	klog.V(2).Infof("Using default NodeGetCapabilities")
+	klog.V(2).Infof("NodeGetCapabilities: called with args %+v", *req)
 
 	return &csi.NodeGetCapabilitiesResponse{
 		Capabilities: d.NSCap,
@@ -232,7 +214,7 @@ func (d *Driver) NodeGetCapabilities(ctx context.Context, req *csi.NodeGetCapabi
 
 // NodeGetInfo return info of the node on which this plugin is running
 func (d *Driver) NodeGetInfo(ctx context.Context, req *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	klog.V(5).Infof("Using default NodeGetInfo")
+	klog.V(2).Infof("NodeGetInfo: called with args %+v", *req)
 
 	return &csi.NodeGetInfoResponse{
 		NodeId: d.NodeID,
@@ -253,7 +235,12 @@ func (d *Driver) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolume
 func (d *Driver) ensureMountPoint(target string) error {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
-		return err
+		if IsCorruptedDir(target) {
+			notMnt = false
+			klog.Warningf("detected corrupted mount for targetPath [%s]", target)
+		} else {
+			return err
+		}
 	}
 
 	if !notMnt {

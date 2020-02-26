@@ -1,0 +1,50 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-blobfuse
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: blobfuse.csi.azure.com
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: deployment-blobfuse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+      name: deployment-blobfuse
+    spec:
+      containers:
+        - name: deployment-blobfuse
+          image: nginx
+          command:
+            - "/bin/sh"
+            - "-c"
+            - while true; do echo $(date) >> /mnt/blobfuse/outfile; sleep 1; done
+          volumeMounts:
+            - name: blobfuse
+              mountPath: "/mnt/blobfuse"
+              readOnly: false
+      volumes:
+        - name: blobfuse
+          persistentVolumeClaim:
+            claimName: pvc-blobfuse
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate

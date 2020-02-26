@@ -18,6 +18,8 @@ package blobfuse
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"testing"
 
@@ -347,5 +349,35 @@ func TestIsSASToken(t *testing.T) {
 		if !reflect.DeepEqual(result, test.expected) {
 			t.Errorf("input: %q, isSASToken result: %v, expected: %v", test.key, result, test.expected)
 		}
+	}
+}
+
+func TestIsCorruptedDir(t *testing.T) {
+	existingMountPath, err := ioutil.TempDir(os.TempDir(), "blobfuse-csi-mount-test")
+	if err != nil {
+		t.Fatalf("failed to create tmp dir: %v", err)
+	}
+	defer os.RemoveAll(existingMountPath)
+
+	tests := []struct {
+		desc           string
+		dir            string
+		expectedResult bool
+	}{
+		{
+			desc:           "NotExist dir",
+			dir:            "/tmp/NotExist",
+			expectedResult: false,
+		},
+		{
+			desc:           "Existing dir",
+			dir:            existingMountPath,
+			expectedResult: false,
+		},
+	}
+
+	for i, test := range tests {
+		isCorruptedDir := IsCorruptedDir(test.dir)
+		assert.Equal(t, test.expectedResult, isCorruptedDir, "TestCase[%d]: %s", i, test.desc)
 	}
 }
