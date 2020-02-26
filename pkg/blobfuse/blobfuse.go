@@ -311,3 +311,9 @@ func (d *Driver) getStorageAccountAndContainer(ctx context.Context, volumeID str
 
 	return accountName, accountKey, accountSasToken, containerName, nil
 }
+
+func IsCorruptedDir(dir string) bool {
+	pathExists, pathErr := mount.PathExists(dir)
+	fmt.Printf("IsCorruptedDir(%s) returned with error: (%v, %v)\\n", dir, pathExists, pathErr)
+	return pathErr != nil && mount.IsCorruptedMnt(pathErr)
+}
