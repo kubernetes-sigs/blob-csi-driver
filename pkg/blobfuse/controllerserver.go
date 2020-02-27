@@ -134,9 +134,9 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 
 	volumeID := req.VolumeId
-	resourceGroupName, accountName, containerName, err := getContainerInfo(volumeID)
+	resourceGroupName, accountName, containerName, err := GetContainerInfo(volumeID)
 	if err != nil {
-		klog.Errorf("getContainerInfo(%s) in DeleteVolume failed with error: %v", volumeID, err)
+		klog.Errorf("GetContainerInfo(%s) in DeleteVolume failed with error: %v", volumeID, err)
 		return &csi.DeleteVolumeResponse{}, nil
 	}
 
@@ -183,9 +183,9 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	}
 
 	volumeID := req.VolumeId
-	resourceGroupName, accountName, containerName, err := getContainerInfo(volumeID)
+	resourceGroupName, accountName, containerName, err := GetContainerInfo(volumeID)
 	if err != nil {
-		klog.Errorf("getContainerInfo(%s) in ValidateVolumeCapabilities failed with error: %v", volumeID, err)
+		klog.Errorf("GetContainerInfo(%s) in ValidateVolumeCapabilities failed with error: %v", volumeID, err)
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
