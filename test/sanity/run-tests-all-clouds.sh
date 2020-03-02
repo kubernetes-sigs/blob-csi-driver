@@ -18,7 +18,7 @@ set -eo pipefail
 
 function install_csi_sanity_bin {
   mkdir -p $GOPATH/src/github.com/kubernetes-csi/csi-test
-  git clone https://github.com/kubernetes-csi/csi-test.git -b v1.1.0 $GOPATH/src/github.com/kubernetes-csi/csi-test
+  git clone https://github.com/kubernetes-csi/csi-test.git -b v2.2.0 $GOPATH/src/github.com/kubernetes-csi/csi-test
   pushd $GOPATH/src/github.com/kubernetes-csi/csi-test/cmd/csi-sanity
   make && make install
   popd
