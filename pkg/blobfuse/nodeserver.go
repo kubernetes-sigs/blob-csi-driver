@@ -126,7 +126,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
 
-	accountName, accountKey, accountSasToken, containerName, err := d.getStorageAccountAndContainer(ctx, volumeID, attrib, secrets)
+	accountName, accountKey, accountSasToken, containerName, err := d.GetStorageAccountAndContainer(ctx, volumeID, attrib, secrets)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, in *csi.NodeGetVolumeSt
 
 // NodeExpandVolume node expand volume
 func (d *Driver) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, fmt.Sprintf("NodeExpandVolume is not yet implemented"))
+	return nil, status.Error(codes.Unimplemented, "NodeExpandVolume is not yet implemented")
 }
 
 // ensureMountPoint: create mount point if not exists

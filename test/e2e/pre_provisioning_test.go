@@ -137,7 +137,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 		test.Run(cs, ns)
 	})
 
-	ginkgo.It("use existing credentials in k8s cluster", func() {
+	ginkgo.It("should use existing credentials in k8s cluster", func() {
 		req := makeCreateVolumeReq("pre-provisioned-existing-credentials")
 		resp, err := blobfuseDriver.CreateVolume(context.Background(), req)
 		if err != nil {
@@ -171,6 +171,46 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 		test := testsuites.PreProvisionedExistingCredentialsTest{
 			CSIDriver: testDriver,
 			Pods:      pods,
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("should use provided credentials", func() {
+		req := makeCreateVolumeReq("pre-provisioned-provided-credentials")
+		resp, err := blobfuseDriver.CreateVolume(context.Background(), req)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
+		}
+		volumeID = resp.Volume.VolumeId
+		ginkgo.By(fmt.Sprintf("Successfully provisioned BlobFuse volume: %q\n", volumeID))
+
+		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
+		reclaimPolicy := v1.PersistentVolumeReclaimRetain
+		volumeBindingMode := storagev1.VolumeBindingImmediate
+
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeID:          volumeID,
+						FSType:            "ext4",
+						ClaimSize:         volumeSize,
+						ReclaimPolicy:     &reclaimPolicy,
+						VolumeBindingMode: &volumeBindingMode,
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+						NodeStageSecretRef: "azure-secret",
+					},
+				},
+			},
+		}
+		test := testsuites.PreProvisionedProvidedCredentiasTest{
+			CSIDriver: testDriver,
+			Pods:      pods,
+			Blobfuse:  blobfuseDriver,
 		}
 		test.Run(cs, ns)
 	})
