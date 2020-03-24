@@ -236,9 +236,9 @@ func isSASToken(key string) bool {
 	return strings.Contains(key, "?sv=")
 }
 
-// getStorageAccountAndContainer: get storage account and container info
+// GetStorageAccountAndContainer: get storage account and container info
 // returns <accountName, accountKey, accountSasToken, containerName>
-func (d *Driver) getStorageAccountAndContainer(ctx context.Context, volumeID string, attrib, secrets map[string]string) (string, string, string, string, error) {
+func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID string, attrib, secrets map[string]string) (string, string, string, string, error) {
 	var (
 		accountName     string
 		accountKey      string
