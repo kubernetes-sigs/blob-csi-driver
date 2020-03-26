@@ -14,7 +14,7 @@ spec:
         app: csi-blobfuse-node
     spec:
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       priorityClassName: system-node-critical
       containers:
         - name: liveness-probe
