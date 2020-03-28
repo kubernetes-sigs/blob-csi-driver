@@ -36,7 +36,6 @@ spec:
           env:
             - name: ADDRESS
               value: /csi/csi.sock
-          imagePullPolicy: Always
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -58,7 +57,6 @@ spec:
           env:
             - name: ADDRESS
               value: /csi/csi.sock
-          imagePullPolicy: Always
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -130,7 +128,6 @@ spec:
               value: "/etc/kubernetes/azure.json"
             - name: CSI_ENDPOINT
               value: unix:///csi/csi.sock
-          imagePullPolicy: Always
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
