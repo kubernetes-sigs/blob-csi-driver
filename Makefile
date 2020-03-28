@@ -32,7 +32,7 @@ export GO111MODULE
 all: blobfuse
 
 .PHONY: verify
-verify:
+verify: unit-test
 	hack/verify-all.sh
 
 .PHONY: unit-test
