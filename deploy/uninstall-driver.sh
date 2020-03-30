@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2019 The Kubernetes Authors.
+# Copyright 2020 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,12 +14,22 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -uo pipefail
+set -euo pipefail
 
-echo 'Uninstalling Blobfuse CSI driver...'
-kubectl delete -f deploy/csi-blobfuse-controller.yaml
-kubectl delete -f deploy/csi-blobfuse-node.yaml
-kubectl delete -f deploy/crd-csi-driver-registry.yaml
-kubectl delete -f deploy/crd-csi-node-info.yaml
-kubectl delete -f deploy/rbac-csi-blobfuse-controller.yaml
-echo 'Blobfuse CSI driver uninstalled'
+ver="master"
+if [[ "$#" -gt 0 ]]; then
+  ver="$1"
+fi
+
+repo="https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy"
+if [ $ver != "master" ]; then
+	repo="$repo/$ver"
+fi
+
+echo "Uninstalling Blobfuse CSI driver, version: $ver ..."
+kubectl delete -f $repo/csi-blobfuse-controller.yaml --ignore-not-found
+kubectl delete -f $repo/csi-blobfuse-node.yaml --ignore-not-found
+kubectl delete -f $repo/crd-csi-driver-registry.yaml --ignore-not-found
+kubectl delete -f $repo/crd-csi-node-info.yaml --ignore-not-found
+kubectl delete -f $repo/rbac-csi-blobfuse-controller.yaml --ignore-not-found
+echo 'Uninstalled Blobfuse CSI driver successfully.'
