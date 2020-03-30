@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2019 The Kubernetes Authors.
+# Copyright 2020 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,10 +14,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -uo pipefail
+set -euo pipefail
 
-kubectl apply -f deploy/crd-csi-driver-registry.yaml
-kubectl apply -f deploy/crd-csi-node-info.yaml
-kubectl apply -f deploy/rbac-csi-blobfuse-controller.yaml
-kubectl apply -f deploy/csi-blobfuse-controller.yaml
-kubectl apply -f deploy/csi-blobfuse-node.yaml
+ver="master"
+if [[ "$#" -gt 0 ]]; then
+  ver="$1"
+fi
+
+repo="https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy"
+if [ $ver != "master" ]; then
+	repo="$repo/$ver"
+fi
+echo "Installing Blobfuse CSI driver, version: $ver ..."
+kubectl apply -f $repo/crd-csi-driver-registry.yaml
+kubectl apply -f $repo/crd-csi-node-info.yaml
+kubectl apply -f $repo/rbac-csi-blobfuse-controller.yaml
+kubectl apply -f $repo/csi-blobfuse-controller.yaml
+kubectl apply -f $repo/csi-blobfuse-node.yaml
+echo 'Blobfuse CSI driver installed successfully.'
