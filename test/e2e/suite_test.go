@@ -103,7 +103,7 @@ var _ = ginkgo.BeforeSuite(func() {
 var _ = ginkgo.AfterSuite(func() {
 	if testutil.IsRunningInProw() {
 		blobfuseLog := testCmd{
-			command:  "sh",
+			command:  "bash",
 			args:     []string{"test/utils/blobfuse_log.sh"},
 			startLog: "===================blobfuse log===================",
 			endLog:   "==================================================",
@@ -115,6 +115,21 @@ var _ = ginkgo.AfterSuite(func() {
 			endLog:   "Blobfuse CSI Driver uninstalled",
 		}
 		execTestCmd([]testCmd{blobfuseLog, e2eTeardown})
+
+		// install/uninstall CSI Driver deployment scripts test
+		installDriver := testCmd{
+			command:  "bash",
+			args:     []string{"deploy/install-driver.sh", "master", "local"},
+			startLog: "===================install CSI Driver deployment scripts test===================",
+			endLog:   "===================================================",
+		}
+		uninstallDriver := testCmd{
+			command:  "bash",
+			args:     []string{"deploy/uninstall-driver.sh", "master", "local"},
+			startLog: "===================uninstall CSI Driver deployment scripts test===================",
+			endLog:   "===================================================",
+		}
+		execTestCmd([]testCmd{installDriver, uninstallDriver})
 
 		err := credentials.DeleteAzureCredentialFile()
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
