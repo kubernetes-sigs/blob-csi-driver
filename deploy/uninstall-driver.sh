@@ -35,8 +35,8 @@ fi
 
 echo "Uninstalling Blobfuse CSI driver, version: $ver ..."
 kubectl delete -f $repo/csi-blobfuse-controller.yaml --ignore-not-found
+kubectl delete -f $repo/csi-blobfuse-driver.yaml --ignore-not-found
 kubectl delete -f $repo/csi-blobfuse-node.yaml --ignore-not-found
-kubectl delete -f $repo/crd-csi-driver-registry.yaml --ignore-not-found
 kubectl delete -f $repo/crd-csi-node-info.yaml --ignore-not-found
 kubectl delete -f $repo/rbac-csi-blobfuse-controller.yaml --ignore-not-found
 echo 'Uninstalled Blobfuse CSI driver successfully.'

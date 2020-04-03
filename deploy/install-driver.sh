@@ -34,9 +34,9 @@ if [ $ver != "master" ]; then
 fi
 
 echo "Installing Blobfuse CSI driver, version: $ver ..."
-kubectl apply -f $repo/crd-csi-driver-registry.yaml
 kubectl apply -f $repo/crd-csi-node-info.yaml
 kubectl apply -f $repo/rbac-csi-blobfuse-controller.yaml
 kubectl apply -f $repo/csi-blobfuse-controller.yaml
+kubectl apply -f $repo/csi-blobfuse-driver.yaml
 kubectl apply -f $repo/csi-blobfuse-node.yaml
 echo 'Blobfuse CSI driver installed successfully.'
