@@ -31,8 +31,8 @@ spec:
             - --v=5
           resources:
             limits:
-              cpu: 200m
-              memory: 200Mi
+              cpu: 2
+              memory: 2Gi
             requests:
               cpu: 10m
               memory: 20Mi
@@ -58,8 +58,8 @@ spec:
               mountPath: /registration
           resources:
             limits:
-              cpu: 200m
-              memory: 200Mi
+              cpu: 2
+              memory: 2Gi
             requests:
               cpu: 10m
               memory: 20Mi
