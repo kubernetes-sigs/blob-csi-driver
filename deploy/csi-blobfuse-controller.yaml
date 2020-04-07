@@ -41,8 +41,8 @@ spec:
               name: socket-dir
           resources:
             limits:
-              cpu: 200m
-              memory: 200Mi
+              cpu: 2
+              memory: 2Gi
             requests:
               cpu: 10m
               memory: 20Mi
@@ -62,8 +62,8 @@ spec:
               name: socket-dir
           resources:
             limits:
-              cpu: 200m
-              memory: 200Mi
+              cpu: 2
+              memory: 2Gi
             requests:
               cpu: 10m
               memory: 20Mi
@@ -78,8 +78,8 @@ spec:
               mountPath: /csi
           resources:
             limits:
-              cpu: 200m
-              memory: 200Mi
+              cpu: 2
+              memory: 2Gi
             requests:
               cpu: 10m
               memory: 20Mi
