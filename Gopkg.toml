@@ -96,7 +96,7 @@
 
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "v35.0.0"
+  version = "v41.0.0"
 
 [[override]]
   name = "github.com/kubernetes-csi/external-snapshotter"
