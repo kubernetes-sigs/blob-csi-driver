@@ -26,6 +26,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 
@@ -185,6 +186,17 @@ func (c *Client) PreparePutRequest(ctx context.Context, decorators ...autorest.P
 	return c.prepareRequest(ctx, decorators...)
 }
 
+// PreparePatchRequest prepares patch request
+func (c *Client) PreparePatchRequest(ctx context.Context, decorators ...autorest.PrepareDecorator) (*http.Request, error) {
+	decorators = append(
+		[]autorest.PrepareDecorator{
+			autorest.AsContentType("application/json; charset=utf-8"),
+			autorest.AsPatch(),
+			autorest.WithBaseURL(c.baseURI)},
+		decorators...)
+	return c.prepareRequest(ctx, decorators...)
+}
+
 // PreparePostRequest prepares post request
 func (c *Client) PreparePostRequest(ctx context.Context, decorators ...autorest.PrepareDecorator) (*http.Request, error) {
 	decorators = append(
@@ -300,13 +312,112 @@ func (c *Client) GetResource(ctx context.Context, resourceID, expand string) (*h
 	return c.Send(ctx, request)
 }
 
+// GetResourceWithDecorators get a resource with decorators by resource ID
+func (c *Client) GetResourceWithDecorators(ctx context.Context, resourceID string, decorators []autorest.PrepareDecorator) (*http.Response, *retry.Error) {
+	getDecorators := []autorest.PrepareDecorator{
+		autorest.WithPathParameters("{resourceID}", map[string]interface{}{"resourceID": resourceID}),
+	}
+	getDecorators = append(getDecorators, decorators...)
+	request, err := c.PrepareGetRequest(ctx, getDecorators...)
+	if err != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "get.prepare", resourceID, err)
+		return nil, retry.NewError(false, err)
+	}
+
+	return c.Send(ctx, request)
+}
+
 // PutResource puts a resource by resource ID
 func (c *Client) PutResource(ctx context.Context, resourceID string, parameters interface{}) (*http.Response, *retry.Error) {
-	decorators := []autorest.PrepareDecorator{
+	putDecorators := []autorest.PrepareDecorator{
 		autorest.WithPathParameters("{resourceID}", map[string]interface{}{"resourceID": resourceID}),
 		autorest.WithJSON(parameters),
 	}
+	return c.PutResourceWithDecorators(ctx, resourceID, parameters, putDecorators)
+}
 
+// PutResources puts a list of resources from resources map[resourceID]parameters.
+// Those resources sync requests are sequential while async requests are concurent. It 's especially
+// useful when the ARM API doesn't support concurrent requests.
+func (c *Client) PutResources(ctx context.Context, resources map[string]interface{}) map[string]*PutResourcesResponse {
+	if len(resources) == 0 {
+		return nil
+	}
+
+	// Sequential sync requests.
+	futures := make(map[string]*azure.Future)
+	responses := make(map[string]*PutResourcesResponse)
+	for resourceID, parameters := range resources {
+		decorators := []autorest.PrepareDecorator{
+			autorest.WithPathParameters("{resourceID}", map[string]interface{}{"resourceID": resourceID}),
+			autorest.WithJSON(parameters),
+		}
+		request, err := c.PreparePutRequest(ctx, decorators...)
+		if err != nil {
+			klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "put.prepare", resourceID, err)
+			responses[resourceID] = &PutResourcesResponse{
+				Error: retry.NewError(false, err),
+			}
+			continue
+		}
+
+		future, resp, clientErr := c.SendAsync(ctx, request)
+		defer c.CloseResponse(ctx, resp)
+		if clientErr != nil {
+			klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "put.send", resourceID, clientErr.Error())
+			responses[resourceID] = &PutResourcesResponse{
+				Error: clientErr,
+			}
+			continue
+		}
+
+		futures[resourceID] = future
+	}
+
+	// Concurrent async requests.
+	wg := sync.WaitGroup{}
+	var responseLock sync.Mutex
+	for resourceID, future := range futures {
+		wg.Add(1)
+		go func(resourceID string, future *azure.Future) {
+			defer wg.Done()
+			response, err := c.WaitForAsyncOperationResult(ctx, future, "armclient.PutResource")
+			if err != nil {
+				if response != nil {
+					klog.V(5).Infof("Received error in WaitForAsyncOperationResult: '%s', response code %d", err.Error(), response.StatusCode)
+				} else {
+					klog.V(5).Infof("Received error in WaitForAsyncOperationResult: '%s', no response", err.Error())
+				}
+
+				retriableErr := retry.GetError(response, err)
+				if !retriableErr.Retriable &&
+					strings.Contains(strings.ToUpper(err.Error()), strings.ToUpper("InternalServerError")) {
+					klog.V(5).Infof("Received InternalServerError in WaitForAsyncOperationResult: '%s', setting error retriable", err.Error())
+					retriableErr.Retriable = true
+				}
+
+				responseLock.Lock()
+				responses[resourceID] = &PutResourcesResponse{
+					Error: retriableErr,
+				}
+				responseLock.Unlock()
+				return
+			}
+
+			responseLock.Lock()
+			responses[resourceID] = &PutResourcesResponse{
+				Response: response,
+			}
+			responseLock.Unlock()
+		}(resourceID, future)
+	}
+
+	wg.Wait()
+	return responses
+}
+
+// PutResourceWithDecorators puts a resource by resource ID
+func (c *Client) PutResourceWithDecorators(ctx context.Context, resourceID string, parameters interface{}, decorators []autorest.PrepareDecorator) (*http.Response, *retry.Error) {
 	request, err := c.PreparePutRequest(ctx, decorators...)
 	if err != nil {
 		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "put.prepare", resourceID, err)
@@ -321,6 +432,46 @@ func (c *Client) PutResource(ctx context.Context, resourceID string, parameters 
 	}
 
 	response, err := c.WaitForAsyncOperationResult(ctx, future, "armclient.PutResource")
+	if err != nil {
+		if response != nil {
+			klog.V(5).Infof("Received error in WaitForAsyncOperationResult: '%s', response code %d", err.Error(), response.StatusCode)
+		} else {
+			klog.V(5).Infof("Received error in WaitForAsyncOperationResult: '%s', no response", err.Error())
+		}
+
+		retriableErr := retry.GetError(response, err)
+		if !retriableErr.Retriable &&
+			strings.Contains(strings.ToUpper(err.Error()), strings.ToUpper("InternalServerError")) {
+			klog.V(5).Infof("Received InternalServerError in WaitForAsyncOperationResult: '%s', setting error retriable", err.Error())
+			retriableErr.Retriable = true
+		}
+		return nil, retriableErr
+	}
+
+	return response, nil
+}
+
+// PatchResource patches a resource by resource ID
+func (c *Client) PatchResource(ctx context.Context, resourceID string, parameters interface{}) (*http.Response, *retry.Error) {
+	decorators := []autorest.PrepareDecorator{
+		autorest.WithPathParameters("{resourceID}", map[string]interface{}{"resourceID": resourceID}),
+		autorest.WithJSON(parameters),
+	}
+
+	request, err := c.PreparePatchRequest(ctx, decorators...)
+	if err != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "patch.prepare", resourceID, err)
+		return nil, retry.NewError(false, err)
+	}
+
+	future, resp, clientErr := c.SendAsync(ctx, request)
+	defer c.CloseResponse(ctx, resp)
+	if clientErr != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "patch.send", resourceID, clientErr.Error())
+		return nil, clientErr
+	}
+
+	response, err := c.WaitForAsyncOperationResult(ctx, future, "armclient.PatchResource")
 	if err != nil {
 		if response != nil {
 			klog.V(5).Infof("Received error in WaitForAsyncOperationResult: '%s', response code %d", err.Error(), response.StatusCode)

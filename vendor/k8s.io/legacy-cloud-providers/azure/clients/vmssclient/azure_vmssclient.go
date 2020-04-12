@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-07-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-12-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -56,7 +56,7 @@ type Client struct {
 // New creates a new VMSS client with ratelimiting.
 func New(config *azclients.ClientConfig) *Client {
 	baseURI := config.ResourceManagerEndpoint
-	authorizer := autorest.NewBearerAuthorizer(config.ServicePrincipalToken)
+	authorizer := config.Authorizer
 	armClient := armclient.New(authorizer, baseURI, "", APIVersion, config.Location, config.Backoff)
 	rateLimiterReader, rateLimiterWriter := azclients.NewRateLimiter(config.RateLimitConfig)
 
@@ -234,6 +234,49 @@ func (c *Client) CreateOrUpdate(ctx context.Context, resourceGroupName string, V
 	return nil
 }
 
+// CreateOrUpdateAsync sends the request to arm client and DO NOT wait for the response
+func (c *Client) CreateOrUpdateAsync(ctx context.Context, resourceGroupName string, VMScaleSetName string, parameters compute.VirtualMachineScaleSet) (*azure.Future, *retry.Error) {
+	mc := metrics.NewMetricContext("vmss", "create_or_update_async", resourceGroupName, c.subscriptionID, "")
+
+	// Report errors if the client is rate limited.
+	if !c.rateLimiterWriter.TryAccept() {
+		mc.RateLimitedCount()
+		return nil, retry.GetRateLimitError(true, "VMSSCreateOrUpdateAsync")
+	}
+
+	// Report errors if the client is throttled.
+	if c.RetryAfterWriter.After(time.Now()) {
+		mc.ThrottledCount()
+		rerr := retry.GetThrottlingError("VMSSCreateOrUpdateAsync", "client throttled", c.RetryAfterWriter)
+		return nil, rerr
+	}
+
+	resourceID := armclient.GetResourceID(
+		c.subscriptionID,
+		resourceGroupName,
+		"Microsoft.Compute/virtualMachineScaleSets",
+		VMScaleSetName,
+	)
+
+	future, rerr := c.armClient.PutResourceAsync(ctx, resourceID, parameters)
+	mc.Observe(rerr.Error())
+	if rerr != nil {
+		if rerr.IsThrottled() {
+			// Update RetryAfterReader so that no more requests would be sent until RetryAfter expires.
+			c.RetryAfterWriter = rerr.RetryAfter
+		}
+
+		return nil, rerr
+	}
+
+	return future, nil
+}
+
+// WaitForAsyncOperationResult waits for the response of the request
+func (c *Client) WaitForAsyncOperationResult(ctx context.Context, future *azure.Future) (*http.Response, error) {
+	return c.armClient.WaitForAsyncOperationResult(ctx, future, "VMSSWaitForAsyncOperationResult")
+}
+
 // createOrUpdateVMSS creates or updates a VirtualMachineScaleSet.
 func (c *Client) createOrUpdateVMSS(ctx context.Context, resourceGroupName string, VMScaleSetName string, parameters compute.VirtualMachineScaleSet) *retry.Error {
 	resourceID := armclient.GetResourceID(
@@ -358,4 +401,70 @@ func (page VirtualMachineScaleSetListResultPage) Values() []compute.VirtualMachi
 		return nil
 	}
 	return *page.vmsslr.Value
+}
+
+// DeleteInstances deletes the instances for a VirtualMachineScaleSet.
+func (c *Client) DeleteInstances(ctx context.Context, resourceGroupName string, vmScaleSetName string, vmInstanceIDs compute.VirtualMachineScaleSetVMInstanceRequiredIDs) *retry.Error {
+	mc := metrics.NewMetricContext("vmss", "delete_instances", resourceGroupName, c.subscriptionID, "")
+
+	// Report errors if the client is rate limited.
+	if !c.rateLimiterWriter.TryAccept() {
+		mc.RateLimitedCount()
+		return retry.GetRateLimitError(true, "VMSSDeleteInstances")
+	}
+
+	// Report errors if the client is throttled.
+	if c.RetryAfterWriter.After(time.Now()) {
+		mc.ThrottledCount()
+		rerr := retry.GetThrottlingError("VMSSDeleteInstances", "client throttled", c.RetryAfterWriter)
+		return rerr
+	}
+
+	rerr := c.deleteVMSSInstances(ctx, resourceGroupName, vmScaleSetName, vmInstanceIDs)
+	mc.Observe(rerr.Error())
+	if rerr != nil {
+		if rerr.IsThrottled() {
+			// Update RetryAfterReader so that no more requests would be sent until RetryAfter expires.
+			c.RetryAfterWriter = rerr.RetryAfter
+		}
+
+		return rerr
+	}
+
+	return nil
+}
+
+// deleteVMSSInstances deletes the instances for a VirtualMachineScaleSet.
+func (c *Client) deleteVMSSInstances(ctx context.Context, resourceGroupName string, vmScaleSetName string, vmInstanceIDs compute.VirtualMachineScaleSetVMInstanceRequiredIDs) *retry.Error {
+	resourceID := armclient.GetResourceID(
+		c.subscriptionID,
+		resourceGroupName,
+		"Microsoft.Compute/virtualMachineScaleSets",
+		vmScaleSetName,
+	)
+	response, rerr := c.armClient.PostResource(ctx, resourceID, "delete", vmInstanceIDs)
+	defer c.armClient.CloseResponse(ctx, response)
+	if rerr != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "vmss.deletevms.request", resourceID, rerr.Error())
+		return rerr
+	}
+
+	err := autorest.Respond(response, azure.WithErrorUnlessStatusCode(http.StatusOK, http.StatusAccepted))
+	if err != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "vmss.deletevms.respond", resourceID, rerr.Error())
+		return retry.GetError(response, err)
+	}
+
+	future, err := azure.NewFutureFromResponse(response)
+	if err != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "vmss.deletevms.future", resourceID, rerr.Error())
+		return retry.NewError(false, err)
+	}
+
+	if err := c.armClient.WaitForAsyncOperationCompletion(ctx, &future, "vmssclient.DeleteInstances"); err != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "vmss.deletevms.wait", resourceID, rerr.Error())
+		return retry.NewError(false, err)
+	}
+
+	return nil
 }
