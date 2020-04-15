@@ -14,10 +14,22 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi
 ### Static Provisioning(use an existing storage account)
 #### Option#1: use existing credentials in k8s cluster
  > make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
- - Download a blobfuse CSI storage class, edit `resourceGroup`, `storageAccount`, `containerName` in storage class
+ - Download [blobfuse CSI storage class](https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi-existing-container.yaml), edit `resourceGroup`, `storageAccount`, `containerName` in storage class
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blobfuse.csi.azure.com
+provisioner: blobfuse.csi.azure.com
+parameters:
+  skuName: Standard_LRS  # available values: Standard_LRS, Standard_GRS, Standard_RAGRS
+  resourceGroup: EXISTING_RESOURCE_GROUP
+  storageAccount: EXISTING_STORAGE_ACCOUNT
+  containerName: EXISTING_CONTAINER_NAME
+reclaimPolicy: Retain  # if set as "Delete" container would be removed after pvc deletion
+volumeBindingMode: Immediate
+```
 ```console
-wget https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi-existing-container.yaml
-vi storageclass-blobfuse-csi-existing-container.yaml
 kubectl create -f storageclass-blobfuse-csi-existing-container.yaml
 ```
 
@@ -36,10 +48,29 @@ kubectl create secret generic azure-secret --from-literal azurestorageaccountnam
 
 > storage account key(or sastoken) could also be stored in Azure Key Vault, check example here: [read-from-keyvault](../../docs/read-from-keyvault.md)
 
- - Create a blobfuse CSI PV, download `pv-blobfuse-csi.yaml` file and edit `containerName` in `volumeAttributes`
+ - Create a blobfuse CSI PV: download [`pv-blobfuse-csi.yaml` file](https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml) and edit `containerName` in `volumeAttributes`
+```yaml
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-blobfuse
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain  # if set as "Delete" container would be removed after pvc deletion
+  csi:
+    driver: blobfuse.csi.azure.com
+    readOnly: false
+    volumeHandle: arbitrary-volumeid
+    volumeAttributes:
+      containerName: EXISTING_CONTAINER_NAME
+    nodeStageSecretRef:
+      name: azure-secret
+      namespace: default
+```
 ```console
-wget https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml
-vi pv-blobfuse-csi.yaml
 kubectl create -f pv-blobfuse-csi.yaml
 ```
 
