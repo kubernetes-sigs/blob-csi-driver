@@ -26,30 +26,57 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 	azureprovider "k8s.io/legacy-cloud-providers/azure"
 
 	"golang.org/x/net/context"
 )
 
+var (
+	DefaultAzureCredentialFileEnv = "AZURE_CREDENTIAL_FILE"
+	DefaultCredFilePath           = "/etc/kubernetes/azure.json"
+)
+
 // GetCloudProvider get Azure Cloud Provider
-func GetCloudProvider() (*azureprovider.Cloud, error) {
-	credFile, ok := os.LookupEnv("AZURE_CREDENTIAL_FILE")
-	if ok {
-		klog.V(2).Infof("AZURE_CREDENTIAL_FILE env var set as %v", credFile)
-	} else {
-		credFile = "/etc/kubernetes/azure.json"
-		klog.V(2).Infof("use default AZURE_CREDENTIAL_FILE env var: %v", credFile)
+func GetCloudProvider(kubeconfig string) (*azureprovider.Cloud, error) {
+	kubeClient, err := getKubeClient(kubeconfig)
+	if err != nil && !os.IsNotExist(err) && err != rest.ErrNotInCluster {
+		return nil, fmt.Errorf("failed to get KubeClient: %v", err)
 	}
 
-	f, err := os.Open(credFile)
-	if err != nil {
-		klog.Errorf("Failed to load config from file: %s", credFile)
-		return nil, fmt.Errorf("Failed to load config from file: %s, cloud not get azure cloud provider", credFile)
+	az := &azureprovider.Cloud{}
+	if kubeClient != nil {
+		klog.V(2).Infof("reading cloud config from secret")
+		az.KubeClient = kubeClient
+		az.InitializeCloudFromSecret()
 	}
-	defer f.Close()
 
-	return azureprovider.NewCloudWithoutFeatureGates(f)
+	if az.TenantID == "" || az.SubscriptionID == "" {
+		klog.V(2).Infof("could not read cloud config from secret")
+		credFile, ok := os.LookupEnv(DefaultAzureCredentialFileEnv)
+		if ok {
+			klog.V(2).Infof("%s env var set as %v", DefaultAzureCredentialFileEnv, credFile)
+		} else {
+			credFile = DefaultCredFilePath
+			klog.V(2).Infof("use default %s env var: %v", DefaultAzureCredentialFileEnv, credFile)
+		}
+
+		f, err := os.Open(credFile)
+		if err != nil {
+			klog.Errorf("Failed to load config from file: %s", credFile)
+			return nil, fmt.Errorf("Failed to load config from file: %s, cloud not get azure cloud provider", credFile)
+		}
+		defer f.Close()
+
+		klog.V(2).Infof("read cloud config from file: %s successfully", credFile)
+		return azureprovider.NewCloudWithoutFeatureGates(f)
+	}
+
+	klog.V(2).Infof("read cloud config from secret successfully")
+	return az, nil
 }
 
 // getKeyVaultSecretContent get content of the keyvault secret
@@ -102,4 +129,22 @@ func (d *Driver) getServicePrincipalToken(env azure.Environment, resource string
 		d.cloud.AADClientID,
 		d.cloud.AADClientSecret,
 		resource)
+}
+
+func getKubeClient(kubeconfig string) (*kubernetes.Clientset, error) {
+	var (
+		config *rest.Config
+		err    error
+	)
+	if kubeconfig != "" {
+		if config, err = clientcmd.BuildConfigFromFlags("", kubeconfig); err != nil {
+			return nil, err
+		}
+	} else {
+		if config, err = rest.InClusterConfig(); err != nil {
+			return nil, err
+		}
+	}
+
+	return kubernetes.NewForConfig(config)
 }
