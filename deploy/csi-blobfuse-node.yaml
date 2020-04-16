@@ -13,6 +13,7 @@ spec:
       labels:
         app: csi-blobfuse-node
     spec:
+      serviceAccountName: csi-blobfuse-node-sa
       nodeSelector:
         kubernetes.io/os: linux
       priorityClassName: system-node-critical
