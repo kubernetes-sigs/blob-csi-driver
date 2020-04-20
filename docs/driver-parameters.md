@@ -3,8 +3,10 @@
  
  > parameter names are case-insensitive
 
- - Dynamic Provisioning
+### Dynamic Provisioning
   > get a quick example [here](../deploy/example/storageclass-blobfuse-csi.yaml)
+
+  > get a `mountOptions` example [here](../deploy/example/storageclass-blobfuse-csi-mountoptions.yaml)
 
 Name | Meaning | Example | Mandatory | Default value 
 --- | --- | --- | --- | ---
@@ -16,9 +18,9 @@ containerName | specify the existing container name where blob storage will be c
 
  - `fsGroup` securityContext setting
 
-Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check https://github.com/Azure/azure-storage-fuse#mount-options for more mountoptions.
+Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check [here](https://github.com/Azure/azure-storage-fuse#mount-options) for more mountoptions.
 
- - Static Provisioning(use existing storage container)
+### Static Provisioning(use existing storage container)
   > get a quick example [here](../deploy/example/pv-blobfuse-csi.yaml)
   >
   > get a key vault example [here](../deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml)
