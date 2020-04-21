@@ -24,10 +24,10 @@ import (
 	"sigs.k8s.io/blobfuse-csi-driver/pkg/util"
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
-	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog"
 )
@@ -81,9 +81,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		resourceGroup = d.cloud.ResourceGroup
 	}
 
-	account, accountKey, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, string(storage.StorageV2), resourceGroup, location, blobfuseAccountNamePrefix)
+	account, _, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, string(storage.StorageV2), resourceGroup, location, blobfuseAccountNamePrefix)
 	if err != nil {
-		return nil, fmt.Errorf("could not get storage key for storage account %s: %v", accountName, err)
+		return nil, status.Errorf(codes.Internal, "could not get storage key for storage account %s: %v", accountName, err)
 	}
 	accountName = account
 
@@ -92,16 +92,19 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
-	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
-	if err != nil {
-		return nil, err
+	container := storage.BlobContainer{
+		ContainerProperties: &storage.ContainerProperties{
+			PublicAccess: storage.PublicAccessNone,
+		},
+		Name: &containerName,
 	}
-	blobClient := client.GetBlobService()
-	container := blobClient.GetContainerReference(containerName)
-	_, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate})
-	if err != nil {
-		return nil, fmt.Errorf("failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
-	}
+	err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+		_, err = d.client.Create(ctx, resourceGroup, accountName, containerName, container)
+		if err != nil && !strings.Contains(err.Error(), "The specified container is being deleted") {
+			return false, status.Errorf(codes.Internal, "failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
+		}
+		return true, nil
+	})
 
 	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, containerName)
 
@@ -144,28 +147,17 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		resourceGroupName = d.cloud.ResourceGroup
 	}
 
-	accountKey, err := d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
-	if err != nil {
-		return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
-	}
-
 	klog.V(2).Infof("deleting container(%s) rg(%s) account(%s) volumeID(%s)", containerName, resourceGroupName, accountName, volumeID)
-	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
-	if err != nil {
-		return nil, err
-	}
-	blobClient := client.GetBlobService()
-	container := blobClient.GetContainerReference(containerName)
-	// todo: check what value to add into DeleteContainerOptions
 	err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
-		_, err := container.DeleteIfExists(nil)
+		_, err = d.client.Delete(ctx, resourceGroupName, accountName, containerName)
 		if err != nil && !strings.Contains(err.Error(), "ContainerBeingDeleted") {
-			return false, fmt.Errorf("failed to delete container(%s) on account(%s), error: %v", containerName, accountName, err)
+			return false, status.Errorf(codes.Internal, "failed to delete container(%s) on account(%s), error: %v", containerName, accountName, err)
 		}
 		return true, nil
 	})
+
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, "failed to delete container(%s) on account(%s), error: %v", containerName, accountName, err)
 	}
 
 	klog.V(2).Infof("container(%s) under rg(%s) account(%s) volumeID(%s) is deleted successfully", containerName, resourceGroupName, accountName, volumeID)
@@ -193,24 +185,9 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		resourceGroupName = d.cloud.ResourceGroup
 	}
 
-	accountKey, err := d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
+	_, err = d.client.Get(ctx, resourceGroupName, accountName, containerName)
 	if err != nil {
-		return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
-	}
-
-	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
-	if err != nil {
-		return nil, err
-	}
-	blobClient := client.GetBlobService()
-	container := blobClient.GetContainerReference(containerName)
-
-	exist, err := container.Exists()
-	if err != nil {
-		return nil, err
-	}
-	if !exist {
-		return nil, status.Error(codes.NotFound, "the requested volume does not exist")
+		return nil, status.Errorf(codes.Internal, "failed to delete container(%s) on account(%s), error: %v", containerName, accountName, err)
 	}
 
 	// blobfuse supports all AccessModes, no need to check capabilities here

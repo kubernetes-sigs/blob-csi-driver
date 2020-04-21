@@ -22,6 +22,7 @@ import (
 
 	csicommon "sigs.k8s.io/blobfuse-csi-driver/pkg/csi-common"
 
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pborman/uuid"
 	"golang.org/x/net/context"
@@ -53,6 +54,7 @@ type Driver struct {
 	csicommon.CSIDriver
 	cloud   *azure.Cloud
 	mounter *mount.SafeFormatAndMount
+	client  storage.BlobContainersClient
 }
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
@@ -82,6 +84,11 @@ func (d *Driver) Run(endpoint, kubeconfig string) {
 	d.mounter = &mount.SafeFormatAndMount{
 		Interface: mount.New(""),
 		Exec:      mount.NewOsExec(),
+	}
+
+	err = d.setClient()
+	if err != nil {
+		klog.Fatalf("could not set Client: %v", err)
 	}
 
 	// Initialize default library driver

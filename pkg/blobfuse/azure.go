@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	kv "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -31,6 +32,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 	azureprovider "k8s.io/legacy-cloud-providers/azure"
+	"k8s.io/legacy-cloud-providers/azure/auth"
 
 	"golang.org/x/net/context"
 )
@@ -147,4 +149,16 @@ func getKubeClient(kubeconfig string) (*kubernetes.Clientset, error) {
 	}
 
 	return kubernetes.NewForConfig(config)
+}
+
+func (d *Driver) setClient() error {
+	d.client = storage.NewBlobContainersClientWithBaseURI(d.cloud.Environment.ResourceManagerEndpoint, d.cloud.SubscriptionID)
+
+	servicePrincipalToken, err := auth.GetServicePrincipalToken(&d.cloud.AzureAuthConfig, &d.cloud.Environment)
+	if err != nil {
+		return err
+	}
+	d.client.Authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
+
+	return nil
 }
