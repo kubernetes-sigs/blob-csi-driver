@@ -139,8 +139,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	for _, opt := range mountOptions {
 		args = args + " " + opt
 	}
-	klog.V(2).Infof("target %v\nfstype %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\n",
-		targetPath, fsType, volumeID, attrib, mountFlags, mountOptions, args)
+	blobStorageEndPoint := fmt.Sprintf("%s.blob.%s", accountName, d.cloud.Environment.StorageEndpointSuffix)
+
+	klog.V(2).Infof("target %v\nfstype %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nblobStorageEndPoint %v",
+		targetPath, fsType, volumeID, attrib, mountFlags, mountOptions, args, blobStorageEndPoint)
 	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName)
 
@@ -149,6 +151,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	} else {
 		cmd.Env = append(cmd.Env, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
 	}
+	cmd.Env = append(cmd.Env, "AZURE_STORAGE_BLOB_ENDPOINT="+blobStorageEndPoint)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
