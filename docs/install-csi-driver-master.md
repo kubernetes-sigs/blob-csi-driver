@@ -2,9 +2,17 @@
 
 If you have already installed Helm, you can also use it to install blobfuse CSI driver. Please see [Installation with Helm](../charts/README.md).
 
-## Installation with kubectl
+## Install with kubectl
+ - remote install
 ```console
 curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/install-driver.sh | bash -s master --
+```
+
+ - local install
+```console
+git clone https://github.com/kubernetes-sigs/blobfuse-csi-driver.git
+cd blobfuse-csi-driver
+./deploy/install-driver.sh master local
 ```
 
 - check pods status:
