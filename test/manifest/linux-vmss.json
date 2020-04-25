@@ -41,7 +41,7 @@
                 "count": 2,
                 "vmSize": "Standard_DS2_v2",
                 "availabilityProfile": "VirtualMachineScaleSets",
-                "storageProfile": "ManagedDisks"，
+                "storageProfile": "ManagedDisks",
                 "distro": "aks-ubuntu-18.04"
             }
         ],
