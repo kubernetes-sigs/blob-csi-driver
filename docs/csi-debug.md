@@ -10,7 +10,7 @@ csi-blobfuse-controller-56bfddd689-dh5tk       5/5     Running   0          35s 
 ```sh
 $ kubectl logs `kubectl get po -n kube-system | grep csi-blobfuse-controller | cut -d ' ' -f1` -c blobfuse -n kube-system > csi-blobfuse-controller.log
 ```
-> note: there could be multiple controller pods, if there is no useful logs, switch to get logs from other controller pods
+> note: there could be multiple controller pods, if there are no useful logs, try to get logs from other controller pods
 
 ### Condition#2: volume mount/unmount failed
  - locate csi driver pod and make sure which pod do tha actual volume mount/unmount
