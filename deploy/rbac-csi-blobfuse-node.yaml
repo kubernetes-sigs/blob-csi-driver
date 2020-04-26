@@ -9,7 +9,7 @@ metadata:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-blobfuse-secret-role
+  name: csi-blobfuse-node-secret-role
   namespace: kube-system
 rules:
   - apiGroups: [""]
@@ -20,16 +20,13 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-blobfuse-secret-binding
+  name: csi-blobfuse-node-secret-binding
   namespace: kube-system
 subjects:
-  - kind: ServiceAccount
-    name: csi-blobfuse-controller-sa
-    namespace: kube-system
   - kind: ServiceAccount
     name: csi-blobfuse-node-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: csi-blobfuse-secret-role
+  name: csi-blobfuse-node-secret-role
   apiGroup: rbac.authorization.k8s.io

@@ -1,9 +1,10 @@
+{{- if .Values.rbac.create -}}
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  namespace: kube-system
-  name: csi-blobfuse-secret-role
+  namespace: {{ .Release.Namespace }}
+  name: csi-blobfuse-node-secret-role
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
@@ -13,16 +14,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-blobfuse-secret-binding
-  namespace: kube-system
+  name: csi-blobfuse-node-secret-binding
+  namespace: {{ .Release.Namespace }}
 subjects:
   - kind: ServiceAccount
-    name: csi-blobfuse-controller-sa
-    namespace: kube-system
-  - kind: ServiceAccount
     name: csi-blobfuse-node-sa
-    namespace: kube-system
+    namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: csi-blobfuse-secret-role
+  name: csi-blobfuse-node-secret-role
   apiGroup: rbac.authorization.k8s.io
+{{ end }}
