@@ -1,4 +1,4 @@
-## CSI driver debug tips
+## CSI driver troubleshooting guide
 ### Condition#1: volume create/delete issue
  - locate csi driver pod
 ```sh
