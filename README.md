@@ -1,4 +1,4 @@
-# blobfuse CSI driver for Kubernetes
+# Blobfuse CSI driver for Kubernetes
 [![Coverage Status](https://coveralls.io/github/kubernetes-sigs/blobfuse-csi-driver?branch=master)](https://coveralls.io/github/kubernetes-sigs/blobfuse-csi-driver?branch=master)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fcsi-driver%2Fblobfuse-csi-driver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fcsi-driver%2Fblobfuse-csi-driver?ref=badge_shield)
 
@@ -32,6 +32,9 @@ Please refer to [install blobfuse csi driver](https://github.com/kubernetes-sigs
 
 ### Examples
  - [Basic usage](./deploy/example/e2e_usage.md)
+ 
+### Troubleshooting
+ - [CSI driver troubleshooting guide](./docs/csi-debug.md)
 
 ## Kubernetes Development
 Please refer to [development guide](./docs/csi-dev.md)
