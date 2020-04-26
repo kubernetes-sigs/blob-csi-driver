@@ -26,7 +26,7 @@ deployDirNum=`ls deploy/*.yaml | wc -l`
 helmDirNum=`ls $helmPath/*.yaml | grep -v serviceaccount | wc -l`
 if [[ "${deployDirNum}" != "${helmDirNum}" ]]; then
   echo "yaml file num($deployDirNum) under deploy/ not equal to num($helmDirNum) under $helmPath"
-  #exit 1
+  exit 1
 fi
 
 for path in "deploy/*.yaml" "deploy/example/*.yaml"
