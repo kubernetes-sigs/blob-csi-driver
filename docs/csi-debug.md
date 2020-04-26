@@ -1,5 +1,5 @@
 ## CSI driver troubleshooting guide
-### Condition#1: volume create/delete issue
+### Case#1: volume create/delete issue
  - locate csi driver pod
 ```sh
 $ kubectl get po -o wide -n kube-system | grep csi-blobfuse-controller
@@ -13,7 +13,7 @@ $ kubectl logs `kubectl get po -n kube-system | grep csi-blobfuse-controller | c
 ```
 > note: there could be multiple controller pods, if there are no helpful logs, try to get logs from other controller pods
 
-### Condition#2: volume mount/unmount failed
+### Case#2: volume mount/unmount failed
  - locate csi driver pod and make sure which pod do tha actual volume mount/unmount
 ```
 $ kubectl get po -o wide -n kube-system | grep csi-blobfuse-node
