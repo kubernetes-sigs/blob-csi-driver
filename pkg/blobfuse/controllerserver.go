@@ -81,10 +81,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		resourceGroup = d.cloud.ResourceGroup
 	}
 
-	// Disable UseInstanceMetadata to mitigate a timeout issue from IMDS
-	// https://github.com/kubernetes-sigs/azuredisk-csi-driver/issues/168
-	d.cloud.Config.UseInstanceMetadata = false
-
 	account, accountKey, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, string(storage.StorageV2), resourceGroup, location, blobfuseAccountNamePrefix)
 	if err != nil {
 		return nil, fmt.Errorf("could not get storage key for storage account %s: %v", accountName, err)
@@ -147,10 +143,6 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	if resourceGroupName == "" {
 		resourceGroupName = d.cloud.ResourceGroup
 	}
-
-	// Disable UseInstanceMetadata to mitigate a timeout issue from IMDS
-	// https://github.com/kubernetes-sigs/azuredisk-csi-driver/issues/168
-	d.cloud.Config.UseInstanceMetadata = false
 
 	accountKey, err := d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
 	if err != nil {
