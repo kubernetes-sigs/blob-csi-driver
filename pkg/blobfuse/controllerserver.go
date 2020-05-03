@@ -72,8 +72,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			resourceGroup = v
 		case "containername":
 			containerName = v
-		default:
-			return nil, fmt.Errorf("invalid option %q", k)
 		}
 	}
 
