@@ -59,7 +59,7 @@ spec:
     storage: 10Gi
   accessModes:
     - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain  # if set as "Delete" container would be removed after pvc deletion
+  persistentVolumeReclaimPolicy: Retain  # "Delete" is not supported in static provisioning
   csi:
     driver: blobfuse.csi.azure.com
     readOnly: false
