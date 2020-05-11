@@ -32,7 +32,6 @@ Please refer to [install blobfuse csi driver](https://github.com/kubernetes-sigs
 ## Kubernetes Development
 Please refer to [development guide](./docs/csi-dev.md)
 
-
 ### Links
  - [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse)
  - [blobfuse flexvolume driver](https://github.com/Azure/kubernetes-volume-drivers/tree/master/flexvolume/blobfuse)
