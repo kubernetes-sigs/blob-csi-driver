@@ -126,7 +126,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
 
-	accountName, accountKey, accountSasToken, containerName, err := d.GetStorageAccountAndContainer(ctx, volumeID, attrib, secrets)
+	accountName, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, attrib, secrets)
 	if err != nil {
 		return nil, err
 	}
@@ -144,14 +144,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	klog.V(2).Infof("target %v\nfstype %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nblobStorageEndPoint %v",
 		targetPath, fsType, volumeID, attrib, mountFlags, mountOptions, args, blobStorageEndPoint)
 	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
-	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName)
 
-	if accountSasToken != "" {
-		cmd.Env = append(cmd.Env, "AZURE_STORAGE_SAS_TOKEN="+accountSasToken)
-	} else {
-		cmd.Env = append(cmd.Env, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
-	}
+	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName)
 	cmd.Env = append(cmd.Env, "AZURE_STORAGE_BLOB_ENDPOINT="+blobStorageEndPoint)
+	cmd.Env = append(cmd.Env, authEnv...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

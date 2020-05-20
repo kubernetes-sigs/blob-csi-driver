@@ -167,42 +167,6 @@ func appendDefaultMountOptions(mountOptions []string) []string {
 	return allMountOptions
 }
 
-// get storage account from secrets map
-// returns <accountName, accountKey, accountSasToken>
-func getStorageAccountFromSecretsMap(secrets map[string]string) (string, string, string, error) {
-	if secrets == nil {
-		return "", "", "", fmt.Errorf("unexpected: getStorageAccountFromSecretsMap secrets is nil")
-	}
-
-	var accountName, accountKey, accountSasToken string
-	for k, v := range secrets {
-		switch strings.ToLower(k) {
-		case "accountname":
-			accountName = v
-		case "azurestorageaccountname": // for compatibility with built-in blobfuse plugin
-			accountName = v
-		case "accountkey":
-			accountKey = v
-		case "azurestorageaccountkey": // for compatibility with built-in blobfuse plugin
-			accountKey = v
-		case "azurestorageaccountsastoken":
-			accountSasToken = v
-		}
-	}
-
-	if accountName == "" {
-		return "", "", "", fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", secrets)
-	}
-	if accountKey == "" && accountSasToken == "" {
-		return "", "", "", fmt.Errorf("could not find accountkey, azurestorageaccountkey or azurestorageaccountsastoken field in secrets(%v)", secrets)
-	}
-	if accountKey != "" && accountSasToken != "" {
-		return "", "", "", fmt.Errorf("could not specify Access Key and SAS Token together")
-	}
-
-	return accountName, accountKey, accountSasToken, nil
-}
-
 // A container name must be a valid DNS name, conforming to the following naming rules:
 //	1. Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
 //	2. Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.
@@ -243,8 +207,118 @@ func isSASToken(key string) bool {
 	return strings.Contains(key, "?sv=")
 }
 
+// GetAuthEnv return <accountName, containerName, authEnv, error>
+func (d *Driver) GetAuthEnv(ctx context.Context, volumeID string, attrib, secrets map[string]string) (string, string, []string, error) {
+	var (
+		accountName           string
+		accountKey            string
+		accountSasToken       string
+		containerName         string
+		keyVaultURL           string
+		keyVaultSecretName    string
+		keyVaultSecretVersion string
+		authEnv               []string
+		err                   error
+	)
+
+	for k, v := range attrib {
+		switch strings.ToLower(k) {
+		case "containername":
+			containerName = v
+		case "keyvaulturl":
+			keyVaultURL = v
+		case "keyvaultsecretname":
+			keyVaultSecretName = v
+		case "keyvaultsecretversion":
+			keyVaultSecretVersion = v
+		case "storageaccountname":
+			accountName = v
+		case "azurestorageidentityclientid":
+			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_CLIENT_ID="+v)
+		case "azurestorageidentityobjectid":
+			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_OBJECT_ID="+v)
+		case "azurestorageidentityresourceid":
+			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_RESOURCE_ID="+v)
+		case "msiendpoint":
+			authEnv = append(authEnv, "MSI_ENDPOINT="+v)
+		case "azurestoragespnclientid":
+			authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+v)
+		case "azurestoragespntenantid":
+			authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+v)
+		case "azurestorageaadendpoint":
+			authEnv = append(authEnv, "AZURE_STORAGE_AAD_ENDPOINT="+v)
+		}
+	}
+
+	// 1. If keyVaultURL is not nil, preferentially use the key stored in key vault.
+	// 2. Then if secrets map is not nil, use the key stored in the secrets map.
+	// 3. Finally if both keyVaultURL and secrets map are nil, get the key from Azure.
+	if keyVaultURL != "" {
+		key, err := d.getKeyVaultSecretContent(ctx, keyVaultURL, keyVaultSecretName, keyVaultSecretVersion)
+		if err != nil {
+			return accountName, containerName, authEnv, err
+		}
+		if isSASToken(key) {
+			accountSasToken = key
+		} else {
+			accountKey = key
+		}
+	} else {
+		if len(secrets) == 0 {
+			var resourceGroupName string
+			resourceGroupName, accountName, containerName, err = GetContainerInfo(volumeID)
+			if err != nil {
+				return accountName, containerName, authEnv, err
+			}
+
+			if resourceGroupName == "" {
+				resourceGroupName = d.cloud.ResourceGroup
+			}
+
+			accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
+			if err != nil {
+				return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
+			}
+		} else {
+			for k, v := range secrets {
+				switch strings.ToLower(k) {
+				case "accountname":
+					accountName = v
+				case "azurestorageaccountname": // for compatibility with built-in blobfuse plugin
+					accountName = v
+				case "accountkey":
+					accountKey = v
+				case "azurestorageaccountkey": // for compatibility with built-in blobfuse plugin
+					accountKey = v
+				case "azurestorageaccountsastoken":
+					accountSasToken = v
+				case "msisecret":
+					authEnv = append(authEnv, "MSI_SECRET="+v)
+				case "azurestoragespnclientsecret":
+					authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_SECRET="+v)
+				}
+			}
+		}
+	}
+
+	if containerName == "" {
+		err = fmt.Errorf("could not find containerName from attributes(%v) or volumeID(%v)", attrib, volumeID)
+	}
+
+	if accountSasToken != "" {
+		authEnv = append(authEnv, "AZURE_STORAGE_SAS_TOKEN="+accountSasToken)
+	}
+
+	if accountKey != "" {
+		authEnv = append(authEnv, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
+	}
+
+	return accountName, containerName, authEnv, err
+}
+
 // GetStorageAccountAndContainer: get storage account and container info
 // returns <accountName, accountKey, accountSasToken, containerName>
+// only for e2e testing
 func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID string, attrib, secrets map[string]string) (string, string, string, string, error) {
 	var (
 		accountName     string
@@ -303,11 +377,6 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 			accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
 			if err != nil {
 				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
-			}
-		} else {
-			accountName, accountKey, accountSasToken, err = getStorageAccountFromSecretsMap(secrets)
-			if err != nil {
-				return "", "", "", "", err
 			}
 		}
 	}
