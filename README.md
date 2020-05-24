@@ -9,8 +9,8 @@ This driver allows Kubernetes to use [azure-storage-fuse](https://github.com/Azu
 |Blobfuse CSI Driver Version    | Image                                              | 1.14+  |
 |-------------------------------|----------------------------------------------------|--------|
 |master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
+|v0.5.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.5.0       | yes    |
 |v0.4.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.4.0       | yes    |
-|v0.3.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.3.0       | yes    |
 
 ### Driver parameters
 Please refer to `blobfuse.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
