@@ -1,18 +1,18 @@
-# Install blobfuse CSI driver master version on a kubernetes cluster
+# Install blobfuse CSI driver v0.5.0 version on a kubernetes cluster
 
 If you have already installed Helm, you can also use it to install blobfuse CSI driver. Please see [Installation with Helm](../charts/README.md).
 
 ## Install with kubectl
  - remote install
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/install-driver.sh | bash -s master --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/v0.5.0/deploy/install-driver.sh | bash -s v0.5.0 --
 ```
 
  - local install
 ```console
 git clone https://github.com/kubernetes-sigs/blobfuse-csi-driver.git
 cd blobfuse-csi-driver
-./deploy/install-driver.sh master local
+./deploy/install-driver.sh v0.5.0 local
 ```
 
 - check pods status:
@@ -33,5 +33,5 @@ csi-blobfuse-node-dr4s4                        3/3     Running   0          35s 
 
 - clean up blobfuse CSI driver
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/uninstall-driver.sh | bash -s master --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/v0.5.0/deploy/uninstall-driver.sh | bash -s v0.5.0 --
 ```
