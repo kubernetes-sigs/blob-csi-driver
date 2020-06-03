@@ -29,9 +29,7 @@ spec:
           image: mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner:v1.4.0
           args:
             - "-v=5"
-            - "--provisioner=blobfuse.csi.azure.com"
             - "--csi-address=$(ADDRESS)"
-            - "--connection-timeout=15s"
             - "--enable-leader-election"
             - "--leader-election-type=leases"
           env:
@@ -87,7 +85,7 @@ spec:
           image: mcr.microsoft.com/k8s/csi/blobfuse-csi:latest
           args:
             - "--v=5"
-            - "--nodeid=$(KUBE_NODE_NAME)"
+            - "--endpoint=$(CSI_ENDPOINT)"
           ports:
             - containerPort: 29622
               name: healthz
