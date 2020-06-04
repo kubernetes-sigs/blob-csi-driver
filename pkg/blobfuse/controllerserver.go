@@ -79,7 +79,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		resourceGroup = d.cloud.ResourceGroup
 	}
 
-	account, accountKey, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, string(storage.StorageV2), resourceGroup, location, blobfuseAccountNamePrefix)
+	accountKind := string(storage.StorageV2)
+	if strings.EqualFold(storageAccountType, "Premium_LRS") {
+		accountKind = string(storage.BlockBlobStorage)
+	}
+	account, accountKey, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, accountKind, resourceGroup, location, blobfuseAccountNamePrefix)
 	if err != nil {
 		return nil, fmt.Errorf("could not get storage key for storage account %s: %v", accountName, err)
 	}

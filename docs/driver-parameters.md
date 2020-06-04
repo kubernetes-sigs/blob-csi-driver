@@ -8,9 +8,9 @@
 
   > get a `mountOptions` example [here](../deploy/example/storageclass-blobfuse-csi-mountoptions.yaml)
 
-Name | Meaning | Example | Mandatory | Default value 
+Name | Meaning | Example | Mandatory | Default value
 --- | --- | --- | --- | ---
-skuName | blobfuse storage account type (alias: `storageAccountType`) | `Standard_LRS`, `Standard_GRS`, `Standard_RAGRS` | No | `Standard_LRS`
+skuName | blobfuse storage account type (alias: `storageAccountType`) | `Standard_LRS`, `Premium_LRS`, `Standard_GRS`, `Standard_RAGRS` | No | `Standard_LRS`
 location | specify the location in which blobfuse share will be created | `eastus`, `westus`, etc. | No | if empty, driver will use the same location name as current k8s cluster
 resourceGroup | specify the existing resource group name where the container is | existing resource group name | No | if empty, driver will use the same resource group name as current k8s cluster
 storageAccount | specify the storage account name in which blobfuse share will be created | STORAGE_ACCOUNT_NAME | No | if empty, driver will find a suitable storage account that matches `skuName` in the same resource group; if a storage account name is provided, it means that storage account must exist otherwise there would be error
