@@ -67,8 +67,9 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
-			CSIDriver: testDriver,
-			Pods:      pods,
+			CSIDriver:              testDriver,
+			Pods:                   pods,
+			StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
 		}
 		test.Run(cs, ns)
 	})
@@ -94,6 +95,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 				Cmd:            []string{"cat", "/mnt/test-1/data"},
 				ExpectedString: "hello world\nhello world\n", // pod will be restarted so expect to see 2 instances of string
 			},
+			StorageClassParameters: map[string]string{"skuName": "Premium_LRS"},
 		}
 		test.Run(cs, ns)
 	})
@@ -117,8 +119,9 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedReadOnlyVolumeTest{
-			CSIDriver: testDriver,
-			Pods:      pods,
+			CSIDriver:              testDriver,
+			Pods:                   pods,
+			StorageClassParameters: map[string]string{"skuName": "Standard_GRS"},
 		}
 		test.Run(cs, ns)
 	})
@@ -153,9 +156,10 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedCollocatedPodTest{
-			CSIDriver:    testDriver,
-			Pods:         pods,
-			ColocatePods: true,
+			CSIDriver:              testDriver,
+			Pods:                   pods,
+			ColocatePods:           true,
+			StorageClassParameters: map[string]string{"skuName": "Standard_RAGRS"},
 		}
 		test.Run(cs, ns)
 	})
@@ -170,8 +174,9 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedReclaimPolicyTest{
-			CSIDriver: testDriver,
-			Volumes:   volumes,
+			CSIDriver:              testDriver,
+			Volumes:                volumes,
+			StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
 		}
 		test.Run(cs, ns)
 	})
@@ -186,9 +191,10 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedReclaimPolicyTest{
-			CSIDriver: testDriver,
-			Volumes:   volumes,
-			Blobfuse:  blobfuseDriver,
+			CSIDriver:              testDriver,
+			Volumes:                volumes,
+			Blobfuse:               blobfuseDriver,
+			StorageClassParameters: map[string]string{"skuName": "Standard_GRS"},
 		}
 		test.Run(cs, ns)
 	})

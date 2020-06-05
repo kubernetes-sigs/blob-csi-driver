@@ -100,9 +100,3 @@ func (d *blobFuseCSIDriver) GetPreProvisionStorageClass(parameters map[string]st
 	generateName := fmt.Sprintf("%s-%s-pre-provisioned-sc-", namespace, provisioner)
 	return getStorageClass(generateName, provisioner, parameters, mountOptions, reclaimPolicy, bindingMode, nil)
 }
-
-func GetParameters() map[string]string {
-	return map[string]string{
-		"skuName": "Standard_LRS",
-	}
-}
