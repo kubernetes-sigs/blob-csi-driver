@@ -80,7 +80,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	accountKind := string(storage.StorageV2)
-	if strings.EqualFold(storageAccountType, "Premium_LRS") {
+	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
 		accountKind = string(storage.BlockBlobStorage)
 	}
 	account, accountKey, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, accountKind, resourceGroup, location, blobfuseAccountNamePrefix)
