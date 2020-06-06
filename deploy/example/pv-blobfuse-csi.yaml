@@ -15,7 +15,7 @@ spec:
   csi:
     driver: blobfuse.csi.azure.com
     readOnly: false
-    volumeHandle: uniqe-volumeid  # make sure this volumeid is unique in whole cluster
+    volumeHandle: uniqe-volumeid  # make sure this volumeid is unique in the cluster
     volumeAttributes:
       containerName: EXISTING_CONTAINER_NAME
     nodeStageSecretRef:
