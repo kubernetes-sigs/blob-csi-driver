@@ -19,7 +19,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: blobfuse.csi.azure.com
+  name: blob
 provisioner: blobfuse.csi.azure.com
 parameters:
   skuName: Standard_LRS  # available values: Standard_LRS, Standard_GRS, Standard_RAGRS
