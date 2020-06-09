@@ -9,7 +9,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-  storageClassName: blobfuse.csi.azure.com
+  storageClassName: blob
 ---
 apiVersion: apps/v1
 kind: Deployment
