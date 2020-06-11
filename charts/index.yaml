@@ -1,0 +1,28 @@
+apiVersion: v1
+entries:
+  blobfuse-csi-driver:
+  - apiVersion: v1
+    appVersion: v0.5.0
+    created: "2020-06-11T14:00:53.498198+08:00"
+    description: BlobFuse Container Storage Interface (CSI) Storage Plugin
+    digest: 4b2a8c9900f1ab5e5c30ee8195543fd65b6d25d53e5acf93519b46a416197baf
+    maintainers:
+      - email: xiazhang@microsoft.com
+        name: andyzhangx
+    name: blobfuse-csi-driver
+    urls:
+    - https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/charts/v0.5.0/blobfuse-csi-driver-v0.5.0.tgz
+    version: v0.5.0
+  - apiVersion: v1
+    appVersion: v0.4.0
+    created: "2020-06-11T14:00:53.497736+08:00"
+    description: BlobFuse Container Storage Interface (CSI) Storage Plugin
+    digest: f29d8d474b8a52f569081ae0d1e32c68c35cc684c0f3cbfa9541d160ae17352f
+    maintainers:
+      - email: xiazhang@microsoft.com
+        name: andyzhangx
+    name: blobfuse-csi-driver
+    urls:
+    - https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/charts/v0.4.0/blobfuse-csi-driver-v0.4.0.tgz
+    version: v0.4.0
+generated: "2020-06-11T14:00:53.495846+08:00"
