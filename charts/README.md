@@ -18,17 +18,17 @@ $ helm install blobfuse-csi-driver blobfuse-csi-driver-latest.tgz --namespace ku
 
 ```console
 $ helm repo add blobfuse-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/charts
-$ helm install --name blobfuse-csi-driver blobfuse-csi-driver/blobfuse-csi-driver --namespace kube-system
+$ helm install  blobfuse-csi-driver blobfuse-csi-driver/blobfuse-csi-driver --namespace kube-system
 ```
   
 ### Search for different versions of charts available
 ```console
-$ helm search -l blobfuse-csi-driver/
+$ helm search repo -l blobfuse-csi-driver/
 ```  
 ### Install a specific version of Helm chart
 Specify the version of the chart to be installed using the `--version` parameter. 
 ```console
-helm install --name blobfuse-csi-driver blobfuse-csi-driver/blobfuse-csi-driver --namespace kube-system --version v0.5.0
+helm install  blobfuse-csi-driver blobfuse-csi-driver/blobfuse-csi-driver --namespace kube-system --version v0.5.0
 ```
 
 ## Uninstall
