@@ -29,7 +29,7 @@ Please refer to `blobfuse.csi.azure.com` [driver parameters](./docs/driver-param
 ### Install blobfuse CSI driver on a kubernetes cluster
 Please refer to [install blobfuse csi driver](https://github.com/kubernetes-sigs/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
 
-### Examples
+### Usage
  - [Basic usage](./deploy/example/e2e_usage.md)
  
 ### Troubleshooting
@@ -41,8 +41,7 @@ Please refer to [development guide](./docs/csi-dev.md)
 
 ### Links
  - [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse)
- - [blobfuse flexvolume driver](https://github.com/Azure/kubernetes-volume-drivers/tree/master/flexvolume/blobfuse)
- - [Kubernetes CSI Documentation](https://kubernetes-csi.github.io/docs/Home.html)
- - [Analysis of the CSI Spec](https://blog.thecodeteam.com/2017/11/03/analysis-csi-spec/)
+ - [Kubernetes CSI Documentation]( https://kubernetes-csi.github.io/docs/)
  - [CSI Drivers](https://github.com/kubernetes-csi/drivers)
  - [Container Storage Interface (CSI) Specification](https://github.com/container-storage-interface/spec)
+ - [Blobfuse FlexVolume driver](https://github.com/Azure/kubernetes-volume-drivers/tree/master/flexvolume/blobfuse)
