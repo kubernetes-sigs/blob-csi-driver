@@ -58,6 +58,10 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 				Volumes: []testsuites.VolumeDetails{
 					{
 						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"-o allow_other",
+							"--file-cache-timeout-in-seconds=120",
+						},
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
@@ -81,6 +85,10 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 				{
 					FSType:    "ext3",
 					ClaimSize: "10Gi",
+					MountOptions: []string{
+						"-o allow_other",
+						"--file-cache-timeout-in-seconds=120",
+					},
 					VolumeMount: testsuites.VolumeMountDetails{
 						NameGenerate:      "test-volume-",
 						MountPathGenerate: "/mnt/test-",
