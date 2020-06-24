@@ -42,6 +42,7 @@ const (
 	defaultFileMode  = "0777"
 	defaultDirMode   = "0777"
 	defaultVers      = "3.0"
+	serverNameField  = "server"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3

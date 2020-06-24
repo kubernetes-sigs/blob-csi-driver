@@ -18,6 +18,7 @@ spec:
     volumeHandle: uniqe-volumeid  # make sure this volumeid is unique in the cluster
     volumeAttributes:
       containerName: EXISTING_CONTAINER_NAME
+      server: SERVER_ADDRESS  # optional, provide a new address to replace default "accountname.blob.core.windows.net"
     nodeStageSecretRef:
       name: azure-secret
       namespace: default

@@ -138,7 +138,18 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	for _, opt := range mountOptions {
 		args = args + " " + opt
 	}
-	blobStorageEndPoint := fmt.Sprintf("%s.blob.%s", accountName, d.cloud.Environment.StorageEndpointSuffix)
+
+	var blobStorageEndPoint string
+	for k, v := range attrib {
+		switch strings.ToLower(k) {
+		case serverNameField:
+			blobStorageEndPoint = v
+		}
+	}
+	if strings.TrimSpace(blobStorageEndPoint) == "" {
+		// server address is "accountname.blob.core.windows.net" by default
+		blobStorageEndPoint = fmt.Sprintf("%s.blob.%s", accountName, d.cloud.Environment.StorageEndpointSuffix)
+	}
 
 	klog.V(2).Infof("target %v\nfstype %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nblobStorageEndPoint %v",
 		targetPath, fsType, volumeID, attrib, mountFlags, mountOptions, args, blobStorageEndPoint)
