@@ -26,6 +26,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	fakeNodeID     = "fakeNodeID"
+	fakeDriverName = "fake"
+	vendorVersion  = "0.3.0"
+)
+
+func NewFakeDriver() *Driver {
+	driver := NewDriver(fakeNodeID)
+	driver.Name = fakeDriverName
+	driver.Version = vendorVersion
+	return driver
+}
+
+func TestNewFakeDriver(t *testing.T) {
+	d := NewDriver(fakeNodeID)
+	assert.NotNil(t, d)
+}
+
 func TestAppendDefaultMountOptions(t *testing.T) {
 	tests := []struct {
 		options  []string
