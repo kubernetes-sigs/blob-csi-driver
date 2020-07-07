@@ -15,19 +15,25 @@
 PKG = sigs.k8s.io/blobfuse-csi-driver
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
 REGISTRY ?= andyzhangx
+REGISTRY_NAME ?= $(shell echo $(REGISTRY) | sed "s/.azurecr.io//g")
 IMAGE_NAME = blobfuse-csi
 IMAGE_VERSION ?= v0.6.0
 # Use a custom version for E2E tests if we are in Prow
-ifdef AZURE_CREDENTIALS
+ifdef CI
+ifndef PUBLISH
 override IMAGE_VERSION := e2e-$(GIT_COMMIT)
 endif
+endif
 IMAGE_TAG = $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
-IMAGE_TAG_LATEST = $(REGISTRY_NAME)/$(IMAGE_NAME):latest
+IMAGE_TAG_LATEST = $(REGISTRY)/$(IMAGE_NAME):latest
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS ?= "-X ${PKG}/pkg/blobfuse.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blobfuse.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blobfuse.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
 GINKGO_FLAGS = -ginkgo.noColor -ginkgo.v
 GO111MODULE = off
-export GO111MODULE
+GOPATH ?= $(shell go env GOPATH)
+GOBIN ?= $(GOPATH)/bin
+DOCKER_CLI_EXPERIMENTAL = enabled
+export GOPATH GOBIN GO111MODULE DOCKER_CLI_EXPERIMENTAL
 
 all: blobfuse
 
@@ -87,16 +93,39 @@ container: blobfuse
 	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/Dockerfile .
 
 .PHONY: blobfuse-container
-blobfuse-container: blobfuse
-	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/Dockerfile .
+blobfuse-container:
+	docker buildx rm container-builder || true
+	docker buildx create --use --name=container-builder
+ifdef CI
+	az acr login --name $(REGISTRY_NAME)
+	docker buildx build --no-cache --build-arg LDFLAGS=${LDFLAGS} -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/Dockerfile --platform="linux/amd64" --push .
+
+	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG)
+	docker manifest inspect $(IMAGE_TAG)
+ifdef PUBLISH
+	docker manifest create $(IMAGE_TAG_LATEST) $(IMAGE_TAG)
+	docker manifest inspect $(IMAGE_TAG_LATEST)
+endif
+endif
 
 .PHONY: push
-push: blobfuse-container
+push:
+ifdef CI
+	docker manifest push --purge $(IMAGE_TAG)
+else
 	docker push $(IMAGE_TAG)
+endif
 
 .PHONY: push-latest
-push-latest: blobfuse-container
-	docker push $(IMAGE_TAG)
+push-latest:
+ifdef CI
+	docker manifest push --purge $(IMAGE_TAG_LATEST)
+else
+	docker push $(IMAGE_TAG_LATEST)
+endif
+
+.PHONY: build-push
+build-push: blobfuse-container
 	docker tag $(IMAGE_TAG) $(IMAGE_TAG_LATEST)
 	docker push $(IMAGE_TAG_LATEST)
 
