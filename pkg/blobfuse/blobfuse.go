@@ -26,7 +26,7 @@ import (
 	"github.com/pborman/uuid"
 	"golang.org/x/net/context"
 	"k8s.io/klog"
-	"k8s.io/kubernetes/pkg/util/mount"
+	"k8s.io/utils/mount"
 	k8sutil "k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/legacy-cloud-providers/azure"
 )
