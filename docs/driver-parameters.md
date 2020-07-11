@@ -1,12 +1,10 @@
-## `blobfuse.csi.azure.com` driver parameters
- > storage class `blobfuse.csi.azure.com` parameters are compatible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin
- 
+## Driver Parameters
  > parameter names are case-insensitive
 
 ### Dynamic Provisioning
-  > get a quick example [here](../deploy/example/storageclass-blobfuse-csi.yaml)
+  > get a [example](../deploy/example/storageclass-blobfuse-csi.yaml)
 
-  > get a `mountOptions` example [here](../deploy/example/storageclass-blobfuse-csi-mountoptions.yaml)
+  > get a `mountOptions` [example](../deploy/example/storageclass-blobfuse-csi-mountoptions.yaml)
 
 Name | Meaning | Example | Mandatory | Default value
 --- | --- | --- | --- | ---
@@ -21,10 +19,10 @@ server | specify azure storage account server address | existing server address,
 
 Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check [here](https://github.com/Azure/azure-storage-fuse#mount-options) for more mountoptions.
 
-### Static Provisioning(use existing storage container)
-  > get a quick example [here](../deploy/example/pv-blobfuse-csi.yaml)
+### Static Provisioning(bring your own storage container)
+  > get an [example](../deploy/example/pv-blobfuse-csi.yaml)
   >
-  > get a key vault example [here](../deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml)
+  > get a key vault [example](../deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml)
 
 Name | Meaning | Available Value | Mandatory | Default value
 --- | --- | --- | --- | ---
@@ -34,4 +32,4 @@ volumeAttributes.keyVaultURL | Azure Key Vault DNS name | existing Azure Key Vau
 volumeAttributes.keyVaultSecretName | Azure Key Vault secret name | existing Azure Key Vault secret name | No |
 volumeAttributes.keyVaultSecretVersion | Azure Key Vault secret version | existing version | No |if empty, driver will use "current version"
 nodeStageSecretRef.name | secret name that stores storage account name and key(or sastoken) | existing kubernetes secret name |  No  |
-nodeStageSecretRef.namespace | namespace where the secret is | k8s namespace  |  No  | `default`
+nodeStageSecretRef.namespace | namespace where the secret is | k8s namespace  |  Yes  |
