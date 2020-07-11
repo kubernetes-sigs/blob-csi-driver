@@ -8,7 +8,6 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.8.2
 	github.com/container-storage-interface/spec v1.2.0
 	github.com/golang/protobuf v1.3.2
-	github.com/kubernetes-csi/external-snapshotter v1.2.2
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.7.0
 	github.com/pborman/uuid v1.2.0
