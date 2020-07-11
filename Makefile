@@ -16,7 +16,7 @@ PKG = sigs.k8s.io/blobfuse-csi-driver
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
 REGISTRY ?= andyzhangx
 REGISTRY_NAME ?= $(shell echo $(REGISTRY) | sed "s/.azurecr.io//g")
-IMAGE_NAME = blobfuse-csi
+IMAGE_NAME ?= blobfuse-csi
 IMAGE_VERSION ?= v0.6.0
 # Use a custom version for E2E tests if we are in Prow
 ifdef CI
@@ -90,7 +90,7 @@ blobfuse-windows:
 
 .PHONY: container
 container: blobfuse
-	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/Dockerfile .
+	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/dev.Dockerfile .
 
 .PHONY: blobfuse-container
 blobfuse-container:

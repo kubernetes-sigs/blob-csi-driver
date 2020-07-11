@@ -21,7 +21,7 @@ if [[ "$#" -gt 0 ]]; then
   ver="$1"
 fi
 
-repo="https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy"
+repo="https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/$ver/deploy"
 if [[ "$#" -gt 1 ]]; then
   if [[ "$2" == *"local"* ]]; then
     echo "use local deploy"
@@ -30,13 +30,13 @@ if [[ "$#" -gt 1 ]]; then
 fi
 
 if [ $ver != "master" ]; then
-	repo="$repo/$ver"
+  repo="$repo/$ver"
 fi
 
 echo "Uninstalling Blobfuse CSI driver, version: $ver ..."
 kubectl delete -f $repo/csi-blobfuse-controller.yaml --ignore-not-found
-kubectl delete -f $repo/csi-blobfuse-driver.yaml --ignore-not-found
 kubectl delete -f $repo/csi-blobfuse-node.yaml --ignore-not-found
+kubectl delete -f $repo/csi-blobfuse-driver.yaml --ignore-not-found
 kubectl delete -f $repo/rbac-csi-blobfuse-controller.yaml --ignore-not-found
 kubectl delete -f $repo/rbac-csi-blobfuse-node.yaml --ignore-not-found
 echo 'Uninstalled Blobfuse CSI driver successfully.'
