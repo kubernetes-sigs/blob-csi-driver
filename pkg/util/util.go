@@ -16,6 +16,10 @@ limitations under the License.
 
 package util
 
+import (
+	"os"
+)
+
 const (
 	GiB = 1024 * 1024 * 1024
 )
@@ -65,4 +69,14 @@ func GetMountOptions(options []string) string {
 		str = str + " " + options[i]
 	}
 	return str
+}
+
+func MakeDir(pathname string) error {
+	err := os.MkdirAll(pathname, os.FileMode(0755))
+	if err != nil {
+		if !os.IsExist(err) {
+			return err
+		}
+	}
+	return nil
 }

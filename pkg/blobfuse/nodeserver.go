@@ -23,11 +23,13 @@ import (
 	"os/exec"
 	"strings"
 
+	volumehelper "sigs.k8s.io/blobfuse-csi-driver/pkg/util"
+
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	"k8s.io/klog"
-	"k8s.io/kubernetes/pkg/util/mount"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/volume/util"
+	"k8s.io/utils/mount"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -267,7 +269,7 @@ func (d *Driver) ensureMountPoint(target string) error {
 		// notMnt = true
 	}
 
-	if err := d.mounter.MakeDir(target); err != nil {
+	if err := volumehelper.MakeDir(target); err != nil {
 		klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
 		return err
 	}

@@ -80,12 +80,10 @@ e2e-teardown:
 
 .PHONY: blobfuse
 blobfuse:
-	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
 	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin ./pkg/blobfuseplugin
 
 .PHONY: blobfuse-windows
 blobfuse-windows:
-	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
 	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin.exe ./pkg/blobfuseplugin
 
 .PHONY: container

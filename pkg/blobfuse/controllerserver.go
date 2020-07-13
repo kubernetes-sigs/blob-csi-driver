@@ -29,7 +29,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 const blobfuseAccountNamePrefix = "fuse"
@@ -83,7 +83,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
 		accountKind = string(storage.BlockBlobStorage)
 	}
-	account, accountKey, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, accountKind, resourceGroup, location, blobfuseAccountNamePrefix)
+	account, accountKey, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, accountKind, resourceGroup, location, blobfuseAccountNamePrefix, false)
 	if err != nil {
 		return nil, fmt.Errorf("could not get storage key for storage account %s: %v", accountName, err)
 	}

@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/blobfuse-csi-driver/pkg/blobfuse"
 
 	"k8s.io/component-base/metrics/legacyregistry"
-	"k8s.io/klog"
+	"k8s.io/klog/v2"
 )
 
 func init() {

@@ -25,10 +25,11 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pborman/uuid"
 	"golang.org/x/net/context"
-	"k8s.io/klog"
-	"k8s.io/kubernetes/pkg/util/mount"
+	"k8s.io/klog/v2"
 	k8sutil "k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/legacy-cloud-providers/azure"
+	utilexec "k8s.io/utils/exec"
+	"k8s.io/utils/mount"
 )
 
 const (
@@ -89,7 +90,7 @@ func (d *Driver) Run(endpoint, kubeconfig string) {
 
 	d.mounter = &mount.SafeFormatAndMount{
 		Interface: mount.New(""),
-		Exec:      mount.NewOsExec(),
+		Exec:      utilexec.New(),
 	}
 
 	// Initialize default library driver
