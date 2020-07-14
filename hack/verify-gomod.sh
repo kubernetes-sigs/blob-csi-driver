@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2019 The Kubernetes Authors.
+# Copyright 2020 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,11 +14,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# disable go dep check since azure cloud provider on master depends on latest k8s.io/client-go, while other components, e.g. snapshot depends on old k8s.io/client-go version
-# k8s.io/legacy-cloud-providers: hash of vendored tree not equal to digest in Gopkg.lock
-#set -euo pipefail
+set -euo pipefail
 
-echo "Verifying dep check"
-go get github.com/golang/dep/cmd/dep
-dep check
-echo "No issue found"
+export GO111MODULE=on
+echo "go mod tidy"
+go mod tidy
+echo "go mod vendor"
+go mod vendor
+diff=`git diff`
+if [[ -n "${diff}" ]]; then
+  echo "${diff}"
+  echo
+  echo "error"
+  exit 1
+fi
+echo "Done"

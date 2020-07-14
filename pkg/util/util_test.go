@@ -17,7 +17,10 @@ limitations under the License.
 package util
 
 import (
+	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRoundUpBytes(t *testing.T) {
@@ -79,4 +82,15 @@ func TestGetMountOptions(t *testing.T) {
 			t.Errorf("getMountOptions(%v) result: %s, expected: %s", test.options, result, test.expected)
 		}
 	}
+}
+
+func TestMakeDir(t *testing.T) {
+	//Successfully create directory
+	targetTest := "./target_test"
+	err := MakeDir(targetTest)
+	assert.NoError(t, err)
+
+	// Remove the directory created
+	err = os.RemoveAll(targetTest)
+	assert.NoError(t, err)
 }
