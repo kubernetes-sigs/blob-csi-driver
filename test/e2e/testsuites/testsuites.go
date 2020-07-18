@@ -33,9 +33,12 @@ import (
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
 	clientset "k8s.io/client-go/kubernetes"
 	deploymentutil "k8s.io/kubernetes/pkg/controller/deployment/util"
+	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/test/e2e/framework"
+	e2eevents "k8s.io/kubernetes/test/e2e/framework/events"
 	e2elog "k8s.io/kubernetes/test/e2e/framework/log"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
 	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
@@ -453,6 +456,16 @@ func (t *TestPod) WaitForSuccess() {
 
 func (t *TestPod) WaitForRunning() {
 	err := e2epod.WaitForPodRunningInNamespace(t.client, t.pod)
+	framework.ExpectNoError(err)
+}
+
+func (t *TestPod) WaitForFailedMountError() {
+	err := e2eevents.WaitTimeoutForEvent(
+		t.client,
+		t.namespace.Name,
+		fields.Set{"reason": events.FailedMountVolume}.AsSelector().String(),
+		"",
+		pollLongTimeout)
 	framework.ExpectNoError(err)
 }
 

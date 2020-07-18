@@ -232,4 +232,32 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 		}
 		test.Run(cs, ns)
 	})
+
+	ginkgo.It("should receive FailedMount event with invalid mount options", func() {
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"invalid",
+							"mount",
+							"options",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedInvalidMountOptions{
+			CSIDriver:              testDriver,
+			Pods:                   pods,
+			StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
+		}
+		test.Run(cs, ns)
+	})
 })
