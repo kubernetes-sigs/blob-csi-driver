@@ -95,7 +95,6 @@ blobfuse-container:
 	docker buildx rm container-builder || true
 	docker buildx create --use --name=container-builder
 ifdef CI
-	az acr login --name $(REGISTRY_NAME)
 	docker buildx build --no-cache --build-arg LDFLAGS=${LDFLAGS} -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/Dockerfile --platform="linux/amd64" --push .
 
 	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG)
