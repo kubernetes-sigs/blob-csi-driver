@@ -28,7 +28,7 @@ $ helm search repo -l blobfuse-csi-driver/
 ### Install a specific version of Helm chart
 Specify the version of the chart to be installed using the `--version` parameter. 
 ```console
-helm install  blobfuse-csi-driver blobfuse-csi-driver/blobfuse-csi-driver --namespace kube-system --version v0.5.0
+helm install  blobfuse-csi-driver blobfuse-csi-driver/blobfuse-csi-driver --namespace kube-system --version v0.6.0
 ```
 
 ## Uninstall
