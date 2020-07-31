@@ -26,6 +26,7 @@ export REGISTRY=$REGISTRY_NAME.azurecr.io
 export IMAGE_NAME=public/k8s/csi/blobfuse-csi
 export CI=1
 export PUBLISH=1
+az acr login --name $REGISTRY_NAME
 make blobfuse-container
 make push
 make push-latest
