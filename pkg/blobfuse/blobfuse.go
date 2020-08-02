@@ -45,6 +45,9 @@ const (
 	defaultVers      = "3.0"
 	serverNameField  = "server"
 	tagsField        = "tags"
+	protocolField    = "protocol"
+	fuse             = "fuse"
+	nfs              = "nfs"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3
@@ -58,7 +61,8 @@ const (
 )
 
 var (
-	retriableErrors = []string{accountNotProvisioned, tooManyRequests, shareNotFound, shareBeingDeleted, clientThrottled}
+	supportedProtocolList = []string{fuse, nfs}
+	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, shareNotFound, shareBeingDeleted, clientThrottled}
 )
 
 // Driver implements all interfaces of CSI drivers
@@ -413,6 +417,18 @@ func isRetriableError(err error) bool {
 			if strings.Contains(strings.ToLower(err.Error()), strings.ToLower(v)) {
 				return true
 			}
+		}
+	}
+	return false
+}
+
+func isSupportedProtocol(protocol string) bool {
+	if protocol == "" {
+		return true
+	}
+	for _, v := range supportedProtocolList {
+		if protocol == v {
+			return true
 		}
 	}
 	return false

@@ -135,7 +135,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 				mockStorageAccountsClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any()).Return(nil, rerr).AnyTimes()
 				_, err := d.CreateVolume(context.Background(), req)
-				expectedErr := fmt.Errorf("could not get storage key for storage account : could not list storage accounts for account type : Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				expectedErr := status.Errorf(codes.Internal, "failed to ensure storage account: could not list storage accounts for account type : Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
