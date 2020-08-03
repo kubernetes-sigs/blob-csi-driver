@@ -21,7 +21,6 @@ import (
 	"errors"
 	"os"
 	"reflect"
-	"syscall"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -184,9 +183,10 @@ func TestNodePublishVolume(t *testing.T) {
 	}
 
 	// Clean up
-	_ = syscall.Unmount(sourceTest, syscall.MNT_DETACH)
-	_ = syscall.Unmount(targetTest, syscall.MNT_DETACH)
-	err := os.RemoveAll(sourceTest)
+	_ = d.mounter.Unmount(sourceTest)
+	err := d.mounter.Unmount(targetTest)
+	assert.NoError(t, err)
+	err = os.RemoveAll(sourceTest)
 	assert.NoError(t, err)
 	err = os.RemoveAll(targetTest)
 	assert.NoError(t, err)
@@ -232,8 +232,9 @@ func TestNodeUnpublishVolume(t *testing.T) {
 	}
 
 	//Clean up
-	_ = syscall.Unmount(targetTest, syscall.MNT_DETACH)
-	err := os.RemoveAll(sourceTest)
+	err := d.mounter.Unmount(targetTest)
+	assert.NoError(t, err)
+	err = os.RemoveAll(sourceTest)
 	assert.NoError(t, err)
 	err = os.RemoveAll(targetTest)
 	assert.NoError(t, err)

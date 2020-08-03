@@ -32,7 +32,7 @@ spec:
     - metadata:
         name: persistent-storage
         annotations:
-          volume.beta.kubernetes.io/storage-class: blobfuse.csi.azure.com
+          volume.beta.kubernetes.io/storage-class: blob
       spec:
         accessModes: ["ReadWriteOnce"]
         resources:
