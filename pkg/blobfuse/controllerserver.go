@@ -55,7 +55,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	requestGiB := int(util.RoundUpGiB(volSizeBytes))
 
 	parameters := req.GetParameters()
-	var storageAccountType, resourceGroup, location, account, containerName, customTags string
+	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags string
 
 	// Apply ProvisionerParameters (case-insensitive). We leave validation of
 	// the values to the cloud provider.
@@ -73,6 +73,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			resourceGroup = v
 		case "containername":
 			containerName = v
+		case protocolField:
+			protocol = v
 		case tagsField:
 			customTags = v
 		}
@@ -80,6 +82,16 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	if resourceGroup == "" {
 		resourceGroup = d.cloud.ResourceGroup
+	}
+
+	if !isSupportedProtocol(protocol) {
+		return nil, status.Errorf(codes.InvalidArgument, "protocol(%s) is not supported, supported protocol list: %v", protocol, supportedProtocolList)
+	}
+
+	if protocol == nfs {
+		if account == "" {
+			return nil, status.Errorf(codes.InvalidArgument, "storage account must be specified when provisioning nfs file share")
+		}
 	}
 
 	accountKind := string(storage.StorageV2)

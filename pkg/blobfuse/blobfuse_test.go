@@ -314,3 +314,34 @@ func TestIsCorruptedDir(t *testing.T) {
 		assert.Equal(t, test.expectedResult, isCorruptedDir, "TestCase[%d]: %s", i, test.desc)
 	}
 }
+
+func TestIsSupportedProtocol(t *testing.T) {
+	tests := []struct {
+		protocol       string
+		expectedResult bool
+	}{
+		{
+			protocol:       "",
+			expectedResult: true,
+		},
+		{
+			protocol:       "fuse",
+			expectedResult: true,
+		},
+		{
+			protocol:       "nfs",
+			expectedResult: true,
+		},
+		{
+			protocol:       "invalid",
+			expectedResult: false,
+		},
+	}
+
+	for _, test := range tests {
+		result := isSupportedProtocol(test.protocol)
+		if result != test.expectedResult {
+			t.Errorf("isSupportedProtocol(%s) returned with %v, not equal to %v", test.protocol, result, test.expectedResult)
+		}
+	}
+}

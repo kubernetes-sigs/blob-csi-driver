@@ -22,11 +22,13 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	volumehelper "sigs.k8s.io/blobfuse-csi-driver/pkg/util"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/utils/mount"
@@ -119,7 +121,6 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	volumeID := req.GetVolumeId()
-	fsType := req.GetVolumeCapability().GetMount().GetFsType()
 	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
@@ -129,20 +130,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, err
 	}
 
-	// Get mountOptions that the volume will be formatted and mounted with
-	options := []string{"--use-https=true"}
-	mountOptions := util.JoinMountOptions(mountFlags, options)
-
-	args := targetPath + " " + "--tmp-path=/mnt/" + volumeID + " " + "--container-name=" + containerName
-	for _, opt := range mountOptions {
-		args = args + " " + opt
-	}
-
-	var blobStorageEndPoint string
+	var blobStorageEndPoint, protocol string
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
 		case serverNameField:
 			blobStorageEndPoint = v
+		case protocolField:
+			protocol = v
 		}
 	}
 	if strings.TrimSpace(blobStorageEndPoint) == "" {
@@ -150,8 +144,39 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		blobStorageEndPoint = fmt.Sprintf("%s.blob.%s", accountName, d.cloud.Environment.StorageEndpointSuffix)
 	}
 
-	klog.V(2).Infof("target %v\nfstype %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nblobStorageEndPoint %v",
-		targetPath, fsType, volumeID, attrib, mountFlags, mountOptions, args, blobStorageEndPoint)
+	if protocol == nfs {
+		klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nblobStorageEndPoint %v",
+			targetPath, protocol, volumeID, attrib, mountFlags, blobStorageEndPoint)
+
+		source := fmt.Sprintf("%s:/%s/%s", blobStorageEndPoint, accountName, containerName)
+		mountOptions := util.JoinMountOptions(mountFlags, []string{"sec=sys,vers=3,nolock"})
+		mountComplete := false
+		err := wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
+			err := d.mounter.MountSensitive(source, targetPath, nfs, mountOptions, []string{})
+			mountComplete = true
+			return true, err
+		})
+		if !mountComplete {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with timeout(2m)", volumeID, source, targetPath))
+		}
+		if err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with %v", volumeID, source, targetPath, err))
+		}
+		klog.V(2).Infof("volume(%s) mount %q on %q succeeded", volumeID, source, targetPath)
+
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
+
+	// Get mountOptions that the volume will be formatted and mounted with
+	mountOptions := util.JoinMountOptions(mountFlags, []string{"--use-https=true"})
+
+	args := targetPath + " " + "--tmp-path=/mnt/" + volumeID + " " + "--container-name=" + containerName
+	for _, opt := range mountOptions {
+		args = args + " " + opt
+	}
+
+	klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nblobStorageEndPoint %v",
+		targetPath, protocol, volumeID, attrib, mountFlags, mountOptions, args, blobStorageEndPoint)
 	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
 
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName)
@@ -187,6 +212,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, err
 	}
 
+	klog.V(2).Infof("volume(%s) mount on %q succeeded", volumeID, targetPath)
 	return &csi.NodeStageVolumeResponse{}, nil
 }
 
