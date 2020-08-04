@@ -44,10 +44,21 @@ const (
 	defaultDirMode   = "0777"
 	defaultVers      = "3.0"
 	serverNameField  = "server"
+	tagsField        = "tags"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3
 	containerNameMaxLength = 63
+
+	accountNotProvisioned = "StorageAccountIsNotProvisioned"
+	tooManyRequests       = "TooManyRequests"
+	shareNotFound         = "The specified share does not exist"
+	shareBeingDeleted     = "The specified share is being deleted"
+	clientThrottled       = "client throttled"
+)
+
+var (
+	retriableErrors = []string{accountNotProvisioned, tooManyRequests, shareNotFound, shareBeingDeleted, clientThrottled}
 )
 
 // Driver implements all interfaces of CSI drivers
@@ -394,4 +405,15 @@ func IsCorruptedDir(dir string) bool {
 	pathExists, pathErr := mount.PathExists(dir)
 	fmt.Printf("IsCorruptedDir(%s) returned with error: (%v, %v)\\n", dir, pathExists, pathErr)
 	return pathErr != nil && mount.IsCorruptedMnt(pathErr)
+}
+
+func isRetriableError(err error) bool {
+	if err != nil {
+		for _, v := range retriableErrors {
+			if strings.Contains(strings.ToLower(err.Error()), strings.ToLower(v)) {
+				return true
+			}
+		}
+	}
+	return false
 }

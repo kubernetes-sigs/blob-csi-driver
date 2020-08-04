@@ -30,6 +30,7 @@ import (
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
+	"k8s.io/legacy-cloud-providers/azure"
 )
 
 const blobfuseAccountNamePrefix = "fuse"
@@ -54,7 +55,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	requestGiB := int(util.RoundUpGiB(volSizeBytes))
 
 	parameters := req.GetParameters()
-	var storageAccountType, resourceGroup, location, accountName, containerName string
+	var storageAccountType, resourceGroup, location, account, containerName, customTags string
 
 	// Apply ProvisionerParameters (case-insensitive). We leave validation of
 	// the values to the cloud provider.
@@ -67,11 +68,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case "location":
 			location = v
 		case "storageaccount":
-			accountName = v
+			account = v
 		case "resourcegroup":
 			resourceGroup = v
 		case "containername":
 			containerName = v
+		case tagsField:
+			customTags = v
 		}
 	}
 
@@ -83,11 +86,38 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
 		accountKind = string(storage.BlockBlobStorage)
 	}
-	account, accountKey, err := d.cloud.EnsureStorageAccount(accountName, storageAccountType, accountKind, resourceGroup, location, blobfuseAccountNamePrefix, false)
+
+	enableHTTPSTrafficOnly := true
+
+	tags, err := azure.ConvertTagsToMap(customTags)
 	if err != nil {
-		return nil, fmt.Errorf("could not get storage key for storage account %s: %v", accountName, err)
+		return nil, err
 	}
-	accountName = account
+
+	accountOptions := &azure.AccountOptions{
+		Name:                   account,
+		Type:                   storageAccountType,
+		Kind:                   accountKind,
+		ResourceGroup:          resourceGroup,
+		Location:               location,
+		EnableHTTPSTrafficOnly: enableHTTPSTrafficOnly,
+		Tags:                   tags,
+	}
+
+	var accountName, accountKey string
+	err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+		var retErr error
+		accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(accountOptions, blobfuseAccountNamePrefix)
+		if isRetriableError(retErr) {
+			klog.Warningf("EnsureStorageAccount(%s) failed with error(%v), waiting for retrying", account, retErr)
+			return false, nil
+		}
+		return true, retErr
+	})
+
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to ensure storage account: %v", err)
+	}
 
 	if containerName == "" {
 		containerName = getValidContainerName(name)
