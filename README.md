@@ -1,18 +1,22 @@
-# Blobfuse CSI driver for Kubernetes
+# Azure Blob Storage CSI driver for Kubernetes
 [![Travis](https://travis-ci.org/kubernetes-sigs/blobfuse-csi-driver.svg)](https://travis-ci.org/kubernetes-sigs/blobfuse-csi-driver)
 [![Coverage Status](https://coveralls.io/repos/github/kubernetes-sigs/blobfuse-csi-driver/badge.svg?branch=master)](https://coveralls.io/github/kubernetes-sigs/blobfuse-csi-driver?branch=master)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fblobfuse-csi-driver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fblobfuse-csi-driver?ref=badge_shield)
 
 ### About
-This driver allows Kubernetes to use [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse), csi plugin name: `blob.csi.azure.com`
+This driver allows Kubernetes to access Azure Storage through one of following methods:
+ - [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse)
+ - [NFSv3](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support)
+
+csi plugin name: `blob.csi.azure.com`
 
 ### Container Images & Kubernetes Compatibility:
-|Blobfuse CSI Driver Version    | Image                                              | 1.14+  |
-|-------------------------------|----------------------------------------------------|--------|
-|master branch                  |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
-|v0.6.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.6.0       | yes    |
-|v0.5.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.5.0       | yes    |
-|v0.4.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.4.0       | yes    |
+|Azure Blob Storage CSI driver Version    | Image                                              | 1.14+  |
+|-----------------------------------------|----------------------------------------------------|--------|
+|master branch                            |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
+|v0.6.0                                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.6.0       | yes    |
+|v0.5.0                                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.5.0       | yes    |
+|v0.4.0                                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.4.0       | yes    |
 
 ### Driver parameters
 Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
@@ -39,10 +43,9 @@ Please refer to [install Azure Blob Storage CSI driver](https://github.com/kuber
 ## Kubernetes Development
 Please refer to [development guide](./docs/csi-dev.md)
 
-
 ### Links
  - [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse)
- - [Kubernetes CSI Documentation]( https://kubernetes-csi.github.io/docs/)
+ - [Kubernetes CSI Documentation](https://kubernetes-csi.github.io/docs/)
  - [CSI Drivers](https://github.com/kubernetes-csi/drivers)
  - [Container Storage Interface (CSI) Specification](https://github.com/container-storage-interface/spec)
  - [Blobfuse FlexVolume driver](https://github.com/Azure/kubernetes-volume-drivers/tree/master/flexvolume/blobfuse)
