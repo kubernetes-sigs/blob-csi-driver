@@ -10,10 +10,10 @@ spec:
       command:
         - "/bin/sh"
         - "-c"
-        - while true; do echo $(date) >> /mnt/blobfuse/outfile; sleep 1; done
+        - while true; do echo $(date) >> /mnt/blob/outfile; sleep 1; done
       volumeMounts:
         - name: blobfuse01
-          mountPath: "/mnt/blobfuse"
+          mountPath: "/mnt/blob"
   volumes:
     - name: blobfuse01
       persistentVolumeClaim:

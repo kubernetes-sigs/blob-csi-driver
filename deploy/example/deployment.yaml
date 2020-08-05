@@ -16,7 +16,7 @@ kind: Deployment
 metadata:
   labels:
     app: nginx
-  name: deployment-blobfuse
+  name: deployment-blob
 spec:
   replicas: 1
   selector:
@@ -26,18 +26,18 @@ spec:
     metadata:
       labels:
         app: nginx
-      name: deployment-blobfuse
+      name: deployment-blob
     spec:
       containers:
-        - name: deployment-blobfuse
+        - name: deployment-blob
           image: nginx
           command:
             - "/bin/sh"
             - "-c"
-            - while true; do echo $(date) >> /mnt/blobfuse/outfile; sleep 1; done
+            - while true; do echo $(date) >> /mnt/blob/outfile; sleep 1; done
           volumeMounts:
             - name: blobfuse
-              mountPath: "/mnt/blobfuse"
+              mountPath: "/mnt/blob"
               readOnly: false
       volumes:
         - name: blobfuse
