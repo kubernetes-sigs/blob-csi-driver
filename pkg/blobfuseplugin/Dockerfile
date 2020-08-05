@@ -28,6 +28,6 @@ RUN apt remove wget -y
 # this is a workaround to install nfs-common and don't quit with error
 RUN apt install nfs-common -y || true
 LABEL maintainers="andyzhangx"
-LABEL description="Blobfuse CSI Driver"
+LABEL description="Azure Blob Storage CSI driver"
 
 ENTRYPOINT ["/blobfuseplugin"]

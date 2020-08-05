@@ -1,4 +1,4 @@
-# Blobfuse CSI driver development guide
+# Azure Blob Storage CSI driver development guide
 
  - Clone repo
 ```console

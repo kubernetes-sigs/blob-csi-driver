@@ -80,7 +80,7 @@ type FromProw struct {
 	StorageAccountKey  string
 }
 
-// Credentials is used in Blobfuse CSI Driver to store Azure credentials
+// Credentials is used in Azure Blob Storage CSI driver to store Azure credentials
 type Credentials struct {
 	Cloud           string
 	TenantID        string
@@ -92,7 +92,7 @@ type Credentials struct {
 }
 
 // CreateAzureCredentialFile creates a temporary Azure credential file for
-// Blobfuse CSI driver tests and returns the credentials
+// Azure Blob Storage CSI driver tests and returns the credentials
 func CreateAzureCredentialFile(isAzureChinaCloud bool) (*Credentials, error) {
 	// Search credentials through env vars first
 	var cloud, tenantID, subscriptionID, aadClientID, aadClientSecret, resourceGroup, location string
@@ -156,7 +156,7 @@ func DeleteAzureCredentialFile() error {
 }
 
 // getCredentialsFromAzureCredentials parses the azure credentials toml (AZURE_CREDENTIALS)
-// in Prow and returns the credential information usable to Blobfuse CSI driver
+// in Prow and returns the credential information usable to Azure Blob Storage CSI driver
 func getCredentialsFromAzureCredentials(azureCredentialsPath string) (*FromProw, error) {
 	content, err := ioutil.ReadFile(azureCredentialsPath)
 	log.Printf("Reading credentials file %v", azureCredentialsPath)

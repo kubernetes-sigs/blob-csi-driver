@@ -66,7 +66,7 @@ func main() {
 func handle() {
 	driver := blobfuse.NewDriver(*nodeID)
 	if driver == nil {
-		klog.Fatalln("Failed to initialize blobfuse CSI Driver")
+		klog.Fatalln("Failed to initialize Azure Blob Storage CSI driver")
 	}
 	driver.Run(*endpoint, *kubeconfig)
 }

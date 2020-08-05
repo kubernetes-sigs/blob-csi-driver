@@ -20,8 +20,8 @@
    az keyvault set-policy -n $keyvaultname --certificate-permissions get --spn $aadclientid
    ```
 
-## Install blobfuse CSI driver on a kubernetes cluster
-Please refer to [install blobfuse csi driver](https://github.com/kubernetes-sigs/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
+## Install Azure Blob Storage CSI driver on a kubernetes cluster
+Please refer to [install Azure Blob Storage CSI driver](https://github.com/kubernetes-sigs/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
 
 ## Create PV
 1.  Download a `pv-blobfuse-csi-keyvault.yaml`, edit `keyVaultURL`, `keyVaultSecretName`, `containerName` in PV

@@ -1,6 +1,6 @@
-# Install blobfuse CSI driver master version on a kubernetes cluster
+# Install Azure Blob Storage CSI driver master version on a kubernetes cluster
 
-If you have already installed Helm, you can also use it to install blobfuse CSI driver. Please see [Installation with Helm](../charts/README.md).
+If you have already installed Helm, you can also use it to install Azure Blob Storage CSI driver. Please see [Installation with Helm](../charts/README.md).
 
 ## Install with kubectl
  - remote install
@@ -31,7 +31,7 @@ csi-blobfuse-node-cvgbs                        3/3     Running   0          35s 
 csi-blobfuse-node-dr4s4                        3/3     Running   0          35s     10.240.0.4     k8s-agentpool-22533604-0
 ```
 
-- clean up blobfuse CSI driver
+- clean up Azure Blob Storage CSI driver
 ```console
 curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/uninstall-driver.sh | bash -s master --
 ```
