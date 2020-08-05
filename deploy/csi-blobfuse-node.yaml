@@ -47,12 +47,12 @@ spec:
           lifecycle:
             preStop:
               exec:
-                command: ["/bin/sh", "-c", "rm -rf /registration/blobfuse.csi.azure.com-reg.sock /csi/csi.sock"]
+                command: ["/bin/sh", "-c", "rm -rf /registration/blob.csi.azure.com-reg.sock /csi/csi.sock"]
           env:
             - name: ADDRESS
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/blobfuse.csi.azure.com/csi.sock
+              value: /var/lib/kubelet/plugins/blob.csi.azure.com/csi.sock
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -126,7 +126,7 @@ spec:
               memory: 20Mi
       volumes:
         - hostPath:
-            path: /var/lib/kubelet/plugins/blobfuse.csi.azure.com
+            path: /var/lib/kubelet/plugins/blob.csi.azure.com
             type: DirectoryOrCreate
           name: socket-dir
         - hostPath:

@@ -13,7 +13,7 @@ spec:
     - -o allow_other
     - --file-cache-timeout-in-seconds=120
   csi:
-    driver: blobfuse.csi.azure.com
+    driver: blob.csi.azure.com
     readOnly: false
     volumeHandle: uniqe-volumeid  # make sure this volumeid is unique in the cluster
     volumeAttributes:

@@ -4,7 +4,7 @@
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fblobfuse-csi-driver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fblobfuse-csi-driver?ref=badge_shield)
 
 ### About
-This driver allows Kubernetes to use [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse), csi plugin name: `blobfuse.csi.azure.com`
+This driver allows Kubernetes to use [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse), csi plugin name: `blob.csi.azure.com`
 
 ### Container Images & Kubernetes Compatibility:
 |Blobfuse CSI Driver Version    | Image                                              | 1.14+  |
@@ -15,8 +15,7 @@ This driver allows Kubernetes to use [azure-storage-fuse](https://github.com/Azu
 |v0.4.0                         |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.4.0       | yes    |
 
 ### Driver parameters
-Please refer to `blobfuse.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
- > storage class `blobfuse.csi.azure.com` parameters are compatible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin
+Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
 
 ### Prerequisite
  - The driver depends on [cloud provider config file](https://github.com/kubernetes/cloud-provider-azure/blob/master/docs/cloud-provider-config.md), usually it's `/etc/kubernetes/azure.json` on all kubernetes nodes deployed by [AKS](https://docs.microsoft.com/en-us/azure/aks/) or [aks-engine](https://github.com/Azure/aks-engine), here is [azure.json example](./deploy/example/azure.json).
