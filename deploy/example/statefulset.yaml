@@ -2,11 +2,11 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: statefulset-blobfuse
+  name: statefulset-blob
   labels:
     app: nginx
 spec:
-  serviceName: statefulset-blobfuse
+  serviceName: statefulset-blob
   replicas: 1
   template:
     metadata:
@@ -14,15 +14,15 @@ spec:
         app: nginx
     spec:
       containers:
-        - name: statefulset-blobfuse
+        - name: statefulset-blob
           image: nginx
           command:
             - "/bin/sh"
             - "-c"
-            - while true; do echo $(date) >> /mnt/blobfuse/outfile; sleep 1; done
+            - while true; do echo $(date) >> /mnt/blob/outfile; sleep 1; done
           volumeMounts:
             - name: persistent-storage
-              mountPath: /mnt/blobfuse
+              mountPath: /mnt/blob
   updateStrategy:
     type: RollingUpdate
   selector:

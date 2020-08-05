@@ -35,5 +35,5 @@ kubectl apply -f pv-blobfuse-csi-keyvault.yaml
 ## Create PVC 
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi-static.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blob-csi-static.yaml
 ```

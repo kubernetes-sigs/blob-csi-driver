@@ -55,11 +55,11 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi
 
  - enter pod to check
 ```console
-$ exec -it statefulset-blobfuse-0 bash
+$ exec -it statefulset-blob-0 bash
 # df -h
 Filesystem      Size  Used Avail Use% Mounted on
 ...
 /dev/sda1                                                                                 29G   11G   19G  37% /etc/hosts
-accountname.blob.core.windows.net:/accountname/pvc-cce02240-5d13-4bcb-b9eb-f9c7eeaaa640  256T     0  256T   0% /mnt/blobfuse
+accountname.blob.core.windows.net:/accountname/pvc-cce02240-5d13-4bcb-b9eb-f9c7eeaaa640  256T     0  256T   0% /mnt/blob
 ...
 ```

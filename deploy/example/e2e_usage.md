@@ -8,7 +8,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi
 
  - Create a blobfuse CSI PVC
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blob-csi.yaml
 ```
 
 ### Static Provisioning(use an existing storage account)
@@ -35,7 +35,7 @@ kubectl create -f storageclass-blobfuse-csi-existing-container.yaml
 
  - Create a blobfuse CSI PVC
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blob-csi.yaml
 ```
 
 #### Option#2: provide storage account name and key(or sastoken)
@@ -76,7 +76,7 @@ kubectl create -f pv-blobfuse-csi.yaml
 
  - Create a blobfuse CSI PVC which would be bound to the above PV
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blobfuse-csi-static.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blob-csi-static.yaml
 ```
 
 #### 2. Validate PVC status and create an nginx pod
@@ -87,7 +87,7 @@ watch kubectl describe pvc pvc-blobfuse
 
  - create a pod with blobfuse CSI PVC
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/nginx-pod-blobfuse.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/nginx-pod-blob.yaml
 ```
 
 #### 3. enter the pod container to do validation
@@ -97,8 +97,8 @@ $ watch kubectl describe po nginx-blobfuse
 $ kubectl exec -it nginx-blobfuse -- bash
 Filesystem      Size  Used Avail Use% Mounted on
 ...
-blobfuse         30G  8.9G   21G  31% /mnt/blobfuse
+blobfuse         30G  8.9G   21G  31% /mnt/blob
 /dev/sda1        30G  8.9G   21G  31% /etc/hosts
 ...
 ```
-In the above example, there is a `/mnt/blobfuse` directory mounted as `blobfuse` filesystem.
+In the above example, there is a `/mnt/blob` directory mounted as `blobfuse` filesystem.
