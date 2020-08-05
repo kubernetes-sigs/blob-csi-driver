@@ -32,6 +32,7 @@ Please refer to [install blobfuse csi driver](https://github.com/kubernetes-sigs
 
 ### Usage
  - [Basic usage](./deploy/example/e2e_usage.md)
+ - [NFSv3](./deploy/example/nfs)
  
 ### Troubleshooting
  - [CSI driver troubleshooting guide](./docs/csi-debug.md)
