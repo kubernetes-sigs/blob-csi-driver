@@ -1,6 +1,6 @@
 # Installation with Helm 3
 
-Quick start instructions for the setup and configuration of blobfuse CSI driver using Helm.
+Quick start instructions for the setup and configuration of Azure Blob Storage CSI driver using Helm.
 
 ## Prerequisites
 
@@ -38,7 +38,7 @@ $ helm uninstall blobfuse-csi-driver -n kube-system
 ```  
 ## The Latest Helm Chart Configuration
 
-The following table lists the configurable parameters of the latest Blobfuse CSI Driver chart and their default values.
+The following table lists the configurable parameters of the latest Azure Blob Storage CSI driver chart and their default values.
 
 | Parameter                                         | Description                                                | Default                                                           |
 |---------------------------------------------------|------------------------------------------------------------|-------------------------------------------------------------------|

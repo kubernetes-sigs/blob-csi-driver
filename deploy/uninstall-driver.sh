@@ -33,10 +33,10 @@ if [ $ver != "master" ]; then
   repo="$repo/$ver"
 fi
 
-echo "Uninstalling Blobfuse CSI driver, version: $ver ..."
+echo "Uninstalling Azure Blob Storage CSI driver, version: $ver ..."
 kubectl delete -f $repo/csi-blobfuse-controller.yaml --ignore-not-found
 kubectl delete -f $repo/csi-blobfuse-node.yaml --ignore-not-found
 kubectl delete -f $repo/csi-blobfuse-driver.yaml --ignore-not-found
 kubectl delete -f $repo/rbac-csi-blobfuse-controller.yaml --ignore-not-found
 kubectl delete -f $repo/rbac-csi-blobfuse-node.yaml --ignore-not-found
-echo 'Uninstalled Blobfuse CSI driver successfully.'
+echo 'Uninstalled Azure Blob Storage CSI driver successfully.'
