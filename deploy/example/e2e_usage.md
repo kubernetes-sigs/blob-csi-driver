@@ -20,7 +20,7 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: blob
-provisioner: blobfuse.csi.azure.com
+provisioner: blob.csi.azure.com
 parameters:
   skuName: Standard_LRS  # available values: Standard_LRS, Standard_GRS, Standard_RAGRS
   resourceGroup: EXISTING_RESOURCE_GROUP
@@ -61,7 +61,7 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain  # "Delete" is not supported in static provisioning
   csi:
-    driver: blobfuse.csi.azure.com
+    driver: blob.csi.azure.com
     readOnly: false
     volumeHandle: arbitrary-volumeid
     volumeAttributes:

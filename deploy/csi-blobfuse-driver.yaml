@@ -2,7 +2,7 @@
 apiVersion: storage.k8s.io/v1beta1
 kind: CSIDriver
 metadata:
-  name: blobfuse.csi.azure.com
+  name: blob.csi.azure.com
 spec:
   attachRequired: false
   podInfoOnMount: true

@@ -34,7 +34,7 @@ import (
 
 const (
 	// DriverName holds the name of the csi-driver
-	DriverName       = "blobfuse.csi.azure.com"
+	DriverName       = "blob.csi.azure.com"
 	separator        = "#"
 	volumeIDTemplate = "%s#%s#%s"
 	fileMode         = "file_mode"

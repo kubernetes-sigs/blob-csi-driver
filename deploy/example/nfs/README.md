@@ -33,7 +33,7 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: blob
-provisioner: blobfuse.csi.azure.com
+provisioner: blob.csi.azure.com
 parameters:
   resourceGroup: EXISTING_RESOURCE_GROUP_NAME  # optional, only set this when storage account is not in the same resource group as agent node
   storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
