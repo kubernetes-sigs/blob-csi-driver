@@ -80,22 +80,22 @@ e2e-teardown:
 
 .PHONY: blobfuse
 blobfuse:
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin ./pkg/blobfuseplugin
+	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -o _output/blobplugin ./pkg/blobplugin
 
 .PHONY: blobfuse-windows
 blobfuse-windows:
-	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -o _output/blobfuseplugin.exe ./pkg/blobfuseplugin
+	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -o _output/blobplugin.exe ./pkg/blobplugin
 
 .PHONY: container
 container: blobfuse
-	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/dev.Dockerfile .
+	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobplugin/dev.Dockerfile .
 
 .PHONY: blobfuse-container
 blobfuse-container:
 	docker buildx rm container-builder || true
 	docker buildx create --use --name=container-builder
 ifdef CI
-	docker buildx build --no-cache --build-arg LDFLAGS=${LDFLAGS} -t $(IMAGE_TAG) -f ./pkg/blobfuseplugin/Dockerfile --platform="linux/amd64" --push .
+	docker buildx build --no-cache --build-arg LDFLAGS=${LDFLAGS} -t $(IMAGE_TAG) -f ./pkg/blobplugin/Dockerfile --platform="linux/amd64" --push .
 
 	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG)
 	docker manifest inspect $(IMAGE_TAG)

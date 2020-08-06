@@ -84,7 +84,7 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
-        - name: blobfuse
+        - name: blob
           image: "{{ .Values.image.blobfuse.repository }}:{{ .Values.image.blobfuse.tag }}"
           args:
             - "--v=5"

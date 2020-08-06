@@ -22,7 +22,7 @@ if [[ "$#" -gt 0 ]] && [[ -n "$1" ]]; then
   nodeid="$1"
 fi
 
-_output/blobfuseplugin --endpoint "$endpoint" --nodeid "$nodeid" -v=5 &
+_output/blobplugin --endpoint "$endpoint" --nodeid "$nodeid" -v=5 &
 
 echo "Begin to run sanity test..."
 csi-sanity --ginkgo.v --csi.endpoint=$endpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity"

@@ -25,8 +25,8 @@ function install_csi_sanity_bin {
 }
 
 function cleanup {
-  echo 'pkill -f blobfuseplugin'
-  pkill -f blobfuseplugin
+  echo 'pkill -f blobplugin'
+  pkill -f blobplugin
   echo 'Deleting CSI sanity test binary'
   rm -rf $GOPATH/src/github.com/kubernetes-csi
 }

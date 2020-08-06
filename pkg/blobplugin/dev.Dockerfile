@@ -18,5 +18,5 @@ RUN dpkg -i /tmp/packages-microsoft-prod.deb && apt-get update && apt-get instal
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
-COPY ./_output/blobfuseplugin /blobfuseplugin
-ENTRYPOINT ["/blobfuseplugin"]
+COPY ./_output/blobplugin /blobplugin
+ENTRYPOINT ["/blobplugin"]

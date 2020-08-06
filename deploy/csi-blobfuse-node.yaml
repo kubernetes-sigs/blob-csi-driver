@@ -65,7 +65,7 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
-        - name: blobfuse
+        - name: blob
           image: mcr.microsoft.com/k8s/csi/blobfuse-csi:latest
           imagePullPolicy: IfNotPresent
           args:
@@ -116,7 +116,7 @@ spec:
               readOnly: true
               name: msi
             - mountPath: /mnt
-              name: blobfuse-cache
+              name: blob-cache
           resources:
             limits:
               cpu: 4
@@ -146,5 +146,5 @@ spec:
           name: msi
         - hostPath:
             path: /mnt
-          name: blobfuse-cache
+          name: blob-cache
 ---
