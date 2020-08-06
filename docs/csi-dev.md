@@ -36,7 +36,7 @@ $ make build
 #### Start CSI driver locally
 ```console
 $ cd $GOPATH/src/sigs.k8s.io/blobfuse-csi-driver
-$ ./_output/blobfuseplugin --endpoint tcp://127.0.0.1:10000 --nodeid CSINode -v=5 &
+$ ./_output/blobplugin --endpoint tcp://127.0.0.1:10000 --nodeid CSINode -v=5 &
 ```
 > Before running CSI driver, create "/etc/kubernetes/azure.json" file under testing server(it's better copy `azure.json` file from a k8s cluster with service principle configured correctly) and set `AZURE_CREDENTIAL_FILE` as following:
 ```

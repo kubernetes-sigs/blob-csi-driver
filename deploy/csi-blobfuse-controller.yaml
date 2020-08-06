@@ -81,7 +81,7 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
-        - name: blobfuse
+        - name: blob
           image: mcr.microsoft.com/k8s/csi/blobfuse-csi:latest
           imagePullPolicy: IfNotPresent
           args:

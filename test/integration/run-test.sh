@@ -18,8 +18,8 @@
 set -euo pipefail
 
 function cleanup {
-  echo "pkill -f blobfuseplugin"
-  pkill -f blobfuseplugin
+  echo "pkill -f blobplugin"
+  pkill -f blobplugin
 }
 
 readonly volname="citest-$(date +%s)"
@@ -33,7 +33,7 @@ readonly cloud="$5"
 echo "Begin to run integration test on $cloud..."
 
 # Run CSI driver as a background service
-_output/blobfuseplugin --endpoint "$endpoint" --nodeid CSINode -v=5 &
+_output/blobplugin --endpoint "$endpoint" --nodeid CSINode -v=5 &
 trap cleanup EXIT
 
 if [[ "$cloud" == "AzureChinaCloud" ]]; then

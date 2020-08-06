@@ -21,7 +21,7 @@ import (
 
 	"github.com/onsi/ginkgo"
 
-	"sigs.k8s.io/blobfuse-csi-driver/pkg/blobfuse"
+	"sigs.k8s.io/blobfuse-csi-driver/pkg/blob"
 	"sigs.k8s.io/blobfuse-csi-driver/test/e2e/driver"
 
 	v1 "k8s.io/api/core/v1"

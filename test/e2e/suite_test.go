@@ -34,7 +34,7 @@ import (
 	"github.com/pborman/uuid"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/framework/config"
-	"sigs.k8s.io/blobfuse-csi-driver/pkg/blobfuse"
+	"sigs.k8s.io/blobfuse-csi-driver/pkg/blob"
 	"sigs.k8s.io/blobfuse-csi-driver/test/utils/azure"
 	"sigs.k8s.io/blobfuse-csi-driver/test/utils/credentials"
 	"sigs.k8s.io/blobfuse-csi-driver/test/utils/testutil"
@@ -107,7 +107,7 @@ var _ = ginkgo.AfterSuite(func() {
 	if testutil.IsRunningInProw() {
 		blobfuseLog := testCmd{
 			command:  "bash",
-			args:     []string{"test/utils/blobfuse_log.sh"},
+			args:     []string{"test/utils/blob_log.sh"},
 			startLog: "===================blobfuse log===================",
 			endLog:   "==================================================",
 		}

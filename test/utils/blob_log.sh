@@ -17,7 +17,7 @@
 set -e
 
 NS=kube-system
-CONTAINER=blobfuse
+CONTAINER=blob
 
 echo "print out all $NS namespace pods status ..."
 kubectl get pods -n${NS}

@@ -9,7 +9,7 @@ csi-blobfuse-controller-56bfddd689-sl4ll       5/5     Running   0          35s 
 ```
  - get csi driver logs
 ```console
-$ kubectl logs csi-blobfuse-controller-56bfddd689-dh5tk -c blobfuse -n kube-system > csi-blobfuse-controller.log
+$ kubectl logs csi-blobfuse-controller-56bfddd689-dh5tk -c blob -n kube-system > csi-blobfuse-controller.log
 ```
 > note: there could be multiple controller pods, if there are no helpful logs, try to get logs from other controller pods
 
@@ -24,5 +24,5 @@ csi-blobfuse-node-dr4s4                        3/3     Running   0          7m4s
 
  - get csi driver logs
 ```console
-$ kubectl logs csi-blobfuse-node-cvgbs -c blobfuse -n kube-system > csi-blobfuse-node.log
+$ kubectl logs csi-blobfuse-node-cvgbs -c blob -n kube-system > csi-blobfuse-node.log
 ```
