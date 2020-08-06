@@ -47,7 +47,7 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 	if *version {
-		info, err := blobfuse.GetVersionYAML()
+		info, err := blob.GetVersionYAML()
 		if err != nil {
 			klog.Fatalln(err)
 		}
@@ -64,7 +64,7 @@ func main() {
 }
 
 func handle() {
-	driver := blobfuse.NewDriver(*nodeID)
+	driver := blob.NewDriver(*nodeID)
 	if driver == nil {
 		klog.Fatalln("Failed to initialize Azure Blob Storage CSI driver")
 	}
