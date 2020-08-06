@@ -191,7 +191,7 @@ func appendDefaultMountOptions(mountOptions []string) []string {
 //	4. Container names must be from 3 through 63 characters long.
 //
 // See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
-func getValidContainerName(volumeName string) string {
+func getValidContainerName(volumeName, protocol string) string {
 	containerName := strings.ToLower(volumeName)
 	if len(containerName) > containerNameMaxLength {
 		containerName = containerName[0:containerNameMaxLength]
@@ -199,7 +199,7 @@ func getValidContainerName(volumeName string) string {
 	if !checkContainerNameBeginAndEnd(containerName) || len(containerName) < containerNameMinLength {
 		// now we set as 63 for maximum container name length
 		// todo: get cluster name
-		containerName = k8sutil.GenerateVolumeName("pvc-fuse", uuid.NewUUID().String(), 63)
+		containerName = k8sutil.GenerateVolumeName(fmt.Sprintf("pvc-%s", protocol), uuid.NewUUID().String(), 63)
 		klog.Warningf("the requested volume name (%q) is invalid, so it is regenerated as (%q)", volumeName, containerName)
 	}
 	containerName = strings.Replace(containerName, "--", "-", -1)

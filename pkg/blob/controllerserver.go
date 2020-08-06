@@ -84,6 +84,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		resourceGroup = d.cloud.ResourceGroup
 	}
 
+	if protocol == "" {
+		protocol = fuse
+	}
 	if !isSupportedProtocol(protocol) {
 		return nil, status.Errorf(codes.InvalidArgument, "protocol(%s) is not supported, supported protocol list: %v", protocol, supportedProtocolList)
 	}
@@ -132,7 +135,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if containerName == "" {
-		containerName = getValidContainerName(name)
+		containerName = getValidContainerName(name, protocol)
 	}
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB)

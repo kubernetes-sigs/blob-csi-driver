@@ -187,6 +187,7 @@ func TestIsRetriableError(t *testing.T) {
 func TestGetValidContainerName(t *testing.T) {
 	tests := []struct {
 		volumeName string
+		protocol   string
 		expected   string
 	}{
 		{
@@ -212,7 +213,7 @@ func TestGetValidContainerName(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result := getValidContainerName(test.volumeName)
+		result := getValidContainerName(test.volumeName, "")
 		if !reflect.DeepEqual(result, test.expected) {
 			t.Errorf("input: %q, getValidContainerName result: %q, expected: %q", test.volumeName, result, test.expected)
 		}
