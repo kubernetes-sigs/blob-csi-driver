@@ -23,9 +23,9 @@ echo "print out all $NS namespace pods status ..."
 kubectl get pods -n${NS}
 echo "======================================================================================"
 
-echo "print out csi-blobfuse-controller logs ..."
+echo "print out csi-blob-controller logs ..."
 echo "======================================================================================"
-LABEL='app=csi-blobfuse-controller'
+LABEL='app=csi-blob-controller'
 kubectl get pods -n${NS} -l${LABEL} \
     | awk 'NR>1 {print $1}' \
     | xargs -I {} kubectl logs {} --prefix -c${CONTAINER} -n${NS}
