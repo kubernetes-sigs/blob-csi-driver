@@ -17,6 +17,7 @@ storageAccount | specify Azure storage account name| STORAGE_ACCOUNT_NAME | - No
 protocol | specify blobfuse mount or NFSv3 mount | `fuse`, `nfs` | No | `fuse`
 containerName | specify the existing container name | existing container name | No | if empty, driver will create a new container name, starting with `pvc-fuse`
 server | specify Azure storage account server address | existing server address, e.g. `accountname.privatelink.blob.core.windows.net` | No | if empty, driver will use default `accountname.blob.core.windows.net` or other sovereign cloud account address
+tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources) would be created in newly created storage account | tag format: 'foo=aaa,bar=bbb' | No | ""
 
  - `fsGroup` securityContext setting
 
