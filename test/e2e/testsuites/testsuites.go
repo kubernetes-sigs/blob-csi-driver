@@ -277,7 +277,7 @@ func (t *TestPersistentVolumeClaim) DeleteBoundPersistentVolume() {
 	framework.ExpectNoError(err)
 }
 
-func (t *TestPersistentVolumeClaim) DeleteBackingVolume(azfile *blobfuse.Driver) {
+func (t *TestPersistentVolumeClaim) DeleteBackingVolume(azfile *blob.Driver) {
 	volumeID := t.persistentVolume.Spec.CSI.VolumeHandle
 	ginkgo.By(fmt.Sprintf("deleting blobfuse volume %q", volumeID))
 	req := &csi.DeleteVolumeRequest{

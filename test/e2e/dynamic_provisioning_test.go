@@ -201,7 +201,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 		test := testsuites.DynamicallyProvisionedReclaimPolicyTest{
 			CSIDriver:              testDriver,
 			Volumes:                volumes,
-			Blobfuse:               blobfuseDriver,
+			Driver:                 blobDriver,
 			StorageClassParameters: map[string]string{"skuName": "Standard_GRS"},
 		}
 		test.Run(cs, ns)

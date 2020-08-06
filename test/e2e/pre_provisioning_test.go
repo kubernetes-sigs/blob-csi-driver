@@ -70,7 +70,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 			req := &csi.DeleteVolumeRequest{
 				VolumeId: volumeID,
 			}
-			_, err := blobfuseDriver.DeleteVolume(context.Background(), req)
+			_, err := blobDriver.DeleteVolume(context.Background(), req)
 			if err != nil {
 				ginkgo.Fail(fmt.Sprintf("create volume %q error: %v", volumeID, err))
 			}
@@ -79,7 +79,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 
 	ginkgo.It("[env] should use a pre-provisioned volume and mount it as readOnly in a pod", func() {
 		req := makeCreateVolumeReq("pre-provisioned-readOnly")
-		resp, err := blobfuseDriver.CreateVolume(context.Background(), req)
+		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
@@ -113,7 +113,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 
 	ginkgo.It(fmt.Sprintf("[env] should use a pre-provisioned volume and retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
 		req := makeCreateVolumeReq("pre-provisioned-retain-reclaimPolicy")
-		resp, err := blobfuseDriver.CreateVolume(context.Background(), req)
+		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
@@ -139,7 +139,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 
 	ginkgo.It("should use existing credentials in k8s cluster", func() {
 		req := makeCreateVolumeReq("pre-provisioned-existing-credentials")
-		resp, err := blobfuseDriver.CreateVolume(context.Background(), req)
+		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
@@ -177,7 +177,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 
 	ginkgo.It("should use provided credentials", func() {
 		req := makeCreateVolumeReq("pre-provisioned-provided-credentials")
-		resp, err := blobfuseDriver.CreateVolume(context.Background(), req)
+		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
@@ -210,7 +210,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 		test := testsuites.PreProvisionedProvidedCredentiasTest{
 			CSIDriver: testDriver,
 			Pods:      pods,
-			Blobfuse:  blobfuseDriver,
+			Driver:    blobDriver,
 		}
 		test.Run(cs, ns)
 	})

@@ -35,7 +35,7 @@ type blobFuseCSIDriver struct {
 // InitBlobFuseCSIDriver returns blobFuseCSIDriver that implemnts DynamicPVTestDriver interface
 func InitBlobFuseCSIDriver() PVTestDriver {
 	return &blobFuseCSIDriver{
-		driverName: blobfuse.DriverName,
+		driverName: blob.DriverName,
 	}
 }
 

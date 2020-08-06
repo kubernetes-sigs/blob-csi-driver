@@ -18,7 +18,7 @@ ADD . .
 ARG TARGETARCH
 ARG TARGETOS
 ARG LDFLAGS
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -ldflags "${LDFLAGS:--X sigs.k8s.io/blobfuse-csi-driver/pkg/blobfuse.driverVersion=latest}" -o _output/blobplugin ./pkg/blobplugin
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -ldflags "${LDFLAGS:--X sigs.k8s.io/blobfuse-csi-driver/pkg/blob.driverVersion=latest}" -o _output/blobplugin ./pkg/blobplugin
 
 FROM us.gcr.io/k8s-artifacts-prod/build-image/debian-base-amd64:v2.1.0
 COPY --from=builder /go/src/sigs.k8s.io/blobfuse-csi-driver/_output/blobplugin /blobplugin

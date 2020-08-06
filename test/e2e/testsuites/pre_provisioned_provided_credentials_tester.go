@@ -35,13 +35,13 @@ import (
 type PreProvisionedProvidedCredentiasTest struct {
 	CSIDriver driver.PreProvisionedVolumeTestDriver
 	Pods      []PodDetails
-	Blobfuse  *blobfuse.Driver
+	Driver    *blob.Driver
 }
 
 func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, namespace *v1.Namespace) {
 	for _, pod := range t.Pods {
 		for n, volume := range pod.Volumes {
-			accountName, accountKey, accountSasToken, containerName, err := t.Blobfuse.GetStorageAccountAndContainer(context.Background(), volume.VolumeID, nil, nil)
+			accountName, accountKey, accountSasToken, containerName, err := t.Driver.GetStorageAccountAndContainer(context.Background(), volume.VolumeID, nil, nil)
 			framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volume.VolumeID, err))
 
 			ginkgo.By("creating the secret")
