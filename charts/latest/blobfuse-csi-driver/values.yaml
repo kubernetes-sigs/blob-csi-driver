@@ -1,6 +1,6 @@
 image:
   blobfuse:
-    repository: mcr.microsoft.com/k8s/csi/blobfuse-csi
+    repository: mcr.microsoft.com/k8s/csi/blob-csi
     tag: latest
     pullPolicy: IfNotPresent
   csiProvisioner:

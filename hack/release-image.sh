@@ -23,16 +23,16 @@ fi
 
 export REGISTRY_NAME="$1"
 export REGISTRY=$REGISTRY_NAME.azurecr.io
-export IMAGE_NAME=public/k8s/csi/blobfuse-csi
+export IMAGE_NAME=public/k8s/csi/blob-csi
 export CI=1
 export PUBLISH=1
 az acr login --name $REGISTRY_NAME
-make blobfuse-container
+make blob-container
 make push
 make push-latest
 
 echo "sleep 60s ..."
 sleep 60
-image="mcr.microsoft.com/k8s/csi/blobfuse-csi:latest"
+image="mcr.microsoft.com/k8s/csi/blob-csi:latest"
 docker pull $image
 docker inspect $image | grep Created

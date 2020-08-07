@@ -16,7 +16,7 @@ PKG = sigs.k8s.io/blobfuse-csi-driver
 GIT_COMMIT ?= $(shell git rev-parse HEAD)
 REGISTRY ?= andyzhangx
 REGISTRY_NAME ?= $(shell echo $(REGISTRY) | sed "s/.azurecr.io//g")
-IMAGE_NAME ?= blobfuse-csi
+IMAGE_NAME ?= blob-csi
 IMAGE_VERSION ?= v0.7.0
 # Use a custom version for E2E tests if we are in Prow
 ifdef CI
@@ -35,7 +35,7 @@ GOBIN ?= $(GOPATH)/bin
 DOCKER_CLI_EXPERIMENTAL = enabled
 export GOPATH GOBIN GO111MODULE DOCKER_CLI_EXPERIMENTAL
 
-all: blobfuse
+all: blob
 
 .PHONY: verify
 verify: unit-test
@@ -46,11 +46,11 @@ unit-test:
 	go test -covermode=count -coverprofile=profile.cov ./pkg/... ./test/utils/credentials
 
 .PHONY: sanity-test
-sanity-test: blobfuse
+sanity-test: blob
 	go test -v -timeout=30m ./test/sanity
 
 .PHONY: integration-test
-integration-test: blobfuse
+integration-test: blob
 	go test -v -timeout=30m ./test/integration
 
 .PHONY: e2e-test
@@ -60,7 +60,7 @@ e2e-test:
 .PHONY: e2e-bootstrap
 e2e-bootstrap: install-helm
 	# Only build and push the image if it does not exist in the registry
-	docker pull $(IMAGE_TAG) || make blobfuse-container push
+	docker pull $(IMAGE_TAG) || make blob-container push
 	helm install charts/latest/blobfuse-csi-driver -n blobfuse-csi-driver --namespace kube-system --wait \
 		--set image.blobfuse.pullPolicy=IfNotPresent \
 		--set image.blobfuse.repository=$(REGISTRY)/$(IMAGE_NAME) \
@@ -78,20 +78,20 @@ install-helm:
 e2e-teardown:
 	helm delete --purge blobfuse-csi-driver
 
-.PHONY: blobfuse
-blobfuse:
+.PHONY: blob
+blob:
 	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -o _output/blobplugin ./pkg/blobplugin
 
-.PHONY: blobfuse-windows
-blobfuse-windows:
+.PHONY: blob-windows
+blob-windows:
 	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -o _output/blobplugin.exe ./pkg/blobplugin
 
 .PHONY: container
-container: blobfuse
+container: blob
 	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobplugin/dev.Dockerfile .
 
-.PHONY: blobfuse-container
-blobfuse-container:
+.PHONY: blob-container
+blob-container:
 	docker buildx rm container-builder || true
 	docker buildx create --use --name=container-builder
 ifdef CI
@@ -122,7 +122,7 @@ else
 endif
 
 .PHONY: build-push
-build-push: blobfuse-container
+build-push: blob-container
 	docker tag $(IMAGE_TAG) $(IMAGE_TAG_LATEST)
 	docker push $(IMAGE_TAG_LATEST)
 
