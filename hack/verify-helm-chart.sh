@@ -20,8 +20,8 @@ readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 function get_image_from_helm_chart() {
   local -r image_name="${1}"
-  image_repository="$(cat ${PKG_ROOT}/charts/latest/blobfuse-csi-driver/values.yaml | yq -r .image.${image_name}.repository)"
-  image_tag="$(cat ${PKG_ROOT}/charts/latest/blobfuse-csi-driver/values.yaml | yq -r .image.${image_name}.tag)"
+  image_repository="$(cat ${PKG_ROOT}/charts/latest/blob-csi-driver/values.yaml | yq -r .image.${image_name}.repository)"
+  image_tag="$(cat ${PKG_ROOT}/charts/latest/blob-csi-driver/values.yaml | yq -r .image.${image_name}.tag)"
   echo "${image_repository}:${image_tag}"
 }
 
@@ -44,7 +44,7 @@ pip install yq
 expected_csi_provisioner_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[0].image | head -n 1)"
 expected_csi_attacher_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[1].image | head -n 1)"
 expected_liveness_probe_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[2].image | head -n 1)"
-expected_blobfuse_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[3].image | head -n 1)"
+expected_blob_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[3].image | head -n 1)"
 
 csi_provisioner_image="$(get_image_from_helm_chart "csiProvisioner")"
 validate_image "${expected_csi_provisioner_image}" "${csi_provisioner_image}"
@@ -55,19 +55,19 @@ validate_image "${expected_csi_attacher_image}" "${csi_attacher_image}"
 liveness_probe_image="$(get_image_from_helm_chart "livenessProbe")"
 validate_image "${expected_liveness_probe_image}" "${liveness_probe_image}"
 
-blobfuse_image="$(get_image_from_helm_chart "blobfuse")"
-validate_image "${expected_blobfuse_image}" "${blobfuse_image}"
+blob_image="$(get_image_from_helm_chart "blob")"
+validate_image "${expected_blob_image}" "${blob_image}"
 
 # Extract images from csi-blob-node.yaml
 expected_liveness_probe_image="$(cat ${PKG_ROOT}/deploy/csi-blob-node.yaml | yq -r .spec.template.spec.containers[0].image | head -n 1)"
 expected_node_driver_registrar="$(cat ${PKG_ROOT}/deploy/csi-blob-node.yaml | yq -r .spec.template.spec.containers[1].image | head -n 1)"
-expected_blobfuse_image="$(cat ${PKG_ROOT}/deploy/csi-blob-node.yaml | yq -r .spec.template.spec.containers[2].image | head -n 1)"
+expected_blob_image="$(cat ${PKG_ROOT}/deploy/csi-blob-node.yaml | yq -r .spec.template.spec.containers[2].image | head -n 1)"
 
 validate_image "${expected_liveness_probe_image}" "${liveness_probe_image}"
 
 node_driver_registrar="$(get_image_from_helm_chart "nodeDriverRegistrar")"
 validate_image "${expected_node_driver_registrar}" "${node_driver_registrar}"
 
-validate_image "${expected_blobfuse_image}" "${blobfuse_image}"
+validate_image "${expected_blob_image}" "${blob_image}"
 
 echo "Images in deploy/ matches those in the latest helm chart."

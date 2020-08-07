@@ -1,6 +1,6 @@
 ## CSI driver E2E usage example
 create a pod with blobfuse mount on linux
-### Dynamic Provisioning (create storage account and container by blobfuse driver)
+### Dynamic Provisioning (create storage account and container by Blob Storage CSI driver)
  - Create a blobfuse CSI storage class
 ```console
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml

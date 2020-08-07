@@ -3,14 +3,14 @@ apiVersion: apps/v1
 metadata:
   name: csi-blob-node
   namespace: {{ .Release.Namespace }}
-{{ include "blobfuse.labels" . | indent 2 }}
+{{ include "blob.labels" . | indent 2 }}
 spec:
   selector:
     matchLabels:
       app: csi-blob-node
   template:
     metadata:
-{{ include "blobfuse.labels" . | indent 6 }}
+{{ include "blob.labels" . | indent 6 }}
         app: csi-blob-node
     spec:
       hostNetwork: true
@@ -67,7 +67,7 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: blob
-          image: "{{ .Values.image.blobfuse.repository }}:{{ .Values.image.blobfuse.tag }}"
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
           args:
             - "--v=5"
             - "--endpoint=$(CSI_ENDPOINT)"

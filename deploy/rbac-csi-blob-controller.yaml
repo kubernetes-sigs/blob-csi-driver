@@ -9,7 +9,7 @@ metadata:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-external-provisioner-role
+  name: blob-external-provisioner-role
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -37,14 +37,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-csi-provisioner-binding
+  name: blob-csi-provisioner-binding
 subjects:
   - kind: ServiceAccount
     name: csi-blob-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: blobfuse-external-provisioner-role
+  name: blob-external-provisioner-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -52,7 +52,7 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-external-attacher-role
+  name: blob-external-attacher-role
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -75,14 +75,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-csi-attacher-binding
+  name: blob-csi-attacher-binding
 subjects:
   - kind: ServiceAccount
     name: csi-blob-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: blobfuse-external-attacher-role
+  name: blob-external-attacher-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -90,7 +90,7 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-external-snapshotter-role
+  name: blob-external-snapshotter-role
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -128,14 +128,14 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-csi-snapshotter-binding
+  name: blob-csi-snapshotter-binding
 subjects:
   - kind: ServiceAccount
     name: csi-blob-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: blobfuse-external-snapshotter-role
+  name: blob-external-snapshotter-role
   apiGroup: rbac.authorization.k8s.io
 
 ---

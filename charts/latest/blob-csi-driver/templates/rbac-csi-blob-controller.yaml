@@ -2,8 +2,8 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-external-provisioner-role
-{{ include "blobfuse.labels" . | indent 2 }}
+  name: blob-external-provisioner-role
+{{ include "blob.labels" . | indent 2 }}
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -32,16 +32,16 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-csi-provisioner-binding
+  name: blob-csi-provisioner-binding
   namespace: {{ .Release.Namespace }}
-{{ include "blobfuse.labels" . | indent 2 }}
+{{ include "blob.labels" . | indent 2 }}
 subjects:
   - kind: ServiceAccount
     name: csi-blob-controller-sa
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: blobfuse-external-provisioner-role
+  name: blob-external-provisioner-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -49,8 +49,8 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-external-attacher-role
-{{ include "blobfuse.labels" . | indent 2 }}
+  name: blob-external-attacher-role
+{{ include "blob.labels" . | indent 2 }}
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -73,16 +73,16 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-csi-attacher-binding
+  name: blob-csi-attacher-binding
   namespace: {{ .Release.Namespace }}
-{{ include "blobfuse.labels" . | indent 2 }}
+{{ include "blob.labels" . | indent 2 }}
 subjects:
   - kind: ServiceAccount
     name: csi-blob-controller-sa
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: blobfuse-external-attacher-role
+  name: blob-external-attacher-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -90,8 +90,8 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-external-snapshotter-role
-{{ include "blobfuse.labels" . | indent 2 }}
+  name: blob-external-snapshotter-role
+{{ include "blob.labels" . | indent 2 }}
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -129,16 +129,16 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blobfuse-csi-snapshotter-binding
+  name: blob-csi-snapshotter-binding
   namespace: {{ .Release.Namespace }}
-{{ include "blobfuse.labels" . | indent 2 }}
+{{ include "blob.labels" . | indent 2 }}
 subjects:
   - kind: ServiceAccount
     name: csi-blob-controller-sa
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: blobfuse-external-snapshotter-role
+  name: blob-external-snapshotter-role
   apiGroup: rbac.authorization.k8s.io
 
 ---

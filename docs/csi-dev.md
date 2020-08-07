@@ -6,10 +6,10 @@ $ mkdir -p $GOPATH/src/sigs.k8s.io
 $ git clone https://github.com/kubernetes-sigs/blobfuse-csi-driver $GOPATH/src/sigs.k8s.io
 ```
 
- - Build blobfuse driver
+ - Build Blob Storage CSI driver
 ```console
 $ cd $GOPATH/src/sigs.k8s.io/blobfuse-csi-driver
-$ make blobfuse
+$ make blob
 ```
 
  - Run verification before sending PR

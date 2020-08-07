@@ -61,10 +61,10 @@ e2e-test:
 e2e-bootstrap: install-helm
 	# Only build and push the image if it does not exist in the registry
 	docker pull $(IMAGE_TAG) || make blob-container push
-	helm install charts/latest/blobfuse-csi-driver -n blobfuse-csi-driver --namespace kube-system --wait \
-		--set image.blobfuse.pullPolicy=IfNotPresent \
-		--set image.blobfuse.repository=$(REGISTRY)/$(IMAGE_NAME) \
-		--set image.blobfuse.tag=$(IMAGE_VERSION)
+	helm install charts/latest/blob-csi-driver -n blob-csi-driver --namespace kube-system --wait \
+		--set image.blob.pullPolicy=IfNotPresent \
+		--set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) \
+		--set image.blob.tag=$(IMAGE_VERSION)
 
 .PHONY: install-helm
 install-helm:
@@ -76,7 +76,7 @@ install-helm:
 
 .PHONY: e2e-teardown
 e2e-teardown:
-	helm delete --purge blobfuse-csi-driver
+	helm delete --purge blob-csi-driver
 
 .PHONY: blob
 blob:

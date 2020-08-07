@@ -9,16 +9,16 @@ Quick start instructions for the setup and configuration of Azure Blob Storage C
 ## Install latest CSI Driver via `helm install`
 
 ```console
-$ cd $GOPATH/src/sigs.k8s.io/blobfuse-csi-driver/charts/latest
-$ helm package blobfuse-csi-driver
-$ helm install blobfuse-csi-driver blobfuse-csi-driver-latest.tgz --namespace kube-system
+$ cd $GOPATH/src/sigs.k8s.io/blob-csi-driver/charts/latest
+$ helm package blob-csi-driver
+$ helm install blob-csi-driver blob-csi-driver-latest.tgz --namespace kube-system
 ```
   
 ## Install CSI Driver released version using Helm repository
 
 ```console
-$ helm repo add blobfuse-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/charts
-$ helm install  blobfuse-csi-driver blobfuse-csi-driver/blobfuse-csi-driver --namespace kube-system
+$ helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/charts
+$ helm install blob-csi-driver blobfuse-csi-driver/blobfuse-csi-driver --namespace kube-system
 ```
   
 ### Search for different versions of charts available
@@ -28,13 +28,13 @@ $ helm search repo -l blobfuse-csi-driver/
 ### Install a specific version of Helm chart
 Specify the version of the chart to be installed using the `--version` parameter. 
 ```console
-helm install  blobfuse-csi-driver blobfuse-csi-driver/blobfuse-csi-driver --namespace kube-system --version v0.6.0
+helm install blob-csi-driver blobfuse-csi-driver/blob-csi-driver --namespace kube-system --version v0.6.0
 ```
 
 ## Uninstall
 
 ```console
-$ helm uninstall blobfuse-csi-driver -n kube-system
+$ helm uninstall blob-csi-driver -n kube-system
 ```  
 ## The Latest Helm Chart Configuration
 
@@ -42,9 +42,9 @@ The following table lists the configurable parameters of the latest Azure Blob S
 
 | Parameter                                         | Description                                                | Default                                                           |
 |---------------------------------------------------|------------------------------------------------------------|-------------------------------------------------------------------|
-| `image.blobfuse.repository`                       | blobfuse-csi-driver docker image                           | mcr.microsoft.com/k8s/csi/blobfuse-csi                            |
-| `image.blobfuse.tag`                              | blobfuse-csi-driver docker image tag                       | latest                                                            |
-| `image.blobfuse.pullPolicy`                       | blobfuse-csi-driver image pull policy                      | IfNotPresent                                                      |
+| `image.blob.repository`                       | blob-csi-driver docker image                           | mcr.microsoft.com/k8s/csi/blob-csi                            |
+| `image.blob.tag`                              | blob-csi-driver docker image tag                       | latest                                                            |
+| `image.blob.pullPolicy`                       | blob-csi-driver image pull policy                      | IfNotPresent                                                      |
 | `image.csiProvisioner.repository`                 | csi-provisioner docker image                               | mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner              |
 | `image.csiProvisioner.tag`                        | csi-provisioner docker image tag                           | v1.4.0                                                            |
 | `image.csiProvisioner.pullPolicy`                 | csi-provisioner image pull policy                          | IfNotPresent                                                      |
