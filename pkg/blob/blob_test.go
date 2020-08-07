@@ -287,7 +287,7 @@ func TestIsSASToken(t *testing.T) {
 }
 
 func TestIsCorruptedDir(t *testing.T) {
-	existingMountPath, err := ioutil.TempDir(os.TempDir(), "blobfuse-csi-mount-test")
+	existingMountPath, err := ioutil.TempDir(os.TempDir(), "blob-csi-mount-test")
 	if err != nil {
 		t.Fatalf("failed to create tmp dir: %v", err)
 	}

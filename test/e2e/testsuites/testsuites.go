@@ -279,7 +279,7 @@ func (t *TestPersistentVolumeClaim) DeleteBoundPersistentVolume() {
 
 func (t *TestPersistentVolumeClaim) DeleteBackingVolume(azfile *blob.Driver) {
 	volumeID := t.persistentVolume.Spec.CSI.VolumeHandle
-	ginkgo.By(fmt.Sprintf("deleting blobfuse volume %q", volumeID))
+	ginkgo.By(fmt.Sprintf("deleting blob volume %q", volumeID))
 	req := &csi.DeleteVolumeRequest{
 		VolumeId: volumeID,
 	}
@@ -297,7 +297,7 @@ type TestDeployment struct {
 }
 
 func NewTestDeployment(c clientset.Interface, ns *v1.Namespace, command string, pvc *v1.PersistentVolumeClaim, volumeName, mountPath string, readOnly bool) *TestDeployment {
-	generateName := "blobfuse-volume-tester-"
+	generateName := "blob-volume-tester-"
 	selectorValue := fmt.Sprintf("%s%d", generateName, rand.Int())
 	replicas := int32(1)
 	return &TestDeployment{
@@ -423,7 +423,7 @@ func NewTestPod(c clientset.Interface, ns *v1.Namespace, command string) *TestPo
 		namespace: ns,
 		pod: &v1.Pod{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "blobfuse-volume-tester-",
+				GenerateName: "blob-volume-tester-",
 			},
 			Spec: v1.PodSpec{
 				Containers: []v1.Container{

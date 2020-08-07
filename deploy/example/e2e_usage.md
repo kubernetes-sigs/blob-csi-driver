@@ -53,7 +53,7 @@ kubectl create secret generic azure-secret --from-literal azurestorageaccountnam
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: pv-blobfuse
+  name: pv-blob
 spec:
   capacity:
     storage: 10Gi
@@ -82,7 +82,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi
 #### 2. Validate PVC status and create an nginx pod
  > make sure pvc is created and in `Bound` status
 ```console
-watch kubectl describe pvc pvc-blobfuse
+watch kubectl describe pvc pvc-blob
 ```
 
  - create a pod with blobfuse CSI PVC
@@ -93,8 +93,8 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi
 #### 3. enter the pod container to do validation
  - watch the status of pod until its Status changed from `Pending` to `Running` and then enter the pod container
 ```console
-$ watch kubectl describe po nginx-blobfuse
-$ kubectl exec -it nginx-blobfuse -- bash
+$ watch kubectl describe po nginx-blob
+$ kubectl exec -it nginx-blob -- bash
 Filesystem      Size  Used Avail Use% Mounted on
 ...
 blobfuse         30G  8.9G   21G  31% /mnt/blob

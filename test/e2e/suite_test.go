@@ -105,10 +105,10 @@ var _ = ginkgo.BeforeSuite(func() {
 
 var _ = ginkgo.AfterSuite(func() {
 	if testutil.IsRunningInProw() {
-		blobfuseLog := testCmd{
+		blobLog := testCmd{
 			command:  "bash",
 			args:     []string{"test/utils/blob_log.sh"},
-			startLog: "===================blobfuse log===================",
+			startLog: "===================blob log===================",
 			endLog:   "==================================================",
 		}
 		e2eTeardown := testCmd{
@@ -117,7 +117,7 @@ var _ = ginkgo.AfterSuite(func() {
 			startLog: "Uninstalling Azure Blob Storage CSI driver...",
 			endLog:   "Azure Blob Storage CSI driver uninstalled",
 		}
-		execTestCmd([]testCmd{blobfuseLog, e2eTeardown})
+		execTestCmd([]testCmd{blobLog, e2eTeardown})
 
 		// install/uninstall CSI Driver deployment scripts test
 		installDriver := testCmd{

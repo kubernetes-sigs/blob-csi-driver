@@ -13,7 +13,7 @@ csi plugin name: `blob.csi.azure.com`
 ### Container Images & Kubernetes Compatibility:
 |Azure Blob Storage CSI driver Version    | Image                                              | 1.14+  |
 |-----------------------------------------|----------------------------------------------------|--------|
-|master branch                            |mcr.microsoft.com/k8s/csi/blobfuse-csi:latest       | yes    |
+|master branch                            |mcr.microsoft.com/k8s/csi/blob-csi:latest           | yes    |
 |v0.6.0                                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.6.0       | yes    |
 |v0.5.0                                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.5.0       | yes    |
 |v0.4.0                                   |mcr.microsoft.com/k8s/csi/blobfuse-csi:v0.4.0       | yes    |
