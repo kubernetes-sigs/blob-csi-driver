@@ -31,7 +31,7 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
  - If cluster identity is [Managed Service Identity(MSI)](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity), make sure user assigned identity has `Contributor` role on node resource group
 
 ### Install Azure Blob Storage CSI driver on a kubernetes cluster
-Please refer to [install Azure Blob Storage CSI driver](https://github.com/kubernetes-sigs/blobfuse-csi-driver/blob/master/docs/install-blobfuse-csi-driver.md)
+Please refer to [install Azure Blob Storage CSI driver](https://github.com/kubernetes-sigs/blobfuse-csi-driver/blob/master/docs/install-blob-csi-driver.md)
 
 ### Usage
  - [Basic usage](./deploy/example/e2e_usage.md)

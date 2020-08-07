@@ -62,7 +62,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 
 		cs = f.ClientSet
 		ns = f.Namespace
-		testDriver = driver.InitBlobFuseCSIDriver()
+		testDriver = driver.InitBlobCSIDriver()
 	})
 
 	ginkgo.AfterEach(func() {
@@ -118,7 +118,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
 		volumeID = resp.Volume.VolumeId
-		ginkgo.By(fmt.Sprintf("Successfully provisioned BlobFuse volume: %q\n", volumeID))
+		ginkgo.By(fmt.Sprintf("Successfully provisioned blob volume: %q\n", volumeID))
 
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
@@ -144,7 +144,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
 		volumeID = resp.Volume.VolumeId
-		ginkgo.By(fmt.Sprintf("Successfully provisioned BlobFuse volume: %q\n", volumeID))
+		ginkgo.By(fmt.Sprintf("Successfully provisioned blob volume: %q\n", volumeID))
 
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
@@ -182,7 +182,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
 		volumeID = resp.Volume.VolumeId
-		ginkgo.By(fmt.Sprintf("Successfully provisioned BlobFuse volume: %q\n", volumeID))
+		ginkgo.By(fmt.Sprintf("Successfully provisioned blob volume: %q\n", volumeID))
 
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
