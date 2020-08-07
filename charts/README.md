@@ -57,9 +57,9 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.nodeDriverRegistrar.repository`            | csi-node-driver-registrar docker image                     | mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar    |
 | `image.nodeDriverRegistrar.tag`                   | csi-node-driver-registrar docker image tag                 | v1.2.0                                                            |
 | `image.nodeDriverRegistrar.pullPolicy`            | csi-node-driver-registrar image pull policy                | IfNotPresent                                                      |
-| `serviceAccount.create`                           | whether create service account of csi-blobfuse-controller  | true                                                              |
-| `rbac.create`                                     | whether create rbac of csi-blobfuse-controller             | true                                                              |
-| `controller.replicas`                             | the replicas of csi-blobfuse-controller                    | 2                                                                 |
+| `serviceAccount.create`                           | whether create service account of csi-blob-controller  | true                                                              |
+| `rbac.create`                                     | whether create rbac of csi-blob-controller             | true                                                              |
+| `controller.replicas`                             | the replicas of csi-blob-controller                    | 2                                                                 |
 ## Troubleshooting
 
 If there are some errors when using helm to install, follow the steps to debug:

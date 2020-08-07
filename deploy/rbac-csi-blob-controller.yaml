@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: csi-blobfuse-controller-sa
+  name: csi-blob-controller-sa
   namespace: kube-system
 ---
 
@@ -40,7 +40,7 @@ metadata:
   name: blobfuse-csi-provisioner-binding
 subjects:
   - kind: ServiceAccount
-    name: csi-blobfuse-controller-sa
+    name: csi-blob-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
@@ -78,7 +78,7 @@ metadata:
   name: blobfuse-csi-attacher-binding
 subjects:
   - kind: ServiceAccount
-    name: csi-blobfuse-controller-sa
+    name: csi-blob-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
@@ -131,7 +131,7 @@ metadata:
   name: blobfuse-csi-snapshotter-binding
 subjects:
   - kind: ServiceAccount
-    name: csi-blobfuse-controller-sa
+    name: csi-blob-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
@@ -142,7 +142,7 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-blobfuse-controller-secret-role
+  name: csi-blob-controller-secret-role
   namespace: kube-system
 rules:
   - apiGroups: [""]
@@ -153,13 +153,13 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-blobfuse-controller-secret-binding
+  name: csi-blob-controller-secret-binding
   namespace: kube-system
 subjects:
   - kind: ServiceAccount
-    name: csi-blobfuse-controller-sa
+    name: csi-blob-controller-sa
     namespace: kube-system
 roleRef:
   kind: ClusterRole
-  name: csi-blobfuse-controller-secret-role
+  name: csi-blob-controller-secret-role
   apiGroup: rbac.authorization.k8s.io

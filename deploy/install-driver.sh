@@ -34,9 +34,9 @@ if [ $ver != "master" ]; then
 fi
 
 echo "Installing Azure Blob Storage CSI driver, version: $ver ..."
-kubectl apply -f $repo/rbac-csi-blobfuse-controller.yaml
+kubectl apply -f $repo/rbac-csi-blob-controller.yaml
 kubectl apply -f $repo/rbac-csi-blobfuse-node.yaml
 kubectl apply -f $repo/csi-blobfuse-driver.yaml
-kubectl apply -f $repo/csi-blobfuse-controller.yaml
+kubectl apply -f $repo/csi-blob-controller.yaml
 kubectl apply -f $repo/csi-blobfuse-node.yaml
 echo 'Azure Blob Storage CSI driver installed successfully.'
