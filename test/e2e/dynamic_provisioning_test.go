@@ -28,8 +28,8 @@ import (
 	"k8s.io/kubernetes/test/e2e/framework"
 )
 
-var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
-	f := framework.NewDefaultFramework("blobfuse")
+var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
+	f := framework.NewDefaultFramework("blob")
 
 	var (
 		cs         clientset.Interface

@@ -39,8 +39,8 @@ var (
 	defaultVolumeSizeBytes int64 = defaultVolumeSize * 1024 * 1024 * 1024
 )
 
-var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
-	f := framework.NewDefaultFramework("blobfuse")
+var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
+	f := framework.NewDefaultFramework("blob")
 
 	var (
 		cs         clientset.Interface
@@ -84,7 +84,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Pre-Provisioned", func() {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 		}
 		volumeID = resp.Volume.VolumeId
-		ginkgo.By(fmt.Sprintf("Successfully provisioned BloBFuse volume: %q\n", volumeID))
+		ginkgo.By(fmt.Sprintf("Successfully provisioned blob volume: %q\n", volumeID))
 
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		pods := []testsuites.PodDetails{

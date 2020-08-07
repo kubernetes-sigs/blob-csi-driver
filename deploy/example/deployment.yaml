@@ -2,7 +2,7 @@
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
-  name: pvc-blobfuse
+  name: pvc-blob
 spec:
   accessModes:
     - ReadWriteOnce
@@ -42,7 +42,7 @@ spec:
       volumes:
         - name: blobfuse
           persistentVolumeClaim:
-            claimName: pvc-blobfuse
+            claimName: pvc-blob
   strategy:
     rollingUpdate:
       maxSurge: 0

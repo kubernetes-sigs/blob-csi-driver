@@ -17,7 +17,7 @@
 set -e
 
 echo "check the driver pods if restarts ..."
-restarts=$(kubectl get pods -n kube-system | grep blobfuse | awk '{print $4}')
+restarts=$(kubectl get pods -n kube-system | grep blob | awk '{print $4}')
 for num in $restarts
 do
     if [ "$num" -ne "0" ]
