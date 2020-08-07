@@ -33,9 +33,7 @@ import (
 	"k8s.io/legacy-cloud-providers/azure"
 )
 
-const blobfuseAccountNamePrefix = "fuse"
-
-// CreateVolume provisions an blobfuse
+// CreateVolume provisions a volume
 func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
 	if err := d.ValidateControllerServiceRequest(csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME); err != nil {
 		klog.Errorf("invalid create volume req: %v", req)
@@ -122,7 +120,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var accountName, accountKey string
 	err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
 		var retErr error
-		accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(accountOptions, blobfuseAccountNamePrefix)
+		accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(accountOptions, protocol)
 		if isRetriableError(retErr) {
 			klog.Warningf("EnsureStorageAccount(%s) failed with error(%v), waiting for retrying", account, retErr)
 			return false, nil
