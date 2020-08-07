@@ -1,20 +1,20 @@
+---
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
-  name: csi-blobfuse-node
-  namespace: {{ .Release.Namespace }}
-{{ include "blobfuse.labels" . | indent 2 }}
+  name: csi-blob-node
+  namespace: kube-system
 spec:
   selector:
     matchLabels:
-      app: csi-blobfuse-node
+      app: csi-blob-node
   template:
     metadata:
-{{ include "blobfuse.labels" . | indent 6 }}
-        app: csi-blobfuse-node
+      labels:
+        app: csi-blob-node
     spec:
       hostNetwork: true
-      serviceAccountName: csi-blobfuse-node-sa
+      serviceAccountName: csi-blob-node-sa
       nodeSelector:
         kubernetes.io/os: linux
       priorityClassName: system-node-critical
@@ -22,11 +22,10 @@ spec:
         - operator: "Exists"
       containers:
         - name: liveness-probe
-          imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
-          image: "{{ .Values.image.livenessProbe.repository }}:{{ .Values.image.livenessProbe.tag }}"
+          image: mcr.microsoft.com/oss/kubernetes-csi/livenessprobe:v1.1.0
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
@@ -40,7 +39,7 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: node-driver-registrar
-          image: "{{ .Values.image.nodeDriverRegistrar.repository }}:{{ .Values.image.nodeDriverRegistrar.tag }}"
+          image: mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar:v1.2.0
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
@@ -67,17 +66,18 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: blob
-          image: "{{ .Values.image.blobfuse.repository }}:{{ .Values.image.blobfuse.tag }}"
+          image: mcr.microsoft.com/k8s/csi/blobfuse-csi:latest
+          imagePullPolicy: IfNotPresent
           args:
             - "--v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
-            - "--metrics-address=0.0.0.0:{{ .Values.node.metricsPort }}"
+            - "--metrics-address=0.0.0.0:29625"
           ports:
             - containerPort: 29623
               name: healthz
               protocol: TCP
-            - containerPort: {{ .Values.node.metricsPort }}
+            - containerPort: 29625
               name: metrics
               protocol: TCP
           livenessProbe:
@@ -102,7 +102,6 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             privileged: true
           volumeMounts:
@@ -148,3 +147,4 @@ spec:
         - hostPath:
             path: /mnt
           name: blob-cache
+---

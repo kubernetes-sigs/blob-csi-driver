@@ -18,7 +18,7 @@ cd blobfuse-csi-driver
 - check pods status:
 ```console
 kubectl -n kube-system get pod -o wide -l app=csi-blob-controller
-kubectl -n kube-system get pod -o wide -l app=csi-blobfuse-node
+kubectl -n kube-system get pod -o wide -l app=csi-blob-node
 ```
 
 example output:
@@ -27,8 +27,8 @@ example output:
 NAME                                           READY   STATUS    RESTARTS   AGE     IP             NODE
 csi-blob-controller-56bfddd689-dh5tk       6/6     Running   0          35s     10.240.0.19    k8s-agentpool-22533604-0
 csi-blob-controller-56bfddd689-8pgr4       6/6     Running   0          35s     10.240.0.35    k8s-agentpool-22533604-1
-csi-blobfuse-node-cvgbs                        3/3     Running   0          35s     10.240.0.35    k8s-agentpool-22533604-1
-csi-blobfuse-node-dr4s4                        3/3     Running   0          35s     10.240.0.4     k8s-agentpool-22533604-0
+csi-blob-node-cvgbs                        3/3     Running   0          35s     10.240.0.35    k8s-agentpool-22533604-1
+csi-blob-node-dr4s4                        3/3     Running   0          35s     10.240.0.4     k8s-agentpool-22533604-0
 ```
 
 - clean up Azure Blob Storage CSI driver
