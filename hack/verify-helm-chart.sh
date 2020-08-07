@@ -58,10 +58,10 @@ validate_image "${expected_liveness_probe_image}" "${liveness_probe_image}"
 blobfuse_image="$(get_image_from_helm_chart "blobfuse")"
 validate_image "${expected_blobfuse_image}" "${blobfuse_image}"
 
-# Extract images from csi-blobfuse-node.yaml
-expected_liveness_probe_image="$(cat ${PKG_ROOT}/deploy/csi-blobfuse-node.yaml | yq -r .spec.template.spec.containers[0].image | head -n 1)"
-expected_node_driver_registrar="$(cat ${PKG_ROOT}/deploy/csi-blobfuse-node.yaml | yq -r .spec.template.spec.containers[1].image | head -n 1)"
-expected_blobfuse_image="$(cat ${PKG_ROOT}/deploy/csi-blobfuse-node.yaml | yq -r .spec.template.spec.containers[2].image | head -n 1)"
+# Extract images from csi-blob-node.yaml
+expected_liveness_probe_image="$(cat ${PKG_ROOT}/deploy/csi-blob-node.yaml | yq -r .spec.template.spec.containers[0].image | head -n 1)"
+expected_node_driver_registrar="$(cat ${PKG_ROOT}/deploy/csi-blob-node.yaml | yq -r .spec.template.spec.containers[1].image | head -n 1)"
+expected_blobfuse_image="$(cat ${PKG_ROOT}/deploy/csi-blob-node.yaml | yq -r .spec.template.spec.containers[2].image | head -n 1)"
 
 validate_image "${expected_liveness_probe_image}" "${liveness_probe_image}"
 

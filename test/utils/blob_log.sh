@@ -30,9 +30,9 @@ kubectl get pods -n${NS} -l${LABEL} \
     | awk 'NR>1 {print $1}' \
     | xargs -I {} kubectl logs {} --prefix -c${CONTAINER} -n${NS}
 
-echo "print out csi-blobfuse-node logs ..."
+echo "print out csi-blob-node logs ..."
 echo "======================================================================================"
-LABEL='app=csi-blobfuse-node'
+LABEL='app=csi-blob-node'
 kubectl get pods -n${NS} -l${LABEL} \
     | awk 'NR>1 {print $1}' \
     | xargs -I {} kubectl logs {} --prefix -c${CONTAINER} -n${NS}
