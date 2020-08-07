@@ -50,7 +50,7 @@ var _ = ginkgo.Describe("[blobfuse-csi-e2e] Dynamic Provisioning", func() {
 		ns = f.Namespace
 	})
 
-	testDriver = driver.InitBlobFuseCSIDriver()
+	testDriver = driver.InitBlobCSIDriver()
 	ginkgo.It("should create a volume on demand", func() {
 		pods := []testsuites.PodDetails{
 			{
