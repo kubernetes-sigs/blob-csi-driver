@@ -24,7 +24,7 @@ kubectl -n kube-system get pod -o wide -l app=csi-blob-node
 example output:
 
 ```console
-NAME                                           READY   STATUS    RESTARTS   AGE     IP             NODE
+NAME                                       READY   STATUS    RESTARTS   AGE     IP             NODE
 csi-blob-controller-56bfddd689-dh5tk       6/6     Running   0          35s     10.240.0.19    k8s-agentpool-22533604-0
 csi-blob-controller-56bfddd689-8pgr4       6/6     Running   0          35s     10.240.0.35    k8s-agentpool-22533604-1
 csi-blob-node-cvgbs                        3/3     Running   0          35s     10.240.0.35    k8s-agentpool-22533604-1
