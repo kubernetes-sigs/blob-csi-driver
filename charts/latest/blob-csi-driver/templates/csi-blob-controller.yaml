@@ -3,7 +3,7 @@ apiVersion: apps/v1
 metadata:
   name: csi-blob-controller
   namespace: {{ .Release.Namespace }}
-{{ include "blobfuse.labels" . | indent 2 }}
+{{ include "blob.labels" . | indent 2 }}
 spec:
   replicas: {{ .Values.controller.replicas }}
   selector:
@@ -11,7 +11,7 @@ spec:
       app: csi-blob-controller
   template:
     metadata:
-{{ include "blobfuse.labels" . | indent 6 }}
+{{ include "blob.labels" . | indent 6 }}
         app: csi-blob-controller
     spec:
       hostNetwork: true
@@ -85,7 +85,7 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: blob
-          image: "{{ .Values.image.blobfuse.repository }}:{{ .Values.image.blobfuse.tag }}"
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
           args:
             - "--v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
@@ -113,7 +113,7 @@ spec:
                   optional: true
             - name: CSI_ENDPOINT
               value: unix:///csi/csi.sock
-          imagePullPolicy: {{ .Values.image.blobfuse.pullPolicy }}
+          imagePullPolicy: {{ .Values.image.blob.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
