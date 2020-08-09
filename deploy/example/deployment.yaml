@@ -36,11 +36,11 @@ spec:
             - "-c"
             - while true; do echo $(date) >> /mnt/blob/outfile; sleep 1; done
           volumeMounts:
-            - name: blobfuse
+            - name: blob
               mountPath: "/mnt/blob"
               readOnly: false
       volumes:
-        - name: blobfuse
+        - name: blob
           persistentVolumeClaim:
             claimName: pvc-blob
   strategy:
