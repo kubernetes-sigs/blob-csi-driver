@@ -3,18 +3,18 @@ create a pod with blob mount on linux
 ### Dynamic Provisioning (create storage account and container by Blob Storage CSI driver)
  - Create a blob storage CSI storage class
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blobfuse-csi.yaml
 ```
 
  - Create a blob storage CSI PVC
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blob-csi.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pvc-blob-csi.yaml
 ```
 
 ### Static Provisioning(use an existing storage account)
 #### Option#1: use existing credentials in k8s cluster
  > make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
- - Download [blob storage CSI storage class](https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/storageclass-blobfuse-csi-existing-container.yaml), edit `resourceGroup`, `storageAccount`, `containerName` in storage class
+ - Download [blob storage CSI storage class](https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blobfuse-csi-existing-container.yaml), edit `resourceGroup`, `storageAccount`, `containerName` in storage class
 ```yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
@@ -35,7 +35,7 @@ kubectl create -f storageclass-blobfuse-csi-existing-container.yaml
 
  - Create a blob storage CSI PVC
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blob-csi.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pvc-blob-csi.yaml
 ```
 
 #### Option#2: provide storage account name and key(or sastoken)
@@ -48,7 +48,7 @@ kubectl create secret generic azure-secret --from-literal azurestorageaccountnam
 
 > storage account key(or sastoken) could also be stored in Azure Key Vault, check example here: [read-from-keyvault](../../docs/read-from-keyvault.md)
 
- - Create a blob storage CSI PV: download [`pv-blobfuse-csi.yaml` file](https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml) and edit `containerName` in `volumeAttributes`
+ - Create a blob storage CSI PV: download [`pv-blobfuse-csi.yaml` file](https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml) and edit `containerName` in `volumeAttributes`
 ```yaml
 apiVersion: v1
 kind: PersistentVolume
@@ -76,7 +76,7 @@ kubectl create -f pv-blobfuse-csi.yaml
 
  - Create a blob storage CSI PVC which would be bound to the above PV
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blob-csi-static.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pvc-blob-csi-static.yaml
 ```
 
 #### 2. Validate PVC status and create an nginx pod
@@ -87,7 +87,7 @@ watch kubectl describe pvc pvc-blob
 
  - create a pod with blob storage CSI PVC
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/nginx-pod-blob.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/nginx-pod-blob.yaml
 ```
 
 #### 3. enter the pod container to do validation

@@ -25,7 +25,7 @@ import (
 	"os"
 	"strings"
 
-	"sigs.k8s.io/blobfuse-csi-driver/pkg/blob"
+	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 
 	"k8s.io/component-base/metrics/legacyregistry"
 	"k8s.io/klog/v2"

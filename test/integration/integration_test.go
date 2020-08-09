@@ -24,9 +24,9 @@ import (
 	"strings"
 	"testing"
 
-	"sigs.k8s.io/blobfuse-csi-driver/test/utils/azure"
-	"sigs.k8s.io/blobfuse-csi-driver/test/utils/credentials"
-	"sigs.k8s.io/blobfuse-csi-driver/test/utils/testutil"
+	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
+	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
+	"sigs.k8s.io/blob-csi-driver/test/utils/testutil"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -95,7 +95,7 @@ func testIntegration(t *testing.T, creds *credentials.Credentials) {
 
 	cwd, err := os.Getwd()
 	assert.NoError(t, err)
-	assert.True(t, strings.HasSuffix(cwd, "blobfuse-csi-driver"))
+	assert.True(t, strings.HasSuffix(cwd, "blob-csi-driver"))
 
 	// Pass in resource group name, storage account name and cloud type
 	cmd := exec.Command("./test/integration/run-tests-all-clouds.sh", creds.ResourceGroup, creds.Cloud)

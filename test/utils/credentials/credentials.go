@@ -23,7 +23,7 @@ import (
 	"log"
 	"os"
 
-	"sigs.k8s.io/blobfuse-csi-driver/test/utils/testutil"
+	"sigs.k8s.io/blob-csi-driver/test/utils/testutil"
 
 	"github.com/pborman/uuid"
 	"github.com/pelletier/go-toml"
@@ -32,7 +32,7 @@ import (
 const (
 	AzurePublicCloud            = "AzurePublicCloud"
 	AzureChinaCloud             = "AzureChinaCloud"
-	ResourceGroupPrefix         = "blobfuse-csi-driver-test-"
+	ResourceGroupPrefix         = "blob-csi-driver-test-"
 	TempAzureCredentialFilePath = "/tmp/azure.json"
 
 	azureCredentialFileTemplate = `{

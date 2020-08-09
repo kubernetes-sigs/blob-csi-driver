@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	volumehelper "sigs.k8s.io/blobfuse-csi-driver/pkg/util"
+	volumehelper "sigs.k8s.io/blob-csi-driver/pkg/util"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 

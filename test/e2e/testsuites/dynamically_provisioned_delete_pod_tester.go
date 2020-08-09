@@ -17,7 +17,7 @@ limitations under the License.
 package testsuites
 
 import (
-	"sigs.k8s.io/blobfuse-csi-driver/test/e2e/driver"
+	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
 
 	"github.com/onsi/ginkgo"
 	v1 "k8s.io/api/core/v1"

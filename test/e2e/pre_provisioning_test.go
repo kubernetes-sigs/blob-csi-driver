@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 
-	"sigs.k8s.io/blobfuse-csi-driver/test/e2e/driver"
-	"sigs.k8s.io/blobfuse-csi-driver/test/e2e/testsuites"
+	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
+	"sigs.k8s.io/blob-csi-driver/test/e2e/testsuites"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/onsi/ginkgo"

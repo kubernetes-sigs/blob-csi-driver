@@ -1,5 +1,5 @@
 language: go
-go_import_path: sigs.k8s.io/blobfuse-csi-driver
+go_import_path: sigs.k8s.io/blob-csi-driver
 dist: bionic
 
 go:

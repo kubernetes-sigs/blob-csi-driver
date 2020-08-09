@@ -24,8 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"sigs.k8s.io/blobfuse-csi-driver/test/utils/azure"
-	"sigs.k8s.io/blobfuse-csi-driver/test/utils/credentials"
+	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
+	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -69,7 +69,7 @@ func TestSanity(t *testing.T) {
 
 	projectRoot, err := os.Getwd()
 	assert.NoError(t, err)
-	assert.True(t, strings.HasSuffix(projectRoot, "blobfuse-csi-driver"))
+	assert.True(t, strings.HasSuffix(projectRoot, "blob-csi-driver"))
 
 	cmd := exec.Command("./test/sanity/run-tests-all-clouds.sh")
 	cmd.Dir = projectRoot

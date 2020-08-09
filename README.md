@@ -1,7 +1,7 @@
 # Azure Blob Storage CSI driver for Kubernetes
-[![Travis](https://travis-ci.org/kubernetes-sigs/blobfuse-csi-driver.svg)](https://travis-ci.org/kubernetes-sigs/blobfuse-csi-driver)
-[![Coverage Status](https://coveralls.io/repos/github/kubernetes-sigs/blobfuse-csi-driver/badge.svg?branch=master)](https://coveralls.io/github/kubernetes-sigs/blobfuse-csi-driver?branch=master)
-[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fblobfuse-csi-driver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fblobfuse-csi-driver?ref=badge_shield)
+[![Travis](https://travis-ci.org/kubernetes-sigs/blob-csi-driver.svg)](https://travis-ci.org/kubernetes-sigs/blob-csi-driver)
+[![Coverage Status](https://coveralls.io/repos/github/kubernetes-sigs/blob-csi-driver/badge.svg?branch=master)](https://coveralls.io/github/kubernetes-sigs/blob-csi-driver?branch=master)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fblob-csi-driver.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fkubernetes-sigs%2Fblob-csi-driver?ref=badge_shield)
 
 ### About
 This driver allows Kubernetes to access Azure Storage through one of following methods:
@@ -31,7 +31,7 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
  - If cluster identity is [Managed Service Identity(MSI)](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity), make sure user assigned identity has `Contributor` role on node resource group
 
 ### Install Azure Blob Storage CSI driver on a kubernetes cluster
-Please refer to [install Azure Blob Storage CSI driver](https://github.com/kubernetes-sigs/blobfuse-csi-driver/blob/master/docs/install-blob-csi-driver.md)
+Please refer to [install Azure Blob Storage CSI driver](https://github.com/kubernetes-sigs/blob-csi-driver/blob/master/docs/install-blob-csi-driver.md)
 
 ### Usage
  - [Basic usage](./deploy/example/e2e_usage.md)

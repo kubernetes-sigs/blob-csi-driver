@@ -22,7 +22,7 @@ import (
 	"math/rand"
 	"time"
 
-	"sigs.k8s.io/blobfuse-csi-driver/pkg/blob"
+	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/onsi/ginkgo"
