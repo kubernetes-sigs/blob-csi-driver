@@ -17,14 +17,21 @@ limitations under the License.
 package blob
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"k8s.io/legacy-cloud-providers/azure/retry"
 	"os"
 	"reflect"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+
+	"k8s.io/legacy-cloud-providers/azure"
+	"k8s.io/legacy-cloud-providers/azure/clients/storageaccountclient/mockstorageaccountclient"
 )
 
 const (
@@ -43,6 +50,88 @@ func NewFakeDriver() *Driver {
 func TestNewFakeDriver(t *testing.T) {
 	d := NewDriver(fakeNodeID)
 	assert.NotNil(t, d)
+}
+
+func TestNewDriver(t *testing.T) {
+	driver := NewDriver(fakeNodeID)
+	fakedriver := NewFakeDriver()
+	fakedriver.Name = DriverName
+	fakedriver.Version = driverVersion
+	assert.Equal(t, driver, fakedriver)
+}
+
+func TestRun(t *testing.T) {
+	fakeCredFile := "fake-cred-file.json"
+	fakeCredContent := `{
+    "tenantId": "1234",
+    "subscriptionId": "12345",
+    "aadClientId": "123456",
+    "aadClientSecret": "1234567",
+    "resourceGroup": "rg1",
+    "location": "loc"
+}`
+
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "Successful run",
+			testFunc: func(t *testing.T) {
+				if err := ioutil.WriteFile(fakeCredFile, []byte(fakeCredContent), 0666); err != nil {
+					t.Error(err)
+				}
+
+				defer func() {
+					if err := os.Remove(fakeCredFile); err != nil {
+						t.Error(err)
+					}
+				}()
+
+				originalCredFile, ok := os.LookupEnv(DefaultAzureCredentialFileEnv)
+				if ok {
+					defer os.Setenv(DefaultAzureCredentialFileEnv, originalCredFile)
+				} else {
+					defer os.Unsetenv(DefaultAzureCredentialFileEnv)
+				}
+				os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
+
+				d := NewFakeDriver()
+				d.Run("tcp://127.0.0.1:0", "", true)
+			},
+		},
+		{
+			name: "Successful run with node ID missing",
+			testFunc: func(t *testing.T) {
+				if err := ioutil.WriteFile(fakeCredFile, []byte(fakeCredContent), 0666); err != nil {
+					t.Error(err)
+				}
+
+				defer func() {
+					if err := os.Remove(fakeCredFile); err != nil {
+						t.Error(err)
+					}
+				}()
+
+				originalCredFile, ok := os.LookupEnv(DefaultAzureCredentialFileEnv)
+				if ok {
+					defer os.Setenv(DefaultAzureCredentialFileEnv, originalCredFile)
+				} else {
+					defer os.Unsetenv(DefaultAzureCredentialFileEnv)
+				}
+				os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
+
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.NodeID = ""
+				d.Run("tcp://127.0.0.1:0", "", true)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
 }
 
 func TestAppendDefaultMountOptions(t *testing.T) {
@@ -344,5 +433,170 @@ func TestIsSupportedProtocol(t *testing.T) {
 		if result != test.expectedResult {
 			t.Errorf("isSupportedProtocol(%s) returned with %v, not equal to %v", test.protocol, result, test.expectedResult)
 		}
+	}
+}
+
+func TestGetAuthEnv(t *testing.T) {
+
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "Get storage access key error",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				attrib := make(map[string]string)
+				secret := make(map[string]string)
+				attrib["containername"] = "unit-test"
+				attrib["keyvaultsecretname"] = "unit-test"
+				attrib["keyvaultsecretversion"] = "unit-test"
+				attrib["storageaccountname"] = "unit-test"
+				attrib["azurestorageidentityclientid"] = "unit-test"
+				attrib["azurestorageidentityobjectid"] = "unit-test"
+				attrib["azurestorageidentityresourceid"] = "unit-test"
+				attrib["msiendpoint"] = "unit-test"
+				attrib["azurestoragespnclientid"] = "unit-test"
+				attrib["azurestoragespntenantid"] = "unit-test"
+				attrib["azurestorageaadendpoint"] = "unit-test"
+				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+				d.cloud = &azure.Cloud{}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				accountListKeysResult := storage.AccountListKeysResult{}
+				rerr := &retry.Error{
+					RawError: fmt.Errorf("test"),
+				}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				_, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, attrib, secret)
+				expectedErr := fmt.Errorf("no key for storage account(f5713de20cde511e8ba4900) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "valid request",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				attrib := make(map[string]string)
+				secret := make(map[string]string)
+				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+				d.cloud = &azure.Cloud{}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				s := "unit-test"
+				accountkey := storage.AccountKey{
+					Value: &s,
+				}
+				accountkeylist := []storage.AccountKey{}
+				accountkeylist = append(accountkeylist, accountkey)
+				list := storage.AccountListKeysResult{
+					Keys: &accountkeylist,
+				}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				_, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, attrib, secret)
+				expectedErr := error(nil)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "secret not empty ",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				attrib := make(map[string]string)
+				secret := make(map[string]string)
+				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+				secret["accountname"] = "unit-test"
+				secret["azurestorageaccountname"] = "unit-test"
+				secret["accountkey"] = "unit-test"
+				secret["azurestorageaccountkey"] = "unit-test"
+				secret["azurestorageaccountsastoken"] = "unit-test"
+				secret["msisecret"] = "unit-test"
+				secret["azurestoragespnclientsecret"] = "unit-test"
+				_, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, attrib, secret)
+				expectedErr := fmt.Errorf("could not find containerName from attributes(map[]) or volumeID(rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41)")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestGetStorageAccountAndContainer(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "Get storage access key error",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				attrib := make(map[string]string)
+				secret := make(map[string]string)
+				attrib["containername"] = "unit-test"
+				attrib["keyvaultsecretname"] = "unit-test"
+				attrib["keyvaultsecretversion"] = "unit-test"
+				attrib["storageaccountname"] = "unit-test"
+				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+				d.cloud = &azure.Cloud{}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				accountListKeysResult := storage.AccountListKeysResult{}
+				rerr := &retry.Error{
+					RawError: fmt.Errorf("test"),
+				}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
+				expectedErr := fmt.Errorf("no key for storage account(f5713de20cde511e8ba4900) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "valid request",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				attrib := make(map[string]string)
+				secret := make(map[string]string)
+				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+				d.cloud = &azure.Cloud{}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				s := "unit-test"
+				accountkey := storage.AccountKey{
+					Value: &s,
+				}
+				accountkeylist := []storage.AccountKey{}
+				accountkeylist = append(accountkeylist, accountkey)
+				list := storage.AccountListKeysResult{
+					Keys: &accountkeylist,
+				}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
+				expectedErr := error(nil)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
 	}
 }
