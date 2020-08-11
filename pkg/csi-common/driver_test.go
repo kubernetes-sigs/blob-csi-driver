@@ -34,6 +34,22 @@ var (
 	vendorVersion = "0.3.0"
 )
 
+func TestNewCSIDriver(t *testing.T) {
+	name := ""
+	str := ""
+	nodeID := ""
+	assert.Nil(t, NewCSIDriver(name, str, nodeID))
+	name = "unit-test"
+	assert.Nil(t, NewCSIDriver(name, str, nodeID))
+	nodeID = "unit-test"
+	driver := CSIDriver{
+		Name:    name,
+		NodeID:  nodeID,
+		Version: str,
+	}
+	assert.Equal(t, &driver, NewCSIDriver(name, str, nodeID))
+}
+
 func NewFakeDriver() *CSIDriver {
 
 	driver := NewCSIDriver(fakeDriverName, vendorVersion, fakeNodeID)
@@ -45,6 +61,13 @@ func TestNewFakeDriver(t *testing.T) {
 	// Test New fake driver with invalid arguments.
 	d := NewCSIDriver("", vendorVersion, fakeNodeID)
 	assert.Nil(t, d)
+}
+
+func TestAddControllerServiceCapabilities(t *testing.T) {
+	d := NewFakeDriver()
+	var cl []csi.ControllerServiceCapability_RPC_Type
+	cl = append(cl, csi.ControllerServiceCapability_RPC_UNKNOWN)
+	d.AddControllerServiceCapabilities(cl)
 }
 
 func TestGetVolumeCapabilityAccessModes(t *testing.T) {
