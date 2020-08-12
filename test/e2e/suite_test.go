@@ -34,10 +34,10 @@ import (
 	"github.com/pborman/uuid"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/framework/config"
-	"sigs.k8s.io/blobfuse-csi-driver/pkg/blob"
-	"sigs.k8s.io/blobfuse-csi-driver/test/utils/azure"
-	"sigs.k8s.io/blobfuse-csi-driver/test/utils/credentials"
-	"sigs.k8s.io/blobfuse-csi-driver/test/utils/testutil"
+	"sigs.k8s.io/blob-csi-driver/pkg/blob"
+	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
+	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
+	"sigs.k8s.io/blob-csi-driver/test/utils/testutil"
 )
 
 const (
@@ -159,7 +159,7 @@ func execTestCmd(cmds []testCmd) {
 
 	projectRoot, err := os.Getwd()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	gomega.Expect(strings.HasSuffix(projectRoot, "blobfuse-csi-driver")).To(gomega.Equal(true))
+	gomega.Expect(strings.HasSuffix(projectRoot, "blob-csi-driver")).To(gomega.Equal(true))
 
 	for _, cmd := range cmds {
 		log.Println(cmd.startLog)

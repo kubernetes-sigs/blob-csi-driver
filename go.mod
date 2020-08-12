@@ -1,4 +1,4 @@
-module sigs.k8s.io/blobfuse-csi-driver
+module sigs.k8s.io/blob-csi-driver
 
 go 1.13
 

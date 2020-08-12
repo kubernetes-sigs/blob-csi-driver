@@ -13,15 +13,15 @@
 # limitations under the License.
 
 FROM golang:1.13.10-alpine3.10 as builder
-WORKDIR /go/src/sigs.k8s.io/blobfuse-csi-driver
+WORKDIR /go/src/sigs.k8s.io/blob-csi-driver
 ADD . .
 ARG TARGETARCH
 ARG TARGETOS
 ARG LDFLAGS
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -ldflags "${LDFLAGS:--X sigs.k8s.io/blobfuse-csi-driver/pkg/blob.driverVersion=latest}" -o _output/blobplugin ./pkg/blobplugin
+RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -ldflags "${LDFLAGS:--X sigs.k8s.io/blob-csi-driver/pkg/blob.driverVersion=latest}" -o _output/blobplugin ./pkg/blobplugin
 
 FROM us.gcr.io/k8s-artifacts-prod/build-image/debian-base-amd64:v2.1.0
-COPY --from=builder /go/src/sigs.k8s.io/blobfuse-csi-driver/_output/blobplugin /blobplugin
+COPY --from=builder /go/src/sigs.k8s.io/blob-csi-driver/_output/blobplugin /blobplugin
 RUN apt-get update && clean-install ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget
 RUN wget -O /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb && dpkg -i /tmp/packages-microsoft-prod.deb && apt-get update && apt install blobfuse fuse -y && rm -f /tmp/packages-microsoft-prod.deb
 RUN apt remove wget -y

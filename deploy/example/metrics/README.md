@@ -2,7 +2,7 @@
 
 1. Create `csi-blob-controller` service with targetPort `29624`
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/metrics/csi-blob-controller-svc.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/metrics/csi-blob-controller-svc.yaml
 ```
 
 2. Get ClusterIP of service `csi-blob-controller`

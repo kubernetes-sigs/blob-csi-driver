@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"strings"
 
-	csicommon "sigs.k8s.io/blobfuse-csi-driver/pkg/csi-common"
+	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pborman/uuid"

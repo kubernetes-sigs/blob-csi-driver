@@ -21,13 +21,13 @@
    ```
 
 ## Install Azure Blob Storage CSI driver on a kubernetes cluster
-Please refer to [install Azure Blob Storage CSI driver](https://github.com/kubernetes-sigs/blobfuse-csi-driver/blob/master/docs/install-blob-csi-driver.md)
+Please refer to [install Azure Blob Storage CSI driver](https://github.com/kubernetes-sigs/blob-csi-driver/blob/master/docs/install-blob-csi-driver.md)
 
 ## Create PV
 1.  Download a `pv-blobfuse-csi-keyvault.yaml`, edit `keyVaultURL`, `keyVaultSecretName`, `containerName` in PV
 > `keyVaultSecretVersion` is the optional parameter. If not specified, it will be *current version*.
 ```console
-wget https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pv-blobfuse-csi-keyvault.yaml
+wget https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pv-blobfuse-csi-keyvault.yaml
 vi pv-blobfuse-csi-keyvault.yaml
 kubectl apply -f pv-blobfuse-csi-keyvault.yaml
 ```
@@ -35,5 +35,5 @@ kubectl apply -f pv-blobfuse-csi-keyvault.yaml
 ## Create PVC 
 
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/pvc-blob-csi-static.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pvc-blob-csi-static.yaml
 ```

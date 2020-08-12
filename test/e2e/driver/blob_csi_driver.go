@@ -19,7 +19,7 @@ package driver
 import (
 	"fmt"
 
-	"sigs.k8s.io/blobfuse-csi-driver/pkg/blob"
+	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 
 	v1 "k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"

@@ -15,7 +15,7 @@ az feature register --name PremiumHns --namespace Microsoft.Storage
 az provider register --namespace Microsoft.Storage
 ```
 
- - [install CSI driver](https://github.com/kubernetes-sigs/blobfuse-csi-driver/blob/master/docs/install-csi-driver-master.md) (only master version supported now)
+ - [install CSI driver](https://github.com/kubernetes-sigs/blob-csi-driver/blob/master/docs/install-csi-driver-master.md) (only master version supported now)
  - Create a `Premium_LRS` Azure storage account with following configurations to support NFS 3.0
    - account kind: `BlockBlobStorage`
    - Replication: `Locally-redundant storage (LRS)`
@@ -42,7 +42,7 @@ parameters:
 
 run following command to create a storage class:
 ```console
-wget https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/storageclass-blob-nfs.yaml
+wget https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blob-nfs.yaml
 # set `storageAccount` in storageclass-blob-nfs.yaml
 kubectl create -f storageclass-blob-nfs.yaml
 ```
@@ -50,7 +50,7 @@ kubectl create -f storageclass-blob-nfs.yaml
 ### Example
  - Create a deployment with NFSv3 on Azure storage
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/example/statefulset.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
 ```
 
  - enter pod to check

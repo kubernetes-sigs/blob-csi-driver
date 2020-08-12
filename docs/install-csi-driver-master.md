@@ -5,13 +5,13 @@ If you have already installed Helm, you can also use it to install Azure Blob St
 ## Install with kubectl
  - remote install
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/install-driver.sh | bash -s master --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/install-driver.sh | bash -s master --
 ```
 
  - local install
 ```console
-git clone https://github.com/kubernetes-sigs/blobfuse-csi-driver.git
-cd blobfuse-csi-driver
+git clone https://github.com/kubernetes-sigs/blob-csi-driver.git
+cd blob-csi-driver
 ./deploy/install-driver.sh master local
 ```
 
@@ -33,5 +33,5 @@ csi-blob-node-dr4s4                        3/3     Running   0          35s     
 
 - clean up Azure Blob Storage CSI driver
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/deploy/uninstall-driver.sh | bash -s master --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/uninstall-driver.sh | bash -s master --
 ```
