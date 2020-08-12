@@ -240,6 +240,144 @@ func TestNodeUnpublishVolume(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestNodeStageVolume(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "Volume ID missing",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "Volume ID missing in request")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "Staging target not provided",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId: "unit-test",
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "Staging target not provided")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "Volume capability missing",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "Volume capability not provided")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "volume mount sensitive fail",
+			testFunc: func(t *testing.T) {
+				attrib := make(map[string]string)
+				attrib["containername"] = "ut-container"
+				attrib["server"] = "blob-endpoint"
+				attrib["protocol"] = "nfs"
+				secret := make(map[string]string)
+				secret["accountname"] = "unit-test"
+				accessType := csi.VolumeCapability_Mount{}
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41",
+					StagingTargetPath: "right_mount",
+					VolumeContext:     attrib,
+					Secrets:           secret,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessType: &accessType,
+					},
+				}
+				d := NewFakeDriver()
+				fakeMounter := &fakeMounter{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+				}
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.Internal, "volume(rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41) mount \"blob-endpoint:/unit-test/ut-container\" on \"right_mount\" failed with fake MountSensitive: source error")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+				// Clean up
+				err = os.RemoveAll(req.StagingTargetPath)
+				assert.NoError(t, err)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestNodeUnstageVolume(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "Volume ID missing",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeUnstageVolumeRequest{}
+				d := NewFakeDriver()
+				_, err := d.NodeUnstageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "Volume ID not provided")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "staging target missing",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeUnstageVolumeRequest{
+					VolumeId: "unit-test",
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeUnstageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "Staging target not provided")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "mount point not exist ",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeUnstageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "./unit-test",
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeUnstageVolume(context.TODO(), req)
+				expectedErr := error(nil)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
 func makeDir(pathname string) error {
 	err := os.MkdirAll(pathname, os.FileMode(0755))
 	if err != nil {
@@ -277,4 +415,24 @@ func TestNewSafeMounter(t *testing.T) {
 	resp, err := NewSafeMounter()
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
+}
+
+func TestNodeGetVolumeStats(t *testing.T) {
+	d := NewFakeDriver()
+	req := csi.NodeGetVolumeStatsRequest{}
+	resp, err := d.NodeGetVolumeStats(context.Background(), &req)
+	assert.Nil(t, resp)
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestNodeExpandVolume(t *testing.T) {
+	d := NewFakeDriver()
+	req := csi.NodeExpandVolumeRequest{}
+	resp, err := d.NodeExpandVolume(context.Background(), &req)
+	assert.Nil(t, resp)
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "NodeExpandVolume is not yet implemented")) {
+		t.Errorf("Unexpected error: %v", err)
+	}
 }

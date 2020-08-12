@@ -35,3 +35,23 @@ func TestGetPluginInfo(t *testing.T) {
 	assert.Equal(t, resp.GetName(), fakeDriverName)
 	assert.Equal(t, resp.GetVendorVersion(), vendorVersion)
 }
+
+func TestProbe(t *testing.T) {
+	d := NewFakeDriver()
+	ids := NewDefaultIdentityServer(d)
+	req := csi.ProbeRequest{}
+	resp, err := ids.Probe(context.Background(), &req)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, resp.XXX_sizecache, int32(0))
+}
+
+func TestGetPluginCapabilities(t *testing.T) {
+	d := NewFakeDriver()
+	ids := NewDefaultIdentityServer(d)
+	req := csi.GetPluginCapabilitiesRequest{}
+	resp, err := ids.GetPluginCapabilities(context.Background(), &req)
+	assert.NoError(t, err)
+	assert.NotNil(t, resp)
+	assert.Equal(t, resp.XXX_sizecache, int32(0))
+}

@@ -145,3 +145,30 @@ func TestLogGRPC(t *testing.T) {
 		})
 	}
 }
+
+func TestNewNodeServiceCapability(t *testing.T) {
+	tests := []struct {
+		cap csi.ControllerServiceCapability_RPC_Type
+	}{
+		{
+			cap: csi.ControllerServiceCapability_RPC_UNKNOWN,
+		},
+		{
+			cap: csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
+		},
+		{
+			cap: csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME,
+		},
+		{
+			cap: csi.ControllerServiceCapability_RPC_LIST_VOLUMES,
+		},
+		{
+			cap: csi.ControllerServiceCapability_RPC_GET_CAPACITY,
+		},
+	}
+	for _, test := range tests {
+		resp := NewControllerServiceCapability(test.cap)
+		assert.NotNil(t, resp)
+		assert.Equal(t, resp.XXX_sizecache, int32(0))
+	}
+}
