@@ -34,8 +34,8 @@ spec:
             - --v=5
           resources:
             limits:
-              cpu: 1
-              memory: 1Gi
+              cpu: 100m
+              memory: 100Mi
             requests:
               cpu: 10m
               memory: 20Mi
@@ -61,8 +61,8 @@ spec:
               mountPath: /registration
           resources:
             limits:
-              cpu: 1
-              memory: 1Gi
+              cpu: 100m
+              memory: 100Mi
             requests:
               cpu: 10m
               memory: 20Mi
@@ -120,8 +120,8 @@ spec:
               name: blob-cache
           resources:
             limits:
-              cpu: 4
-              memory: 6Gi
+              cpu: 800m
+              memory: 800Mi
             requests:
               cpu: 10m
               memory: 20Mi
