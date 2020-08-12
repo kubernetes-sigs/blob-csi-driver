@@ -68,7 +68,7 @@ func handle() {
 	if driver == nil {
 		klog.Fatalln("Failed to initialize Azure Blob Storage CSI driver")
 	}
-	driver.Run(*endpoint, *kubeconfig)
+	driver.Run(*endpoint, *kubeconfig, false)
 }
 
 func exportMetrics() {

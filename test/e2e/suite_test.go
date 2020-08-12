@@ -99,7 +99,7 @@ var _ = ginkgo.BeforeSuite(func() {
 	blobDriver = blob.NewDriver(nodeid)
 	go func() {
 		os.Setenv("AZURE_CREDENTIAL_FILE", credentials.TempAzureCredentialFilePath)
-		blobDriver.Run(fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String()), kubeconfig)
+		blobDriver.Run(fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String()), kubeconfig, false)
 	}()
 })
 

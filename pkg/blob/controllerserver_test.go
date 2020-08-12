@@ -115,9 +115,82 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid protocol",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				mp := make(map[string]string)
+				mp["protocol"] = "unit-test"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				expectedErr := status.Errorf(codes.InvalidArgument, "protocol(unit-test) is not supported, supported protocol list: [fuse nfs]")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "storageacount empty while nfs",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				mp := make(map[string]string)
+				mp["protocol"] = "nfs"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				expectedErr := status.Errorf(codes.InvalidArgument, "storage account must be specified when provisioning nfs file share")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "tags error",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				mp := make(map[string]string)
+				mp["tags"] = "unit-test"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				expectedErr := fmt.Errorf("Tags 'unit-test' are invalid, the format should like: 'key1=value1,key2=value2'")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
 			name: "getStorageAccounts error",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
+				mp := make(map[string]string)
+				mp["skuname"] = "unit-test"
+				mp["storageaccounttype"] = "unit-test"
+				mp["location"] = "unit-test"
+				mp["storageaccount"] = "unit-test"
+				mp["resourcegroup"] = "unit-test"
+				mp["containername"] = "unit-test"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
@@ -125,6 +198,7 @@ func TestCreateVolume(t *testing.T) {
 				d.Cap = []*csi.ControllerServiceCapability{
 					controllerServiceCapability,
 				}
+
 				d.cloud = &azure.Cloud{}
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
@@ -161,7 +235,7 @@ func TestDeleteVolume(t *testing.T) {
 		testFunc func(t *testing.T)
 	}{
 		{
-			name: "volume Name missing",
+			name: "volume ID missing",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				req := &csi.DeleteVolumeRequest{}
@@ -224,6 +298,38 @@ func TestDeleteVolume(t *testing.T) {
 				accountListKeysResult := storage.AccountListKeysResult{}
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				expectedErr := fmt.Errorf("no key for storage account(test) under resource group(unit), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				_, err := d.DeleteVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "base storage service url empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				req := &csi.DeleteVolumeRequest{
+					VolumeId: "unit#test#test",
+				}
+				d.cloud = &azure.Cloud{}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				s := "unit-test"
+				accountkey := storage.AccountKey{
+					Value: &s,
+				}
+				accountkeylist := []storage.AccountKey{}
+				accountkeylist = append(accountkeylist, accountkey)
+				list := storage.AccountListKeysResult{
+					Keys: &accountkeylist,
+				}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				expectedErr := fmt.Errorf("azure: base storage service url required")
 				_, err := d.DeleteVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
@@ -320,6 +426,39 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				accountListKeysResult := storage.AccountListKeysResult{}
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				expectedErr := fmt.Errorf("no key for storage account(test) under resource group(unit), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "base storage service url empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				req := &csi.ValidateVolumeCapabilitiesRequest{
+					VolumeId:           "unit#test#test",
+					VolumeCapabilities: stdVolumeCapabilities,
+				}
+				d.cloud = &azure.Cloud{}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				s := "unit-test"
+				accountkey := storage.AccountKey{
+					Value: &s,
+				}
+				accountkeylist := []storage.AccountKey{}
+				accountkeylist = append(accountkeylist, accountkey)
+				list := storage.AccountListKeysResult{
+					Keys: &accountkeylist,
+				}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				expectedErr := fmt.Errorf("azure: base storage service url required")
 				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
