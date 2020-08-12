@@ -104,3 +104,9 @@ $  csc controller create-snapshot
 ```console
 $  csc controller delete-snapshot
 ```
+
+### How to update chart index
+
+```console
+helm repo index charts --url=https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/charts
+```
