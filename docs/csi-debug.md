@@ -3,9 +3,9 @@
  - locate csi driver pod
 ```console
 $ kubectl get po -o wide -n kube-system | grep csi-blob-controller
-NAME                                           READY   STATUS    RESTARTS   AGE     IP             NODE
-csi-blob-controller-56bfddd689-dh5tk       5/5     Running   0          35s     10.240.0.19    k8s-agentpool-22533604-0
-csi-blob-controller-56bfddd689-sl4ll       5/5     Running   0          35s     10.240.0.23    k8s-agentpool-22533604-1
+NAME                                       READY   STATUS    RESTARTS   AGE     IP             NODE
+csi-blob-controller-56bfddd689-dh5tk       4/4     Running   0          35s     10.240.0.19    k8s-agentpool-22533604-0
+csi-blob-controller-56bfddd689-sl4ll       4/4     Running   0          35s     10.240.0.23    k8s-agentpool-22533604-1
 ```
  - get csi driver logs
 ```console
