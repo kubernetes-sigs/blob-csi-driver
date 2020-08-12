@@ -25,8 +25,7 @@ COPY --from=builder /go/src/sigs.k8s.io/blob-csi-driver/_output/blobplugin /blob
 RUN apt-get update && clean-install ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget
 RUN wget -O /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb && dpkg -i /tmp/packages-microsoft-prod.deb && apt-get update && apt install blobfuse fuse -y && rm -f /tmp/packages-microsoft-prod.deb
 RUN apt remove wget -y
-# this is a workaround to install nfs-common and don't quit with error
-RUN apt update && apt install mount nfs-common -y || true
+RUN apt update && apt install mount nfs-common -y
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
