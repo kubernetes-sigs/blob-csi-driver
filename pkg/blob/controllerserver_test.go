@@ -19,19 +19,20 @@ package blob
 import (
 	"context"
 	"fmt"
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
-	"github.com/golang/mock/gomock"
-	"k8s.io/legacy-cloud-providers/azure"
-	"k8s.io/legacy-cloud-providers/azure/clients/storageaccountclient/mockstorageaccountclient"
-	"k8s.io/legacy-cloud-providers/azure/retry"
 	"reflect"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+
+	"k8s.io/legacy-cloud-providers/azure"
+	"k8s.io/legacy-cloud-providers/azure/clients/storageaccountclient/mockstorageaccountclient"
+	"k8s.io/legacy-cloud-providers/azure/retry"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestControllerGetCapabilities(t *testing.T) {
@@ -121,6 +122,12 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud = &azure.Cloud{}
 				mp := make(map[string]string)
 				mp["protocol"] = "unit-test"
+				mp["skuname"] = "unit-test"
+				mp["storageaccounttype"] = "unit-test"
+				mp["location"] = "unit-test"
+				mp["storageaccount"] = "unit-test"
+				mp["resourcegroup"] = "unit-test"
+				mp["containername"] = "unit-test"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
@@ -165,6 +172,7 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud = &azure.Cloud{}
 				mp := make(map[string]string)
 				mp["tags"] = "unit-test"
+				mp["storageaccounttype"] = "premium"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
@@ -247,7 +255,7 @@ func TestDeleteVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid create volume req",
+			name: "invalid delete volume req",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				req := &csi.DeleteVolumeRequest{
@@ -285,9 +293,10 @@ func TestDeleteVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 				req := &csi.DeleteVolumeRequest{
-					VolumeId: "unit#test#test",
+					VolumeId: "#test#test",
 				}
 				d.cloud = &azure.Cloud{}
+				d.cloud.ResourceGroup = "unit"
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
@@ -412,10 +421,11 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 					controllerServiceCapability,
 				}
 				req := &csi.ValidateVolumeCapabilitiesRequest{
-					VolumeId:           "unit#test#test",
+					VolumeId:           "#test#test",
 					VolumeCapabilities: stdVolumeCapabilities,
 				}
 				d.cloud = &azure.Cloud{}
+				d.cloud.ResourceGroup = "unit"
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
