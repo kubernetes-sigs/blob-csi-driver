@@ -20,12 +20,13 @@ import (
 	"bytes"
 	"context"
 	"flag"
-	"github.com/container-storage-interface/spec/lib/go/csi"
-	"google.golang.org/grpc"
-	"k8s.io/klog/v2"
 	"testing"
 
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+
+	"k8s.io/klog/v2"
 )
 
 func TestParseEndpoint(t *testing.T) {
@@ -146,7 +147,7 @@ func TestLogGRPC(t *testing.T) {
 	}
 }
 
-func TestNewNodeServiceCapability(t *testing.T) {
+func TestNewControllerServiceCapability(t *testing.T) {
 	tests := []struct {
 		cap csi.ControllerServiceCapability_RPC_Type
 	}{
@@ -168,6 +169,30 @@ func TestNewNodeServiceCapability(t *testing.T) {
 	}
 	for _, test := range tests {
 		resp := NewControllerServiceCapability(test.cap)
+		assert.NotNil(t, resp)
+		assert.Equal(t, resp.XXX_sizecache, int32(0))
+	}
+}
+
+func TestNewNodeServiceCapability(t *testing.T) {
+	tests := []struct {
+		cap csi.NodeServiceCapability_RPC_Type
+	}{
+		{
+			cap: csi.NodeServiceCapability_RPC_UNKNOWN,
+		},
+		{
+			cap: csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
+		},
+		{
+			cap: csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
+		},
+		{
+			cap: csi.NodeServiceCapability_RPC_EXPAND_VOLUME,
+		},
+	}
+	for _, test := range tests {
+		resp := NewNodeServiceCapability(test.cap)
 		assert.NotNil(t, resp)
 		assert.Equal(t, resp.XXX_sizecache, int32(0))
 	}

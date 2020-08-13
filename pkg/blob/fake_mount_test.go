@@ -63,3 +63,38 @@ func TestMountSensitive(t *testing.T) {
 		}
 	}
 }
+
+func TestIsLikelyNotMountPoint(t *testing.T) {
+	tests := []struct {
+		desc        string
+		file        string
+		expectedErr error
+	}{
+		{
+			desc:        "[Error] Mocked file error",
+			file:        "./error_is_likely_target",
+			expectedErr: fmt.Errorf("fake IsLikelyNotMountPoint: fake error"),
+		},
+		{desc: "[Success] Successful run",
+			file:        targetTest,
+			expectedErr: nil,
+		},
+		{
+			desc:        "[Success] Successful run not a mount",
+			file:        "./false_is_likely_target",
+			expectedErr: nil,
+		},
+	}
+
+	d := NewFakeDriver()
+	fakeMounter := &fakeMounter{}
+	d.mounter = &mount.SafeFormatAndMount{
+		Interface: fakeMounter,
+	}
+	for _, test := range tests {
+		_, err := d.mounter.IsLikelyNotMountPoint(test.file)
+		if !reflect.DeepEqual(err, test.expectedErr) {
+			t.Errorf("Unexpected error: %v", err)
+		}
+	}
+}

@@ -19,8 +19,10 @@ package blob
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"reflect"
+	"syscall"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -67,11 +69,9 @@ func TestNodeGetCapabilities(t *testing.T) {
 }
 
 func TestEnsureMountPoint(t *testing.T) {
-	// Setup
-	_ = makeDir(sourceTest)
-	_ = makeDir(targetTest)
-	d := NewFakeDriver()
-	d.mounter, _ = NewSafeMounter()
+	errorTarget := "./error_is_likely_target"
+	alreadyExistTarget := "./false_is_likely_exist_target"
+	azureunit := "./azure.go"
 
 	tests := []struct {
 		desc        string
@@ -79,30 +79,44 @@ func TestEnsureMountPoint(t *testing.T) {
 		expectedErr error
 	}{
 		{
-			desc:        "Not a mount point",
+			desc:        "[Error] Mocked by IsLikelyNotMountPoint",
+			target:      errorTarget,
+			expectedErr: fmt.Errorf("fake IsLikelyNotMountPoint: fake error"),
+		},
+		{
+			desc:        "[Error] Not a directory",
+			target:      azureunit,
+			expectedErr: &os.PathError{Op: "mkdir", Path: "./azure.go", Err: syscall.ENOTDIR},
+		},
+		{
+			desc:        "[Success] Successful run",
 			target:      targetTest,
 			expectedErr: nil,
 		},
 		{
-			desc:   "Error creating directory",
-			target: "./azure.go",
+			desc:        "[Success] Already existing mount",
+			target:      alreadyExistTarget,
+			expectedErr: nil,
 		},
+	}
+
+	// Setup
+	_ = makeDir(alreadyExistTarget)
+	d := NewFakeDriver()
+	fakeMounter := &fakeMounter{}
+	d.mounter = &mount.SafeFormatAndMount{
+		Interface: fakeMounter,
 	}
 
 	for _, test := range tests {
 		err := d.ensureMountPoint(test.target)
-		if test.desc == "Error creating directory" {
-			var e *os.PathError
-			if !errors.As(err, &e) {
-				t.Errorf("Unexpected Error: %v", err)
-			}
-		} else if !reflect.DeepEqual(err, test.expectedErr) {
+		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("desc: %s\n actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
 	}
 
 	// Clean up
-	err := os.RemoveAll(sourceTest)
+	err := os.RemoveAll(alreadyExistTarget)
 	assert.NoError(t, err)
 	err = os.RemoveAll(targetTest)
 	assert.NoError(t, err)

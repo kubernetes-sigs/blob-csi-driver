@@ -17,11 +17,16 @@ limitations under the License.
 package blob
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/stretchr/testify/assert"
+	azure2 "k8s.io/legacy-cloud-providers/azure"
 )
 
 // TestGetCloudProvider tests the func GetCloudProvider().
@@ -139,6 +144,87 @@ users:
 	}
 }
 
+func TestGetServicePrincipalToken(t *testing.T) {
+	env := azure.Environment{
+		ActiveDirectoryEndpoint: "unit-test",
+	}
+	resource := "unit-test"
+	d := NewFakeDriver()
+	d.cloud = &azure2.Cloud{}
+	_, err := d.getServicePrincipalToken(env, resource)
+	expectedErr := fmt.Errorf("parameter 'clientID' cannot be empty")
+	if !reflect.DeepEqual(expectedErr, err) {
+		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+	}
+	d.cloud.AADClientID = "unit-test"
+	d.cloud.AADClientSecret = "unit-test"
+	_, err = d.getServicePrincipalToken(env, resource)
+	assert.NoError(t, err)
+}
+
+func TestGetKeyvaultToken(t *testing.T) {
+	env := azure.Environment{
+		ActiveDirectoryEndpoint: "unit-test",
+		KeyVaultEndpoint:        "unit-test",
+	}
+	d := NewFakeDriver()
+	d.cloud = &azure2.Cloud{}
+	d.cloud.Environment = env
+	_, err := d.getKeyvaultToken()
+	expectedErr := fmt.Errorf("parameter 'clientID' cannot be empty")
+	if !reflect.DeepEqual(expectedErr, err) {
+		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+	}
+	d.cloud.AADClientID = "unit-test"
+	d.cloud.AADClientSecret = "unit-test"
+	_, err = d.getKeyvaultToken()
+	assert.NoError(t, err)
+
+}
+
+func TestInitializeKvClient(t *testing.T) {
+	env := azure.Environment{
+		ActiveDirectoryEndpoint: "unit-test",
+		KeyVaultEndpoint:        "unit-test",
+	}
+	d := NewFakeDriver()
+	d.cloud = &azure2.Cloud{}
+	d.cloud.Environment = env
+	_, err := d.initializeKvClient()
+	expectedErr := fmt.Errorf("parameter 'clientID' cannot be empty")
+	if !reflect.DeepEqual(expectedErr, err) {
+		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+	}
+	d.cloud.AADClientID = "unit-test"
+	d.cloud.AADClientSecret = "unit-test"
+	_, err = d.initializeKvClient()
+	assert.NoError(t, err)
+}
+
+func TestGetKeyVaultSecretContent(t *testing.T) {
+	env := azure.Environment{
+		ActiveDirectoryEndpoint: "unit-test",
+		KeyVaultEndpoint:        "unit-test",
+	}
+	d := NewFakeDriver()
+	d.cloud = &azure2.Cloud{}
+	d.cloud.Environment = env
+	valueURL := "unit-test"
+	secretName := "unit-test"
+	secretVersion := "v1"
+	_, err := d.getKeyVaultSecretContent(context.TODO(), valueURL, secretName, secretVersion)
+	expectedErr := fmt.Errorf("failed to get keyvaultClient: parameter 'clientID' cannot be empty")
+	if !reflect.DeepEqual(expectedErr, err) {
+		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+	}
+	d.cloud.AADClientID = "unit-test"
+	d.cloud.AADClientSecret = "unit-test"
+	expectedErr = fmt.Errorf("failed to use vaultURL(unit-test), sercretName(unit-test), secretVersion(v1) to get secret: keyvault.BaseClient#GetSecret: Failure preparing request: StatusCode=0 -- Original Error: autorest: No scheme detected in URL unit-test")
+	_, err = d.getKeyVaultSecretContent(context.TODO(), valueURL, secretName, secretVersion)
+	if !reflect.DeepEqual(expectedErr, err) {
+		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+	}
+}
 func createTestFile(path string) error {
 	f, err := os.Create(path)
 	if err != nil {

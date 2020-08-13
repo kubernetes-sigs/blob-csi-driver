@@ -37,3 +37,13 @@ func (f *fakeMounter) MountSensitive(source string, target string, fstype string
 
 	return nil
 }
+
+func (f *fakeMounter) IsLikelyNotMountPoint(file string) (bool, error) {
+	if strings.Contains(file, "error_is_likely") {
+		return false, fmt.Errorf("fake IsLikelyNotMountPoint: fake error")
+	}
+	if strings.Contains(file, "false_is_likely") {
+		return false, nil
+	}
+	return true, nil
+}
