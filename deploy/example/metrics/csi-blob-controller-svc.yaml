@@ -8,6 +8,6 @@ spec:
   selector:
   app: csi-blob-controller
   ports:
-    - port: 29624
-      targetPort: 29624
+    - port: 29634
+      targetPort: 29634
   type: ClusterIP

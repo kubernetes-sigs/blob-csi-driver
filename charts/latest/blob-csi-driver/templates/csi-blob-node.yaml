@@ -30,7 +30,7 @@ spec:
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
-            - --health-port=29623
+            - --health-port=29633
             - --v=5
           resources:
             limits:
@@ -74,7 +74,7 @@ spec:
             - "--nodeid=$(KUBE_NODE_NAME)"
             - "--metrics-address=0.0.0.0:{{ .Values.node.metricsPort }}"
           ports:
-            - containerPort: 29623
+            - containerPort: 29633
               name: healthz
               protocol: TCP
             - containerPort: {{ .Values.node.metricsPort }}

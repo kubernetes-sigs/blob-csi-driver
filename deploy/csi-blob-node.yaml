@@ -29,7 +29,7 @@ spec:
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
-            - --health-port=29623
+            - --health-port=29633
             - --v=5
           resources:
             limits:
@@ -72,12 +72,12 @@ spec:
             - "--v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
-            - "--metrics-address=0.0.0.0:29625"
+            - "--metrics-address=0.0.0.0:29635"
           ports:
-            - containerPort: 29623
+            - containerPort: 29633
               name: healthz
               protocol: TCP
-            - containerPort: 29625
+            - containerPort: 29635
               name: metrics
               protocol: TCP
           livenessProbe:
