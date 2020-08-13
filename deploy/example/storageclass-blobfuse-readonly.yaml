@@ -1,0 +1,17 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blob
+provisioner: blob.csi.azure.com
+parameters:
+  resourceGroup: EXISTING_RESOURCE_GROUP
+  storageAccount: EXISTING_STORAGE_ACCOUNT
+  containerName: EXISTING_CONTAINER_NAME
+reclaimPolicy: Retain  # if set as "Delete" container would be removed after pvc deletion
+volumeBindingMode: Immediate
+mountOptions:
+  - -o ro
+  - -o allow_other
+  - --file-cache-timeout-in-seconds=0
+  - --log-level=LOG_DEBUG  # only for debugging

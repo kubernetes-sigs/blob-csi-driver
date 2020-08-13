@@ -5,7 +5,6 @@ metadata:
   name: blob
 provisioner: blob.csi.azure.com
 parameters:
-  skuName: Standard_LRS  # available values: Standard_LRS, Standard_GRS, Standard_RAGRS
   resourceGroup: EXISTING_RESOURCE_GROUP
   storageAccount: EXISTING_STORAGE_ACCOUNT
   containerName: EXISTING_CONTAINER_NAME

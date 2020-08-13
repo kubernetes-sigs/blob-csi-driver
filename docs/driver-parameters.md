@@ -2,10 +2,10 @@
  > parameter names are case-insensitive
 
 ### Dynamic Provisioning
-  > get a [blobfuse example](../deploy/example/storageclass-blobfuse-csi.yaml)
+  > get a [blobfuse example](../deploy/example/storageclass-blobfuse.yaml)
  
-  > get a `mountOptions` [example](../deploy/example/storageclass-blobfuse-csi-mountoptions.yaml)
- 
+  > get a `mountOptions` [example](../deploy/example/storageclass-blobfuse-mountoptions.yaml)
+
   > get a [nfs example](../deploy/example/storageclass-blob-nfs.yaml)
 
 Name | Meaning | Example | Mandatory | Default value
