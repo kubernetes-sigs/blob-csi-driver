@@ -1,18 +1,21 @@
-# Install Azure Blob Storage CSI driver master version on a kubernetes cluster
+# Install Azure Blob Storage CSI driver v0.7.0 version on a kubernetes cluster
 
 If you have already installed Helm, you can also use it to install Azure Blob Storage CSI driver. Please see [Installation with Helm](../charts/README.md).
+
+#### Breaking change
+Since `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.azure.com`, volume created by `v0.6.0`(or prior version) could not be mounted by `v0.7.0` driver. If you have volumes created by `v0.6.0` version, just keep the driver running in your cluster.
 
 ## Install with kubectl
  - remote install
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/install-driver.sh | bash -s master --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v0.7.0/deploy/install-driver.sh | bash -s v0.7.0 --
 ```
 
  - local install
 ```console
 git clone https://github.com/kubernetes-sigs/blob-csi-driver.git
 cd blob-csi-driver
-./deploy/install-driver.sh master local
+./deploy/install-driver.sh v0.7.0 local
 ```
 
 - check pods status:
@@ -33,5 +36,5 @@ csi-blob-node-dr4s4                        3/3     Running   0          35s     
 
 - clean up Azure Blob Storage CSI driver
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/uninstall-driver.sh | bash -s master --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v0.7.0/deploy/uninstall-driver.sh | bash -s v0.7.0 --
 ```

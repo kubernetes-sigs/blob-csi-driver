@@ -1,3 +1,6 @@
+#### Breaking change
+Since `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.azure.com`, volume created by `v0.6.0`(or prior version) could not be mounted by `v0.7.0` driver. If you have volumes created by `v0.6.0` version, just keep the driver running in your cluster.
+
 # Installation with Helm 3
 
 Quick start instructions for the setup and configuration of Azure Blob Storage CSI driver using Helm.
@@ -28,7 +31,7 @@ $ helm search repo -l blob-csi-driver/
 ### Install a specific version of Helm chart
 Specify the version of the chart to be installed using the `--version` parameter. 
 ```console
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v0.6.0
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v0.7.0
 ```
 
 ## Uninstall
