@@ -5,7 +5,7 @@
 > supported OS: Linux
 
 #### Available regions
-`eastus`, `centralus`, `canadacentral`
+`eastus`, `centralus`, `westcentralus`, `australiasoutheast`, `northeurope`, `ukwest`, `koreacentral`, `koreasouth`, `canadacentral`
 
 #### Prerequisite
  - [Register the NFS 3.0 protocol feature with your subscription](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to#step-1-register-the-nfs-30-protocol-feature-with-your-subscription)
