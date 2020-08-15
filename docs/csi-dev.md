@@ -110,3 +110,19 @@ $  csc controller delete-snapshot
 ```console
 helm repo index charts --url=https://raw.githubusercontent.com/kubernetes-sigs/blobfuse-csi-driver/master/charts
 ```
+
+#### How to debug Dockerfile config
+ - create `blob.Dockerfile` file
+```
+FROM us.gcr.io/k8s-artifacts-prod/build-image/debian-base-amd64:v2.1.0
+RUN apt-get update && clean-install ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget
+# this is a workaround to install nfs-common and don't quit with error
+RUN apt update && apt install udev util-linux mount nfs-common -y || true
+LABEL maintainers="andyzhangx"
+LABEL description="Azure Blob Storage CSI driver"
+```
+ - build image from `blob.Dockerfile`
+```console
+docker build --no-cache -t andyzhangx/blobnfs:v1 -f ./blob.Dockerfile .
+docker run --network host -it andyzhangx/blobnfs:v1 sh
+```
