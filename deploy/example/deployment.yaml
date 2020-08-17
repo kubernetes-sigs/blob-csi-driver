@@ -28,6 +28,8 @@ spec:
         app: nginx
       name: deployment-blob
     spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
       containers:
         - name: deployment-blob
           image: nginx
