@@ -120,8 +120,8 @@ spec:
               name: blob-cache
           resources:
             limits:
-              cpu: 800m
-              memory: 800Mi
+              cpu: 200m
+              memory: 2100Mi
             requests:
               cpu: 10m
               memory: 20Mi
