@@ -2,11 +2,13 @@
  > parameter names are case-insensitive
 
 ### Dynamic Provisioning
-  > get a [blobfuse example](../deploy/example/storageclass-blobfuse.yaml)
+  > [blobfuse example](../deploy/example/storageclass-blobfuse.yaml)
  
-  > get a `mountOptions` [example](../deploy/example/storageclass-blobfuse-mountoptions.yaml)
+  > [blobfuse mountOptions example](../deploy/example/storageclass-blobfuse-mountoptions.yaml)
 
-  > get a [nfs example](../deploy/example/storageclass-blob-nfs.yaml)
+  > [blobfuse Managed Identity and Service Principal Name auth example](../deploy/example/storageclass-blobfuse-msi.yaml)
+
+  > [nfs example](../deploy/example/storageclass-blob-nfs.yaml)
 
 Name | Meaning | Example | Mandatory | Default value
 --- | --- | --- | --- | ---
@@ -24,9 +26,9 @@ tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/mana
 Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check [here](https://github.com/Azure/Azure-storage-fuse#mount-options) for more mountoptions.
 
 ### Static Provisioning(bring your own storage container)
-  > get an [example](../deploy/example/pv-blobfuse-csi.yaml)
-  >
-  > get a key vault [example](../deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml)
+  > [blobfuse example](../deploy/example/pv-blobfuse-csi.yaml)
+
+  > [blobfuse key vault example](../deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml)
 
 Name | Meaning | Available Value | Mandatory | Default value
 --- | --- | --- | --- | ---
