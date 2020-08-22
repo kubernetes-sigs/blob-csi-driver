@@ -9,6 +9,7 @@ require (
 	github.com/container-storage-interface/spec v1.2.0
 	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.3.2
+	github.com/kubernetes-csi/csi-lib-utils v0.7.0
 	github.com/onsi/ginkgo v1.11.0
 	github.com/onsi/gomega v1.7.0
 	github.com/pborman/uuid v1.2.0
