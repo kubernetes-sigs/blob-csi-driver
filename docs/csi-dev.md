@@ -116,8 +116,10 @@ helm repo index charts --url=https://raw.githubusercontent.com/kubernetes-sigs/b
 ```
 FROM us.gcr.io/k8s-artifacts-prod/build-image/debian-base-amd64:v2.1.0
 RUN apt-get update && clean-install ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget
-# this is a workaround to install nfs-common and don't quit with error
-RUN apt update && apt install udev util-linux mount nfs-common -y || true
+RUN wget -O /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb && dpkg -i /tmp/packages-microsoft-prod.deb && apt-get update && apt install blobfuse fuse -y && rm -f /tmp/packages-microsoft-prod.deb
+RUN apt remove wget -y
+# this is a workaround to install nfs-common & nfs-kernel-server and don't quit with error
+RUN apt update && apt install nfs-common nfs-kernel-server -y || true
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 ```

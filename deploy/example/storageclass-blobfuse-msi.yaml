@@ -1,0 +1,22 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blob
+provisioner: blob.csi.azure.com
+parameters:
+  resourceGroup: EXISTING_RESOURCE_GROUP
+  storageAccount: EXISTING_STORAGE_ACCOUNT
+  containerName: EXISTING_CONTAINER_NAME
+  # refer to https://github.com/Azure/azure-storage-fuse#environment-variables
+  AzureStorageIdentityClientID:
+  AzureStorageIdentityObjectID:
+  AzureStorageIdentityResourceID:
+  MSIEndpoint:
+  AzureStorageSPNClientID:
+  AzureStorageSPNTenantID:
+  AzureStorageAADEndpoint:
+volumeBindingMode: Immediate
+mountOptions:
+  - -o allow_other
+  - --file-cache-timeout-in-seconds=120
