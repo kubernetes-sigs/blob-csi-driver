@@ -20,6 +20,7 @@ spec:
       priorityClassName: system-node-critical
       tolerations:
         - operator: "Exists"
+      {{- include "blob.pullSecrets" . | indent 6 }}
       containers:
         - name: liveness-probe
           imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
