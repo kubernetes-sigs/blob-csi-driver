@@ -26,3 +26,10 @@ csi-blob-node-dr4s4                        3/3     Running   0          7m4s    
 ```console
 $ kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 ```
+
+### get blobfuse driver version
+```console
+# kubectl exec -it csi-blob-node-fmbqw -n kube-system -c blob -- sh
+# blobfuse -v
+blobfuse 1.2.4
+```

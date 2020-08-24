@@ -6,7 +6,7 @@ metadata:
   namespace: kube-system
 spec:
   selector:
-  app: csi-blob-controller
+    app: csi-blob-controller
   ports:
     - port: 29634
       targetPort: 29634
