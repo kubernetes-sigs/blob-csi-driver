@@ -22,8 +22,8 @@ metadata:
   name: blob
 provisioner: blob.csi.azure.com
 parameters:
-  resourceGroup: EXISTING_RESOURCE_GROUP # Resource group name, not resource id
-  storageAccount: EXISTING_STORAGE_ACCOUNT # Storage account name, not resource id
+  resourceGroup: EXISTING_RESOURCE_GROUP_NAME
+  storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
   containerName: EXISTING_CONTAINER_NAME
 reclaimPolicy: Retain  # If set as "Delete" container would be removed after pvc deletion
 volumeBindingMode: Immediate
