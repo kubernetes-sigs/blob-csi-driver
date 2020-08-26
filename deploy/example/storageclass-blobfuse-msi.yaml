@@ -5,8 +5,8 @@ metadata:
   name: blob
 provisioner: blob.csi.azure.com
 parameters:
-  resourceGroup: EXISTING_RESOURCE_GROUP
-  storageAccount: EXISTING_STORAGE_ACCOUNT
+  resourceGroup: EXISTING_RESOURCE_GROUP_NAME
+  storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
   containerName: EXISTING_CONTAINER_NAME
   # refer to https://github.com/Azure/azure-storage-fuse#environment-variables
   AzureStorageIdentityClientID:

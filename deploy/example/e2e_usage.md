@@ -23,12 +23,12 @@ metadata:
 provisioner: blob.csi.azure.com
 parameters:
   resourceGroup: EXISTING_RESOURCE_GROUP_NAME
-  storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
+  storageAccount: EXISTING_STORAGE_ACCOUNT_NAME  # cross subscription is not supported
   containerName: EXISTING_CONTAINER_NAME
 reclaimPolicy: Retain  # If set as "Delete" container would be removed after pvc deletion
 volumeBindingMode: Immediate
 ```
- > As of this writing blob-csi-driver doesn't support storage accounts outside the cluster's subscription
+
 ```console
 kubectl create -f storageclass-blobfuse-existing-container.yaml
 ```
