@@ -13,7 +13,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
 
 ### Static Provisioning(use an existing storage account)
 #### Option#1: use existing credentials in k8s cluster
- > make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
+ > Make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
  - Download [blob storage CSI storage class](https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blobfuse-existing-container.yaml), edit `resourceGroup`, `storageAccount`, `containerName` in storage class
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -22,12 +22,13 @@ metadata:
   name: blob
 provisioner: blob.csi.azure.com
 parameters:
-  resourceGroup: EXISTING_RESOURCE_GROUP
-  storageAccount: EXISTING_STORAGE_ACCOUNT
+  resourceGroup: EXISTING_RESOURCE_GROUP_NAME
+  storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
   containerName: EXISTING_CONTAINER_NAME
-reclaimPolicy: Retain  # if set as "Delete" container would be removed after pvc deletion
+reclaimPolicy: Retain  # If set as "Delete" container would be removed after pvc deletion
 volumeBindingMode: Immediate
 ```
+ > As of this writing blob-csi-driver doesn't support storage accounts outside the cluster's subscription
 ```console
 kubectl create -f storageclass-blobfuse-existing-container.yaml
 ```
