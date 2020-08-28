@@ -1,5 +1,5 @@
-## CSI driver E2E usage example
-create a pod with blob mount on linux
+## CSI driver example
+
 ### Dynamic Provisioning (create storage account and container by Blob Storage CSI driver)
  - Create a blob storage CSI storage class
 ```console
@@ -79,7 +79,7 @@ kubectl create -f pv-blobfuse-csi.yaml
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pvc-blob-csi-static.yaml
 ```
 
-#### 2. Validate PVC status and create an nginx pod
+#### Validate PVC status and create an nginx pod
  > make sure pvc is created and in `Bound` status
 ```console
 watch kubectl describe pvc pvc-blob
@@ -90,7 +90,7 @@ watch kubectl describe pvc pvc-blob
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/nginx-pod-blob.yaml
 ```
 
-#### 3. enter the pod container to do validation
+#### Enter container to verify
  - watch the status of pod until its Status changed from `Pending` to `Running` and then enter the pod container
 ```console
 $ watch kubectl describe po nginx-blob
