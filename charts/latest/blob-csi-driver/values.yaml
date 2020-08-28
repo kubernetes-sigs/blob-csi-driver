@@ -27,7 +27,8 @@ rbac:
   create: true
 
 controller:
+  metricsPort: 29634
   replicas: 2
 
 node:
-  metricsPort: 29625
+  metricsPort: 29635

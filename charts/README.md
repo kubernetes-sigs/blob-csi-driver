@@ -64,6 +64,9 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `serviceAccount.create`                           | whether create service account of csi-blob-controller  | true                                                              |
 | `rbac.create`                                     | whether create rbac of csi-blob-controller             | true                                                              |
 | `controller.replicas`                             | the replicas of csi-blob-controller                    | 2                                                                 |
+| `controller.metricsPort`                          | metrics port of csi-blob-controller                    | 29634                                                                 |
+| `node.metricsPort`                                | metrics port of csi-blob-node                          | 29635                                                                |
+
 ## Troubleshooting
 
 If there are some errors when using helm to install, follow the steps to debug:
