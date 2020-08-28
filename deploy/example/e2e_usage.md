@@ -6,9 +6,9 @@ create a pod with blob mount on linux
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blobfuse.yaml
 ```
 
- - Create a blob storage CSI PVC
+ - Create a statefulset with blob storage mount
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pvc-blob-csi.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
 ```
 
 ### Static Provisioning(use an existing storage account)
@@ -97,7 +97,7 @@ $ watch kubectl describe po nginx-blob
 $ kubectl exec -it nginx-blob -- bash
 Filesystem      Size  Used Avail Use% Mounted on
 ...
-blobfuse         30G  8.9G   21G  31% /mnt/blob
+blobfuse         14G   41M   13G   1% /mnt/blob
 /dev/sda1        30G  8.9G   21G  31% /etc/hosts
 ...
 ```
