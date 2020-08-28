@@ -2,8 +2,17 @@ apiVersion: v1
 entries:
   blob-csi-driver:
   - apiVersion: v1
+    appVersion: v0.8.0
+    created: "2020-08-28T01:41:53.654464085Z"
+    description: Azure Blob Storage CSI driver
+    digest: 8ac9fc62030ff7c7dd6deaa51db410d9b782578149347688b8f66b37ec33960f
+    name: blob-csi-driver
+    urls:
+    - https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts/v0.8.0/blob-csi-driver-v0.8.0.tgz
+    version: v0.8.0
+  - apiVersion: v1
     appVersion: v0.7.0
-    created: "2020-08-14T02:58:30.518545111Z"
+    created: "2020-08-28T01:41:53.653532676Z"
     description: Azure Blob Storage CSI driver
     digest: 6d758b8e4a480a8d006f7e73c51d32ea0b568b8ba1364d4ac33549e3bedfc9a7
     name: blob-csi-driver
@@ -12,7 +21,16 @@ entries:
     version: v0.7.0
   - apiVersion: v1
     appVersion: latest
-    created: "2020-08-14T02:58:30.518080406Z"
+    created: "2020-08-28T01:41:53.653993181Z"
+    description: Azure Blob Storage CSI driver
+    digest: a85285af0500bfb2160f910863db8174f9e7399f845d784ff99dda7812accfdf
+    name: blob-csi-driver
+    urls:
+    - https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts/v0.8.0/blob-csi-driver-latest.tgz
+    version: latest
+  - apiVersion: v1
+    appVersion: latest
+    created: "2020-08-28T01:41:53.650810248Z"
     description: Azure Blob Storage CSI driver
     digest: a85285af0500bfb2160f910863db8174f9e7399f845d784ff99dda7812accfdf
     name: blob-csi-driver
@@ -21,7 +39,7 @@ entries:
     version: latest
   - apiVersion: v1
     appVersion: latest
-    created: "2020-08-14T02:58:30.515604779Z"
+    created: "2020-08-28T01:41:53.649056429Z"
     description: Azure Blob Storage CSI driver
     digest: a85285af0500bfb2160f910863db8174f9e7399f845d784ff99dda7812accfdf
     name: blob-csi-driver
@@ -31,7 +49,7 @@ entries:
   blobfuse-csi-driver:
   - apiVersion: v1
     appVersion: v0.6.0
-    created: "2020-08-14T02:58:30.5175966Z"
+    created: "2020-08-28T01:41:53.650380443Z"
     description: BlobFuse Container Storage Interface (CSI) Storage Plugin
     digest: 2bea484bc1e87097b048ab2e1615683b8b7db614059fb624a0a2b18ad0920926
     name: blobfuse-csi-driver
@@ -40,7 +58,7 @@ entries:
     version: v0.6.0
   - apiVersion: v1
     appVersion: v0.5.0
-    created: "2020-08-14T02:58:30.517063195Z"
+    created: "2020-08-28T01:41:53.649937339Z"
     description: BlobFuse Container Storage Interface (CSI) Storage Plugin
     digest: 11441a6025c319e97c0605f520c4be063eadc482670655bb6ecc4426bee2d49c
     name: blobfuse-csi-driver
@@ -49,11 +67,11 @@ entries:
     version: v0.5.0
   - apiVersion: v1
     appVersion: v0.4.0
-    created: "2020-08-14T02:58:30.516061584Z"
+    created: "2020-08-28T01:41:53.649476834Z"
     description: BlobFuse Container Storage Interface (CSI) Storage Plugin
     digest: 263e474a08598f1c7f518c1efed43eb23d9f12b146b3c47deda77aa99c0ca385
     name: blobfuse-csi-driver
     urls:
     - https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts/v0.4.0/blobfuse-csi-driver-v0.4.0.tgz
     version: v0.4.0
-generated: "2020-08-14T02:58:30.51392056Z"
+generated: "2020-08-28T01:41:53.648447323Z"
