@@ -130,3 +130,7 @@ build-push: blob-container
 clean:
 	go clean -r -x
 	-rm -rf _output
+
+.PHONY: create-metrics-svc
+create-metrics-svc:
+	kubectl create -f deploy/example/metrics/csi-blob-controller-svc.yaml

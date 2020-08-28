@@ -88,11 +88,17 @@ var _ = ginkgo.BeforeSuite(func() {
 		e2eBootstrap := testCmd{
 			command:  "make",
 			args:     []string{"e2e-bootstrap"},
-			startLog: "Installing Azure Blob Storage CSI driver...",
+			startLog: "Installing Azure Blob Storage CSI driver ...",
 			endLog:   "Azure Blob Storage CSI driver installed",
 		}
-		execTestCmd([]testCmd{e2eBootstrap})
 
+		createMetricsSVC := testCmd{
+			command:  "make",
+			args:     []string{"create-metrics-svc"},
+			startLog: "create metrics service ...",
+			endLog:   "metrics service created",
+		}
+		execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
 	}
 	nodeid := os.Getenv("nodeid")
 	kubeconfig := os.Getenv(kubeconfigEnvVar)

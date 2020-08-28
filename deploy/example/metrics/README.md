@@ -15,5 +15,5 @@ csi-blob-controller   ClusterIP   10.0.156.8   20.39.0.113   29634/TCP   32m
 3. Run following command to get cloudprovider_azure metrics
 ```console
 ip=`kubectl get svc csi-blob-controller -n kube-system | grep blob | awk '{print $4}'`
-curl http://$ip:29634/metrics | grep cloudprovider_azure
+curl http://$ip:29634/metrics | grep cloudprovider_azure | grep -e sum -e count
 ```
