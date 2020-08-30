@@ -45,6 +45,9 @@ Please refer to [install Azure Blob Storage CSI driver](https://github.com/kuber
 ## Kubernetes Development
 Please refer to [development guide](./docs/csi-dev.md)
 
+### View CI Results
+Check testgrid [provider-azure-blobfuse-csi-driver](https://testgrid.k8s.io/provider-azure-blobfuse-csi-driver) dashboard.
+
 ### Links
  - [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse)
  - [Kubernetes CSI Documentation](https://kubernetes-csi.github.io/docs/)
