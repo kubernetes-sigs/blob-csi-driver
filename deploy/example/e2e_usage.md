@@ -1,4 +1,5 @@
 ## CSI driver example
+> refer to [detailed driver parameters](../../docs/driver-parameters.md)
 
 ### Dynamic Provisioning (create storage account and blob container by CSI driver)
  - Create CSI storage class
@@ -70,7 +71,7 @@ spec:
   csi:
     driver: blob.csi.azure.com
     readOnly: false
-    volumeHandle: arbitrary-volumeid
+    volumeHandle: uniqe-volumeid  # make sure this volumeid is unique in the cluster
     volumeAttributes:
       containerName: EXISTING_CONTAINER_NAME
     nodeStageSecretRef:
