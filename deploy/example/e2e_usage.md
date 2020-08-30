@@ -1,5 +1,5 @@
 ## CSI driver example
-> refer to [detailed driver parameters](../../docs/driver-parameters.md)
+> refer to [driver parameters](../../docs/driver-parameters.md) for more detailed usage
 
 ### Dynamic Provisioning (create storage account and blob container by CSI driver)
  - Create CSI storage class
