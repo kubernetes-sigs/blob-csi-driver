@@ -1,7 +1,7 @@
 ## CSI driver example
 
-### Dynamic Provisioning (create storage account and container by Blob Storage CSI driver)
- - Create a blob storage CSI storage class
+### Dynamic Provisioning (create storage account and blob container by CSI driver)
+ - Create CSI storage class
 ```console
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blobfuse.yaml
 ```
@@ -11,9 +11,19 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
 ```
 
+ - Execute `df -h` command in the container
+```
+# kubectl exec -it statefulset-blob-0 sh
+# df -h
+Filesystem      Size  Used Avail Use% Mounted on
+...
+blobfuse         14G   41M   13G   1% /mnt/blob
+...
+```
+
 ### Static Provisioning(use an existing storage account)
-#### Option#1: use existing credentials in k8s cluster
- > Make sure the existing credentials in k8s cluster(e.g. service principal, msi) could access the specified storage account
+#### Option#1: Use storage class
+> make sure cluster identity could access storage account
  - Download [blob storage CSI storage class](https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blobfuse-existing-container.yaml), edit `resourceGroup`, `storageAccount`, `containerName` in storage class
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -29,16 +39,13 @@ reclaimPolicy: Retain  # If set as "Delete" container would be removed after pvc
 volumeBindingMode: Immediate
 ```
 
+ - Create storage class and PVC
 ```console
 kubectl create -f storageclass-blobfuse-existing-container.yaml
-```
-
- - Create a blob storage CSI PVC
-```console
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pvc-blob-csi.yaml
 ```
 
-#### Option#2: provide storage account name and key(or sastoken)
+#### Option#2: Use secret
  - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key(or sastoken)
 ```console
 kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountkey="KEY" --type=Opaque
@@ -70,35 +77,29 @@ spec:
       name: azure-secret
       namespace: default
 ```
+
+ - Create PV and PVC
 ```console
 kubectl create -f pv-blobfuse-csi.yaml
-```
-
- - Create a blob storage CSI PVC which would be bound to the above PV
-```console
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pvc-blob-csi-static.yaml
 ```
 
-#### Validate PVC status and create an nginx pod
- > make sure pvc is created and in `Bound` status
+ - make sure pvc is created and in `Bound` status after a while
 ```console
-watch kubectl describe pvc pvc-blob
+kubectl describe pvc pvc-blob
 ```
 
- - create a pod with blob storage CSI PVC
+#### create a pod with PVC mount
 ```console
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/nginx-pod-blob.yaml
 ```
 
-#### Enter container to verify
- - watch the status of pod until its Status changed from `Pending` to `Running` and then enter the pod container
+ - Execute `df -h` command in the container
 ```console
-$ watch kubectl describe po nginx-blob
 $ kubectl exec -it nginx-blob -- bash
 Filesystem      Size  Used Avail Use% Mounted on
 ...
 blobfuse         14G   41M   13G   1% /mnt/blob
-/dev/sda1        30G  8.9G   21G  31% /etc/hosts
 ...
 ```
 In the above example, there is a `/mnt/blob` directory mounted as `blobfuse` filesystem.
