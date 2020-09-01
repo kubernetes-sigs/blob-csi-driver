@@ -24,10 +24,11 @@ ifndef PUBLISH
 override IMAGE_VERSION := e2e-$(GIT_COMMIT)
 endif
 endif
-IMAGE_TAG = $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
+IMAGE_TAG ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
 IMAGE_TAG_LATEST = $(REGISTRY)/$(IMAGE_NAME):latest
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS ?= "-X ${PKG}/pkg/blob.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blob.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blob.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
+E2E_HELM_OPTIONS ?= --set image.blob.pullPolicy=IfNotPresent --set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.blob.tag=$(IMAGE_VERSION)
 GINKGO_FLAGS = -ginkgo.noColor -ginkgo.v
 GO111MODULE = off
 GOPATH ?= $(shell go env GOPATH)
@@ -62,9 +63,7 @@ e2e-bootstrap: install-helm
 	# Only build and push the image if it does not exist in the registry
 	docker pull $(IMAGE_TAG) || make blob-container push
 	helm install charts/latest/blob-csi-driver -n blob-csi-driver --namespace kube-system --wait \
-		--set image.blob.pullPolicy=IfNotPresent \
-		--set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) \
-		--set image.blob.tag=$(IMAGE_VERSION)
+		$(E2E_HELM_OPTIONS)
 
 .PHONY: install-helm
 install-helm:
