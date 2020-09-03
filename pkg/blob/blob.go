@@ -433,3 +433,34 @@ func isSupportedProtocol(protocol string) bool {
 	}
 	return false
 }
+
+// get storage account from secrets map
+func getStorageAccount(secrets map[string]string) (string, string, error) {
+	if secrets == nil {
+		return "", "", fmt.Errorf("unexpected: getStorageAccount secrets is nil")
+	}
+
+	var accountName, accountKey string
+	for k, v := range secrets {
+		switch strings.ToLower(k) {
+		case "accountname":
+			accountName = v
+		case "azurestorageaccountname": // for compatibility with built-in azurefile plugin
+			accountName = v
+		case "accountkey":
+			accountKey = v
+		case "azurestorageaccountkey": // for compatibility with built-in azurefile plugin
+			accountKey = v
+		}
+	}
+
+	if accountName == "" {
+		return "", "", fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", secrets)
+	}
+	if accountKey == "" {
+		return "", "", fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets(%v)", secrets)
+	}
+
+	klog.V(4).Infof("got storage account(%s) from secret", accountName)
+	return accountName, accountKey, nil
+}
