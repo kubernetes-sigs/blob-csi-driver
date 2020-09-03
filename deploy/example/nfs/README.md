@@ -4,7 +4,7 @@
 #### Feature Status: Alpha
 > supported OS: Linux
 
-#### Supported CSI driver version: `v0.7.0`+
+#### Supported CSI driver version: `v0.7.0`
 
 #### [Available regions](https://azure.microsoft.com/en-us/updates/nfs-30-support-for-azure-blob-storage-preview-region-expansion/)
 `eastus`, `centralus`, `westcentralus`, `australiasoutheast`, `northeurope`, `ukwest`, `koreacentral`, `koreasouth`, `canadacentral`
