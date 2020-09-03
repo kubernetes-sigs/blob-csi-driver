@@ -64,4 +64,7 @@ Filesystem      Size  Used Avail Use% Mounted on
 /dev/sda1                                                                                 29G   11G   19G  37% /etc/hosts
 accountname.blob.core.windows.net:/accountname/pvc-cce02240-5d13-4bcb-b9eb-f9c7eeaaa640  256T     0  256T   0% /mnt/blob
 ...
+# ls -lt
+total 2
+-rw-r--r-- 1 root root 1120 Sep  3 06:52 outfile
 ```
