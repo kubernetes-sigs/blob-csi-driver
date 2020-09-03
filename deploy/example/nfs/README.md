@@ -4,6 +4,8 @@
 #### Feature Status: Alpha
 > supported OS: Linux
 
+#### Supported CSI driver version: `v0.7.0`+
+
 #### [Available regions](https://azure.microsoft.com/en-us/updates/nfs-30-support-for-azure-blob-storage-preview-region-expansion/)
 `eastus`, `centralus`, `westcentralus`, `australiasoutheast`, `northeurope`, `ukwest`, `koreacentral`, `koreasouth`, `canadacentral`
 
@@ -15,7 +17,7 @@ az feature register --name PremiumHns --namespace Microsoft.Storage
 az provider register --namespace Microsoft.Storage
 ```
 
- - [install CSI driver](https://github.com/kubernetes-sigs/blob-csi-driver/blob/master/docs/install-csi-driver-master.md) (only master version supported now)
+ - [install CSI driver](https://github.com/kubernetes-sigs/blob-csi-driver/blob/master/docs/install-csi-driver-master.md)
  - Create a `Premium_LRS` Azure storage account with following configurations to support NFS 3.0
    - account kind: `BlockBlobStorage`
    - Replication: `Locally-redundant storage (LRS)`
