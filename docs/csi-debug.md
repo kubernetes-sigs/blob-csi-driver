@@ -33,3 +33,15 @@ $ kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 # blobfuse -v
 blobfuse 1.2.4
 ```
+
+### troubleshooting connection failure
+
+Blobfuse mount will fail due to incorrect storage account name, key or container name, run below commands to check whether blobfuse mount would work on agent node:
+```console
+mkdir test
+export AZURE_STORAGE_ACCOUNT=
+export AZURE_STORAGE_ACCESS_KEY=
+# only for sovereign cloud
+# export AZURE_STORAGE_BLOB_ENDPOINT=<youraccountname>.blob.core.chinacloudapi.cn
+blobfuse test --container-name=CONTAINER-NAME --tmp-path=/tmp/blobfuse -o allow_other --file-cache-timeout-in-seconds=120
+```
