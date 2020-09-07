@@ -2,8 +2,7 @@
 [NFS 3.0 protocol support on Azure Blob storage](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support) is now in Preview. This service is best suited for large scale read-heavy sequential access workload where data will be ingested once and minimally modified further. E.g. large scale analytic data, backup and archive, NFS apps for media rendering, and genomic sequencing etc. It offers lowest total cost of ownership.
 
 #### Feature Status: Alpha
-> supported OS: Linux
-
+#### Supported OS: Linux
 #### Supported CSI driver version: `v0.7.0`
 
 #### [Available regions](https://azure.microsoft.com/en-us/updates/nfs-30-support-for-azure-blob-storage-preview-region-expansion/)
