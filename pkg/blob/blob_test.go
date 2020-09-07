@@ -21,10 +21,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"k8s.io/legacy-cloud-providers/azure/retry"
 	"os"
 	"reflect"
 	"testing"
+
+	"k8s.io/legacy-cloud-providers/azure/retry"
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
 	"github.com/golang/mock/gomock"
@@ -598,5 +599,104 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestGetStorageAccount(t *testing.T) {
+	emptyAccountKeyMap := map[string]string{
+		"accountname": "testaccount",
+		"accountkey":  "",
+	}
+
+	emptyAccountNameMap := map[string]string{
+		"azurestorageaccountname": "",
+		"azurestorageaccountkey":  "testkey",
+	}
+
+	emptyAzureAccountKeyMap := map[string]string{
+		"azurestorageaccountname": "testaccount",
+		"azurestorageaccountkey":  "",
+	}
+
+	emptyAzureAccountNameMap := map[string]string{
+		"azurestorageaccountname": "",
+		"azurestorageaccountkey":  "testkey",
+	}
+
+	tests := []struct {
+		options   map[string]string
+		expected1 string
+		expected2 string
+		expected3 error
+	}{
+		{
+			options: map[string]string{
+				"accountname": "testaccount",
+				"accountkey":  "testkey",
+			},
+			expected1: "testaccount",
+			expected2: "testkey",
+			expected3: nil,
+		},
+		{
+			options: map[string]string{
+				"azurestorageaccountname": "testaccount",
+				"azurestorageaccountkey":  "testkey",
+			},
+			expected1: "testaccount",
+			expected2: "testkey",
+			expected3: nil,
+		},
+		{
+			options: map[string]string{
+				"accountname": "",
+				"accountkey":  "",
+			},
+			expected1: "",
+			expected2: "",
+			expected3: fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(map[accountname: accountkey:])"),
+		},
+		{
+			options:   emptyAccountKeyMap,
+			expected1: "",
+			expected2: "",
+			expected3: fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets(%v)", emptyAccountKeyMap),
+		},
+		{
+			options:   emptyAccountNameMap,
+			expected1: "",
+			expected2: "",
+			expected3: fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", emptyAccountNameMap),
+		},
+		{
+			options:   emptyAzureAccountKeyMap,
+			expected1: "",
+			expected2: "",
+			expected3: fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets(%v)", emptyAzureAccountKeyMap),
+		},
+		{
+			options:   emptyAzureAccountNameMap,
+			expected1: "",
+			expected2: "",
+			expected3: fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", emptyAzureAccountNameMap),
+		},
+		{
+			options:   nil,
+			expected1: "",
+			expected2: "",
+			expected3: fmt.Errorf("unexpected: getStorageAccount secrets is nil"),
+		},
+	}
+
+	for _, test := range tests {
+		result1, result2, result3 := getStorageAccount(test.options)
+		if !reflect.DeepEqual(result1, test.expected1) || !reflect.DeepEqual(result2, test.expected2) {
+			t.Errorf("input: %q, getStorageAccount result1: %q, expected1: %q, result2: %q, expected2: %q, result3: %q, expected3: %q", test.options, result1, test.expected1, result2, test.expected2,
+				result3, test.expected3)
+		} else {
+			if result1 == "" || result2 == "" {
+				assert.Error(t, result3)
+			}
+		}
 	}
 }
