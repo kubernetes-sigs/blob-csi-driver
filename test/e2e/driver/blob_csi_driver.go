@@ -70,7 +70,7 @@ func (d *blobCSIDriver) GetPersistentVolume(volumeID string, fsType string, size
 			},
 		},
 		Spec: v1.PersistentVolumeSpec{
-			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteMany},
 			Capacity: v1.ResourceList{
 				v1.ResourceName(v1.ResourceStorage): resource.MustParse(size),
 			},

@@ -226,7 +226,7 @@ func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.Pe
 		Spec: v1.PersistentVolumeClaimSpec{
 			StorageClassName: &storageClassName,
 			AccessModes: []v1.PersistentVolumeAccessMode{
-				v1.ReadWriteOnce,
+				v1.ReadWriteMany,
 			},
 			Resources: v1.ResourceRequirements{
 				Requests: v1.ResourceList{
