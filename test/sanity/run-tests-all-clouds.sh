@@ -17,21 +17,12 @@
 set -eo pipefail
 
 function install_csi_sanity_bin {
-  mkdir -p $GOPATH/src/github.com/kubernetes-csi/csi-test
-  git clone https://github.com/kubernetes-csi/csi-test.git -b v2.2.0 $GOPATH/src/github.com/kubernetes-csi/csi-test
-  pushd $GOPATH/src/github.com/kubernetes-csi/csi-test/cmd/csi-sanity
-  make && make install
+  echo 'Installing CSI sanity test binary...'
+  git clone https://github.com/kubernetes-csi/csi-test.git -b v2.2.0
+  pushd csi-test/cmd/csi-sanity
+  make
   popd
 }
-
-function cleanup {
-  echo 'pkill -f blobplugin'
-  pkill -f blobplugin
-  echo 'Deleting CSI sanity test binary'
-  rm -rf $GOPATH/src/github.com/kubernetes-csi
-}
-
-trap cleanup EXIT
 
 # copy blobfuse binary
 mkdir -p /usr/blob

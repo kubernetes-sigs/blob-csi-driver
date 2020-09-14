@@ -31,6 +31,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
 
+	testingexec "k8s.io/utils/exec/testing"
 	"k8s.io/utils/mount"
 )
 
@@ -186,7 +187,12 @@ func TestNodePublishVolume(t *testing.T) {
 	_ = makeDir(sourceTest)
 	_ = makeDir(targetTest)
 	d := NewFakeDriver()
-	d.mounter, _ = NewSafeMounter()
+	fakeMounter := &fakeMounter{}
+	fakeExec := &testingexec.FakeExec{ExactOrder: true}
+	d.mounter = &mount.SafeFormatAndMount{
+		Interface: fakeMounter,
+		Exec:      fakeExec,
+	}
 
 	for _, test := range tests {
 		_, err := d.NodePublishVolume(context.Background(), &test.req)
@@ -233,9 +239,13 @@ func TestNodeUnpublishVolume(t *testing.T) {
 	_ = makeDir(sourceTest)
 	_ = makeDir(targetTest)
 	d := NewFakeDriver()
-	d.mounter, _ = NewSafeMounter()
-	mountOptions := []string{"bind"}
-	_ = d.mounter.Mount(sourceTest, targetTest, "", mountOptions)
+
+	fakeMounter := &fakeMounter{}
+	fakeExec := &testingexec.FakeExec{ExactOrder: true}
+	d.mounter = &mount.SafeFormatAndMount{
+		Interface: fakeMounter,
+		Exec:      fakeExec,
+	}
 
 	for _, test := range tests {
 		_, err := d.NodeUnpublishVolume(context.Background(), &test.req)

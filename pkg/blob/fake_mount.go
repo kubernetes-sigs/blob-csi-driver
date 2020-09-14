@@ -27,6 +27,17 @@ type fakeMounter struct {
 	mount.FakeMounter
 }
 
+// Mount overrides mount.FakeMounter.Mount.
+func (f *fakeMounter) Mount(source string, target string, fstype string, options []string) error {
+	if strings.Contains(source, "error_mount") {
+		return fmt.Errorf("fake Mount: source error")
+	} else if strings.Contains(target, "error_mount") {
+		return fmt.Errorf("fake Mount: target error")
+	}
+
+	return nil
+}
+
 // MountSensitive overrides mount.FakeMounter.MountSensitive.
 func (f *fakeMounter) MountSensitive(source string, target string, fstype string, options []string, sensitiveOptions []string) error {
 	if strings.Contains(source, "ut-container") {

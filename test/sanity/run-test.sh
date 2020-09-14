@@ -16,6 +16,15 @@
 
 set -eo pipefail
 
+function cleanup {
+  echo 'pkill -f blobplugin'
+  pkill -f blobplugin
+  echo 'Deleting CSI sanity test binary'
+  rm -rf csi-test
+}
+
+trap cleanup EXIT
+
 readonly endpoint="unix:///tmp/csi.sock"
 nodeid="CSINode"
 if [[ "$#" -gt 0 ]] && [[ -n "$1" ]]; then
@@ -25,4 +34,6 @@ fi
 _output/blobplugin --endpoint "$endpoint" --nodeid "$nodeid" -v=5 &
 
 echo "Begin to run sanity test..."
-csi-sanity --ginkgo.v --csi.endpoint=$endpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity"
+readonly CSI_SANITY_BIN='csi-test/cmd/csi-sanity/csi-sanity'
+"$CSI_SANITY_BIN" --ginkgo.v --csi.endpoint=$endpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity"
+
