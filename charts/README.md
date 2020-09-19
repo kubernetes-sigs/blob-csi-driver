@@ -51,9 +51,6 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.csiProvisioner.repository`                 | csi-provisioner docker image                               | mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner              |
 | `image.csiProvisioner.tag`                        | csi-provisioner docker image tag                           | v1.4.0                                                            |
 | `image.csiProvisioner.pullPolicy`                 | csi-provisioner image pull policy                          | IfNotPresent                                                      |
-| `image.csiAttacher.repository`                    | csi-attacher docker image                                  | mcr.microsoft.com/oss/kubernetes-csi/csi-attacher                 |
-| `image.csiAttacher.tag`                           | csi-attacher docker image tag                              | v2.2.0                                                            |
-| `image.csiAttacher.pullPolicy`                    | csi-attacher image pull policy                             | IfNotPresent                                                      |                                                  |
 | `image.livenessProbe.repository`                  | liveness-probe docker image                                | mcr.microsoft.com/oss/kubernetes-csi/livenessprobe                |
 | `image.livenessProbe.tag`                         | liveness-probe docker image tag                            | v1.1.0                                                            |
 | `image.livenessProbe.pullPolicy`                  | liveness-probe image pull policy                           | IfNotPresent                                                      |

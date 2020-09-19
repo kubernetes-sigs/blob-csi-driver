@@ -48,27 +48,6 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
-        - name: csi-attacher
-          image: "{{ .Values.image.csiAttacher.repository }}:{{ .Values.image.csiAttacher.tag }}"
-          args:
-            - "-v=5"
-            - "-csi-address=$(ADDRESS)"
-            - "-timeout=120s"
-            - "-leader-election"
-          env:
-            - name: ADDRESS
-              value: /csi/csi.sock
-          imagePullPolicy: {{ .Values.image.csiAttacher.pullPolicy }}
-          volumeMounts:
-            - mountPath: /csi
-              name: socket-dir
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
         - name: liveness-probe
           image: "{{ .Values.image.livenessProbe.repository }}:{{ .Values.image.livenessProbe.tag }}"
           args:
