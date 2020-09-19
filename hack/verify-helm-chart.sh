@@ -42,15 +42,11 @@ pip install yq
 
 # Extract images from csi-blob-controller.yaml
 expected_csi_provisioner_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[0].image | head -n 1)"
-expected_csi_attacher_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[1].image | head -n 1)"
-expected_liveness_probe_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[2].image | head -n 1)"
-expected_blob_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[3].image | head -n 1)"
+expected_liveness_probe_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[1].image | head -n 1)"
+expected_blob_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[2].image | head -n 1)"
 
 csi_provisioner_image="$(get_image_from_helm_chart "csiProvisioner")"
 validate_image "${expected_csi_provisioner_image}" "${csi_provisioner_image}"
-
-csi_attacher_image="$(get_image_from_helm_chart "csiAttacher")"
-validate_image "${expected_csi_attacher_image}" "${csi_attacher_image}"
 
 liveness_probe_image="$(get_image_from_helm_chart "livenessProbe")"
 validate_image "${expected_liveness_probe_image}" "${liveness_probe_image}"
