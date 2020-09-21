@@ -313,6 +313,8 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID string, attrib, secret
 				} else {
 					accountKey = string(secret.Data[defaultSecretAccountKey][:])
 				}
+			} else {
+				klog.V(5).Infof("could not get account(%s) key from secret: KubeClient is nil", accountName)
 			}
 
 			if accountKey == "" {
