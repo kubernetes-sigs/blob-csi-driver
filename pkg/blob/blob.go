@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strings"
 
+	"sigs.k8s.io/blob-csi-driver/pkg/util"
+
 	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -68,8 +70,9 @@ var (
 // Driver implements all interfaces of CSI drivers
 type Driver struct {
 	csicommon.CSIDriver
-	cloud   *azure.Cloud
-	mounter *mount.SafeFormatAndMount
+	cloud      *azure.Cloud
+	mounter    *mount.SafeFormatAndMount
+	volLockMap *util.LockMap
 }
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
@@ -79,6 +82,7 @@ func NewDriver(nodeID string) *Driver {
 	driver.Name = DriverName
 	driver.Version = driverVersion
 	driver.NodeID = nodeID
+	driver.volLockMap = util.NewLockMap()
 	return &driver
 }
 
