@@ -53,7 +53,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	requestGiB := int(util.RoundUpGiB(volSizeBytes))
 
 	parameters := req.GetParameters()
-	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags string
+	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, storeAccountKey, secretNamespace string
 
 	// Apply ProvisionerParameters (case-insensitive). We leave validation of
 	// the values to the cloud provider.
@@ -75,6 +75,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			protocol = v
 		case tagsField:
 			customTags = v
+		case secretNamespaceField:
+			secretNamespace = v
+		case storeAccountKeyField:
+			storeAccountKey = v
 		}
 	}
 
@@ -95,6 +99,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			return nil, status.Errorf(codes.InvalidArgument, "storage account must be specified when provisioning nfs file share")
 		}
 		enableHTTPSTrafficOnly = false
+		// NFS protocol does not need account key
+		storeAccountKey = storeAccountKeyFalse
 	}
 
 	accountKind := string(storage.StorageV2)
@@ -117,9 +123,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		Tags:                   tags,
 	}
 
-	var accountName, accountKey string
-	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
-		lockKey := account + storageAccountType + accountKind + resourceGroup + location
+	var accountKey string
+	accountName := account
+	if len(req.GetSecrets()) == 0 && accountName == "" {
+		lockKey := storageAccountType + accountKind + resourceGroup + location
 		d.volLockMap.LockEntry(lockKey)
 		defer d.volLockMap.UnlockEntry(lockKey)
 
@@ -135,10 +142,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to ensure storage account: %v", err)
 		}
-	} else {
-		accountName, accountKey, err = getStorageAccount(req.GetSecrets())
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get storage account from secrets: %v", err)
+	}
+	accountOptions.Name = accountName
+
+	if accountKey == "" {
+		if accountKey, err = d.GetStorageAccesskey(accountOptions, req.GetSecrets(), secretNamespace); err != nil {
+			return nil, fmt.Errorf("failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
 		}
 	}
 
@@ -159,15 +168,17 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, containerName)
+	klog.V(2).Infof("create container %s on storage account %s successfully", containerName, accountName)
 
-	/* todo: snapshot support
-	if req.GetVolumeContentSource() != nil {
-		contentSource := req.GetVolumeContentSource()
-		if contentSource.GetSnapshot() != nil {
+	if storeAccountKey != storeAccountKeyFalse && len(req.GetSecrets()) == 0 {
+		secretName, err := setAzureCredentials(d.cloud.KubeClient, accountName, accountKey, secretNamespace)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to store storage account key: %v", err)
+		}
+		if secretName != "" {
+			klog.V(2).Infof("store account key to k8s secret(%v) in %s namespace", secretName, secretNamespace)
 		}
 	}
-	*/
-	klog.V(2).Infof("create container %s on storage account %s successfully", containerName, accountName)
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
