@@ -89,18 +89,18 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "protocol(%s) is not supported, supported protocol list: %v", protocol, supportedProtocolList)
 	}
 
+	enableHTTPSTrafficOnly := true
 	if protocol == nfs {
 		if account == "" {
 			return nil, status.Errorf(codes.InvalidArgument, "storage account must be specified when provisioning nfs file share")
 		}
+		enableHTTPSTrafficOnly = false
 	}
 
 	accountKind := string(storage.StorageV2)
 	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
 		accountKind = string(storage.BlockBlobStorage)
 	}
-
-	enableHTTPSTrafficOnly := true
 
 	tags, err := azure.ConvertTagsToMap(customTags)
 	if err != nil {
@@ -119,6 +119,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	var accountName, accountKey string
 	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
+		lockKey := account + storageAccountType + accountKind + resourceGroup + location
+		d.volLockMap.LockEntry(lockKey)
+		defer d.volLockMap.UnlockEntry(lockKey)
+
 		err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
 			var retErr error
 			accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(accountOptions, protocol)

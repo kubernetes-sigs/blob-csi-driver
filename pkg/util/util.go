@@ -18,6 +18,7 @@ package util
 
 import (
 	"os"
+	"sync"
 )
 
 const (
@@ -79,4 +80,52 @@ func MakeDir(pathname string) error {
 		}
 	}
 	return nil
+}
+
+// LockMap used to lock on entries
+type LockMap struct {
+	sync.Mutex
+	mutexMap map[string]*sync.Mutex
+}
+
+// NewLockMap returns a new lock map
+func NewLockMap() *LockMap {
+	return &LockMap{
+		mutexMap: make(map[string]*sync.Mutex),
+	}
+}
+
+// LockEntry acquires a lock associated with the specific entry
+func (lm *LockMap) LockEntry(entry string) {
+	lm.Lock()
+	// check if entry does not exists, then add entry
+	if _, exists := lm.mutexMap[entry]; !exists {
+		lm.addEntry(entry)
+	}
+
+	lm.Unlock()
+	lm.lockEntry(entry)
+}
+
+// UnlockEntry release the lock associated with the specific entry
+func (lm *LockMap) UnlockEntry(entry string) {
+	lm.Lock()
+	defer lm.Unlock()
+
+	if _, exists := lm.mutexMap[entry]; !exists {
+		return
+	}
+	lm.unlockEntry(entry)
+}
+
+func (lm *LockMap) addEntry(entry string) {
+	lm.mutexMap[entry] = &sync.Mutex{}
+}
+
+func (lm *LockMap) lockEntry(entry string) {
+	lm.mutexMap[entry].Lock()
+}
+
+func (lm *LockMap) unlockEntry(entry string) {
+	lm.mutexMap[entry].Unlock()
 }

@@ -148,16 +148,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 		source := fmt.Sprintf("%s:/%s/%s", blobStorageEndPoint, accountName, containerName)
 		mountOptions := util.JoinMountOptions(mountFlags, []string{"sec=sys,vers=3,nolock"})
-		mountComplete := false
-		err := wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
-			err := d.mounter.MountSensitive(source, targetPath, nfs, mountOptions, []string{})
-			mountComplete = true
-			return true, err
-		})
-		if !mountComplete {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with timeout(2m)", volumeID, source, targetPath))
-		}
-		if err != nil {
+		if err := wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
+			return true, d.mounter.MountSensitive(source, targetPath, nfs, mountOptions, []string{})
+		}); err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with %v", volumeID, source, targetPath, err))
 		}
 		klog.V(2).Infof("volume(%s) mount %q on %q succeeded", volumeID, source, targetPath)
