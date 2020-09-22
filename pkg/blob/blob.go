@@ -27,6 +27,10 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pborman/uuid"
 	"golang.org/x/net/context"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	k8sutil "k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/legacy-cloud-providers/azure"
@@ -36,20 +40,27 @@ import (
 
 const (
 	// DriverName holds the name of the csi-driver
-	DriverName       = "blob.csi.azure.com"
-	separator        = "#"
-	volumeIDTemplate = "%s#%s#%s"
-	fileMode         = "file_mode"
-	dirMode          = "dir_mode"
-	vers             = "vers"
-	defaultFileMode  = "0777"
-	defaultDirMode   = "0777"
-	defaultVers      = "3.0"
-	serverNameField  = "server"
-	tagsField        = "tags"
-	protocolField    = "protocol"
-	fuse             = "fuse"
-	nfs              = "nfs"
+	DriverName               = "blob.csi.azure.com"
+	separator                = "#"
+	volumeIDTemplate         = "%s#%s#%s"
+	secretNameTemplate       = "azure-storage-account-%s-secret"
+	fileMode                 = "file_mode"
+	dirMode                  = "dir_mode"
+	vers                     = "vers"
+	defaultFileMode          = "0777"
+	defaultDirMode           = "0777"
+	defaultVers              = "3.0"
+	serverNameField          = "server"
+	tagsField                = "tags"
+	protocolField            = "protocol"
+	secretNamespaceField     = "secretnamespace"
+	storeAccountKeyField     = "storeaccountkey"
+	storeAccountKeyFalse     = "false"
+	defaultSecretAccountName = "azurestorageaccountname"
+	defaultSecretAccountKey  = "azurestorageaccountkey"
+	defaultSecretNamespace   = "default"
+	fuse                     = "fuse"
+	nfs                      = "nfs"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3
@@ -296,9 +307,14 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID string, attrib, secret
 				resourceGroupName = d.cloud.ResourceGroup
 			}
 
-			accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
+			// read from k8s secret first
+			accountKey, err = d.GetStorageAccesskeyFromSecret(accountName, attrib[secretNamespaceField])
 			if err != nil {
-				return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
+				klog.V(2).Infof("could not get account(%s) key from secret, error: %v, use cluster identity to get account key instead", accountName, err)
+				accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
+				if err != nil {
+					return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
+				}
 			}
 		} else {
 			for k, v := range secrets {
@@ -467,4 +483,71 @@ func getStorageAccount(secrets map[string]string) (string, string, error) {
 
 	klog.V(4).Infof("got storage account(%s) from secret", accountName)
 	return accountName, accountKey, nil
+}
+
+func setAzureCredentials(kubeClient kubernetes.Interface, accountName, accountKey, secretNamespace string) (string, error) {
+	if kubeClient == nil {
+		klog.Warningf("could not create secret: kubeClient is nil")
+		return "", nil
+	}
+	if accountName == "" || accountKey == "" {
+		return "", fmt.Errorf("the account info is not enough, accountName(%v), accountKey(%v)", accountName, accountKey)
+	}
+	if secretNamespace == "" {
+		secretNamespace = defaultSecretNamespace
+	}
+	secretName := fmt.Sprintf(secretNameTemplate, accountName)
+	secret := &v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: defaultSecretNamespace,
+			Name:      secretName,
+		},
+		Data: map[string][]byte{
+			defaultSecretAccountName: []byte(accountName),
+			defaultSecretAccountKey:  []byte(accountKey),
+		},
+		Type: "Opaque",
+	}
+	_, err := kubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	if errors.IsAlreadyExists(err) {
+		err = nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("couldn't create secret %v", err)
+	}
+	return secretName, err
+}
+
+// GetStorageAccesskey get Azure storage account key
+func (d *Driver) GetStorageAccesskey(accountOptions *azure.AccountOptions, secrets map[string]string, secretNamespace string) (string, error) {
+	if len(secrets) > 0 {
+		_, accountKey, err := getStorageAccount(secrets)
+		return accountKey, err
+	}
+
+	// read from k8s secret first
+	accountKey, err := d.GetStorageAccesskeyFromSecret(accountOptions.Name, secretNamespace)
+	if err != nil {
+		klog.V(2).Infof("could not get account(%s) key from secret, error: %v, use cluster identity to get account key instead", accountOptions.Name, err)
+		return d.cloud.GetStorageAccesskey(accountOptions.Name, accountOptions.ResourceGroup)
+	}
+	return accountKey, err
+}
+
+// GetStorageAccesskeyFromSecret get storage account key from k8s secret
+func (d *Driver) GetStorageAccesskeyFromSecret(accountName, secretNamespace string) (string, error) {
+	if d.cloud.KubeClient == nil {
+		return "", fmt.Errorf("could not get account(%s) key from secret: KubeClient is nil", accountName)
+	}
+
+	secretName := fmt.Sprintf(secretNameTemplate, accountName)
+	if secretNamespace == "" {
+		secretNamespace = defaultSecretNamespace
+	}
+	secret, err := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Get(context.TODO(), secretName, metav1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("could not get secret(%v): %v", secretName, err)
+	}
+
+	return string(secret.Data[defaultSecretAccountKey][:]), nil
 }

@@ -31,6 +31,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/legacy-cloud-providers/azure"
 	"k8s.io/legacy-cloud-providers/azure/clients/storageaccountclient/mockstorageaccountclient"
 )
@@ -697,6 +699,62 @@ func TestGetStorageAccount(t *testing.T) {
 			if result1 == "" || result2 == "" {
 				assert.Error(t, result3)
 			}
+		}
+	}
+}
+
+func TestSetAzureCredentials(t *testing.T) {
+	fakeClient := fake.NewSimpleClientset()
+
+	tests := []struct {
+		desc            string
+		kubeClient      kubernetes.Interface
+		accountName     string
+		accountKey      string
+		secretNamespace string
+		expectedName    string
+		expectedErr     error
+	}{
+		{
+			desc:        "[failure] accountName is nil",
+			kubeClient:  fakeClient,
+			expectedErr: fmt.Errorf("the account info is not enough, accountName(), accountKey()"),
+		},
+		{
+			desc:        "[failure] accountKey is nil",
+			kubeClient:  fakeClient,
+			accountName: "testName",
+			accountKey:  "",
+			expectedErr: fmt.Errorf("the account info is not enough, accountName(testName), accountKey()"),
+		},
+		{
+			desc:        "[success] kubeClient is nil",
+			kubeClient:  nil,
+			expectedErr: nil,
+		},
+		{
+			desc:         "[success] normal scenario",
+			kubeClient:   fakeClient,
+			accountName:  "testName",
+			accountKey:   "testKey",
+			expectedName: "azure-storage-account-testName-secret",
+			expectedErr:  nil,
+		},
+		{
+			desc:         "[success] already exist",
+			kubeClient:   fakeClient,
+			accountName:  "testName",
+			accountKey:   "testKey",
+			expectedName: "azure-storage-account-testName-secret",
+			expectedErr:  nil,
+		},
+	}
+
+	for _, test := range tests {
+		result, err := setAzureCredentials(test.kubeClient, test.accountName, test.accountKey, test.secretNamespace)
+		if result != test.expectedName || !reflect.DeepEqual(err, test.expectedErr) {
+			t.Errorf("desc: %s,\n input: kubeClient(%v), accountName(%v), accountKey(%v),\n setAzureCredentials result: %v, expectedName: %v err: %v, expectedErr: %v",
+				test.desc, test.kubeClient, test.accountName, test.accountKey, result, test.expectedName, err, test.expectedErr)
 		}
 	}
 }

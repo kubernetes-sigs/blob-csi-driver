@@ -132,7 +132,7 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "list"]
+    verbs: ["get", "list", "create"]
 
 ---
 kind: ClusterRoleBinding
