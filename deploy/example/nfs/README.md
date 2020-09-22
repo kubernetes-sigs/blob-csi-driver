@@ -67,3 +67,6 @@ accountname.blob.core.windows.net:/accountname/pvc-cce02240-5d13-4bcb-b9eb-f9c7e
 total 2
 -rw-r--r-- 1 root root 1120 Sep  3 06:52 outfile
 ```
+
+#### Links
+ - [Troubleshoot Azure NFS file shares](https://docs.microsoft.com/en-us/azure/storage/files/storage-troubleshooting-files-nfs)
