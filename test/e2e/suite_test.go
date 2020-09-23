@@ -27,6 +27,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/reporters"
@@ -111,6 +112,16 @@ var _ = ginkgo.BeforeSuite(func() {
 
 var _ = ginkgo.AfterSuite(func() {
 	if testutil.IsRunningInProw() {
+		createExampleDeployment := testCmd{
+			command:  "make",
+			args:     []string{"create-example-deployment"},
+			startLog: "create example deployments",
+			endLog:   "example deployments created",
+		}
+		execTestCmd([]testCmd{createExampleDeployment})
+		// sleep 120s waiting for deployment running complete
+		time.Sleep(120 * time.Second)
+
 		blobLog := testCmd{
 			command:  "bash",
 			args:     []string{"test/utils/blob_log.sh"},
