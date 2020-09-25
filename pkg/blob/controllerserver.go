@@ -53,6 +53,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	requestGiB := int(util.RoundUpGiB(volSizeBytes))
 
 	parameters := req.GetParameters()
+	if parameters == nil {
+		parameters = make(map[string]string)
+	}
 	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, storeAccountKey, secretNamespace string
 
 	// Apply ProvisionerParameters (case-insensitive). We leave validation of
@@ -69,7 +72,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			account = v
 		case "resourcegroup":
 			resourceGroup = v
-		case "containername":
+		case containerNameField:
 			containerName = v
 		case protocolField:
 			protocol = v
@@ -146,13 +149,14 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	accountOptions.Name = accountName
 
 	if accountKey == "" {
-		if accountKey, err = d.GetStorageAccesskey(accountOptions, req.GetSecrets(), secretNamespace); err != nil {
+		if accountName, accountKey, err = d.GetStorageAccesskey(accountOptions, req.GetSecrets(), secretNamespace); err != nil {
 			return nil, fmt.Errorf("failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
 		}
 	}
 
 	if containerName == "" {
 		containerName = getValidContainerName(name, protocol)
+		parameters[containerNameField] = containerName
 	}
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
