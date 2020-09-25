@@ -54,6 +54,7 @@ const (
 	tagsField                = "tags"
 	protocolField            = "protocol"
 	secretNamespaceField     = "secretnamespace"
+	containerNameField       = "containername"
 	storeAccountKeyField     = "storeaccountkey"
 	storeAccountKeyFalse     = "false"
 	defaultSecretAccountName = "azurestorageaccountname"
@@ -255,7 +256,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID string, attrib, secret
 
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
-		case "containername":
+		case containerNameField:
 			containerName = v
 		case "keyvaulturl":
 			keyVaultURL = v
@@ -373,7 +374,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
-		case "containername":
+		case containerNameField:
 			containerName = v
 		case "keyvaulturl":
 			keyVaultURL = v
@@ -518,20 +519,19 @@ func setAzureCredentials(kubeClient kubernetes.Interface, accountName, accountKe
 	return secretName, err
 }
 
-// GetStorageAccesskey get Azure storage account key
-func (d *Driver) GetStorageAccesskey(accountOptions *azure.AccountOptions, secrets map[string]string, secretNamespace string) (string, error) {
+// GetStorageAccesskey get Azure storage (account name, account key)
+func (d *Driver) GetStorageAccesskey(accountOptions *azure.AccountOptions, secrets map[string]string, secretNamespace string) (string, string, error) {
 	if len(secrets) > 0 {
-		_, accountKey, err := getStorageAccount(secrets)
-		return accountKey, err
+		return getStorageAccount(secrets)
 	}
 
 	// read from k8s secret first
 	accountKey, err := d.GetStorageAccesskeyFromSecret(accountOptions.Name, secretNamespace)
 	if err != nil {
 		klog.V(2).Infof("could not get account(%s) key from secret, error: %v, use cluster identity to get account key instead", accountOptions.Name, err)
-		return d.cloud.GetStorageAccesskey(accountOptions.Name, accountOptions.ResourceGroup)
+		accountKey, err = d.cloud.GetStorageAccesskey(accountOptions.Name, accountOptions.ResourceGroup)
 	}
-	return accountKey, err
+	return accountOptions.Name, accountKey, err
 }
 
 // GetStorageAccesskeyFromSecret get storage account key from k8s secret
