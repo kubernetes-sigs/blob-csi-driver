@@ -49,6 +49,11 @@ const (
 
 var blobDriver *blob.Driver
 
+var bringKeyStorageClassParameters = map[string]string{
+	"csi.storage.k8s.io/provisioner-secret-namespace": "default",
+	"csi.storage.k8s.io/node-stage-secret-namespace":  "default",
+}
+
 type testCmd struct {
 	command  string
 	args     []string
