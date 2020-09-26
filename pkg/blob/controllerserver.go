@@ -164,15 +164,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	blobClient := client.GetBlobService()
 	container := blobClient.GetContainerReference(containerName)
-	_, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate})
-	if err != nil {
+	if _, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate}); err != nil {
 		return nil, fmt.Errorf("failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
 	}
-
-	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, containerName)
-	klog.V(2).Infof("create container %s on storage account %s successfully", containerName, accountName)
 
 	if storeAccountKey != storeAccountKeyFalse && len(req.GetSecrets()) == 0 {
 		secretName, err := setAzureCredentials(d.cloud.KubeClient, accountName, accountKey, secretNamespace)
@@ -183,6 +180,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			klog.V(2).Infof("store account key to k8s secret(%v) in %s namespace", secretName, secretNamespace)
 		}
 	}
+
+	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, containerName)
+	klog.V(2).Infof("create container %s on storage account %s successfully", containerName, accountName)
 
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
