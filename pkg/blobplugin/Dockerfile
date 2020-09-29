@@ -30,4 +30,8 @@ RUN apt update && apt install nfs-common nfs-kernel-server -y || true
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
+# Create a nonroot user
+RUN useradd -u 10001 nonroot
+USER nonroot
+
 ENTRYPOINT ["/blobplugin"]
