@@ -122,11 +122,11 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud = &azure.Cloud{}
 				mp := make(map[string]string)
 				mp["protocol"] = "unit-test"
-				mp["skuname"] = "unit-test"
-				mp["storageaccounttype"] = "unit-test"
-				mp["location"] = "unit-test"
-				mp["storageaccount"] = "unit-test"
-				mp["resourcegroup"] = "unit-test"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unit-test"
+				mp[resourceGroupField] = "unit-test"
 				mp["containername"] = "unit-test"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
@@ -172,7 +172,7 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud = &azure.Cloud{}
 				mp := make(map[string]string)
 				mp["tags"] = "unit-test"
-				mp["storageaccounttype"] = "premium"
+				mp[storageAccountTypeField] = "premium"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
@@ -193,11 +193,11 @@ func TestCreateVolume(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				mp := make(map[string]string)
-				mp["skuname"] = "unit-test"
-				mp["storageaccounttype"] = "unit-test"
-				mp["location"] = "unit-test"
-				mp["storageaccount"] = "unit-test"
-				mp["resourcegroup"] = "unit-test"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unit-test"
+				mp[resourceGroupField] = "unit-test"
 				mp["containername"] = "unit-test"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",

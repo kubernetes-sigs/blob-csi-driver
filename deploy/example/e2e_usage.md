@@ -1,19 +1,33 @@
 ## CSI driver example
 > refer to [driver parameters](../../docs/driver-parameters.md) for more detailed usage
 
-### Dynamic Provisioning (create storage account and blob container by CSI driver)
- - Create CSI storage class
+### Dynamic Provisioning
+#### Option#1: create storage account by CSI driver
+ - Create storage class
 ```console
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blobfuse.yaml
 ```
 
- - Create a statefulset with blob storage mount
+#### Option#2: bring your own storage account
+ > only available from `v0.9.0`
+ - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
+```console
+kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
+```
+
+ - create storage class referencing `azure-secret`
+```console
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blob-secret.yaml
+```
+
+#### Create application
+ - Create a statefulset with volume mount
 ```console
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
 ```
 
  - Execute `df -h` command in the container
-```
+```console
 # kubectl exec -it statefulset-blob-0 sh
 # df -h
 Filesystem      Size  Used Avail Use% Mounted on
@@ -50,13 +64,18 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
  - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key(or sastoken)
 ```console
 kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountkey="KEY" --type=Opaque
-#kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountsastoken
+```
+
+or create `azure-secret` with existing storage account name and sastoken:
+
+```console
+kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountsastoken
 ="sastoken" --type=Opaque
 ```
 
 > storage account key(or sastoken) could also be stored in Azure Key Vault, check example here: [read-from-keyvault](../../docs/read-from-keyvault.md)
 
- - Create a blob storage CSI PV: download [`pv-blobfuse-csi.yaml` file](https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml) and edit `containerName` in `volumeAttributes`
+ - Create PV: download [`pv-blobfuse-csi.yaml` file](https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/pv-blobfuse-csi.yaml) and edit `containerName` in `volumeAttributes`
 ```yaml
 apiVersion: v1
 kind: PersistentVolume
