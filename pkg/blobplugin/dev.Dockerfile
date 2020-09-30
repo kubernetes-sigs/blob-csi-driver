@@ -18,5 +18,9 @@ RUN dpkg -i /tmp/packages-microsoft-prod.deb && apt-get update && apt-get instal
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
+# Create a nonroot user
+RUN useradd -u 10001 nonroot
+USER nonroot
+
 COPY ./_output/blobplugin /blobplugin
 ENTRYPOINT ["/blobplugin"]
