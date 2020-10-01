@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"syscall"
 	"testing"
 
@@ -125,7 +126,13 @@ func TestEnsureMountPoint(t *testing.T) {
 
 func TestNodePublishVolume(t *testing.T) {
 	volumeCap := csi.VolumeCapability_AccessMode{Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER}
-
+	createDirError := status.Errorf(codes.Internal,
+		"Could not mount target \"./azure.go\": mkdir ./azure.go: not a directory")
+	if runtime.GOOS == "windows" {
+		createDirError = status.Errorf(codes.Internal,
+			"Could not mount target \"./azure.go\": mkdir ./azure.go: "+
+				"The system cannot find the path specified.")
+	}
 	tests := []struct {
 		desc        string
 		req         csi.NodePublishVolumeRequest
@@ -170,7 +177,7 @@ func TestNodePublishVolume(t *testing.T) {
 				TargetPath:        "./azure.go",
 				StagingTargetPath: sourceTest,
 				Readonly:          true},
-			expectedErr: status.Errorf(codes.Internal, "Could not mount target \"./azure.go\": mkdir ./azure.go: not a directory"),
+			expectedErr: createDirError,
 		},
 		{
 			desc: "Error mounting resource busy",
@@ -198,7 +205,7 @@ func TestNodePublishVolume(t *testing.T) {
 		_, err := d.NodePublishVolume(context.Background(), &test.req)
 
 		if !reflect.DeepEqual(err, test.expectedErr) {
-			t.Errorf("Unexpected error: %v", err)
+			t.Errorf("Desc: %s - Unexpected error: %v - Expected: %v", test.desc, err, test.expectedErr)
 		}
 	}
 
