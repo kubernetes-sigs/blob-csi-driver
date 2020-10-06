@@ -85,6 +85,10 @@ blob:
 blob-windows:
 	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -o _output/blobplugin.exe ./pkg/blobplugin
 
+.PHONT: blob-darwin
+blob-darwin:
+	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags ${LDFLAGS} -o _output/blobplugin ./pkg/blobplugin
+
 .PHONY: container
 container: blob
 	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobplugin/dev.Dockerfile .

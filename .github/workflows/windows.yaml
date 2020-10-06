@@ -1,4 +1,4 @@
-name: Windows Test
+name: Windows Tests
 on:
   push:
     branches: [ master ]
