@@ -153,6 +153,11 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		}); err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with %v", volumeID, source, targetPath, err))
 		}
+
+		// set 0777 for NFSv3 root folder
+		if err := os.Chmod(targetPath, 0777); err != nil {
+			return nil, status.Error(codes.Internal, fmt.Sprintf("Chmod(%s) failed with %v", targetPath, err))
+		}
 		klog.V(2).Infof("volume(%s) mount %q on %q succeeded", volumeID, source, targetPath)
 
 		return &csi.NodeStageVolumeResponse{}, nil
