@@ -34,7 +34,7 @@ $ kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 blobfuse 1.2.4
 ```
 
-### troubleshooting connection failure
+### troubleshooting connection failure on agent node
  - blobfuse
 
 Blobfuse mount will fail due to incorrect storage account name, key or container name, run below commands to check whether blobfuse mount would work on agent node:
