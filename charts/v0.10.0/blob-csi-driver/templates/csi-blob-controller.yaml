@@ -1,17 +1,17 @@
----
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: csi-blob-controller
-  namespace: kube-system
+  namespace: {{ .Release.Namespace }}
+{{ include "blob.labels" . | indent 2 }}
 spec:
-  replicas: 2
+  replicas: {{ .Values.controller.replicas }}
   selector:
     matchLabels:
       app: csi-blob-controller
   template:
     metadata:
-      labels:
+{{ include "blob.labels" . | indent 6 }}
         app: csi-blob-controller
     spec:
       hostNetwork: true
@@ -24,9 +24,10 @@ spec:
           operator: "Equal"
           value: "true"
           effect: "NoSchedule"
+      {{- include "blob.pullSecrets" . | indent 6 }}
       containers:
         - name: csi-provisioner
-          image: mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner:v1.4.0
+          image: {{ .Values.image.csiProvisioner.repository }}:{{ .Values.image.csiProvisioner.tag }}
           args:
             - "-v=5"
             - "--csi-address=$(ADDRESS)"
@@ -36,6 +37,7 @@ spec:
           env:
             - name: ADDRESS
               value: /csi/csi.sock
+          imagePullPolicy: {{ .Values.image.csiProvisioner.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -47,11 +49,12 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: liveness-probe
-          image: mcr.microsoft.com/oss/kubernetes-csi/livenessprobe:v1.1.0
+          image: "{{ .Values.image.livenessProbe.repository }}:{{ .Values.image.livenessProbe.tag }}"
           args:
             - --csi-address=/csi/csi.sock
             - --connection-timeout=3s
             - --health-port=29632
+          imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -63,17 +66,16 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: blob
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v0.10.0
-          imagePullPolicy: IfNotPresent
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
           args:
             - "--v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
-            - "--metrics-address=0.0.0.0:29634"
+            - "--metrics-address=0.0.0.0:{{ .Values.controller.metricsPort }}"
           ports:
             - containerPort: 29632
               name: healthz
               protocol: TCP
-            - containerPort: 29634
+            - containerPort: {{ .Values.controller.metricsPort }}
               name: metrics
               protocol: TCP
           livenessProbe:
@@ -93,6 +95,7 @@ spec:
                   optional: true
             - name: CSI_ENDPOINT
               value: unix:///csi/csi.sock
+          imagePullPolicy: {{ .Values.image.blob.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -118,3 +121,4 @@ spec:
         - name: msi
           hostPath:
             path: /var/lib/waagent/ManagedIdentity-Settings
+---
