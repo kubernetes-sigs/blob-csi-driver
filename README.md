@@ -13,10 +13,10 @@ csi plugin name: `blob.csi.azure.com`
 ### Container Images & Kubernetes Compatibility:
 |driver version  |Image                                      | 1.15+  | built-in blobfuse version |
 |----------------|-------------------------------------------|--------|---------------------------|
-|master branch   |mcr.microsoft.com/k8s/csi/blob-csi:latest  | yes    | 1.3.4                     |
+|master branch   |mcr.microsoft.com/k8s/csi/blob-csi:latest  | yes    | 1.3.5                     |
+|v0.10.0          |mcr.microsoft.com/k8s/csi/blob-csi:v0.10.0| yes    | 1.3.5                     |
 |v0.9.0          |mcr.microsoft.com/k8s/csi/blob-csi:v0.9.0  | yes    | 1.3.4                     |
 |v0.8.0          |mcr.microsoft.com/k8s/csi/blob-csi:v0.8.0  | yes    | 1.3.1                     |
-|v0.7.0          |mcr.microsoft.com/k8s/csi/blob-csi:v0.7.0  | yes    | 1.2.4                     |
 
 #### Breaking change notice
 Since `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.azure.com`, volume created by `v0.6.0`(or prior version) could not be mounted by `v0.7.0` driver. If you have volumes created by `v0.6.0` version, just keep the driver running in your cluster.
