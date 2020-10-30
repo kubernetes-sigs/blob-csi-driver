@@ -317,40 +317,6 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 			},
 		},
-		{
-			name: "volume mount sensitive fail",
-			testFunc: func(t *testing.T) {
-				attrib := make(map[string]string)
-				attrib["containername"] = "ut-container"
-				attrib["server"] = "blob-endpoint"
-				attrib["protocol"] = "nfs"
-				secret := make(map[string]string)
-				secret["accountname"] = "unit-test"
-				accessType := csi.VolumeCapability_Mount{}
-				req := &csi.NodeStageVolumeRequest{
-					VolumeId:          "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41",
-					StagingTargetPath: "right_mount",
-					VolumeContext:     attrib,
-					Secrets:           secret,
-					VolumeCapability: &csi.VolumeCapability{
-						AccessType: &accessType,
-					},
-				}
-				d := NewFakeDriver()
-				fakeMounter := &fakeMounter{}
-				d.mounter = &mount.SafeFormatAndMount{
-					Interface: fakeMounter,
-				}
-				_, err := d.NodeStageVolume(context.TODO(), req)
-				expectedErr := status.Error(codes.Internal, "volume(rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41) mount \"blob-endpoint:/unit-test/ut-container\" on \"right_mount\" failed with fake MountSensitive: source error")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-				// Clean up
-				err = os.RemoveAll(req.StagingTargetPath)
-				assert.NoError(t, err)
-			},
-		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)

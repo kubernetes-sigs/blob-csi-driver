@@ -123,11 +123,6 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
 
-	accountName, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, attrib, secrets)
-	if err != nil {
-		return nil, err
-	}
-
 	var blobStorageEndPoint, protocol string
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
@@ -137,6 +132,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			protocol = v
 		}
 	}
+
+	accountName, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, protocol, attrib, secrets)
+	if err != nil {
+		return nil, err
+	}
+
 	if strings.TrimSpace(blobStorageEndPoint) == "" {
 		// server address is "accountname.blob.core.windows.net" by default
 		blobStorageEndPoint = fmt.Sprintf("%s.blob.%s", accountName, d.cloud.Environment.StorageEndpointSuffix)
