@@ -155,7 +155,7 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 	s.Wait()
 }
 
-// get container info according to volume id, e.g.
+// GetContainerInfo get container info according to volume id, e.g.
 // input: "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
 // output: rg, f5713de20cde511e8ba4900, pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41
 func GetContainerInfo(id string) (string, string, string, error) {
@@ -246,7 +246,7 @@ func isSASToken(key string) bool {
 }
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
-func (d *Driver) GetAuthEnv(ctx context.Context, volumeID string, attrib, secrets map[string]string) (string, string, []string, error) {
+func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, []string, error) {
 	var (
 		accountName           string
 		accountKey            string
@@ -269,7 +269,9 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID string, attrib, secret
 			keyVaultSecretName = v
 		case "keyvaultsecretversion":
 			keyVaultSecretVersion = v
-		case "storageaccountname":
+		case storageAccountField:
+			accountName = v
+		case "storageaccountname": // for compatibility
 			accountName = v
 		case "azurestorageauthtype":
 			authEnv = append(authEnv, "AZURE_STORAGE_AUTH_TYPE="+v)
@@ -290,6 +292,10 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID string, attrib, secret
 		}
 	}
 	klog.V(2).Infof("volumeID(%s) authEnv: %s", volumeID, authEnv)
+
+	if protocol == nfs {
+		return accountName, containerName, authEnv, err
+	}
 
 	// 1. If keyVaultURL is not nil, preferentially use the key stored in key vault.
 	// 2. Then if secrets map is not nil, use the key stored in the secrets map.
@@ -390,6 +396,8 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 			keyVaultSecretName = v
 		case "keyvaultsecretversion":
 			keyVaultSecretVersion = v
+		case storageAccountField:
+			accountName = v
 		case "storageaccountname":
 			accountName = v
 		}
