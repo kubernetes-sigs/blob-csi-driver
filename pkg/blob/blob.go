@@ -271,6 +271,8 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID string, attrib, secret
 			keyVaultSecretVersion = v
 		case "storageaccountname":
 			accountName = v
+		case "azurestorageauthtype":
+			authEnv = append(authEnv, "AZURE_STORAGE_AUTH_TYPE="+v)
 		case "azurestorageidentityclientid":
 			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_CLIENT_ID="+v)
 		case "azurestorageidentityobjectid":
@@ -287,6 +289,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID string, attrib, secret
 			authEnv = append(authEnv, "AZURE_STORAGE_AAD_ENDPOINT="+v)
 		}
 	}
+	klog.V(2).Infof("volumeID(%s) authEnv: %s", volumeID, authEnv)
 
 	// 1. If keyVaultURL is not nil, preferentially use the key stored in key vault.
 	// 2. Then if secrets map is not nil, use the key stored in the secrets map.
@@ -432,8 +435,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 }
 
 func IsCorruptedDir(dir string) bool {
-	pathExists, pathErr := mount.PathExists(dir)
-	fmt.Printf("IsCorruptedDir(%s) returned with error: (%v, %v)\\n", dir, pathExists, pathErr)
+	_, pathErr := mount.PathExists(dir)
 	return pathErr != nil && mount.IsCorruptedMnt(pathErr)
 }
 
