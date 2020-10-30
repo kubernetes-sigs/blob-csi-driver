@@ -1,0 +1,34 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv-blob
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain  # "Delete" is not supported in static provisioning
+  mountOptions:
+    - -o allow_other
+    - --file-cache-timeout-in-seconds=120
+  csi:
+    driver: blob.csi.azure.com
+    readOnly: false
+    volumeHandle: uniqe-volumeid  # make sure this volumeid is unique in the cluster
+    volumeAttributes:
+      resourceGroup: EXISTING_RESOURCE_GROUP_NAME
+      storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
+      containerName: EXISTING_CONTAINER_NAME
+      # refer to https://github.com/Azure/azure-storage-fuse#environment-variables
+      AzureStorageAuthType: key  # key, sas, msi, spn
+      AzureStorageIdentityClientID:
+      AzureStorageIdentityObjectID:
+      AzureStorageIdentityResourceID:
+      MSIEndpoint:
+      AzureStorageSPNClientID:
+      AzureStorageSPNTenantID:
+      AzureStorageAADEndpoint:
+    nodeStageSecretRef:  # secret should be stored here
+      name: azure-secret
+      namespace: default
