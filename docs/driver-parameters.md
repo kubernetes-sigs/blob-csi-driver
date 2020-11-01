@@ -6,8 +6,6 @@
  
   > [blobfuse mountOptions example](../deploy/example/storageclass-blobfuse-mountoptions.yaml)
 
-  > [blobfuse Managed Identity and Service Principal Name auth example](../deploy/example/storageclass-blobfuse-msi.yaml)
-
   > [nfs example](../deploy/example/storageclass-blob-nfs.yaml)
 
 Name | Meaning | Example | Mandatory | Default value
@@ -28,15 +26,39 @@ Blobfuse driver does not honor `fsGroup` securityContext setting, instead user c
 ### Static Provisioning(bring your own storage container)
   > [blobfuse example](../deploy/example/pv-blobfuse-csi.yaml)
 
-  > [blobfuse key vault example](../deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml)
+  > [nfs example](../deploy/example/pv-blobfuse-nfs.yaml)
+
+  > [blobfuse read account key or SAS token from key vault example](../deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml)
+
+  > [blobfuse Managed Identity and Service Principal Name auth example](../deploy/example/pv-blobfuse-auth.yaml)
 
 Name | Meaning | Available Value | Mandatory | Default value
 --- | --- | --- | --- | ---
+volumeAttributes.resourceGroup | Azure resource group name | existing resource group name | No | if empty, driver will use the same resource group name as current k8s cluster
+volumeAttributes.storageAccount | existing storage account name | existing storage account name | Yes |
 volumeAttributes.containerName | existing container name | existing container name | Yes |
-volumeAttributes.storageAccountName | existing storage account name | existing storage account name | Yes |
 volumeAttributes.protocol | specify blobfuse mount or NFSv3 mount | `fuse`, `nfs` | No | `fuse`
+nodeStageSecretRef.name | secret name that stores(check below examples):<br>`azurestorageaccountkey`<br>`azurestorageaccountsastoken`<br>`msisecret`<br>`azurestoragespnclientsecret` | existing Kubernetes secret name |  No  |
+nodeStageSecretRef.namespace | namespace where the secret is | k8s namespace  |  Yes  |
+--- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse#environment-variables)** | --- | --- |
+volumeAttributes.AzureStorageAuthType | Authentication Type | `Key`, `SAS`, `MSI`, `SPN` | No | `Key`
+volumeAttributes.AzureStorageIdentityClientID | Identity Client ID |  | No |
+volumeAttributes.AzureStorageIdentityObjectID | Identity Object ID |  | No |
+volumeAttributes.AzureStorageIdentityResourceID | Identity Resource ID |  | No |
+volumeAttributes.MSIEndpoint | MSI Endpoint |  | No |
+volumeAttributes.AzureStorageSPNClientID | SPN Client ID |  | No |
+volumeAttributes.AzureStorageSPNTenantID | SPN Tenant ID |  | No |
+volumeAttributes.AzureStorageAADEndpoint | AADEndpoint |  | No |
+--- | **Following parameters are only for feature: blobfuse read account key or SAS token from key vault** | --- | --- |
 volumeAttributes.keyVaultURL | Azure Key Vault DNS name | existing Azure Key Vault DNS name | No |
 volumeAttributes.keyVaultSecretName | Azure Key Vault secret name | existing Azure Key Vault secret name | No |
 volumeAttributes.keyVaultSecretVersion | Azure Key Vault secret version | existing version | No |if empty, driver will use "current version"
-nodeStageSecretRef.name | secret name that stores storage account name and key(or sastoken) | existing Kubernetes secret name |  No  |
-nodeStageSecretRef.namespace | namespace where the secret is | k8s namespace  |  Yes  |
+
+
+ - create a Kubernetes secret for `nodeStageSecretRef.name`
+ ```console
+kubectl create secret generic azure-secret --from-literal azurestorageaccountkey="xxx" --type=Opaque
+kubectl create secret generic azure-secret --from-literal azurestorageaccountsastoken="xxx" --type=Opaque
+kubectl create secret generic azure-secret --from-literal msisecret="xxx" --type=Opaque
+kubectl create secret generic azure-secret --from-literal azurestoragespnclientsecret="xxx" --type=Opaque
+ ```
