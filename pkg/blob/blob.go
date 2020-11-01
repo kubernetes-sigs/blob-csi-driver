@@ -40,33 +40,39 @@ import (
 
 const (
 	// DriverName holds the name of the csi-driver
-	DriverName               = "blob.csi.azure.com"
-	separator                = "#"
-	volumeIDTemplate         = "%s#%s#%s"
-	secretNameTemplate       = "azure-storage-account-%s-secret"
-	fileMode                 = "file_mode"
-	dirMode                  = "dir_mode"
-	vers                     = "vers"
-	defaultFileMode          = "0777"
-	defaultDirMode           = "0777"
-	defaultVers              = "3.0"
-	serverNameField          = "server"
-	tagsField                = "tags"
-	protocolField            = "protocol"
-	storageAccountField      = "storageaccount"
-	storageAccountTypeField  = "storageaccounttype"
-	skuNameField             = "skuname"
-	resourceGroupField       = "resourcegroup"
-	locationField            = "location"
-	secretNamespaceField     = "secretnamespace"
-	containerNameField       = "containername"
-	storeAccountKeyField     = "storeaccountkey"
-	storeAccountKeyFalse     = "false"
-	defaultSecretAccountName = "azurestorageaccountname"
-	defaultSecretAccountKey  = "azurestorageaccountkey"
-	defaultSecretNamespace   = "default"
-	fuse                     = "fuse"
-	nfs                      = "nfs"
+	DriverName                 = "blob.csi.azure.com"
+	separator                  = "#"
+	volumeIDTemplate           = "%s#%s#%s"
+	secretNameTemplate         = "azure-storage-account-%s-secret"
+	fileMode                   = "file_mode"
+	dirMode                    = "dir_mode"
+	vers                       = "vers"
+	defaultFileMode            = "0777"
+	defaultDirMode             = "0777"
+	defaultVers                = "3.0"
+	serverNameField            = "server"
+	tagsField                  = "tags"
+	protocolField              = "protocol"
+	accountNameField           = "accountname"
+	accountKeyField            = "accountkey"
+	storageAccountField        = "storageaccount"
+	storageAccountTypeField    = "storageaccounttype"
+	skuNameField               = "skuname"
+	resourceGroupField         = "resourcegroup"
+	locationField              = "location"
+	secretNamespaceField       = "secretnamespace"
+	containerNameField         = "containername"
+	storeAccountKeyField       = "storeaccountkey"
+	keyVaultURLField           = "keyvaulturl"
+	keyVaultSecretNameField    = "keyvaultsecretname"
+	keyVaultSecretVersionField = "keyvaultsecretversion"
+	storageAccountNameField    = "storageaccountname"
+	storeAccountKeyFalse       = "false"
+	defaultSecretAccountName   = "azurestorageaccountname"
+	defaultSecretAccountKey    = "azurestorageaccountkey"
+	defaultSecretNamespace     = "default"
+	fuse                       = "fuse"
+	nfs                        = "nfs"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3
@@ -263,15 +269,15 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		switch strings.ToLower(k) {
 		case containerNameField:
 			containerName = v
-		case "keyvaulturl":
+		case keyVaultURLField:
 			keyVaultURL = v
-		case "keyvaultsecretname":
+		case keyVaultSecretNameField:
 			keyVaultSecretName = v
-		case "keyvaultsecretversion":
+		case keyVaultSecretVersionField:
 			keyVaultSecretVersion = v
 		case storageAccountField:
 			accountName = v
-		case "storageaccountname": // for compatibility
+		case storageAccountNameField: // for compatibility
 			accountName = v
 		case "azurestorageauthtype":
 			authEnv = append(authEnv, "AZURE_STORAGE_AUTH_TYPE="+v)
@@ -334,13 +340,13 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		} else {
 			for k, v := range secrets {
 				switch strings.ToLower(k) {
-				case "accountname":
+				case accountNameField:
 					accountName = v
-				case "azurestorageaccountname": // for compatibility with built-in blobfuse plugin
+				case defaultSecretAccountName: // for compatibility with built-in blobfuse plugin
 					accountName = v
-				case "accountkey":
+				case accountKeyField:
 					accountKey = v
-				case "azurestorageaccountkey": // for compatibility with built-in blobfuse plugin
+				case defaultSecretAccountKey: // for compatibility with built-in blobfuse plugin
 					accountKey = v
 				case "azurestorageaccountsastoken":
 					accountSasToken = v
@@ -368,7 +374,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	return accountName, containerName, authEnv, err
 }
 
-// GetStorageAccountAndContainer: get storage account and container info
+// GetStorageAccountAndContainer get storage account and container info
 // returns <accountName, accountKey, accountSasToken, containerName>
 // only for e2e testing
 func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID string, attrib, secrets map[string]string) (string, string, string, string, error) {
@@ -390,15 +396,15 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 		switch strings.ToLower(k) {
 		case containerNameField:
 			containerName = v
-		case "keyvaulturl":
+		case keyVaultURLField:
 			keyVaultURL = v
-		case "keyvaultsecretname":
+		case keyVaultSecretNameField:
 			keyVaultSecretName = v
-		case "keyvaultsecretversion":
+		case keyVaultSecretVersionField:
 			keyVaultSecretVersion = v
 		case storageAccountField:
 			accountName = v
-		case "storageaccountname":
+		case storageAccountNameField: // for compatibility
 			accountName = v
 		}
 	}
@@ -479,22 +485,22 @@ func getStorageAccount(secrets map[string]string) (string, string, error) {
 	var accountName, accountKey string
 	for k, v := range secrets {
 		switch strings.ToLower(k) {
-		case "accountname":
+		case accountNameField:
 			accountName = v
-		case "azurestorageaccountname": // for compatibility with built-in azurefile plugin
+		case defaultSecretAccountName: // for compatibility with built-in azurefile plugin
 			accountName = v
-		case "accountkey":
+		case accountKeyField:
 			accountKey = v
-		case "azurestorageaccountkey": // for compatibility with built-in azurefile plugin
+		case defaultSecretAccountKey: // for compatibility with built-in azurefile plugin
 			accountKey = v
 		}
 	}
 
 	if accountName == "" {
-		return "", "", fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", secrets)
+		return accountName, accountKey, fmt.Errorf("could not find %s or %s field secrets(%v)", accountNameField, defaultSecretAccountName, secrets)
 	}
 	if accountKey == "" {
-		return "", "", fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets(%v)", secrets)
+		return accountName, accountKey, fmt.Errorf("could not find %s or %s field in secrets(%v)", accountKeyField, defaultSecretAccountKey, secrets)
 	}
 
 	klog.V(4).Infof("got storage account(%s) from secret", accountName)
