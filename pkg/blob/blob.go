@@ -503,6 +503,7 @@ func getStorageAccount(secrets map[string]string) (string, string, error) {
 		return accountName, accountKey, fmt.Errorf("could not find %s or %s field in secrets(%v)", accountKeyField, defaultSecretAccountKey, secrets)
 	}
 
+	accountName = strings.TrimSpace(accountName)
 	klog.V(4).Infof("got storage account(%s) from secret", accountName)
 	return accountName, accountKey, nil
 }
