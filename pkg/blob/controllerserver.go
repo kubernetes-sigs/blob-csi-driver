@@ -110,6 +110,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
 		accountKind = string(storage.BlockBlobStorage)
 	}
+	if IsAzureStackCloud(d.cloud) {
+		accountKind = string(storage.Storage)
+	}
 
 	tags, err := azure.ConvertTagsToMap(customTags)
 	if err != nil {

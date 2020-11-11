@@ -18,6 +18,12 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
+echo "Verifying boilerplate"
+
+if [[ -z "$(command -v python)" ]]; then
+  echo "Cannot find python. Make link to python3..."
+  update-alternatives --install /usr/bin/python python /usr/bin/python3 1
+fi
 
 REPO_ROOT=$(dirname "${BASH_SOURCE}")/..
 
@@ -41,3 +47,5 @@ if [[ ${#files_need_boilerplate[@]} -gt 0 ]]; then
 
   exit 1
 fi
+
+echo "Done"

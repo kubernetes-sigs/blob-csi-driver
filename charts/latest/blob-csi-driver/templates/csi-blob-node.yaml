@@ -113,6 +113,8 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
+            - name: AZURE_ENVIRONMENT_FILEPATH  # For Azure Stack Cloud
+              value: /etc/kubernetes/azurestackcloud.json
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             privileged: true
@@ -129,6 +131,9 @@ spec:
               name: msi
             - mountPath: /mnt
               name: blob-cache
+            - name: ssl
+              mountPath: /etc/ssl/certs
+              readOnly: true
           resources:
             limits:
               cpu: 2
@@ -159,3 +164,6 @@ spec:
         - hostPath:
             path: /mnt
           name: blob-cache
+        - name: ssl
+          hostPath:
+            path: /etc/ssl/certs
