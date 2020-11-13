@@ -112,6 +112,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	if IsAzureStackCloud(d.cloud) {
 		accountKind = string(storage.Storage)
+		storageAccountType = "Standard_LRS"
 	}
 
 	tags, err := azure.ConvertTagsToMap(customTags)

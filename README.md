@@ -43,6 +43,11 @@ Please refer to [install Azure Blob Storage CSI driver](https://github.com/kuber
 ### Troubleshooting
  - [CSI driver troubleshooting guide](./docs/csi-debug.md)
 
+ ### Limitations
+ - Although Blob CSI Driver allows ReadWriteMany access mode to be used, its functionality is limited by the underlying volume-mounting technology. If azure-storage-fuse is being used to mount a Blob storage container, multiple nodes are allowed to mount the same container, but for just read-only scenarios. It means, you can still use ReadWriteMany mode to claim a volume, but you should carefully avoid writing to one single file from multiple nodes as there will be data corruption. NFSv3, in the contrast, fully supports ReadWriteMany access mode.
+ - The azure-storage-fuse method only supports Linux agent nodes.
+ - For the Kubernetes clusters that are running on Azure Stack Hub environments, only Standard Locally-redundant storage (Standard_LRS) Storage Account is supported. You will not be blocked if you claim a volume with other types of Storage Account but under the hood, the account type will be converted to Standard_LRS.
+
 ## Kubernetes Development
 Please refer to [development guide](./docs/csi-dev.md)
 
