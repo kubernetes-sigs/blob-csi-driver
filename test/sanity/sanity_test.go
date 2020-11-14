@@ -31,7 +31,7 @@ import (
 )
 
 func TestSanity(t *testing.T) {
-	creds, err := credentials.CreateAzureCredentialFile(false)
+	creds, err := credentials.CreateAzureCredentialFile()
 	defer func() {
 		err := credentials.DeleteAzureCredentialFile()
 		assert.NoError(t, err)

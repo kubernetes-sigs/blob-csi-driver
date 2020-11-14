@@ -2,9 +2,33 @@
 
 ## Run E2E tests Locally
 ### Prerequisite
- - Make sure a kubernetes cluster(with version >= 1.13) is set up and kubeconfig is under `$HOME/.kube/config`
- - Copy out `/etc/kubernetes/azure.json` under one agent node to local machine
- > For AKS cluster, need to modify `resourceGroup` to the node resource group name inside `/etc/kubernetes/azure.json`
+ - Make sure a kubernetes cluster(with version >= 1.13) is set up and kubeconfig is under `$HOME/.kube/config`. Make sure kubectl is functional.
+ - Better to do: install Helm and Tiller 
+ ```
+# Use v2.11.0 helm to match tiller's version in clusters made by aks-engine
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get | DESIRED_VERSION=v2.11.0 bash
+
+# Install Tiller for Helm version v2.11.0
+helm init --history-max 200 --override spec.selector.matchLabels.'name'='tiller',spec.selector.matchLabels.'app'='helm' --output yaml | sed 's@apiVersion: extensions/v1beta1@apiVersion: apps/v1@' | kubectl apply -f -
+```
+ - Set Azure credentials by environment variables
+ > You could get these variables from `/etc/kubernetes/azure.json` on a kubernetes cluster node
+```
+# Required environment variables:
+export set AZURE_TENANT_ID=
+export set AZURE_SUBSCRIPTION_ID=
+export set AZURE_CLIENT_ID=
+export set AZURE_CLIENT_SECRET=
+
+# Optional environment variables:
+# If the the test is not for the public Azure, e.g. Azure China Cloud, then you need to set AZURE_CLOUD_NAME and AZURE_LOCATION.
+# For Azure Stack Clound, you need to set AZURE_ENVIRONMENT_FILEPATH for your cloud environment.
+# If you have an existing resource group created for the test, then you need to set variable AZURE_RESOURCE_GROUP.
+export set AZURE_CLOUD_NAME=
+export set AZURE_LOCATION=
+export set AZURE_ENVIRONMENT_FILEPATH=
+export set AZURE_RESOURCE_GROUP=
+```
 
 ### Run test
 ```

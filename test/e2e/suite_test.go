@@ -71,14 +71,14 @@ var _ = ginkgo.BeforeSuite(func() {
 	handleFlags()
 	framework.AfterReadingAllFlags(&framework.TestContext)
 
-	if testutil.IsRunningInProw() {
-		creds, err := credentials.CreateAzureCredentialFile(false)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		_, err = azureClient.EnsureResourceGroup(context.Background(), creds.ResourceGroup, creds.Location, nil)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	creds, err := credentials.CreateAzureCredentialFile()
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	_, err = azureClient.EnsureResourceGroup(context.Background(), creds.ResourceGroup, creds.Location, nil)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
+	if testutil.IsRunningInProw() {
 		// Need to login to ACR using SP credential if we are running in Prow so we can push test images.
 		// If running locally, user should run 'docker login' before running E2E tests
 		registry := os.Getenv("REGISTRY")
@@ -89,23 +89,24 @@ var _ = ginkgo.BeforeSuite(func() {
 		err = cmd.Run()
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		log.Println("docker login is successful")
-
-		// Install Azure Blob Storage CSI driver on cluster from project root
-		e2eBootstrap := testCmd{
-			command:  "make",
-			args:     []string{"e2e-bootstrap"},
-			startLog: "Installing Azure Blob Storage CSI driver ...",
-			endLog:   "Azure Blob Storage CSI driver installed",
-		}
-
-		createMetricsSVC := testCmd{
-			command:  "make",
-			args:     []string{"create-metrics-svc"},
-			startLog: "create metrics service ...",
-			endLog:   "metrics service created",
-		}
-		execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
 	}
+
+	// Install Azure Blob Storage CSI driver on cluster from project root
+	e2eBootstrap := testCmd{
+		command:  "make",
+		args:     []string{"e2e-bootstrap"},
+		startLog: "Installing Azure Blob Storage CSI driver ...",
+		endLog:   "Azure Blob Storage CSI driver installed",
+	}
+
+	createMetricsSVC := testCmd{
+		command:  "make",
+		args:     []string{"create-metrics-svc"},
+		startLog: "create metrics service ...",
+		endLog:   "metrics service created",
+	}
+	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
+
 	nodeid := os.Getenv("nodeid")
 	kubeconfig := os.Getenv(kubeconfigEnvVar)
 	blobDriver = blob.NewDriver(nodeid)
@@ -116,49 +117,53 @@ var _ = ginkgo.BeforeSuite(func() {
 })
 
 var _ = ginkgo.AfterSuite(func() {
-	if testutil.IsRunningInProw() {
-		createExampleDeployment := testCmd{
-			command:  "make",
-			args:     []string{"create-example-deployment"},
-			startLog: "create example deployments",
-			endLog:   "example deployments created",
-		}
-		execTestCmd([]testCmd{createExampleDeployment})
-		// sleep 120s waiting for deployment running complete
-		time.Sleep(120 * time.Second)
-
-		blobLog := testCmd{
-			command:  "bash",
-			args:     []string{"test/utils/blob_log.sh"},
-			startLog: "===================blob log===================",
-			endLog:   "==================================================",
-		}
-		e2eTeardown := testCmd{
-			command:  "make",
-			args:     []string{"e2e-teardown"},
-			startLog: "Uninstalling Azure Blob Storage CSI driver...",
-			endLog:   "Azure Blob Storage CSI driver uninstalled",
-		}
-		execTestCmd([]testCmd{blobLog, e2eTeardown})
-
-		// install/uninstall CSI Driver deployment scripts test
-		installDriver := testCmd{
-			command:  "bash",
-			args:     []string{"deploy/install-driver.sh", "master", "local"},
-			startLog: "===================install CSI Driver deployment scripts test===================",
-			endLog:   "===================================================",
-		}
-		uninstallDriver := testCmd{
-			command:  "bash",
-			args:     []string{"deploy/uninstall-driver.sh", "master", "local"},
-			startLog: "===================uninstall CSI Driver deployment scripts test===================",
-			endLog:   "===================================================",
-		}
-		execTestCmd([]testCmd{installDriver, uninstallDriver})
-
-		err := credentials.DeleteAzureCredentialFile()
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	createExampleDeployment := testCmd{
+		command:  "make",
+		args:     []string{"create-example-deployment"},
+		startLog: "create example deployments",
+		endLog:   "example deployments created",
 	}
+	execTestCmd([]testCmd{createExampleDeployment})
+	// sleep 120s waiting for deployment running complete
+	time.Sleep(120 * time.Second)
+
+	blobLog := testCmd{
+		command:  "bash",
+		args:     []string{"test/utils/blob_log.sh"},
+		startLog: "===================blob log===================",
+		endLog:   "==================================================",
+	}
+	deleteMetricsSVC := testCmd{
+		command:  "make",
+		args:     []string{"delete-metrics-svc"},
+		startLog: "delete metrics service...",
+		endLog:   "metrics service deleted",
+	}
+	e2eTeardown := testCmd{
+		command:  "make",
+		args:     []string{"e2e-teardown"},
+		startLog: "Uninstalling Azure Blob Storage CSI driver...",
+		endLog:   "Azure Blob Storage CSI driver uninstalled",
+	}
+	execTestCmd([]testCmd{blobLog, deleteMetricsSVC, e2eTeardown})
+
+	// install/uninstall CSI Driver deployment scripts test
+	installDriver := testCmd{
+		command:  "bash",
+		args:     []string{"deploy/install-driver.sh", "master", "local"},
+		startLog: "===================install CSI Driver deployment scripts test===================",
+		endLog:   "===================================================",
+	}
+	uninstallDriver := testCmd{
+		command:  "bash",
+		args:     []string{"deploy/uninstall-driver.sh", "master", "local"},
+		startLog: "===================uninstall CSI Driver deployment scripts test===================",
+		endLog:   "===================================================",
+	}
+	execTestCmd([]testCmd{installDriver, uninstallDriver})
+
+	err := credentials.DeleteAzureCredentialFile()
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 })
 
 func TestE2E(t *testing.T) {
