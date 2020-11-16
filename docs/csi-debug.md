@@ -34,6 +34,11 @@ $ kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 blobfuse 1.2.4
 ```
 
+### check blobfuse mount on the agent node
+```console
+# mount | grep blobfuse | uniq
+```
+
 ### troubleshooting connection failure on agent node
  - blobfuse
 
