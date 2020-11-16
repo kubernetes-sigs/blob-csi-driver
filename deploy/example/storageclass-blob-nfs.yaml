@@ -2,7 +2,7 @@
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: blob
+  name: blob-nfs
 provisioner: blob.csi.azure.com
 parameters:
   storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
