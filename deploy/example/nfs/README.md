@@ -33,7 +33,7 @@ az provider register --namespace Microsoft.Storage
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: blob
+  name: blob-nfs
 provisioner: blob.csi.azure.com
 parameters:
   resourceGroup: EXISTING_RESOURCE_GROUP_NAME  # optional, only set this when storage account is not in the same resource group as agent node
@@ -51,7 +51,7 @@ kubectl create -f storageclass-blob-nfs.yaml
 ### Example
  - Create a deployment with NFSv3 on Azure storage
 ```console
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/nfs/statefulset.yaml
 ```
 
  - enter pod to check
