@@ -28,8 +28,8 @@ IMAGE_TAG ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
 IMAGE_TAG_LATEST = $(REGISTRY)/$(IMAGE_NAME):latest
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS ?= "-X ${PKG}/pkg/blob.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blob.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blob.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
-E2E_HELM_OPTIONS ?= --set image.blob.pullPolicy=IfNotPresent --set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.blob.tag=$(IMAGE_VERSION)
-GINKGO_FLAGS = -ginkgo.noColor -ginkgo.v
+E2E_HELM_OPTIONS ?= --set image.blob.pullPolicy=Always --set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.blob.tag=$(IMAGE_VERSION)
+GINKGO_FLAGS = -ginkgo.v
 GO111MODULE = on
 GOPATH ?= $(shell go env GOPATH)
 GOBIN ?= $(GOPATH)/bin
@@ -79,15 +79,15 @@ e2e-teardown:
 
 .PHONY: blob
 blob:
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -o _output/blobplugin ./pkg/blobplugin
+	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin ./pkg/blobplugin
 
 .PHONY: blob-windows
 blob-windows:
-	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -o _output/blobplugin.exe ./pkg/blobplugin
+	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin.exe ./pkg/blobplugin
 
 .PHONT: blob-darwin
 blob-darwin:
-	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags ${LDFLAGS} -o _output/blobplugin ./pkg/blobplugin
+	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin ./pkg/blobplugin
 
 .PHONY: container
 container: blob
@@ -143,3 +143,7 @@ create-example-deployment:
 	kubectl apply -f deploy/example/storageclass-blobfuse.yaml
 	kubectl apply -f deploy/example/deployment.yaml
 	kubectl apply -f deploy/example/statefulset.yaml
+
+.PHONY: delete-metrics-svc
+delete-metrics-svc:
+	kubectl delete -f deploy/example/metrics/csi-blob-controller-svc.yaml --ignore-not-found

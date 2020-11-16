@@ -26,14 +26,12 @@ import (
 
 	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
 	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
-	"sigs.k8s.io/blob-csi-driver/test/utils/testutil"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestIntegrationOnAzurePublicCloud(t *testing.T) {
-	// Test on AzurePublicCloud
-	creds, err := credentials.CreateAzureCredentialFile(false)
+func TestIntegration(t *testing.T) {
+	creds, err := credentials.CreateAzureCredentialFile()
 	defer func() {
 		err := credentials.DeleteAzureCredentialFile()
 		assert.NoError(t, err)
@@ -41,30 +39,6 @@ func TestIntegrationOnAzurePublicCloud(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, creds)
 
-	testIntegration(t, creds)
-}
-
-func TestIntegrationOnAzureChinaCloud(t *testing.T) {
-	if testutil.IsRunningInProw() {
-		t.Skipf("Skipping integration test on Azure China Cloud because Prow only tests on Azure Public Cloud at the moment")
-	}
-
-	// Test on AzureChinaCloud
-	creds, err := credentials.CreateAzureCredentialFile(true)
-	defer func() {
-		err := credentials.DeleteAzureCredentialFile()
-		assert.NoError(t, err)
-	}()
-
-	if err != nil {
-		// Skip the test if Azure China Cloud credentials are not supplied
-		t.Skipf("Skipping integration test on Azure China Cloud due to the following error %v", err)
-	}
-	assert.NotNil(t, creds)
-	testIntegration(t, creds)
-}
-
-func testIntegration(t *testing.T, creds *credentials.Credentials) {
 	os.Setenv("AZURE_CREDENTIAL_FILE", credentials.TempAzureCredentialFilePath)
 
 	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret)

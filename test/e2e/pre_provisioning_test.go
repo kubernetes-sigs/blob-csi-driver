@@ -72,7 +72,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			}
 			_, err := blobDriver.DeleteVolume(context.Background(), req)
 			if err != nil {
-				ginkgo.Fail(fmt.Sprintf("create volume %q error: %v", volumeID, err))
+				ginkgo.Fail(fmt.Sprintf("delete volume %q error: %v", volumeID, err))
 			}
 		}
 	})

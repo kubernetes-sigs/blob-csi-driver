@@ -31,7 +31,6 @@ import (
 
 const (
 	AzurePublicCloud            = "AzurePublicCloud"
-	AzureChinaCloud             = "AzureChinaCloud"
 	ResourceGroupPrefix         = "blob-csi-driver-test-"
 	TempAzureCredentialFilePath = "/tmp/azure.json"
 
@@ -45,22 +44,15 @@ const (
     "location": "{{.Location}}"
 }`
 	defaultAzurePublicCloudLocation = "eastus2"
-	defaultAzureChinaCloudLocation  = "chinaeast2"
 
 	// Env vars
+	cloudNameEnvVar       = "AZURE_CLOUD_NAME"
 	tenantIDEnvVar        = "AZURE_TENANT_ID"
 	subscriptionIDEnvVar  = "AZURE_SUBSCRIPTION_ID"
 	aadClientIDEnvVar     = "AZURE_CLIENT_ID"
 	aadClientSecretEnvVar = "AZURE_CLIENT_SECRET"
 	resourceGroupEnvVar   = "AZURE_RESOURCE_GROUP"
 	locationEnvVar        = "AZURE_LOCATION"
-
-	tenantIDChinaEnvVar        = "AZURE_TENANT_ID_CHINA"
-	subscriptionIDChinaEnvVar  = "AZURE_SUBSCRIPTION_ID_CHINA"
-	aadClientIDChinaEnvVar     = "AZURE_CLIENT_ID_CHINA"
-	aadClientSecretChinaEnvVar = "AZURE_CLIENT_SECRET_CHINA"
-	resourceGroupChinaEnvVar   = "AZURE_RESOURCE_GROUP_CHINA"
-	locationChinaEnvVar        = "AZURE_LOCATION_CHINA"
 )
 
 // Config is used in Prow to store Azure credentials
@@ -93,37 +85,26 @@ type Credentials struct {
 
 // CreateAzureCredentialFile creates a temporary Azure credential file for
 // Azure Blob Storage CSI driver tests and returns the credentials
-func CreateAzureCredentialFile(isAzureChinaCloud bool) (*Credentials, error) {
+func CreateAzureCredentialFile() (*Credentials, error) {
 	// Search credentials through env vars first
 	var cloud, tenantID, subscriptionID, aadClientID, aadClientSecret, resourceGroup, location string
-	if isAzureChinaCloud {
-		cloud = AzureChinaCloud
-		tenantID = os.Getenv(tenantIDChinaEnvVar)
-		subscriptionID = os.Getenv(subscriptionIDChinaEnvVar)
-		aadClientID = os.Getenv(aadClientIDChinaEnvVar)
-		aadClientSecret = os.Getenv(aadClientSecretChinaEnvVar)
-		resourceGroup = os.Getenv(resourceGroupChinaEnvVar)
-		location = os.Getenv(locationChinaEnvVar)
-	} else {
+	cloud = os.Getenv(cloudNameEnvVar)
+	if cloud == "" {
 		cloud = AzurePublicCloud
-		tenantID = os.Getenv(tenantIDEnvVar)
-		subscriptionID = os.Getenv(subscriptionIDEnvVar)
-		aadClientID = os.Getenv(aadClientIDEnvVar)
-		aadClientSecret = os.Getenv(aadClientSecretEnvVar)
-		resourceGroup = os.Getenv(resourceGroupEnvVar)
-		location = os.Getenv(locationEnvVar)
 	}
+	tenantID = os.Getenv(tenantIDEnvVar)
+	subscriptionID = os.Getenv(subscriptionIDEnvVar)
+	aadClientID = os.Getenv(aadClientIDEnvVar)
+	aadClientSecret = os.Getenv(aadClientSecretEnvVar)
+	resourceGroup = os.Getenv(resourceGroupEnvVar)
+	location = os.Getenv(locationEnvVar)
 
 	if resourceGroup == "" {
 		resourceGroup = ResourceGroupPrefix + uuid.NewUUID().String()
 	}
 
 	if location == "" {
-		if isAzureChinaCloud {
-			location = defaultAzureChinaCloudLocation
-		} else {
-			location = defaultAzurePublicCloudLocation
-		}
+		location = defaultAzurePublicCloudLocation
 	}
 
 	// Running test locally
