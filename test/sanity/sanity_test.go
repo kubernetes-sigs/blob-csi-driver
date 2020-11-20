@@ -71,7 +71,7 @@ func TestSanity(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, strings.HasSuffix(projectRoot, "blob-csi-driver"))
 
-	cmd := exec.Command("./test/sanity/run-tests-all-clouds.sh")
+	cmd := exec.Command("./test/sanity/run-tests-all-clouds.sh", creds.Cloud)
 	cmd.Dir = projectRoot
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

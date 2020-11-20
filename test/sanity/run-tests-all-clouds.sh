@@ -16,6 +16,8 @@
 
 set -eo pipefail
 
+readonly cloud="$1"
+
 function install_csi_sanity_bin {
   echo 'Installing CSI sanity test binary...'
   git clone https://github.com/kubernetes-csi/csi-test.git -b v2.2.0
@@ -24,9 +26,22 @@ function install_csi_sanity_bin {
   popd
 }
 
+function install_blobfuse_bin {
+  echo 'Installing blobfuse...'
+  apt-get update && apt install ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget -y
+  wget https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
+  dpkg -i packages-microsoft-prod.deb
+  apt-get update && apt install blobfuse fuse -y
+  rm -f packages-microsoft-prod.deb
+}
+
 # copy blobfuse binary
-mkdir -p /usr/blob
-cp test/artifacts/blobfuse /usr/bin/blobfuse
+if [[ "$cloud" == "AzureStackCloud" ]]; then
+  install_blobfuse_bin
+else
+  mkdir -p /usr/blob
+  cp test/artifacts/blobfuse /usr/bin/blobfuse
+fi
 
 install_csi_sanity_bin
 apt update && apt install libfuse2 -y
