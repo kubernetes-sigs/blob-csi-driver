@@ -3,14 +3,6 @@
 ## Run E2E tests Locally
 ### Prerequisite
  - Make sure a kubernetes cluster(with version >= 1.13) is set up and kubeconfig is under `$HOME/.kube/config`. Make sure kubectl is functional.
- - Better to do: install Helm and Tiller 
- ```
-# Use v2.11.0 helm to match tiller's version in clusters made by aks-engine
-curl https://raw.githubusercontent.com/helm/helm/master/scripts/get | DESIRED_VERSION=v2.11.0 bash
-
-# Install Tiller for Helm version v2.11.0
-helm init --history-max 200 --override spec.selector.matchLabels.'name'='tiller',spec.selector.matchLabels.'app'='helm' --output yaml | sed 's@apiVersion: extensions/v1beta1@apiVersion: apps/v1@' | kubectl apply -f -
-```
  - Set Azure credentials by environment variables
  > You could get these variables from `/etc/kubernetes/azure.json` on a kubernetes cluster node
 ```
