@@ -18,12 +18,25 @@ set -eo pipefail
 
 GO111MODULE=off go get github.com/rexray/gocsi/csc
 
+function install_blobfuse_bin {
+  echo 'Installing blobfuse...'
+  apt-get update && apt install ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget -y
+  wget https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
+  dpkg -i packages-microsoft-prod.deb
+  apt-get update && apt install blobfuse fuse -y
+  rm -f packages-microsoft-prod.deb
+}
+
 readonly resource_group="$1"
 readonly cloud="$2"
 
 # copy blobfuse binary
-mkdir -p /usr/blob
-cp test/artifacts/blobfuse /usr/bin/blobfuse
+if [[ "$cloud" == "AzureStackCloud" ]]; then
+  install_blobfuse_bin
+else
+  mkdir -p /usr/blob
+  cp test/artifacts/blobfuse /usr/bin/blobfuse
+fi
 
 apt update && apt install libfuse2 -y
 test/integration/run-test.sh "tcp://127.0.0.1:10000" "/tmp/stagingtargetpath" "/tmp/targetpath" "$resource_group" "$cloud"
