@@ -63,6 +63,8 @@ e2e-bootstrap: install-helm
 	# Only build and push the image if it does not exist in the registry
 	docker pull $(IMAGE_TAG) || make blob-container push
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
+		--set controller.runOnMaster=true \
+		--set controller.replicas=1 \
 		$(E2E_HELM_OPTIONS)
 
 .PHONY: install-helm
