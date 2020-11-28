@@ -13,8 +13,7 @@ Quick start instructions for the setup and configuration of Azure Blob Storage C
 
 ```console
 $ cd $GOPATH/src/sigs.k8s.io/blob-csi-driver/charts/latest
-$ helm package blob-csi-driver
-$ helm install blob-csi-driver blob-csi-driver-latest.tgz --namespace kube-system
+$ helm install blob-csi-driver ./blob-csi-driver --namespace kube-system
 ```
   
 ## Install CSI Driver released version using Helm repository
