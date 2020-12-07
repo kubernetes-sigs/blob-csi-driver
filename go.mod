@@ -6,7 +6,7 @@ require (
 	github.com/Azure/azure-sdk-for-go v43.0.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.1
 	github.com/Azure/go-autorest/autorest/adal v0.9.5
-	github.com/container-storage-interface/spec v1.2.0
+	github.com/container-storage-interface/spec v1.3.0
 	github.com/golang/mock v1.3.1
 	github.com/golang/protobuf v1.3.2
 	github.com/kubernetes-csi/csi-lib-utils v0.7.0
@@ -29,7 +29,7 @@ require (
 )
 
 replace (
-	github.com/container-storage-interface/spec => github.com/container-storage-interface/spec v1.1.0
+	github.com/container-storage-interface/spec => github.com/container-storage-interface/spec v1.3.0
 	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.0.0
 	go.etcd.io/etcd => go.etcd.io/etcd v0.0.0-20200410171415-59f5fb25a533
 	google.golang.org/grpc => google.golang.org/grpc v1.27.0
