@@ -33,8 +33,9 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
  - This driver also supports [read cloud config from kuberenetes secret](./docs/read-from-secret.md).
  - If cluster identity is [Managed Service Identity(MSI)](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity), make sure user assigned identity has `Contributor` role on node resource group
 
-### Install Azure Blob Storage CSI driver on a kubernetes cluster
-Please refer to [install Azure Blob Storage CSI driver](https://github.com/kubernetes-sigs/blob-csi-driver/blob/master/docs/install-blob-csi-driver.md)
+### Install driver on a Kubernetes cluster
+ - install by [kubectl](./docs/install-blob-csi-driver.md)
+ - install by [helm charts](./charts)
 
 ### Usage
  - [Basic usage](./deploy/example/e2e_usage.md)
