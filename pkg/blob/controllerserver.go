@@ -360,5 +360,26 @@ func (d *Driver) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsReques
 
 // ControllerExpandVolume controller expand volume
 func (d *Driver) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "ControllerExpandVolume is not yet implemented")
+	if len(req.GetVolumeId()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
+	}
+
+	if req.GetCapacityRange() == nil {
+		return nil, status.Error(codes.InvalidArgument, "Capacity Range missing in request")
+	}
+
+	if err := d.ValidateControllerServiceRequest(csi.ControllerServiceCapability_RPC_EXPAND_VOLUME); err != nil {
+		return nil, fmt.Errorf("invalid expand volume req: %v", req)
+	}
+
+	volSizeBytes := int64(req.GetCapacityRange().GetRequiredBytes())
+	requestGiB := int64(util.RoundUpGiB(volSizeBytes))
+
+	if volSizeBytes > containerMaxSize {
+		return nil, status.Errorf(codes.OutOfRange, "required bytes (%d) exceeds the maximum supported bytes (%d)", volSizeBytes, containerMaxSize)
+	}
+
+	klog.V(2).Infof("ControllerExpandVolume(%s) successfully, currentQuota: %d Gi", req.VolumeId, requestGiB)
+
+	return &csi.ControllerExpandVolumeResponse{CapacityBytes: req.GetCapacityRange().GetRequiredBytes()}, nil
 }
