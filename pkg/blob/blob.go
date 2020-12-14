@@ -83,6 +83,9 @@ const (
 	shareNotFound         = "The specified share does not exist"
 	shareBeingDeleted     = "The specified share is being deleted"
 	clientThrottled       = "client throttled"
+
+	// containerMaxSize is the max size of the blob container. See https://docs.microsoft.com/en-us/azure/storage/blobs/scalability-targets#scale-targets-for-blob-storage
+	containerMaxSize = 100 * util.TiB
 )
 
 var (
@@ -141,6 +144,7 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 			csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 			//csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
 			//csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
+			csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
 		})
 	d.AddVolumeCapabilityAccessModes([]csi.VolumeCapability_AccessMode_Mode{
 		csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,

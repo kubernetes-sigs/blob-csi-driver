@@ -119,6 +119,26 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+        - name: csi-resizer
+          image: "{{ .Values.image.csiResizer.repository }}:{{ .Values.image.csiResizer.tag }}"
+          args:
+            - "-csi-address=$(ADDRESS)"
+            - "-v=5"
+            - "-leader-election"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+          imagePullPolicy: {{ .Values.image.csiResizer.pullPolicy }}
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
       volumes:
         - name: socket-dir
           emptyDir: {}

@@ -23,6 +23,7 @@ import (
 
 const (
 	GiB = 1024 * 1024 * 1024
+	TiB = 1024 * GiB
 )
 
 // RoundUpBytes rounds up the volume size in bytes upto multiplications of GiB

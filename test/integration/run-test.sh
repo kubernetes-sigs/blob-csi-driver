@@ -24,6 +24,7 @@ function cleanup {
 
 readonly volname="citest-$(date +%s)"
 readonly volsize="2147483648"
+readonly expanded_vol_size="2147483650"
 readonly endpoint="$1"
 readonly staging_target_path="$2"
 readonly target_path="$3"
@@ -69,6 +70,11 @@ if [[ "$cloud" != "AzureChinaCloud" ]]; then
   csc node unstage --endpoint "$endpoint" --staging-target-path "$staging_target_path" "$volumeid"
   sleep 2
 fi
+
+# TODO: Activate test once issue is resolved - https://github.com/rexray/gocsi/issues/141
+# echo "Expand volume test:"
+# csc controller expand-volume --endpoint "$endpoint" --req-bytes "$expanded_vol_size" "$volumeid"
+# sleep 15
 
 echo "Delete volume test:"
 csc controller del --endpoint "$endpoint" "$volumeid"

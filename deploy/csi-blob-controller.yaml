@@ -113,6 +113,25 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+        - name: csi-resizer
+          image: mcr.microsoft.com/oss/kubernetes-csi/csi-resizer:v0.5.0
+          args:
+            - "-csi-address=$(ADDRESS)"
+            - "-v=5"
+            - "-leader-election"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
       volumes:
         - name: socket-dir
           emptyDir: {}
