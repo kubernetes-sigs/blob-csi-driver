@@ -26,7 +26,8 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
-	azure2 "k8s.io/legacy-cloud-providers/azure"
+
+	azure2 "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
 
 // TestGetCloudProvider tests the func GetCloudProvider().

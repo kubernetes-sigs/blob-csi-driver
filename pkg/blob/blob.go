@@ -20,22 +20,23 @@ import (
 	"fmt"
 	"strings"
 
-	"sigs.k8s.io/blob-csi-driver/pkg/util"
-
-	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
+	"golang.org/x/net/context"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pborman/uuid"
-	"golang.org/x/net/context"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	k8sutil "k8s.io/kubernetes/pkg/volume/util"
-	"k8s.io/legacy-cloud-providers/azure"
 	utilexec "k8s.io/utils/exec"
 	"k8s.io/utils/mount"
+
+	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
+	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
 
 const (
