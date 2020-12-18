@@ -96,6 +96,9 @@ blob-container:
 	docker buildx rm container-builder || true
 	docker buildx create --use --name=container-builder
 ifdef CI
+ifdef AZURE_STACK
+	docker run --privileged --name buildx_buildkit_container-builder0 -d --mount type=bind,src=/etc/ssl/certs,dst=/etc/ssl/certs moby/buildkit:latest || true
+endif
 	docker buildx build --no-cache --build-arg LDFLAGS=${LDFLAGS} -t $(IMAGE_TAG) -f ./pkg/blobplugin/Dockerfile --platform="linux/amd64" --push .
 
 	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG)
