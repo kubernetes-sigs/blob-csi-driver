@@ -21,6 +21,8 @@ import (
 	"os"
 	"strings"
 
+	"golang.org/x/net/context"
+
 	kv "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -30,9 +32,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
-	azureprovider "k8s.io/legacy-cloud-providers/azure"
 
-	"golang.org/x/net/context"
+	azureprovider "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
 
 var (
