@@ -44,14 +44,17 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
 ### Troubleshooting
  - [CSI driver troubleshooting guide](./docs/csi-debug.md)
 
- ### Limitations
-Please refer to [Azure Blob Storage CSI Driver Limitations](./docs/limitations.md)
+### Support
+ - Please see our [support policy][support-policy]
+
+### Limitations
+ - Please refer to [Azure Blob Storage CSI Driver Limitations](./docs/limitations.md)
 
 ## Kubernetes Development
-Please refer to [development guide](./docs/csi-dev.md)
+ - Please refer to [development guide](./docs/csi-dev.md)
 
 ### View CI Results
-Check testgrid [provider-azure-blobfuse-csi-driver](https://testgrid.k8s.io/provider-azure-blobfuse-csi-driver) dashboard.
+ - Check testgrid [provider-azure-blobfuse-csi-driver](https://testgrid.k8s.io/provider-azure-blobfuse-csi-driver) dashboard.
 
 ### Links
  - [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse)
@@ -59,3 +62,5 @@ Check testgrid [provider-azure-blobfuse-csi-driver](https://testgrid.k8s.io/prov
  - [CSI Drivers](https://github.com/kubernetes-csi/drivers)
  - [Container Storage Interface (CSI) Specification](https://github.com/container-storage-interface/spec)
  - [Blobfuse FlexVolume driver](https://github.com/Azure/kubernetes-volume-drivers/tree/master/flexvolume/blobfuse)
+
+[support-policy]: support.md
