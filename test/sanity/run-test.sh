@@ -35,4 +35,4 @@ _output/blobplugin --endpoint "$endpoint" --nodeid "$nodeid" -v=5 &
 
 echo "Begin to run sanity test..."
 readonly CSI_SANITY_BIN='csi-sanity'
-"$CSI_SANITY_BIN" --ginkgo.v --csi.endpoint=$endpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity"
+"$CSI_SANITY_BIN" --ginkgo.v --csi.endpoint=$endpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity|should be idempotent"
