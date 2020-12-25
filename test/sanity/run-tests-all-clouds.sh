@@ -20,9 +20,13 @@ readonly cloud="$1"
 
 function install_csi_sanity_bin {
   echo 'Installing CSI sanity test binary...'
+  mkdir -p $GOPATH/src/github.com/kubernetes-csi
+  pushd $GOPATH/src/github.com/kubernetes-csi
+  export GO111MODULE=off
   git clone https://github.com/kubernetes-csi/csi-test.git -b v2.2.0
   pushd csi-test/cmd/csi-sanity
-  make
+  make install
+  popd
   popd
 }
 
@@ -43,6 +47,8 @@ else
   cp test/artifacts/blobfuse /usr/bin/blobfuse
 fi
 
-install_csi_sanity_bin
 apt update && apt install libfuse2 -y
+if [[ -z "$(command -v csi-sanity)" ]]; then
+	install_csi_sanity_bin
+fi
 test/sanity/run-test.sh "$nodeid"
