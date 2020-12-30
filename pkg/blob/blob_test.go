@@ -453,7 +453,7 @@ func TestGetAuthEnv(t *testing.T) {
 				attrib["containername"] = "unit-test"
 				attrib["keyvaultsecretname"] = "unit-test"
 				attrib["keyvaultsecretversion"] = "unit-test"
-				attrib["storageaccountname"] = "unit-test"
+				attrib["storageaccountname"] = "storageaccountname"
 				attrib["azurestorageidentityclientid"] = "unit-test"
 				attrib["azurestorageidentityobjectid"] = "unit-test"
 				attrib["azurestorageidentityresourceid"] = "unit-test"
@@ -473,7 +473,7 @@ func TestGetAuthEnv(t *testing.T) {
 				}
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				_, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
-				expectedErr := fmt.Errorf("no key for storage account(f5713de20cde511e8ba4900) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				expectedErr := fmt.Errorf("no key for storage account(storageaccountname) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -514,19 +514,20 @@ func TestGetAuthEnv(t *testing.T) {
 				d := NewFakeDriver()
 				attrib := make(map[string]string)
 				secret := make(map[string]string)
-				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				secret["accountname"] = "unit-test"
-				secret["azurestorageaccountname"] = "unit-test"
+				volumeID := "rg#f5713de20cde511e8ba4900#containername"
+				secret["accountname"] = "accountname"
+				secret["azurestorageaccountname"] = "accountname"
 				secret["accountkey"] = "unit-test"
 				secret["azurestorageaccountkey"] = "unit-test"
 				secret["azurestorageaccountsastoken"] = "unit-test"
 				secret["msisecret"] = "unit-test"
 				secret["azurestoragespnclientsecret"] = "unit-test"
-				_, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
-				expectedErr := fmt.Errorf("could not find containerName from attributes(map[]) or volumeID(rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41)")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				accountName, containerName, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				if err != nil {
+					t.Errorf("actualErr: (%v), expectedErr: nil", err)
 				}
+				assert.Equal(t, accountName, "accountname")
+				assert.Equal(t, containerName, "containername")
 			},
 		},
 		{

@@ -259,16 +259,20 @@ func isSASToken(key string) bool {
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
 func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, []string, error) {
+	rgName, accountName, containerName, err := GetContainerInfo(volumeID)
+	if err != nil {
+		// ignore volumeID parsing error
+		klog.Warningf("parsing volumeID(%s) return with error: %v", volumeID, err)
+		err = nil
+	}
+
 	var (
-		accountName           string
 		accountKey            string
 		accountSasToken       string
-		containerName         string
 		keyVaultURL           string
 		keyVaultSecretName    string
 		keyVaultSecretVersion string
 		authEnv               []string
-		err                   error
 	)
 
 	for k, v := range attrib {
@@ -306,6 +310,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	klog.V(2).Infof("volumeID(%s) authEnv: %s", volumeID, authEnv)
 
 	if protocol == nfs {
+		// nfs protocol does not need account key, return directly
 		return accountName, containerName, authEnv, err
 	}
 
@@ -324,23 +329,16 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		}
 	} else {
 		if len(secrets) == 0 {
-			var resourceGroupName string
-			resourceGroupName, accountName, containerName, err = GetContainerInfo(volumeID)
-			if err != nil {
-				return accountName, containerName, authEnv, err
-			}
-
-			if resourceGroupName == "" {
-				resourceGroupName = d.cloud.ResourceGroup
-			}
-
 			// read from k8s secret first
 			accountKey, err = d.GetStorageAccesskeyFromSecret(accountName, attrib[secretNamespaceField])
 			if err != nil {
 				klog.V(2).Infof("could not get account(%s) key from secret, error: %v, use cluster identity to get account key instead", accountName, err)
-				accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
+				if rgName == "" {
+					rgName = d.cloud.ResourceGroup
+				}
+				accountKey, err = d.cloud.GetStorageAccesskey(accountName, rgName)
 				if err != nil {
-					return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
+					return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, rgName, err)
 				}
 			}
 		} else {
@@ -385,17 +383,14 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 // only for e2e testing
 func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID string, attrib, secrets map[string]string) (string, string, string, string, error) {
 	var (
-		accountName     string
-		accountKey      string
-		accountSasToken string
-
-		containerName string
-
+		accountName           string
+		accountKey            string
+		accountSasToken       string
+		containerName         string
 		keyVaultURL           string
 		keyVaultSecretName    string
 		keyVaultSecretVersion string
-
-		err error
+		err                   error
 	)
 
 	for k, v := range attrib {
@@ -430,19 +425,19 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 		}
 	} else {
 		if len(secrets) == 0 {
-			var resourceGroupName string
-			resourceGroupName, accountName, containerName, err = GetContainerInfo(volumeID)
+			var rgName string
+			rgName, accountName, containerName, err = GetContainerInfo(volumeID)
 			if err != nil {
 				return "", "", "", "", err
 			}
 
-			if resourceGroupName == "" {
-				resourceGroupName = d.cloud.ResourceGroup
+			if rgName == "" {
+				rgName = d.cloud.ResourceGroup
 			}
 
-			accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
+			accountKey, err = d.cloud.GetStorageAccesskey(accountName, rgName)
 			if err != nil {
-				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
+				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, rgName, err)
 			}
 		}
 	}
