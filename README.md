@@ -17,7 +17,7 @@ Since `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.a
 |Azure Blob Storage CSI driver Version    | Image                                        | 1.14+  |
 |-----------------------------------------|----------------------------------------------|--------|
 |master branch                            |mcr.microsoft.com/k8s/csi/blob-csi:latest     | yes    |
-|v0.7.0                                   |mcr.microsoft.com/k8s/csi/blob-csi:v0.7.0     | yes    |
+|v0.7.1                                   |mcr.microsoft.com/k8s/csi/blob-csi:v0.7.1     | yes    |
 
 ### Driver parameters
 Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
