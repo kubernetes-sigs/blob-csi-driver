@@ -73,7 +73,8 @@ func TestNodeGetCapabilities(t *testing.T) {
 func TestEnsureMountPoint(t *testing.T) {
 	errorTarget := "./error_is_likely_target"
 	alreadyExistTarget := "./false_is_likely_exist_target"
-	azureunit := "./azure.go"
+	falseTarget := "./false_is_likely_target"
+	azureFile := "./azure.go"
 
 	tests := []struct {
 		desc        string
@@ -86,8 +87,13 @@ func TestEnsureMountPoint(t *testing.T) {
 			expectedErr: fmt.Errorf("fake IsLikelyNotMountPoint: fake error"),
 		},
 		{
+			desc:        "[Error] Error opening file",
+			target:      falseTarget,
+			expectedErr: &os.PathError{Op: "open", Path: "./false_is_likely_target", Err: syscall.ENOENT},
+		},
+		{
 			desc:        "[Error] Not a directory",
-			target:      azureunit,
+			target:      azureFile,
 			expectedErr: &os.PathError{Op: "mkdir", Path: "./azure.go", Err: syscall.ENOTDIR},
 		},
 		{
@@ -106,14 +112,16 @@ func TestEnsureMountPoint(t *testing.T) {
 	_ = makeDir(alreadyExistTarget)
 	d := NewFakeDriver()
 	fakeMounter := &fakeMounter{}
+	fakeExec := &testingexec.FakeExec{ExactOrder: true}
 	d.mounter = &mount.SafeFormatAndMount{
 		Interface: fakeMounter,
+		Exec:      fakeExec,
 	}
 
 	for _, test := range tests {
-		err := d.ensureMountPoint(test.target)
+		_, err := d.ensureMountPoint(test.target)
 		if !reflect.DeepEqual(err, test.expectedErr) {
-			t.Errorf("desc: %s\n actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
+			t.Errorf("[%s]: Unexpected Error: %v, expected error: %v", test.desc, err, test.expectedErr)
 		}
 	}
 
