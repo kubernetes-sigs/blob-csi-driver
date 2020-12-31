@@ -45,6 +45,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	if req.GetVolumeCapability() == nil {
 		return nil, status.Error(codes.InvalidArgument, "Volume capability missing in request")
 	}
+	volumeID := req.GetVolumeId()
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
 	}
@@ -64,18 +65,23 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		mountOptions = append(mountOptions, "ro")
 	}
 
-	if err := d.ensureMountPoint(target); err != nil {
+	mnt, err := d.ensureMountPoint(target)
+	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", target, err)
 	}
+	if mnt {
+		klog.V(2).Infof("NodePublishVolume: volume %s is already mounted on %s", volumeID, target)
+		return &csi.NodePublishVolumeResponse{}, nil
+	}
 
-	klog.V(2).Infof("NodePublishVolume: mounting %s at %s with mountOptions: %v", source, target, mountOptions)
+	klog.V(2).Infof("NodePublishVolume: volume %s mounting %s at %s with mountOptions: %v", volumeID, source, target, mountOptions)
 	if err := d.mounter.Mount(source, target, "", mountOptions); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
 			return nil, status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, removeErr)
 		}
 		return nil, status.Errorf(codes.Internal, "Could not mount %q at %q: %v", source, target, err)
 	}
-	klog.V(2).Infof("NodePublishVolume: mount %s at %s successfully", source, target)
+	klog.V(2).Infof("NodePublishVolume: volume %s mount %s at %s successfully", volumeID, source, target)
 
 	return &csi.NodePublishVolumeResponse{}, nil
 }
@@ -103,7 +109,8 @@ func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublish
 
 // NodeStageVolume mount the volume to a staging path
 func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	if len(req.GetVolumeId()) == 0 {
+	volumeID := req.GetVolumeId()
+	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
 	}
 	targetPath := req.GetStagingTargetPath()
@@ -115,11 +122,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Error(codes.InvalidArgument, "Volume capability not provided")
 	}
 
-	if err := d.ensureMountPoint(targetPath); err != nil {
+	mnt, err := d.ensureMountPoint(targetPath)
+	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", targetPath, err)
 	}
+	if mnt {
+		klog.V(2).Infof("NodeStageVolume: volume %s is already mounted on %s", volumeID, targetPath)
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
 
-	volumeID := req.GetVolumeId()
 	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
@@ -228,12 +239,12 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 		return nil, status.Error(codes.InvalidArgument, "Staging target not provided")
 	}
 
-	klog.V(2).Infof("NodeUnstageVolume: unmounting %s", stagingTargetPath)
+	klog.V(2).Infof("NodeUnstageVolume: volume %s unmounting on %s", volumeID, stagingTargetPath)
 	err := mount.CleanupMountPoint(stagingTargetPath, d.mounter, false)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to unmount staing target %q: %v", stagingTargetPath, err)
 	}
-	klog.V(2).Infof("NodeUnstageVolume: unmount %s successfully", stagingTargetPath)
+	klog.V(2).Infof("NodeUnstageVolume: volume %s unmount on %s successfully", volumeID, stagingTargetPath)
 
 	return &csi.NodeUnstageVolumeResponse{}, nil
 }
@@ -324,14 +335,15 @@ func (d *Driver) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolume
 }
 
 // ensureMountPoint: create mount point if not exists
-func (d *Driver) ensureMountPoint(target string) error {
+// return <true, nil> if it's already a mounted point otherwise return <false, nil>
+func (d *Driver) ensureMountPoint(target string) (bool, error) {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
 		if IsCorruptedDir(target) {
 			notMnt = false
 			klog.Warningf("detected corrupted mount for targetPath [%s]", target)
 		} else {
-			return err
+			return !notMnt, err
 		}
 	}
 
@@ -340,21 +352,20 @@ func (d *Driver) ensureMountPoint(target string) error {
 		_, err := ioutil.ReadDir(target)
 		if err == nil {
 			klog.V(2).Infof("already mounted to target %s", target)
-			return nil
+			return !notMnt, nil
 		}
 		// mount link is invalid, now unmount and remount later
 		klog.Warningf("ReadDir %s failed with %v, unmount this directory", target, err)
 		if err := d.mounter.Unmount(target); err != nil {
 			klog.Errorf("Unmount directory %s failed with %v", target, err)
-			return err
+			return !notMnt, err
 		}
-		// notMnt = true
+		notMnt = true
+		return !notMnt, err
 	}
-
 	if err := volumehelper.MakeDir(target); err != nil {
 		klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
-		return err
+		return !notMnt, err
 	}
-
-	return nil
+	return !notMnt, nil
 }
