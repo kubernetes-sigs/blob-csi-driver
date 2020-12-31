@@ -3,8 +3,6 @@
 
 ### Dynamic Provisioning
   > [blobfuse example](../deploy/example/storageclass-blobfuse.yaml)
- 
-  > [blobfuse mountOptions example](../deploy/example/storageclass-blobfuse-mountoptions.yaml)
 
   > [nfs example](../deploy/example/storageclass-blob-nfs.yaml)
 
