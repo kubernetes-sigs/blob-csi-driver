@@ -45,12 +45,6 @@ const (
 	separator                  = "#"
 	volumeIDTemplate           = "%s#%s#%s"
 	secretNameTemplate         = "azure-storage-account-%s-secret"
-	fileMode                   = "file_mode"
-	dirMode                    = "dir_mode"
-	vers                       = "vers"
-	defaultFileMode            = "0777"
-	defaultDirMode             = "0777"
-	defaultVers                = "3.0"
 	serverNameField            = "server"
 	tagsField                  = "tags"
 	protocolField              = "protocol"
@@ -176,45 +170,6 @@ func GetContainerInfo(id string) (string, string, string, error) {
 		return "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
 	}
 	return segments[0], segments[1], segments[2], nil
-}
-
-// check whether mountOptions contains file_mode, dir_mode, vers, if not, append default mode
-func appendDefaultMountOptions(mountOptions []string) []string {
-	fileModeFlag := false
-	dirModeFlag := false
-	versFlag := false
-
-	for _, mountOption := range mountOptions {
-		if strings.HasPrefix(mountOption, fileMode) {
-			fileModeFlag = true
-		}
-		if strings.HasPrefix(mountOption, dirMode) {
-			dirModeFlag = true
-		}
-		if strings.HasPrefix(mountOption, vers) {
-			versFlag = true
-		}
-	}
-
-	allMountOptions := mountOptions
-	if !fileModeFlag {
-		allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%s", fileMode, defaultFileMode))
-	}
-
-	if !dirModeFlag {
-		allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%s", dirMode, defaultDirMode))
-	}
-
-	if !versFlag {
-		allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%s", vers, defaultVers))
-	}
-
-	/* todo: looks like fsGroup is not included in CSI
-	if !gidFlag && fsGroup != nil {
-		allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%d", gid, *fsGroup))
-	}
-	*/
-	return allMountOptions
 }
 
 // A container name must be a valid DNS name, conforming to the following naming rules:
