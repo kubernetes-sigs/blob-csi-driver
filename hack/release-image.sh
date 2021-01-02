@@ -26,7 +26,7 @@ export REGISTRY=$REGISTRY_NAME.azurecr.io
 export IMAGE_NAME=public/k8s/csi/blob-csi
 export CI=1
 export PUBLISH=1
-#az acr login --name $REGISTRY_NAME
+az acr login --name $REGISTRY_NAME
 make blob-container
 make push
 make push-latest
