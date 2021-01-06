@@ -7,7 +7,7 @@ Quick start instructions for the setup and configuration of Azure Blob Storage C
 
 ## Prerequisites
 
-1. [install Helm Client 3.0+ ](https://helm.sh/docs/intro/quickstart/#install-helm)
+ - [install Helm Client 3.0+ ](https://helm.sh/docs/intro/quickstart/#install-helm)
 
 ## Install latest CSI Driver via `helm install`
 
@@ -17,22 +17,17 @@ $ helm package blob-csi-driver
 $ helm install blob-csi-driver blob-csi-driver-latest.tgz --namespace kube-system
 ```
   
-## Install CSI Driver released version using Helm repository
+### Install a specific version
 
 ```console
 $ helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-$ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system
+$ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v0.11.0
 ```
   
-### Search for different versions of charts available
+### Search for all available charts versions
 ```console
 $ helm search repo -l blob-csi-driver/
 ```  
-### Install a specific version of Helm chart
-Specify the version of the chart to be installed using the `--version` parameter. 
-```console
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v0.11.0
-```
 
 ## Uninstall
 
@@ -68,10 +63,9 @@ The following table lists the configurable parameters of the latest Azure Blob S
 
 ## Troubleshooting
 
-If there are some errors when using helm to install, follow the steps to debug:
+If there are some errors when using helm, follow the steps to debug:
 
 1. Add `--wait -v=5 --debug` in `helm install` command.
-2. Then the error pods  can be located.
+2. Then the error pods can be located.
 3. Use `kubectl describe ` to acquire more info.
 4. Check the related resource of the pod, such as serviceaacount, rbac, etc.
-
