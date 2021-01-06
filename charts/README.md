@@ -7,7 +7,7 @@ Quick start instructions for the setup and configuration of Azure Blob Storage C
 
 ## Prerequisites
 
- - [install Helm Client 3.0+ ](https://helm.sh/docs/intro/quickstart/#install-helm)
+ - [install Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
 
 ## Install latest CSI Driver via `helm install`
 
@@ -24,7 +24,7 @@ $ helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sig
 $ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v0.11.0
 ```
   
-### Search for all available charts versions
+### Search for all available chart versions
 ```console
 $ helm search repo -l blob-csi-driver/
 ```  
@@ -62,10 +62,5 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.metricsPort`                                | metrics port of csi-blob-node                          | 29635                                                                |
 
 ## Troubleshooting
-
-If there are some errors when using helm, follow the steps to debug:
-
-1. Add `--wait -v=5 --debug` in `helm install` command.
-2. Then the error pods can be located.
-3. Use `kubectl describe ` to acquire more info.
-4. Check the related resource of the pod, such as serviceaacount, rbac, etc.
+ - Add `--wait -v=5 --debug` in `helm install` command to get detailed error
+ - Use `kubectl describe` to acquire more info
