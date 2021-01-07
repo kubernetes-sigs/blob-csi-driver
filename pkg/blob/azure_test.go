@@ -30,9 +30,10 @@ import (
 	azure2 "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
 
-// TestGetCloudProvider tests the func GetCloudProvider().
+// TestGetCloudProvider tests the func getCloudProvider().
 // To run this unit test successfully, need to ensure /etc/kubernetes/azure.json nonexistent.
 func TestGetCloudProvider(t *testing.T) {
+
 	fakeCredFile := "fake-cred-file.json"
 	fakeKubeConfig := "fake-kube-config"
 	emptyKubeConfig := "empty-kube-config"
@@ -138,7 +139,7 @@ users:
 			}
 			os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 		}
-		_, err := GetCloudProvider(test.kubeconfig)
+		_, err := getCloudProvider(test.kubeconfig)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
 		}
@@ -226,6 +227,7 @@ func TestGetKeyVaultSecretContent(t *testing.T) {
 		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 	}
 }
+
 func createTestFile(path string) error {
 	f, err := os.Create(path)
 	if err != nil {

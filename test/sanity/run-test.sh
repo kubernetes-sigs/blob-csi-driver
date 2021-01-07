@@ -25,14 +25,16 @@ function cleanup {
 
 trap cleanup EXIT
 
-readonly endpoint="unix:///tmp/csi.sock"
+readonly controllerendpoint="unix:///tmp/csi-controller.sock"
+readonly nodeendpoint="unix:///tmp/csi-node.sock"
 nodeid="CSINode"
 if [[ "$#" -gt 0 ]] && [[ -n "$1" ]]; then
   nodeid="$1"
 fi
 
-_output/blobplugin --endpoint "$endpoint" --nodeid "$nodeid" -v=5 &
+_output/blobplugin --endpoint "$controllerendpoint" -v=5 &
+_output/blobplugin --endpoint "$nodeendpoint" --nodeid "$nodeid" -v=5 &
 
 echo "Begin to run sanity test..."
 readonly CSI_SANITY_BIN='csi-sanity'
-"$CSI_SANITY_BIN" --ginkgo.v --csi.endpoint=$endpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity|should be idempotent"
+"$CSI_SANITY_BIN" --ginkgo.v --csi.endpoint=$nodeendpoint --csi.controllerendpoint=$controllerendpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity|should be idempotent"

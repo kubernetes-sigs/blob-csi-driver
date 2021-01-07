@@ -46,21 +46,22 @@ func IsAzureStackCloud(cloud *azureprovider.Cloud) bool {
 	return strings.EqualFold(cloud.Config.Cloud, "AZURESTACKCLOUD")
 }
 
-// GetCloudProvider get Azure Cloud Provider
-func GetCloudProvider(kubeconfig string) (*azureprovider.Cloud, error) {
+// getCloudProvider get Azure Cloud Provider
+func getCloudProvider(kubeconfig string) (*azureprovider.Cloud, error) {
 	kubeClient, err := getKubeClient(kubeconfig)
 	if err != nil && !os.IsNotExist(err) && err != rest.ErrNotInCluster {
 		return nil, fmt.Errorf("failed to get KubeClient: %v", err)
 	}
 
 	az := &azureprovider.Cloud{}
+
 	if kubeClient != nil {
 		klog.V(2).Infof("reading cloud config from secret")
 		az.KubeClient = kubeClient
 		az.InitializeCloudFromSecret()
 	}
 
-	if az.TenantID == "" || az.SubscriptionID == "" {
+	if az.TenantID == "" || az.SubscriptionID == "" || az.ResourceGroup == "" {
 		klog.V(2).Infof("could not read cloud config from secret")
 		credFile, ok := os.LookupEnv(DefaultAzureCredentialFileEnv)
 		if ok {
@@ -86,6 +87,7 @@ func GetCloudProvider(kubeconfig string) (*azureprovider.Cloud, error) {
 	if kubeClient != nil {
 		az.KubeClient = kubeClient
 	}
+
 	return az, nil
 }
 
