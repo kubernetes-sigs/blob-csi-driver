@@ -33,3 +33,6 @@ controller:
 
 node:
   metricsPort: 29635
+
+kubelet:
+  linuxPath: /var/lib/kubelet

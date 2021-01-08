@@ -60,6 +60,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.runOnMaster`                          | run controller on master node                          |
 `false`                                                           |
 | `node.metricsPort`                                | metrics port of csi-blob-node                          | 29635                                                                |
+| `kubelet.linuxPath`                               | configure the kubelet path for Linux node                  | `/var/lib/kubelet`                                                |
 
 ## Troubleshooting
  - Add `--wait -v=5 --debug` in `helm install` command to get detailed error
