@@ -34,8 +34,8 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
  - If cluster identity is [Managed Service Identity(MSI)](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity), make sure user assigned identity has `Contributor` role on node resource group
 
 ### Install driver on a Kubernetes cluster
- - install by [kubectl](./docs/install-blob-csi-driver.md)
- - install by [helm charts](./charts)
+ - install via [kubectl](./docs/install-blob-csi-driver.md) on public Azure (please use helm for other cloud environments, e.g. Azure Stack)
+ - install via [helm charts](./charts) on public Azure and Azure Stack
 
 ### Usage
  - [Basic usage](./deploy/example/e2e_usage.md)
