@@ -36,3 +36,5 @@ node:
 
 kubelet:
   linuxPath: /var/lib/kubelet
+
+cloud: AzurePublicCloud
