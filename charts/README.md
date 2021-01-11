@@ -20,8 +20,9 @@ $ helm install blob-csi-driver blob-csi-driver-latest.tgz --namespace kube-syste
 ## Install latest CSI Driver on Azure Stack via `helm install`
 
 ```console
-$ cd $GOPATH/src/sigs.k8s.io/blob-csi-driver
-$ helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --set cloud=AzureStackCloud
+$ cd $GOPATH/src/sigs.k8s.io/blob-csi-driver/charts/latest
+$ helm package blob-csi-driver
+$ helm install blob-csi-driver blob-csi-driver-latest.tgz --namespace kube-system --set cloud=AzureStackCloud
 ```
 
 ### Install a specific version
