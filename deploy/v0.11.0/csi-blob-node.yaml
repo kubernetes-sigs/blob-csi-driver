@@ -129,9 +129,6 @@ spec:
               name: msi
             - mountPath: /mnt
               name: blob-cache
-            - name: ssl
-              mountPath: /etc/ssl/certs
-              readOnly: true
           resources:
             limits:
               cpu: 2
@@ -162,7 +159,4 @@ spec:
         - hostPath:
             path: /mnt
           name: blob-cache
-        - name: ssl
-          hostPath:
-            path: /etc/ssl/certs
 ---
