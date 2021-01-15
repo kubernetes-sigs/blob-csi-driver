@@ -143,10 +143,7 @@ create-metrics-svc:
 
 .PHONY: create-example-deployment
 create-example-deployment:
-	kubectl apply -f deploy/example/storageclass-blobfuse.yaml
-	kubectl apply -f deploy/example/deployment.yaml
-	kubectl apply -f deploy/example/statefulset.yaml
-	kubectl apply -f deploy/example/statefulset-nonroot.yaml
+	./hack/verify-examples.sh
 
 .PHONY: delete-metrics-svc
 delete-metrics-svc:

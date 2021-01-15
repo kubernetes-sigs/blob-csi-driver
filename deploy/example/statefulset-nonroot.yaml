@@ -2,11 +2,11 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: statefulset-blob
+  name: statefulset-blob-nonroot
   labels:
     app: nginx
 spec:
-  serviceName: statefulset-blob
+  serviceName: statefulset-blob-nonroot
   replicas: 1
   template:
     metadata:
