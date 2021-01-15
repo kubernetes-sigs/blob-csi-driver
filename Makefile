@@ -146,6 +146,7 @@ create-example-deployment:
 	kubectl apply -f deploy/example/storageclass-blobfuse.yaml
 	kubectl apply -f deploy/example/deployment.yaml
 	kubectl apply -f deploy/example/statefulset.yaml
+	kubectl apply -f deploy/example/statefulset-nonroot.yaml
 
 .PHONY: delete-metrics-svc
 delete-metrics-svc:
