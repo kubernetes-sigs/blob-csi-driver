@@ -3,7 +3,7 @@
  - Clone repo
 ```console
 $ mkdir -p $GOPATH/src/sigs.k8s.io
-$ git clone https://github.com/kubernetes-sigs/blob-csi-driver $GOPATH/src/sigs.k8s.io
+$ git clone https://github.com/kubernetes-sigs/blob-csi-driver $GOPATH/src/sigs.k8s.io/blob-csi-driver
 ```
 
  - Build Blob Storage CSI driver
