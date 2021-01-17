@@ -94,6 +94,9 @@ type Driver struct {
 	cloud      *azure.Cloud
 	mounter    *mount.SafeFormatAndMount
 	volLockMap *util.LockMap
+	// A map storing all volumes with ongoing operations so that additional operations
+	// for that same volume (as defined by VolumeID) return an Aborted error
+	volumeLocks *volumeLocks
 }
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
@@ -104,6 +107,7 @@ func NewDriver(nodeID string) *Driver {
 	driver.Version = driverVersion
 	driver.NodeID = nodeID
 	driver.volLockMap = util.NewLockMap()
+	driver.volumeLocks = newVolumeLocks()
 	return &driver
 }
 

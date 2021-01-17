@@ -143,8 +143,10 @@ func TestNodePublishVolume(t *testing.T) {
 	}
 	tests := []struct {
 		desc        string
+		setup       func(*Driver)
 		req         csi.NodePublishVolumeRequest
 		expectedErr error
+		cleanup     func(*Driver)
 	}{
 		{
 			desc:        "Volume capabilities missing",
@@ -168,6 +170,21 @@ func TestNodePublishVolume(t *testing.T) {
 				VolumeId:          "vol_1",
 				StagingTargetPath: sourceTest},
 			expectedErr: status.Error(codes.InvalidArgument, "Target path not provided"),
+		},
+		{
+			desc: "[Error] Volume operation in progress",
+			setup: func(d *Driver) {
+				d.volumeLocks.TryAcquire("vol_1")
+			},
+			req: csi.NodePublishVolumeRequest{VolumeCapability: &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				Readonly:          true},
+			expectedErr: status.Error(codes.Aborted, fmt.Sprintf(volumeOperationAlreadyExistsFmt, "vol_1")),
+			cleanup: func(d *Driver) {
+				d.volumeLocks.Release("vol_1")
+			},
 		},
 		{
 			desc: "Valid request read only",
@@ -210,10 +227,16 @@ func TestNodePublishVolume(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		if test.setup != nil {
+			test.setup(d)
+		}
 		_, err := d.NodePublishVolume(context.Background(), &test.req)
 
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("Desc: %s - Unexpected error: %v - Expected: %v", test.desc, err, test.expectedErr)
+		}
+		if test.cleanup != nil {
+			test.cleanup(d)
 		}
 	}
 
@@ -230,8 +253,10 @@ func TestNodePublishVolume(t *testing.T) {
 func TestNodeUnpublishVolume(t *testing.T) {
 	tests := []struct {
 		desc        string
+		setup       func(*Driver)
 		req         csi.NodeUnpublishVolumeRequest
 		expectedErr error
+		cleanup     func(*Driver)
 	}{
 		{
 			desc:        "Volume ID missing",
@@ -242,6 +267,17 @@ func TestNodeUnpublishVolume(t *testing.T) {
 			desc:        "Target missing",
 			req:         csi.NodeUnpublishVolumeRequest{VolumeId: "vol_1"},
 			expectedErr: status.Error(codes.InvalidArgument, "Target path missing in request"),
+		},
+		{
+			desc: "[Error] Volume operation in progress",
+			setup: func(d *Driver) {
+				d.volumeLocks.TryAcquire("vol_1")
+			},
+			req:         csi.NodeUnpublishVolumeRequest{TargetPath: targetTest, VolumeId: "vol_1"},
+			expectedErr: status.Error(codes.Aborted, fmt.Sprintf(volumeOperationAlreadyExistsFmt, "vol_1")),
+			cleanup: func(d *Driver) {
+				d.volumeLocks.Release("vol_1")
+			},
 		},
 		{
 			desc:        "Valid request",
@@ -263,10 +299,16 @@ func TestNodeUnpublishVolume(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		if test.setup != nil {
+			test.setup(d)
+		}
 		_, err := d.NodeUnpublishVolume(context.Background(), &test.req)
 
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("Unexpected error: %v", err)
+		}
+		if test.cleanup != nil {
+			test.cleanup(d)
 		}
 	}
 
@@ -280,6 +322,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 }
 
 func TestNodeStageVolume(t *testing.T) {
+	volumeCap := csi.VolumeCapability_AccessMode{Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER}
 	testCases := []struct {
 		name     string
 		testFunc func(t *testing.T)
@@ -325,6 +368,24 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "Volume operation in progress",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				}
+				d := NewFakeDriver()
+				d.volumeLocks.TryAcquire("unit-test")
+				defer d.volumeLocks.Release("unit-test")
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.Aborted, fmt.Sprintf(volumeOperationAlreadyExistsFmt, "unit-test"))
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
@@ -332,6 +393,7 @@ func TestNodeStageVolume(t *testing.T) {
 }
 
 func TestNodeUnstageVolume(t *testing.T) {
+	volumeCap := csi.VolumeCapability_AccessMode{Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER}
 	testCases := []struct {
 		name     string
 		testFunc func(t *testing.T)
@@ -357,6 +419,24 @@ func TestNodeUnstageVolume(t *testing.T) {
 				d := NewFakeDriver()
 				_, err := d.NodeUnstageVolume(context.TODO(), req)
 				expectedErr := status.Error(codes.InvalidArgument, "Staging target not provided")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "Volume operation in progress",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				}
+				d := NewFakeDriver()
+				d.volumeLocks.TryAcquire("unit-test")
+				defer d.volumeLocks.Release("unit-test")
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.Aborted, fmt.Sprintf(volumeOperationAlreadyExistsFmt, "unit-test"))
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
