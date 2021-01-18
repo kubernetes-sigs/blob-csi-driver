@@ -141,10 +141,6 @@ clean:
 create-metrics-svc:
 	kubectl create -f deploy/example/metrics/csi-blob-controller-svc.yaml
 
-.PHONY: create-example-deployment
-create-example-deployment:
-	./hack/verify-examples.sh
-
 .PHONY: delete-metrics-svc
 delete-metrics-svc:
 	kubectl delete -f deploy/example/metrics/csi-blob-controller-svc.yaml --ignore-not-found
