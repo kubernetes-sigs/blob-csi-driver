@@ -66,7 +66,7 @@ e2e-bootstrap: install-helm
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
 		--set controller.runOnMaster=true \
 		--set controller.replicas=1 \
-		--set cloud=CLOUD \
+		--set cloud=$(CLOUD) \
 		$(E2E_HELM_OPTIONS)
 
 .PHONY: install-helm
@@ -98,7 +98,7 @@ blob-container:
 	docker buildx rm container-builder || true
 	docker buildx create --use --name=container-builder
 ifdef CI
-ifeq ($(CLOUD), "AzureStackCloud")
+ifeq ($(CLOUD), AzureStackCloud)
 	docker run --privileged --name buildx_buildkit_container-builder0 -d --mount type=bind,src=/etc/ssl/certs,dst=/etc/ssl/certs moby/buildkit:latest || true
 endif
 	docker buildx build --no-cache --build-arg LDFLAGS=${LDFLAGS} -t $(IMAGE_TAG) -f ./pkg/blobplugin/Dockerfile --platform="linux/amd64" --push .
