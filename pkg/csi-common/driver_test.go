@@ -71,7 +71,6 @@ func TestAddControllerServiceCapabilities(t *testing.T) {
 }
 
 func TestGetVolumeCapabilityAccessModes(t *testing.T) {
-
 	d := NewFakeDriver()
 
 	// Test no volume access modes.
