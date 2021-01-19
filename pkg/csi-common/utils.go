@@ -88,7 +88,6 @@ func RunNodePublishServer(endpoint string, d *CSIDriver, ns csi.NodeServer, test
 
 func RunControllerPublishServer(endpoint string, d *CSIDriver, cs csi.ControllerServer, testMode bool) {
 	ids := NewDefaultIdentityServer(d)
-
 	s := NewNonBlockingGRPCServer()
 	s.Start(endpoint, ids, cs, nil, testMode)
 	s.Wait()
