@@ -32,7 +32,7 @@ spec:
         - name: csi-provisioner
           image: {{ .Values.image.csiProvisioner.repository }}:{{ .Values.image.csiProvisioner.tag }}
           args:
-            - "-v=5"
+            - "-v=2"
             - "--csi-address=$(ADDRESS)"
             - "--enable-leader-election"
             - "--leader-election-type=leases"
@@ -127,7 +127,7 @@ spec:
           image: "{{ .Values.image.csiResizer.repository }}:{{ .Values.image.csiResizer.tag }}"
           args:
             - "-csi-address=$(ADDRESS)"
-            - "-v=5"
+            - "-v=2"
             - "-leader-election"
             - '-handle-volume-inuse-error=false'
           env:
