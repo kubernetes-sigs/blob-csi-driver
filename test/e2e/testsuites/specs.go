@@ -18,6 +18,8 @@ package testsuites
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
 
@@ -64,7 +66,9 @@ const (
 )
 
 var (
-	supportedStorageAccountTypes = []string{"Standard_LRS", "Premium_LRS", "Standard_GRS", "Standard_RAGRS"}
+	isAzureStackCloud                            = strings.EqualFold(os.Getenv("AZURE_CLOUD_NAME"), "AZURESTACKCLOUD")
+	azurePublicCloudSupportedStorageAccountTypes = []string{"Standard_LRS", "Premium_LRS", "Standard_GRS", "Standard_RAGRS"}
+	azureStackCloudSupportedStorageAccountTypes  = []string{"Standard_LRS", "Premium_LRS"}
 )
 
 type VolumeMountDetails struct {
@@ -101,6 +105,10 @@ func (pod *PodDetails) SetupWithDynamicVolumes(client clientset.Interface, names
 func (pod *PodDetails) SetupWithDynamicMultipleVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestPod, []func()) {
 	tpod := NewTestPod(client, namespace, pod.Cmd)
 	cleanupFuncs := make([]func(), 0)
+	supportedStorageAccountTypes := azurePublicCloudSupportedStorageAccountTypes
+	if isAzureStackCloud {
+		supportedStorageAccountTypes = azureStackCloudSupportedStorageAccountTypes
+	}
 	accountTypeCount := len(supportedStorageAccountTypes)
 	for n, v := range pod.Volumes {
 		storageClassParameters := map[string]string{"skuName": supportedStorageAccountTypes[n%accountTypeCount]}

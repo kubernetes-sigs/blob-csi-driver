@@ -46,6 +46,7 @@ const (
 	defaultReportDir = "/workspace/_artifacts"
 )
 
+var isAzureStackCloud = strings.EqualFold(os.Getenv("AZURE_CLOUD_NAME"), "AZURESTACKCLOUD")
 var blobDriver *blob.Driver
 
 var bringKeyStorageClassParameters = map[string]string{

@@ -114,7 +114,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	if IsAzureStackCloud(d.cloud) {
 		accountKind = string(storage.Storage)
-		storageAccountType = "Standard_LRS"
+		if storageAccountType != "" && storageAccountType != string(storage.StandardLRS) && storageAccountType != string(storage.PremiumLRS) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", storageAccountType, storage.PremiumLRS, storage.StandardLRS))
+		}
 	}
 
 	tags, err := azure.ConvertTagsToMap(customTags)
