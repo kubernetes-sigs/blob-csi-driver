@@ -137,11 +137,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			StorageClassParameters: map[string]string{"skuName": "Standard_GRS"},
 		}
 		if isAzureStackCloud {
-			test = testsuites.DynamicallyProvisionedReadOnlyVolumeTest{
-				CSIDriver:              testDriver,
-				Pods:                   pods,
-				StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
-			}
+			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
 		}
 		test.Run(cs, ns)
 	})
@@ -182,12 +178,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			StorageClassParameters: map[string]string{"skuName": "Standard_RAGRS"},
 		}
 		if isAzureStackCloud {
-			test = testsuites.DynamicallyProvisionedCollocatedPodTest{
-				CSIDriver:              testDriver,
-				Pods:                   pods,
-				ColocatePods:           true,
-				StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
-			}
+			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
 		}
 		test.Run(cs, ns)
 	})
@@ -225,12 +216,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			StorageClassParameters: map[string]string{"skuName": "Standard_GRS"},
 		}
 		if isAzureStackCloud {
-			test = testsuites.DynamicallyProvisionedReclaimPolicyTest{
-				CSIDriver:              testDriver,
-				Volumes:                volumes,
-				Driver:                 blobDriver,
-				StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
-			}
+			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
 		}
 		test.Run(cs, ns)
 	})
