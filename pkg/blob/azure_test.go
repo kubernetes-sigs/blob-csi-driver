@@ -75,31 +75,37 @@ users:
 	tests := []struct {
 		desc        string
 		kubeconfig  string
+		nodeID      string
 		expectedErr error
 	}{
 		{
 			desc:        "[failure] out of cluster, no kubeconfig, no credential file",
 			kubeconfig:  "",
+			nodeID:      "",
 			expectedErr: fmt.Errorf("Failed to load config from file: %s, cloud not get azure cloud provider", DefaultCredFilePath),
 		},
 		{
 			desc:        "[failure] out of cluster & in cluster, specify a non-exist kubeconfig, no credential file",
 			kubeconfig:  "/tmp/non-exist.json",
+			nodeID:      "",
 			expectedErr: fmt.Errorf("Failed to load config from file: %s, cloud not get azure cloud provider", DefaultCredFilePath),
 		},
 		{
 			desc:        "[failure] out of cluster & in cluster, specify a empty kubeconfig, no credential file",
 			kubeconfig:  emptyKubeConfig,
+			nodeID:      "",
 			expectedErr: fmt.Errorf("failed to get KubeClient: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable"),
 		},
 		{
 			desc:        "[failure] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
 			kubeconfig:  fakeKubeConfig,
+			nodeID:      "",
 			expectedErr: fmt.Errorf("Failed to load config from file: %s, cloud not get azure cloud provider", DefaultCredFilePath),
 		},
 		{
 			desc:        "[success] out of cluster & in cluster, no kubeconfig, a fake credential file",
 			kubeconfig:  "",
+			nodeID:      "",
 			expectedErr: nil,
 		},
 	}
@@ -139,7 +145,7 @@ users:
 			}
 			os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 		}
-		_, err := getCloudProvider(test.kubeconfig)
+		_, err := getCloudProvider(test.kubeconfig, test.nodeID)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
 		}

@@ -47,7 +47,9 @@ func IsAzureStackCloud(cloud *azureprovider.Cloud) bool {
 }
 
 // getCloudProvider get Azure Cloud Provider
-func getCloudProvider(kubeconfig string) (*azureprovider.Cloud, error) {
+func getCloudProvider(kubeconfig, nodeID string) (*azureprovider.Cloud, error) {
+	isController := (nodeID == "")
+
 	kubeClient, err := getKubeClient(kubeconfig)
 	if err != nil && !os.IsNotExist(err) && err != rest.ErrNotInCluster {
 		return nil, fmt.Errorf("failed to get KubeClient: %v", err)
@@ -71,21 +73,37 @@ func getCloudProvider(kubeconfig string) (*azureprovider.Cloud, error) {
 			klog.V(2).Infof("use default %s env var: %v", DefaultAzureCredentialFileEnv, credFile)
 		}
 
-		f, err := os.Open(credFile)
+		var f *os.File
+		f, err = os.Open(credFile)
+		if f != nil {
+			defer f.Close()
+		}
 		if err != nil {
 			klog.Errorf("Failed to load config from file: %s", credFile)
-			return nil, fmt.Errorf("Failed to load config from file: %s, cloud not get azure cloud provider", credFile)
-		}
-		defer f.Close()
-
-		klog.V(2).Infof("read cloud config from file: %s successfully", credFile)
-		if az, err = azureprovider.NewCloudWithoutFeatureGates(f); err != nil {
-			return az, err
+			err = fmt.Errorf("Failed to load config from file: %s, cloud not get azure cloud provider", credFile)
+		} else {
+			klog.V(2).Infof("read cloud config from file: %s successfully", credFile)
+			az, err = azureprovider.NewCloudWithoutFeatureGates(f)
 		}
 	}
 
 	if kubeClient != nil {
 		az.KubeClient = kubeClient
+	}
+	if isController {
+		if err != nil {
+			return az, err
+		}
+		// Disable UseInstanceMetadata for controller to mitigate a timeout issue using IMDS
+		// https://github.com/kubernetes-sigs/azuredisk-csi-driver/issues/168
+		klog.Infoln("disable UseInstanceMetadata for controller")
+		az.Config.UseInstanceMetadata = false
+		klog.Infoln("Starting the controller server...")
+	} else {
+		if err != nil {
+			klog.V(2).Infof("there is no azure.json provided for node server, error: %v", err)
+		}
+		klog.V(2).Infof("Starting the node server, nodeID is(%s)", nodeID)
 	}
 
 	return az, nil

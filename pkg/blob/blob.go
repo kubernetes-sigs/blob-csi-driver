@@ -46,7 +46,7 @@ const (
 	volumeIDTemplate           = "%s#%s#%s"
 	secretNameTemplate         = "azure-storage-account-%s-secret"
 	serverNameField            = "server"
-	blobStorageEndPointField   = "blobstorageendpoint"
+	storageEndpointSuffixField = "storageendpointsuffix"
 	tagsField                  = "tags"
 	protocolField              = "protocol"
 	accountNameField           = "accountname"
@@ -116,35 +116,9 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 	}
 	klog.Infof("\nDRIVER INFORMATION:\n-------------------\n%s\n\nStreaming logs below:", versionMeta)
 
-	// For the controller server, the NodeID is nil. For the node server, the NodeID is not nil.
-	if d.NodeID == "" {
-		cloud, err := getCloudProvider(kubeconfig)
-		if err != nil || cloud.TenantID == "" || cloud.SubscriptionID == "" {
-			klog.Fatalf("failed to get Azure Cloud Provider, error: %v", err)
-		}
-		d.cloud = cloud
-		// Disable UseInstanceMetadata for controller to mitigate a timeout issue using IMDS
-		// https://github.com/kubernetes-sigs/azuredisk-csi-driver/issues/168
-		klog.Infoln("disable UseInstanceMetadata for controller")
-		d.cloud.Config.UseInstanceMetadata = false
-		klog.Infoln("Starting the controller server...")
-	} else {
-		cloud, err := getCloudProvider(kubeconfig)
-		if err == nil {
-			d.cloud = cloud
-		} else {
-			klog.V(2).Infof("there is no azure.json provided for node server")
-			d.cloud = &azure.Cloud{}
-			kubeClient, err := getKubeClient(kubeconfig)
-			if err != nil {
-				klog.Infof("failed to get KubeClient: %v", err)
-			}
-			if kubeClient != nil {
-				d.cloud.KubeClient = kubeClient
-			}
-		}
-
-		klog.V(2).Infof("Starting the node server, nodeID is(%s)", d.NodeID)
+	d.cloud, err = getCloudProvider(kubeconfig, d.NodeID)
+	if err != nil {
+		klog.Fatalf("failed to get Azure Cloud Provider, error: %v", err)
 	}
 
 	d.mounter = &mount.SafeFormatAndMount{

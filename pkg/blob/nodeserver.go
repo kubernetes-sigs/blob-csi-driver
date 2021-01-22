@@ -135,15 +135,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
 
-	var serverAddress, blobStorageEndPoint, protocol string
+	var serverAddress, storageEndpointSuffix, protocol string
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
 		case serverNameField:
 			serverAddress = v
 		case protocolField:
 			protocol = v
-		case blobStorageEndPointField:
-			blobStorageEndPoint = v
+		case storageEndpointSuffixField:
+			storageEndpointSuffix = v
 		}
 	}
 
@@ -152,13 +152,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, err
 	}
 
-	if strings.TrimSpace(blobStorageEndPoint) == "" {
-		blobStorageEndPoint = "core.windows.net"
+	if strings.TrimSpace(storageEndpointSuffix) == "" {
+		storageEndpointSuffix = "core.windows.net"
 	}
 
 	if strings.TrimSpace(serverAddress) == "" {
 		// server address is "accountname.blob.core.windows.net" by default
-		serverAddress = fmt.Sprintf("%s.blob.%s", accountName, blobStorageEndPoint)
+		serverAddress = fmt.Sprintf("%s.blob.%s", accountName, storageEndpointSuffix)
 	}
 
 	if protocol == nfs {
