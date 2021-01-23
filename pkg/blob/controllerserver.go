@@ -32,6 +32,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	"sigs.k8s.io/cloud-provider-azure/pkg/metrics"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
 
@@ -171,6 +172,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		parameters[containerNameField] = containerName
 	}
 
+	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_create_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveOperationWithResult(isOperationSucceeded)
+	}()
+
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
 	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
 	if err != nil {
@@ -196,6 +203,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, containerName)
 	klog.V(2).Infof("create container %s on storage account %s successfully", containerName, accountName)
 
+	isOperationSucceeded = true
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      volumeID,
@@ -231,6 +239,12 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		resourceGroupName = d.cloud.ResourceGroup
 	}
 
+	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_delete_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveOperationWithResult(isOperationSucceeded)
+	}()
+
 	var accountKey string
 	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
 		accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
@@ -263,6 +277,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		return nil, err
 	}
 
+	isOperationSucceeded = true
 	klog.V(2).Infof("container(%s) under rg(%s) account(%s) volumeID(%s) is deleted successfully", containerName, resourceGroupName, accountName, volumeID)
 	return &csi.DeleteVolumeResponse{}, nil
 }

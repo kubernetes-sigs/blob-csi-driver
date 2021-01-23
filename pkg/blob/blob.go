@@ -42,6 +42,7 @@ import (
 const (
 	// DriverName holds the name of the csi-driver
 	DriverName                 = "blob.csi.azure.com"
+	blobCSIDriverName          = "blob_csi_driver"
 	separator                  = "#"
 	volumeIDTemplate           = "%s#%s#%s"
 	secretNameTemplate         = "azure-storage-account-%s-secret"
