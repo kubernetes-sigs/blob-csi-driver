@@ -54,9 +54,6 @@ func main() {
 		fmt.Println(info)
 		os.Exit(0)
 	}
-	if *nodeID == "" {
-		klog.Warning("nodeid is empty")
-	}
 
 	exportMetrics()
 	handle()

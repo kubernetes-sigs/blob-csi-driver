@@ -150,13 +150,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
 
-	var blobStorageEndPoint, protocol string
+	var serverAddress, storageEndpointSuffix, protocol string
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
 		case serverNameField:
-			blobStorageEndPoint = v
+			serverAddress = v
 		case protocolField:
 			protocol = v
+		case storageEndpointSuffixField:
+			storageEndpointSuffix = v
 		}
 	}
 
@@ -165,16 +167,20 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, err
 	}
 
-	if strings.TrimSpace(blobStorageEndPoint) == "" {
+	if strings.TrimSpace(storageEndpointSuffix) == "" {
+		storageEndpointSuffix = "core.windows.net"
+	}
+
+	if strings.TrimSpace(serverAddress) == "" {
 		// server address is "accountname.blob.core.windows.net" by default
-		blobStorageEndPoint = fmt.Sprintf("%s.blob.%s", accountName, d.cloud.Environment.StorageEndpointSuffix)
+		serverAddress = fmt.Sprintf("%s.blob.%s", accountName, storageEndpointSuffix)
 	}
 
 	if protocol == nfs {
-		klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nblobStorageEndPoint %v",
-			targetPath, protocol, volumeID, attrib, mountFlags, blobStorageEndPoint)
+		klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nserverAddress %v",
+			targetPath, protocol, volumeID, attrib, mountFlags, serverAddress)
 
-		source := fmt.Sprintf("%s:/%s/%s", blobStorageEndPoint, accountName, containerName)
+		source := fmt.Sprintf("%s:/%s/%s", serverAddress, accountName, containerName)
 		mountOptions := util.JoinMountOptions(mountFlags, []string{"sec=sys,vers=3,nolock"})
 		if err := wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
 			return true, d.mounter.MountSensitive(source, targetPath, nfs, mountOptions, []string{})
@@ -201,12 +207,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		args = args + " " + opt
 	}
 
-	klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nblobStorageEndPoint %v",
-		targetPath, protocol, volumeID, attrib, mountFlags, mountOptions, args, blobStorageEndPoint)
+	klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nserverAddress %v",
+		targetPath, protocol, volumeID, attrib, mountFlags, mountOptions, args, serverAddress)
 	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
 
 	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName)
-	cmd.Env = append(cmd.Env, "AZURE_STORAGE_BLOB_ENDPOINT="+blobStorageEndPoint)
+	cmd.Env = append(cmd.Env, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
 	cmd.Env = append(cmd.Env, authEnv...)
 
 	output, err := cmd.CombinedOutput()
