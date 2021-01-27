@@ -87,23 +87,26 @@ func getCloudProvider(kubeconfig, nodeID string) (*azureprovider.Cloud, error) {
 		}
 	}
 
-	if kubeClient != nil {
+	// reassign kubeClient
+	if kubeClient != nil && az.KubeClient == nil {
 		az.KubeClient = kubeClient
 	}
+
 	if isController {
 		if err != nil {
+			// controller depends on cloud config
 			return az, err
 		}
 		// Disable UseInstanceMetadata for controller to mitigate a timeout issue using IMDS
 		// https://github.com/kubernetes-sigs/azuredisk-csi-driver/issues/168
-		klog.Infoln("disable UseInstanceMetadata for controller")
+		klog.V(2).Infof("disable UseInstanceMetadata for controller server")
 		az.Config.UseInstanceMetadata = false
-		klog.Infoln("Starting the controller server...")
+		klog.V(2).Infof("Starting controller server...")
 	} else {
 		if err != nil {
-			klog.V(2).Infof("there is no azure.json provided for node server, error: %v", err)
+			klog.V(2).Infof("no cloud config provided, error: %v, node server will run without cloud config", err)
 		}
-		klog.V(2).Infof("Starting the node server, nodeID is(%s)", nodeID)
+		klog.V(2).Infof("Starting node server on node(%s)", nodeID)
 	}
 
 	return az, nil
