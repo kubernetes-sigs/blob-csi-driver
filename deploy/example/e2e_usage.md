@@ -116,7 +116,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
 
  - Execute `df -h` command in the container
 ```console
-$ kubectl exec -it nginx-blob -- bash
+$ kubectl exec -it nginx-blob -- df -h
 Filesystem      Size  Used Avail Use% Mounted on
 ...
 blobfuse         14G   41M   13G   1% /mnt/blob
