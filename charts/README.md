@@ -1,50 +1,41 @@
 #### Breaking change
-Since `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.azure.com`, volume created by `v0.6.0`(or prior version) could not be mounted by `v0.7.0` driver. If you have volumes created by `v0.6.0` version, just keep the driver running in your cluster.
+From `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.azure.com`, volume created by `v0.6.0`(or prior version) could not be mounted by `v0.7.0` driver. If you have volumes created by `v0.6.0` version, DO NOT upgrade to `v0.7.0` or higher version.
 
-# Installation with Helm 3
-
-Quick start instructions for the setup and configuration of Azure Blob Storage CSI driver using Helm.
+# Install CSI driver with Helm 3
 
 ## Prerequisites
-
  - [install Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
 
-## Install latest CSI Driver via `helm install`
-
+## install latest version
 ```console
-$ cd $GOPATH/src/sigs.k8s.io/blob-csi-driver/charts/latest
-$ helm package blob-csi-driver
-$ helm install blob-csi-driver blob-csi-driver-latest.tgz --namespace kube-system
-```
-  
-## Install latest CSI Driver on Azure Stack via `helm install`
-
-```console
-$ cd $GOPATH/src/sigs.k8s.io/blob-csi-driver/charts/latest
-$ helm package blob-csi-driver
-$ helm install blob-csi-driver blob-csi-driver-latest.tgz --namespace kube-system --set cloud=AzureStackCloud
+helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system
 ```
 
-### Install a specific version
-
+## install on Azure Stack
 ```console
-$ helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-$ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v0.11.0
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set cloud=AzureStackCloud
 ```
-  
-### Search for all available chart versions
+
+### install a specific version
 ```console
-$ helm search repo -l blob-csi-driver/
-```  
+helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v0.10.0
+```
 
-## Uninstall
-
+### search for all available chart versions
 ```console
-$ helm uninstall blob-csi-driver -n kube-system
-```  
-## The Latest Helm Chart Configuration
+helm search repo -l blob-csi-driver
+```
 
-The following table lists the configurable parameters of the latest Azure Blob Storage CSI driver chart and their default values.
+## uninstall CSI driver
+```console
+helm uninstall blob-csi-driver -n kube-system
+```
+
+## latest chart configuration
+
+The following table lists the configurable parameters of the latest Azure Blob Storage CSI driver chart and default values.
 
 | Parameter                                         | Description                                                | Default                                                           |
 |---------------------------------------------------|------------------------------------------------------------|-------------------------------------------------------------------|
@@ -70,6 +61,6 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `kubelet.linuxPath`                               | configure the kubelet path for Linux node                  | `/var/lib/kubelet`                                                |
 | `cloud`                                           | the cloud environment the driver is running on             | AzurePublicCloud                                                  |
 
-## Troubleshooting
+## troubleshooting
  - Add `--wait -v=5 --debug` in `helm install` command to get detailed error
  - Use `kubectl describe` to acquire more info
