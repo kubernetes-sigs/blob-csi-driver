@@ -62,8 +62,8 @@ entries:
     digest: a85285af0500bfb2160f910863db8174f9e7399f845d784ff99dda7812accfdf
     name: blob-csi-driver
     urls:
-    - https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts/latest/blob-csi-driver-latest.tgz
-    version: latest
+    - https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts/latest/blob-csi-driver-v1.0.0.tgz
+    version: v1.0.0
   blobfuse-csi-driver:
   - apiVersion: v1
     appVersion: v0.6.0

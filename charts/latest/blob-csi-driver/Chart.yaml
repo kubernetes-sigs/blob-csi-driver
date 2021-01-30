@@ -2,4 +2,4 @@ apiVersion: v1
 appVersion: latest
 description: Azure Blob Storage CSI driver
 name: blob-csi-driver
-version: latest
+version: v1.0.0
