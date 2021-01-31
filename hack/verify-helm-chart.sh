@@ -78,3 +78,23 @@ validate_image "${expected_node_driver_registrar}" "${node_driver_registrar}"
 validate_image "${expected_blob_image}" "${blob_image}"
 
 echo "Images in deploy/ matches those in the latest helm chart."
+
+# verify whether latest chart config has changed
+for dir in charts/*
+do
+  if [ -d $dir ]; then
+    if [ -f $dir/*.tgz ]; then
+      tar -xvf $dir/*.tgz -C $dir/
+    fi
+  fi
+done
+
+diff=`git diff`
+if [[ -n "${diff}" ]]; then
+  echo "${diff}"
+  echo
+  echo "latest chart config has changed, pls run \"helm package charts/latest/blob-csi-driver -d charts/latest/\" to update tgz file"
+  exit 1
+fi
+
+echo "latest chart tgz file verified."
