@@ -79,11 +79,18 @@ validate_image "${expected_blob_image}" "${blob_image}"
 
 echo "Images in deploy/ matches those in the latest helm chart."
 
-# verify whether latest chart config has changed
+# verify whether chart config has changed
+diff=`git diff`
+if [[ -n "${diff}" ]]; then
+  echo "${diff}"
+  exit 1
+fi
+
 for dir in charts/*
 do
   if [ -d $dir ]; then
     if [ -f $dir/*.tgz ]; then
+      echo "verify $dir ..."
       tar -xvf $dir/*.tgz -C $dir/
     fi
   fi
@@ -97,4 +104,4 @@ if [[ -n "${diff}" ]]; then
   exit 1
 fi
 
-echo "latest chart tgz file verified."
+echo "chart tgz files verified."
