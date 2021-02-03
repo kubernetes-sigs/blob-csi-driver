@@ -168,7 +168,11 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	if strings.TrimSpace(storageEndpointSuffix) == "" {
-		storageEndpointSuffix = "core.windows.net"
+		if d.cloud.Environment.StorageEndpointSuffix != "" {
+			storageEndpointSuffix = d.cloud.Environment.StorageEndpointSuffix
+		} else {
+			storageEndpointSuffix = "core.windows.net"
+		}
 	}
 
 	if strings.TrimSpace(serverAddress) == "" {
