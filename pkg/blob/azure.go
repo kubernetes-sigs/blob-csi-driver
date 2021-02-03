@@ -48,14 +48,11 @@ func IsAzureStackCloud(cloud *azureprovider.Cloud) bool {
 
 // getCloudProvider get Azure Cloud Provider
 func getCloudProvider(kubeconfig, nodeID string) (*azureprovider.Cloud, error) {
-	isController := (nodeID == "")
-
+	az := &azureprovider.Cloud{}
 	kubeClient, err := getKubeClient(kubeconfig)
 	if err != nil && !os.IsNotExist(err) && err != rest.ErrNotInCluster {
-		return nil, fmt.Errorf("failed to get KubeClient: %v", err)
+		return az, fmt.Errorf("failed to get KubeClient: %v", err)
 	}
-
-	az := &azureprovider.Cloud{}
 
 	if kubeClient != nil {
 		klog.V(2).Infof("reading cloud config from secret")
@@ -92,6 +89,7 @@ func getCloudProvider(kubeconfig, nodeID string) (*azureprovider.Cloud, error) {
 		az.KubeClient = kubeClient
 	}
 
+	isController := (nodeID == "")
 	if isController {
 		if err != nil {
 			// controller depends on cloud config
