@@ -66,6 +66,9 @@ if [[ "$cloud" != "AzureChinaCloud" ]]; then
   csc node stats --endpoint "$endpoint" "$volumeid:$target_path:$staging_target_path"
   sleep 2
 
+  echo 'expand volume test'
+  csc controller expand-volume --endpoint "$endpoint" --req-bytes "$expanded_vol_size" "$volumeid"
+
   echo "unpublish volume test:"
   csc node unpublish --endpoint "$endpoint" --target-path "$target_path" "$volumeid"
   sleep 2
@@ -74,11 +77,6 @@ if [[ "$cloud" != "AzureChinaCloud" ]]; then
   csc node unstage --endpoint "$endpoint" --staging-target-path "$staging_target_path" "$volumeid"
   sleep 2
 fi
-
-# TODO: Activate test once issue is resolved - https://github.com/rexray/gocsi/issues/141
-# echo "Expand volume test:"
-# csc controller expand-volume --endpoint "$endpoint" --req-bytes "$expanded_vol_size" "$volumeid"
-# sleep 15
 
 echo "Delete volume test:"
 csc controller del --endpoint "$endpoint" "$volumeid"
