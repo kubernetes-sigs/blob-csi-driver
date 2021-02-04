@@ -33,7 +33,6 @@ import (
 // TestGetCloudProvider tests the func getCloudProvider().
 // To run this unit test successfully, need to ensure /etc/kubernetes/azure.json nonexistent.
 func TestGetCloudProvider(t *testing.T) {
-
 	fakeCredFile := "fake-cred-file.json"
 	fakeKubeConfig := "fake-kube-config"
 	emptyKubeConfig := "empty-kube-config"
@@ -145,9 +144,12 @@ users:
 			}
 			os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 		}
-		_, err := getCloudProvider(test.kubeconfig, test.nodeID)
+		cloud, err := getCloudProvider(test.kubeconfig, test.nodeID)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
+		}
+		if cloud == nil {
+			t.Errorf("return value of getCloudProvider should not be nil even there is error")
 		}
 	}
 }
