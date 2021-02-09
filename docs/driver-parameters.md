@@ -56,8 +56,8 @@ volumeAttributes.keyVaultSecretVersion | Azure Key Vault secret version | existi
 
  - create a Kubernetes secret for `nodeStageSecretRef.name`
  ```console
-kubectl create secret generic azure-secret --from-literal azurestorageaccountkey="xxx" --type=Opaque
-kubectl create secret generic azure-secret --from-literal azurestorageaccountsastoken="xxx" --type=Opaque
+kubectl create secret generic azure-secret --from-literal=azurestorageaccountname="xxx" --from-literal azurestorageaccountkey="xxx" --type=Opaque
+kubectl create secret generic azure-secret --from-literal=azurestorageaccountname="xxx" --from-literal azurestorageaccountsastoken="xxx" --type=Opaque
 kubectl create secret generic azure-secret --from-literal msisecret="xxx" --type=Opaque
 kubectl create secret generic azure-secret --from-literal azurestoragespnclientsecret="xxx" --type=Opaque
  ```
