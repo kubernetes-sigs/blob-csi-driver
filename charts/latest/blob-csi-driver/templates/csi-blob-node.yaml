@@ -80,7 +80,7 @@ spec:
         - name: blob
           image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
           args:
-            - "--v=5"
+            - "--v={{ .Values.node.logLevel }}"
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
             - "--metrics-address=0.0.0.0:{{ .Values.node.metricsPort }}"

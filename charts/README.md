@@ -57,7 +57,9 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.replicas`                             | the replicas of csi-blob-controller                    | 2                                                                 |
 | `controller.metricsPort`                          | metrics port of csi-blob-controller                    | 29634                                                             |
 | `controller.runOnMaster`                          | run controller on master node                          | false                                                             |
+| `controller.logLevel`                             | controller driver log level                                                          |`5`                                                           |
 | `node.metricsPort`                                | metrics port of csi-blob-node                          | 29635                                                                |
+| `node.logLevel`                                   | node driver log level                                                          |`5`                                                           |
 | `kubelet.linuxPath`                               | configure the kubelet path for Linux node                  | `/var/lib/kubelet`                                                |
 | `cloud`                                           | the cloud environment the driver is running on             | AzurePublicCloud                                                  |
 
