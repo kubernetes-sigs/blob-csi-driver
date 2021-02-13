@@ -30,9 +30,11 @@ controller:
   metricsPort: 29634
   replicas: 2
   runOnMaster: false
+  logLevel: 5
 
 node:
   metricsPort: 29635
+  logLevel: 5
 
 kubelet:
   linuxPath: /var/lib/kubelet
