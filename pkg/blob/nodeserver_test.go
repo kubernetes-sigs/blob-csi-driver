@@ -26,6 +26,7 @@ import (
 	"syscall"
 	"testing"
 
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -130,6 +131,16 @@ func TestEnsureMountPoint(t *testing.T) {
 	assert.NoError(t, err)
 	err = os.RemoveAll(targetTest)
 	assert.NoError(t, err)
+}
+
+func TestNewMountClient(t *testing.T) {
+	conn, _ := grpc.DialContext(context.TODO(), "unix://tmp/proxy.sock", grpc.WithInsecure())
+	// No need to check for error because the socket is not available and
+	// will result in following error: failed to build resolver: invalid (non-empty) authority: tmp
+	client := NewMountClient(conn)
+	valueType := reflect.TypeOf(client).String()
+	fmt.Println(valueType)
+	assert.Equal(t, valueType, "*blob.MountClient")
 }
 
 func TestNodePublishVolume(t *testing.T) {
@@ -558,4 +569,22 @@ func TestNodeExpandVolume(t *testing.T) {
 	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "NodeExpandVolume is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
+}
+
+func TestMountBlobfuseWithProxy(t *testing.T) {
+	args := "--tmp-path /tmp"
+	authEnv := []string{"username=blob", "authkey=blob"}
+	d := NewFakeDriver()
+	_, err := d.mountBlobfuseWithProxy(args, authEnv)
+	// should be context.deadlineExceededError{} error
+	assert.NotNil(t, err)
+}
+
+func TestMountBlobfuseInsideDriver(t *testing.T) {
+	args := "--tmp-path /tmp"
+	authEnv := []string{"username=blob", "authkey=blob"}
+	d := NewFakeDriver()
+	_, err := d.mountBlobfuseInsideDriver(args, authEnv)
+	// the error should be of type exec.ExitError
+	assert.NotNil(t, err)
 }

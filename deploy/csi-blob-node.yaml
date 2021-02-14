@@ -81,6 +81,7 @@ spec:
           args:
             - "--v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
+            - "--blobfuse-proxy-endpoint=$(BLOBFUSE_PROXY_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
             - "--metrics-address=0.0.0.0:29635"
           ports:
@@ -107,6 +108,8 @@ spec:
                   optional: true
             - name: CSI_ENDPOINT
               value: unix:///csi/csi.sock
+            - name: BLOBFUSE_PROXY_ENDPOINT
+              value: unix:///csi/blobfuse-proxy.sock
             - name: KUBE_NODE_NAME
               valueFrom:
                 fieldRef:

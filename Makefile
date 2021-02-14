@@ -31,7 +31,7 @@ BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS ?= "-X ${PKG}/pkg/blob.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blob.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blob.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
 E2E_HELM_OPTIONS ?= --set image.blob.pullPolicy=Always --set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.blob.tag=$(IMAGE_VERSION)
 ifdef ENABLE_BLOBFUSE_PROXY
-override E2E_HELM_OPTIONS := --set image.blob.pullPolicy=Always --set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.blob.tag=$(IMAGE_VERSION) --set controller.logLevel=6 --set node.logLevel=6
+override E2E_HELM_OPTIONS := $(E2E_HELM_OPTIONS) --set controller.logLevel=6 --set node.logLevel=6 --set node.enableBlobfuseProxy=true
 endif
 GINKGO_FLAGS = -ginkgo.v
 GO111MODULE = on
@@ -66,6 +66,9 @@ e2e-test:
 e2e-bootstrap: install-helm install-blobfuse-proxy
 	# Only build and push the image if it does not exist in the registry
 	docker pull $(IMAGE_TAG) || make blob-container push
+	if [[ -z "$(ENABLE_BLOBFUSE_PROXY)" ]]; then \
+		make install-blobfuse-proxy;\
+	fi
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
 		--set controller.runOnMaster=true \
 		--set controller.replicas=1 \
@@ -168,11 +171,7 @@ blobfuse-proxy-container:
 
 .PHONY: install-blobfuse-proxy
 install-blobfuse-proxy:
-ifdef ENABLE_BLOBFUSE_PROXY
 	kubectl apply -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml
-else
-	echo "ENABLE_BLOBFUSE_PROXY env not found"
-endif
 
 .PHONY: uninstall-blobfuse-proxy
 uninstall-blobfuse-proxy:

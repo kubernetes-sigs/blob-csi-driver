@@ -36,11 +36,14 @@ func init() {
 }
 
 var (
-	endpoint       = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	nodeID         = flag.String("nodeid", "", "node id")
-	version        = flag.Bool("version", false, "Print the version and exit.")
-	metricsAddress = flag.String("metrics-address", "0.0.0.0:29634", "export the metrics")
-	kubeconfig     = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
+	endpoint                = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	blobfuseProxyEndpoint   = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
+	nodeID                  = flag.String("nodeid", "", "node id")
+	version                 = flag.Bool("version", false, "Print the version and exit.")
+	metricsAddress          = flag.String("metrics-address", "0.0.0.0:29634", "export the metrics")
+	kubeconfig              = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
+	enableBlobfuseProxy     = flag.Bool("enable-blobfuse-proxy", false, "Whether supports using Blobfuse proxy for mounts")
+	blobfuseProxyConnTimout = flag.Int("blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
 )
 
 func main() {
@@ -61,7 +64,7 @@ func main() {
 }
 
 func handle() {
-	driver := blob.NewDriver(*nodeID)
+	driver := blob.NewDriver(*nodeID, *blobfuseProxyEndpoint, *enableBlobfuseProxy, *blobfuseProxyConnTimout)
 	if driver == nil {
 		klog.Fatalln("Failed to initialize Azure Blob Storage CSI driver")
 	}
