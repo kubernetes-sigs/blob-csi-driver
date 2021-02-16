@@ -20,6 +20,8 @@ image:
     tag: v1.1.0
     pullPolicy: IfNotPresent
 
+## Reference to one or more secrets to be used when pulling images
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
 # - name: myRegistryKeySecretName
 
