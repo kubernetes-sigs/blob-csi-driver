@@ -13,6 +13,10 @@ spec:
 {{ include "blob.labels" . | indent 6 }}
         app: csi-blob-node
     spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
+      {{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: csi-blob-node-sa

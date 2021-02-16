@@ -20,6 +20,9 @@ image:
     tag: v1.1.0
     pullPolicy: IfNotPresent
 
+imagePullSecrets: []
+# - name: myRegistryKeySecretName
+
 serviceAccount:
   create: true
 
