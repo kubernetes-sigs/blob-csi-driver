@@ -31,7 +31,6 @@ spec:
           operator: "Equal"
           value: "true"
           effect: "NoSchedule"
-      {{- include "blob.pullSecrets" . | indent 6 }}
       containers:
         - name: csi-provisioner
           image: {{ .Values.image.csiProvisioner.repository }}:{{ .Values.image.csiProvisioner.tag }}
