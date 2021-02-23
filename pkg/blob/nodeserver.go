@@ -215,9 +215,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		targetPath, protocol, volumeID, attrib, mountFlags, mountOptions, args, serverAddress)
 	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
 
-	cmd.Env = append(os.Environ(), "AZURE_STORAGE_ACCOUNT="+accountName)
-	cmd.Env = append(cmd.Env, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
-	cmd.Env = append(cmd.Env, authEnv...)
+	authEnv = append(authEnv, "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
+	cmd.Env = append(os.Environ(), authEnv...)
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
