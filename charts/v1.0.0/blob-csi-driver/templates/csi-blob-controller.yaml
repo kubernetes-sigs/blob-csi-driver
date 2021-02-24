@@ -1,23 +1,30 @@
----
 kind: Deployment
 apiVersion: apps/v1
 metadata:
   name: csi-blob-controller
-  namespace: kube-system
+  namespace: {{ .Release.Namespace }}
+{{ include "blob.labels" . | indent 2 }}
 spec:
-  replicas: 2
+  replicas: {{ .Values.controller.replicas }}
   selector:
     matchLabels:
       app: csi-blob-controller
   template:
     metadata:
-      labels:
+{{ include "blob.labels" . | indent 6 }}
         app: csi-blob-controller
     spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
+      {{- end }}
       hostNetwork: true
       serviceAccountName: csi-blob-controller-sa
       nodeSelector:
-        kubernetes.io/os: linux  # add "kubernetes.io/role: master" to run controller on master node
+        kubernetes.io/os: linux
+        {{- if .Values.controller.runOnMaster}}
+        kubernetes.io/role: master
+        {{- end}}
       priorityClassName: system-cluster-critical
       tolerations:
         - key: "node-role.kubernetes.io/master"
@@ -26,7 +33,7 @@ spec:
           effect: "NoSchedule"
       containers:
         - name: csi-provisioner
-          image: mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner:v1.4.0
+          image: {{ .Values.image.csiProvisioner.repository }}:{{ .Values.image.csiProvisioner.tag }}
           args:
             - "-v=2"
             - "--csi-address=$(ADDRESS)"
@@ -36,6 +43,7 @@ spec:
           env:
             - name: ADDRESS
               value: /csi/csi.sock
+          imagePullPolicy: {{ .Values.image.csiProvisioner.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -47,11 +55,12 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: liveness-probe
-          image: mcr.microsoft.com/oss/kubernetes-csi/livenessprobe:v2.2.0
+          image: "{{ .Values.image.livenessProbe.repository }}:{{ .Values.image.livenessProbe.tag }}"
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s
             - --health-port=29632
+          imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -63,17 +72,16 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: blob
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v1.0.0
-          imagePullPolicy: IfNotPresent
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
           args:
-            - "--v=5"
+            - "--v={{ .Values.controller.logLevel }}"
             - "--endpoint=$(CSI_ENDPOINT)"
-            - "--metrics-address=0.0.0.0:29634"
+            - "--metrics-address=0.0.0.0:{{ .Values.controller.metricsPort }}"
           ports:
             - containerPort: 29632
               name: healthz
               protocol: TCP
-            - containerPort: 29634
+            - containerPort: {{ .Values.controller.metricsPort }}
               name: metrics
               protocol: TCP
           livenessProbe:
@@ -93,6 +101,11 @@ spec:
                   optional: true
             - name: CSI_ENDPOINT
               value: unix:///csi/csi.sock
+            {{- if eq .Values.cloud "AzureStackCloud" }}
+            - name: AZURE_ENVIRONMENT_FILEPATH
+              value: /etc/kubernetes/azurestackcloud.json
+            {{- end }}
+          imagePullPolicy: {{ .Values.image.blob.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -101,6 +114,11 @@ spec:
             - mountPath: /var/lib/waagent/ManagedIdentity-Settings
               readOnly: true
               name: msi
+            {{- if eq .Values.cloud "AzureStackCloud" }}
+            - name: ssl
+              mountPath: /etc/ssl/certs
+              readOnly: true
+            {{- end }}
           resources:
             limits:
               cpu: 200m
@@ -109,7 +127,7 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: csi-resizer
-          image: mcr.microsoft.com/oss/kubernetes-csi/csi-resizer:v1.1.0
+          image: "{{ .Values.image.csiResizer.repository }}:{{ .Values.image.csiResizer.tag }}"
           args:
             - "-csi-address=$(ADDRESS)"
             - "-v=2"
@@ -118,6 +136,7 @@ spec:
           env:
             - name: ADDRESS
               value: /csi/csi.sock
+          imagePullPolicy: {{ .Values.image.csiResizer.pullPolicy }}
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -138,3 +157,8 @@ spec:
         - name: msi
           hostPath:
             path: /var/lib/waagent/ManagedIdentity-Settings
+        {{- if eq .Values.cloud "AzureStackCloud" }}
+        - name: ssl
+          hostPath:
+            path: /etc/ssl/certs
+        {{- end }}

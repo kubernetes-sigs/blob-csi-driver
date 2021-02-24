@@ -1,18 +1,22 @@
----
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
   name: csi-blob-node
-  namespace: kube-system
+  namespace: {{ .Release.Namespace }}
+{{ include "blob.labels" . | indent 2 }}
 spec:
   selector:
     matchLabels:
       app: csi-blob-node
   template:
     metadata:
-      labels:
+{{ include "blob.labels" . | indent 6 }}
         app: csi-blob-node
     spec:
+      {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 8 }}
+      {{- end }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: csi-blob-node-sa
@@ -32,10 +36,11 @@ spec:
         - operator: "Exists"
       containers:
         - name: liveness-probe
+          imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
-          image: mcr.microsoft.com/oss/kubernetes-csi/livenessprobe:v2.2.0
+          image: "{{ .Values.image.livenessProbe.repository }}:{{ .Values.image.livenessProbe.tag }}"
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s
@@ -49,7 +54,7 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: node-driver-registrar
-          image: mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar:v2.0.1
+          image: "{{ .Values.image.nodeDriverRegistrar.repository }}:{{ .Values.image.nodeDriverRegistrar.tag }}"
           args:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
@@ -62,7 +67,7 @@ spec:
             - name: ADDRESS
               value: /csi/csi.sock
             - name: DRIVER_REG_SOCK_PATH
-              value: /var/lib/kubelet/plugins/blob.csi.azure.com/csi.sock
+              value: {{ .Values.kubelet.linuxPath }}/plugins/blob.csi.azure.com/csi.sock
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
@@ -76,18 +81,17 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: blob
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v1.0.0
-          imagePullPolicy: IfNotPresent
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
           args:
-            - "--v=5"
+            - "--v={{ .Values.node.logLevel }}"
             - "--endpoint=$(CSI_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
-            - "--metrics-address=0.0.0.0:29635"
+            - "--metrics-address=0.0.0.0:{{ .Values.node.metricsPort }}"
           ports:
             - containerPort: 29633
               name: healthz
               protocol: TCP
-            - containerPort: 29635
+            - containerPort: {{ .Values.node.metricsPort }}
               name: metrics
               protocol: TCP
           livenessProbe:
@@ -112,12 +116,17 @@ spec:
                 fieldRef:
                   apiVersion: v1
                   fieldPath: spec.nodeName
+            {{- if eq .Values.cloud "AzureStackCloud" }}
+            - name: AZURE_ENVIRONMENT_FILEPATH
+              value: /etc/kubernetes/azurestackcloud.json
+            {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
           securityContext:
             privileged: true
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
-            - mountPath: /var/lib/kubelet/
+            - mountPath: {{ .Values.kubelet.linuxPath }}/
               mountPropagation: Bidirectional
               name: mountpoint-dir
             - mountPath: /etc/kubernetes/
@@ -127,6 +136,11 @@ spec:
               name: msi
             - mountPath: /mnt
               name: blob-cache
+            {{- if eq .Values.cloud "AzureStackCloud" }}
+            - name: ssl
+              mountPath: /etc/ssl/certs
+              readOnly: true
+            {{- end }}
           resources:
             limits:
               cpu: 2
@@ -136,15 +150,15 @@ spec:
               memory: 20Mi
       volumes:
         - hostPath:
-            path: /var/lib/kubelet/plugins/blob.csi.azure.com
+            path: {{ .Values.kubelet.linuxPath }}/plugins/blob.csi.azure.com
             type: DirectoryOrCreate
           name: socket-dir
         - hostPath:
-            path: /var/lib/kubelet/
+            path: {{ .Values.kubelet.linuxPath }}/
             type: DirectoryOrCreate
           name: mountpoint-dir
         - hostPath:
-            path: /var/lib/kubelet/plugins_registry/
+            path: {{ .Values.kubelet.linuxPath }}/plugins_registry/
             type: DirectoryOrCreate
           name: registration-dir
         - hostPath:
@@ -157,4 +171,8 @@ spec:
         - hostPath:
             path: /mnt
           name: blob-cache
----
+        {{- if eq .Values.cloud "AzureStackCloud" }}
+        - name: ssl
+          hostPath:
+            path: /etc/ssl/certs
+        {{- end }}
