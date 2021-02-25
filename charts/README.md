@@ -20,7 +20,7 @@ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-sy
 ### install a specific version
 ```console
 helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v0.10.0
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.0.0
 ```
 
 ### search for all available chart versions
