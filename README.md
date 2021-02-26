@@ -34,6 +34,7 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
  > ```
  - This driver also supports [read cloud config from kuberenetes secret](./docs/read-from-secret.md).
  - If cluster identity is [Managed Service Identity(MSI)](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity), make sure user assigned identity has `Contributor` role on node resource group
+ - [How to set up CSI driver on Azure RedHat OpenShift(ARO)](https://github.com/ezYakaEagle442/aro-pub-storage/blob/master/setup-store-CSI-driver-azure-blob.md)
 
 ### Install driver on a Kubernetes cluster
  - install via [kubectl](./docs/install-blob-csi-driver.md) on public Azure (please use helm for other cloud environments, e.g. Azure Stack)
