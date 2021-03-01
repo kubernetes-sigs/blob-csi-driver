@@ -63,7 +63,7 @@ e2e-test:
 	go test -v -timeout=0 ./test/e2e ${GINKGO_FLAGS}
 
 .PHONY: e2e-bootstrap
-e2e-bootstrap: install-helm
+e2e-bootstrap: install-helm install-blobfuse-proxy
 	# Only build and push the image if it does not exist in the registry
 	docker pull $(IMAGE_TAG) || make blob-container push
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
@@ -94,7 +94,7 @@ blob-darwin:
 
 .PHONY: container
 container: blob
-	docker build --no-cache -t $(IMAGE_TAG) -f ./pkg/blobplugin/dev.Dockerfile .
+	docker build -t $(IMAGE_TAG) -f ./pkg/blobplugin/dev.Dockerfile .
 
 .PHONY: blob-container
 blob-container:
@@ -147,3 +147,33 @@ create-metrics-svc:
 .PHONY: delete-metrics-svc
 delete-metrics-svc:
 	kubectl delete -f deploy/example/metrics/csi-blob-controller-svc.yaml --ignore-not-found
+
+# compile .proto file to go output
+.PHONY: gen-proto
+gen-proto:
+	protoc --proto_path=pkg/blobfuse-proxy/proto --go-grpc_out=pkg/blobfuse-proxy/pb --go_out=pkg/blobfuse-proxy/pb pkg/blobfuse-proxy/proto/*.proto
+
+# clean the files generated from .proto file
+.PHONY: clean-proto
+clean-proto:
+	rm pkg/blobfuse-proxy/pb/*.go
+
+.PHONY: blobfuse-proxy
+blobfuse-proxy:
+	CGO_ENABLED=0 GOOS=linux go build -mod vendor -o _output/blobfuse-proxy ./pkg/blobfuse-proxy
+
+.PHONY: blobfuse-proxy-container
+blobfuse-proxy-container:
+	sudo docker build -t blobfuse-proxy -f pkg/blobfuse-proxy/Dockerfile .
+
+.PHONY: install-blobfuse-proxy
+install-blobfuse-proxy:
+ifdef ENABLE_BLOBFUSE_PROXY
+	kubectl apply -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml
+else
+	echo "ENABLE_BLOBFUSE_PROXY env not found"
+endif
+
+.PHONY: uninstall-blobfuse-proxy
+uninstall-blobfuse-proxy:
+	kubectl delete -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml --ignore-not-found

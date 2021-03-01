@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = ".;pb";
+
+message MountAzureBlobRequest {
+	string mountArgs = 1;
+	repeated string authEnv = 2;
+}
+
+message MountAzureBlobResponse {
+	string output = 1;
+}
+
+service MountService {
+	rpc MountAzureBlob(MountAzureBlobRequest) returns (MountAzureBlobResponse) {};
+}

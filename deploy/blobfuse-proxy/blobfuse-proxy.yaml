@@ -1,0 +1,71 @@
+# This is to be used in e2e test, while for production, we suggest install this proxy as a standalone process
+---
+kind: DaemonSet
+apiVersion: apps/v1
+metadata:
+  name: csi-blobfuse-proxy
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: csi-blobfuse-proxy
+  template:
+    metadata:
+      labels:
+        app: csi-blobfuse-proxy
+    spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        kubernetes.io/os: linux
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: type
+                    operator: NotIn
+                    values:
+                      - virtual-kubelet
+      priorityClassName: system-node-critical
+      tolerations:
+        - operator: "Exists"
+      containers:
+        - name: proxy
+          image: bmanu199/blobfuse-proxy@sha256:65659c9effa9df94c42a5f8388cef9656343c8fdd47a200ab69dc53913af7a42
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--blobfuse-proxy-endpoint=$(BLOBFUSE_PROXY_ENDPOINT)"
+          env:
+            - name: BLOBFUSE_PROXY_ENDPOINT
+              value: unix://csi/blobfuse-proxy.sock
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - mountPath: /csi
+              name: socket-dir
+            - mountPath: /var/lib/kubelet/
+              mountPropagation: Bidirectional
+              name: mountpoint-dir
+            - mountPath: /mnt
+              name: blob-cache
+          resources:
+            limits:
+              cpu: 2
+              memory: 2100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+      volumes:
+        - hostPath:
+            path: /var/lib/kubelet/plugins/blob.csi.azure.com
+            type: DirectoryOrCreate
+          name: socket-dir
+        - hostPath:
+            path: /var/lib/kubelet/
+            type: DirectoryOrCreate
+          name: mountpoint-dir
+        - hostPath:
+            path: /mnt
+          name: blob-cache
+---

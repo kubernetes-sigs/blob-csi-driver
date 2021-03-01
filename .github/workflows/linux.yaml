@@ -33,6 +33,11 @@ jobs:
         export PATH=$PATH:$HOME/.local/bin
         make container
 
+    - name: Make blobfuse-proxy test
+      run: |
+        export PATH=$PATH:$HOME/.local/bin
+        make blobfuse-proxy
+
     - name: Get code coverage
       env:
           COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
