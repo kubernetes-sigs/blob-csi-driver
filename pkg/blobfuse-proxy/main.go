@@ -17,19 +17,14 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"flag"
 	"log"
 	"net"
 	"os"
-	"os/exec"
-	"strings"
-	"sync"
 
 	"k8s.io/klog/v2"
 
-	"google.golang.org/grpc"
-	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
+	server "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server"
 	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 )
 
@@ -39,56 +34,7 @@ func init() {
 
 var (
 	blobfuseProxyEndpoint = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
-	mutex                 sync.Mutex
 )
-
-type MountServer struct {
-	mount_azure_blob.UnimplementedMountServiceServer
-}
-
-// NewMountServer returns a new Mountserver
-func NewMountServiceServer() *MountServer {
-	return &MountServer{}
-}
-
-// MountAzureBlob mounts an azure blob container to given location
-func (server *MountServer) MountAzureBlob(ctx context.Context,
-	req *mount_azure_blob.MountAzureBlobRequest,
-) (resp *mount_azure_blob.MountAzureBlobResponse, err error) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
-	args := req.GetMountArgs()
-	authEnv := req.GetAuthEnv()
-	klog.V(2).Infof("received mount request: Mounting with args %v \n", args)
-
-	var result mount_azure_blob.MountAzureBlobResponse
-	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
-
-	cmd.Env = append(cmd.Env, authEnv...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		klog.Error("blobfuse mount failed: with error:", err.Error())
-	} else {
-		klog.V(2).Infof("successfully mounted")
-	}
-	result.Output = string(output)
-	return &result, err
-}
-
-func runGRPCServer(
-	mountServer mount_azure_blob.MountServiceServer,
-	enableTLS bool,
-	listener net.Listener,
-) error {
-	serverOptions := []grpc.ServerOption{}
-	grpcServer := grpc.NewServer(serverOptions...)
-
-	mount_azure_blob.RegisterMountServiceServer(grpcServer, mountServer)
-
-	klog.V(2).Infof("Start GRPC server at %s, TLS = %t", listener.Addr().String(), enableTLS)
-	return grpcServer.Serve(listener)
-}
 
 func main() {
 	flag.Parse()
@@ -109,10 +55,10 @@ func main() {
 		klog.Fatal("cannot start server:", err)
 	}
 
-	mountServer := NewMountServiceServer()
+	mountServer := server.NewMountServiceServer()
 
 	log.Printf("Listening for connections on address: %#v\n", listener.Addr())
-	if err = runGRPCServer(mountServer, false, listener); err != nil {
+	if err = server.RunGRPCServer(mountServer, false, listener); err != nil {
 		klog.Fatalf("Listening for connections on address: %#v, error: %v", listener.Addr(), err)
 	}
 }

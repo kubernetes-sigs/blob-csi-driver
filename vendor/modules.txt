@@ -202,9 +202,10 @@ github.com/rubiojr/go-vhd/vhd
 github.com/satori/go.uuid
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/stretchr/testify v1.6.1
+# github.com/stretchr/testify v1.7.0
 ## explicit
 github.com/stretchr/testify/assert
+github.com/stretchr/testify/require
 # golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
@@ -275,7 +276,7 @@ google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
 # google.golang.org/genproto v0.0.0-20201110150050-8816d57aaa9a
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.35.0 => google.golang.org/grpc v1.35.0
+# google.golang.org/grpc v1.36.0 => google.golang.org/grpc v1.35.0
 ## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes
