@@ -50,8 +50,8 @@ func TestServerMountAzureBlob(t *testing.T) {
 
 			mountServer := NewMountServiceServer()
 			req := mount_azure_blob.MountAzureBlobRequest{
-				MountArgs: "--hello",
-				AuthEnv:   []string{"helloworld"},
+				MountArgs: tc.args,
+				AuthEnv:   tc.authEnv,
 			}
 			res, err := mountServer.MountAzureBlob(context.Background(), &req)
 			if tc.code == codes.OK {
@@ -60,9 +60,6 @@ func TestServerMountAzureBlob(t *testing.T) {
 			} else {
 				require.Error(t, err)
 				require.NotNil(t, res)
-				// st, ok := status.FromError(err)
-				// require.True(t, ok)
-				// require.Equal(t, tc.code, st.Code())
 			}
 		})
 	}
