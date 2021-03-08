@@ -38,7 +38,19 @@ import (
 	"google.golang.org/grpc/status"
 
 	"golang.org/x/net/context"
+	"google.golang.org/grpc"
+	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
 )
+
+type MountClient struct {
+	service mount_azure_blob.MountServiceClient
+}
+
+// NewMountClient returns a new mount client
+func NewMountClient(cc *grpc.ClientConn) *MountClient {
+	service := mount_azure_blob.NewMountServiceClient(cc)
+	return &MountClient{service}
+}
 
 // NodePublishVolume mount the volume from staging to target path
 func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
@@ -89,6 +101,38 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	klog.V(2).Infof("NodePublishVolume: volume %s mount %s at %s successfully", volumeID, source, target)
 
 	return &csi.NodePublishVolumeResponse{}, nil
+}
+
+func (d *Driver) mountBlobfuseWithProxy(args string, authEnv []string) (string, error) {
+	klog.V(2).Infof("mouting using blobfuse proxy")
+	var resp *mount_azure_blob.MountAzureBlobResponse
+	var output string
+	connectionTimout := time.Duration(d.blobfuseProxyConnTimout)
+	ctx, cancel := context.WithTimeout(context.Background(), connectionTimout*time.Second)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, d.blobfuseProxyEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+	if err == nil {
+		mountClient := NewMountClient(conn)
+		mountreq := mount_azure_blob.MountAzureBlobRequest{
+			MountArgs: args,
+			AuthEnv:   authEnv,
+		}
+		klog.V(2).Infof("calling BlobfuseProxy: MountAzureBlob function")
+		resp, err = mountClient.service.MountAzureBlob(context.TODO(), &mountreq)
+		if err != nil {
+			klog.Error("GRPC call returned with an error:", err)
+		}
+		output = resp.GetOutput()
+	}
+	return output, err
+}
+
+func (d *Driver) mountBlobfuseInsideDriver(args string, authEnv []string) (string, error) {
+	klog.V(2).Infof("mounting blobfuse inside driver")
+	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
+	cmd.Env = append(os.Environ(), authEnv...)
+	output, err := cmd.CombinedOutput()
+	return string(output), err
 }
 
 // NodeUnpublishVolume unmount the volume from the target path
@@ -213,14 +257,17 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nserverAddress %v",
 		targetPath, protocol, volumeID, attrib, mountFlags, mountOptions, args, serverAddress)
-	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
 
 	authEnv = append(authEnv, "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
-	cmd.Env = append(os.Environ(), authEnv...)
+	var output string
+	if d.enableBlobfuseProxy {
+		output, err = d.mountBlobfuseWithProxy(args, authEnv)
+	} else {
+		output, err = d.mountBlobfuseInsideDriver(args, authEnv)
+	}
 
-	output, err := cmd.CombinedOutput()
 	if err != nil {
-		err = fmt.Errorf("Mount failed with error: %v, output: %v", err, string(output))
+		err = fmt.Errorf("Mount failed with error: %v, output: %v", err, output)
 		klog.Errorf("%v", err)
 		notMnt, mntErr := d.mounter.IsLikelyNotMountPoint(targetPath)
 		if mntErr != nil {

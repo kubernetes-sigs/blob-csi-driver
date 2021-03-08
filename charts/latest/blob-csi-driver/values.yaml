@@ -40,6 +40,7 @@ controller:
 node:
   metricsPort: 29635
   logLevel: 5
+  enableBlobfuseProxy: false
 
 kubelet:
   linuxPath: /var/lib/kubelet

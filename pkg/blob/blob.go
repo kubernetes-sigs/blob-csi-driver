@@ -93,9 +93,12 @@ var (
 // Driver implements all interfaces of CSI drivers
 type Driver struct {
 	csicommon.CSIDriver
-	cloud      *azure.Cloud
-	mounter    *mount.SafeFormatAndMount
-	volLockMap *util.LockMap
+	cloud                   *azure.Cloud
+	blobfuseProxyEndpoint   string
+	enableBlobfuseProxy     bool
+	blobfuseProxyConnTimout int
+	mounter                 *mount.SafeFormatAndMount
+	volLockMap              *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
 	// for that same volume (as defined by VolumeID) return an Aborted error
 	volumeLocks *volumeLocks
@@ -103,13 +106,16 @@ type Driver struct {
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
 // does not support optional driver plugin info manifest field. Refer to CSI spec for more details.
-func NewDriver(nodeID string) *Driver {
+func NewDriver(nodeID, blobfuseProxyEndpoint string, enableBlobfuseProxy bool, blobfuseProxyConnTimout int) *Driver {
 	driver := Driver{}
 	driver.Name = DriverName
 	driver.Version = driverVersion
 	driver.NodeID = nodeID
 	driver.volLockMap = util.NewLockMap()
 	driver.volumeLocks = newVolumeLocks()
+	driver.blobfuseProxyEndpoint = blobfuseProxyEndpoint
+	driver.enableBlobfuseProxy = enableBlobfuseProxy
+	driver.blobfuseProxyConnTimout = blobfuseProxyConnTimout
 	return &driver
 }
 
