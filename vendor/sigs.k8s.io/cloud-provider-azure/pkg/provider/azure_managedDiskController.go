@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package azure
+package provider
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-30/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-12-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	v1 "k8s.io/api/core/v1"
@@ -49,10 +49,10 @@ type ManagedDiskController struct {
 
 // ManagedDiskOptions specifies the options of managed disks.
 type ManagedDiskOptions struct {
+	// The SKU of storage account.
+	StorageAccountType compute.DiskStorageAccountTypes
 	// The name of the disk.
 	DiskName string
-	// The size in GB.
-	SizeGB int
 	// The name of PVC.
 	PVCName string
 	// The name of resource group.
@@ -61,22 +61,22 @@ type ManagedDiskOptions struct {
 	AvailabilityZone string
 	// The tags of the disk.
 	Tags map[string]string
-	// The SKU of storage account.
-	StorageAccountType compute.DiskStorageAccountTypes
 	// IOPS Caps for UltraSSD disk
 	DiskIOPSReadWrite string
 	// Throughput Cap (MBps) for UltraSSD disk
 	DiskMBpsReadWrite string
-	// Logical sector size in bytes for Ultra disks
-	LogicalSectorSize int32
 	// if SourceResourceID is not empty, then it's a disk copy operation(for snapshot)
 	SourceResourceID string
 	// The type of source
 	SourceType string
 	// ResourceId of the disk encryption set to use for enabling encryption at rest.
 	DiskEncryptionSetID string
+	// The size in GB.
+	SizeGB int
 	// The maximum number of VMs that can attach to the disk at the same time. Value greater than one indicates a disk that can be mounted on multiple VMs at the same time.
 	MaxShares int32
+	// Logical sector size in bytes for Ultra disks
+	LogicalSectorSize int32
 }
 
 //CreateManagedDisk : create managed disk
@@ -122,7 +122,7 @@ func (c *ManagedDiskController) CreateManagedDisk(options *ManagedDiskOptions) (
 		if options.DiskIOPSReadWrite != "" {
 			v, err := strconv.Atoi(options.DiskIOPSReadWrite)
 			if err != nil {
-				return "", fmt.Errorf("AzureDisk - failed to parse DiskIOPSReadWrite: %v", err)
+				return "", fmt.Errorf("AzureDisk - failed to parse DiskIOPSReadWrite: %w", err)
 			}
 			diskIOPSReadWrite = int64(v)
 		}
@@ -132,7 +132,7 @@ func (c *ManagedDiskController) CreateManagedDisk(options *ManagedDiskOptions) (
 		if options.DiskMBpsReadWrite != "" {
 			v, err := strconv.Atoi(options.DiskMBpsReadWrite)
 			if err != nil {
-				return "", fmt.Errorf("AzureDisk - failed to parse DiskMBpsReadWrite: %v", err)
+				return "", fmt.Errorf("AzureDisk - failed to parse DiskMBpsReadWrite: %w", err)
 			}
 			diskMBpsReadWrite = int64(v)
 		}
@@ -387,7 +387,7 @@ func (c *Cloud) GetAzureDiskLabels(diskURI string) (map[string]string, error) {
 	zones := *disk.Zones
 	zoneID, err := strconv.Atoi(zones[0])
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse zone %v for AzureDisk %v: %v", zones, diskName, err)
+		return nil, fmt.Errorf("failed to parse zone %v for AzureDisk %v: %w", zones, diskName, err)
 	}
 
 	zone := c.makeZone(c.Location, zoneID)

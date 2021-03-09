@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package azure
+package provider
 
 import (
 	"context"
@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-06-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-07-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	v1 "k8s.io/api/core/v1"
@@ -129,6 +129,8 @@ const (
 	serviceUsingDNSKey = "kubernetes-dns-label-service"
 
 	defaultLoadBalancerSourceRanges = "0.0.0.0/0"
+
+	trueAnnotationValue = "true"
 )
 
 // GetLoadBalancer returns whether the specified load balancer and its components exist, and
@@ -331,7 +333,8 @@ func (az *Cloud) cleanBackendpoolForPrimarySLB(primarySLB *network.LoadBalancer,
 			break
 		}
 	}
-	for vmSetName, backendIPConfigurationsToBeDeleted := range vmSetNameToBackendIPConfigurationsToBeDeleted {
+	for vmSetName := range vmSetNameToBackendIPConfigurationsToBeDeleted {
+		backendIPConfigurationsToBeDeleted := vmSetNameToBackendIPConfigurationsToBeDeleted[vmSetName]
 		backendpoolToBeDeleted := &[]network.BackendAddressPool{
 			{
 				ID: to.StringPtr(lbBackendPoolID),
@@ -550,6 +553,12 @@ func (az *Cloud) getServiceLoadBalancer(service *v1.Service, clusterName string,
 				Name: network.LoadBalancerSkuNameStandard,
 			}
 		}
+		if az.HasExtendedLocation() {
+			defaultLB.ExtendedLocation = &network.ExtendedLocation{
+				Name: &az.ExtendedLocationName,
+				Type: &az.ExtendedLocationType,
+			}
+		}
 	}
 
 	return defaultLB, nil, false, nil
@@ -592,6 +601,12 @@ func (az *Cloud) selectLoadBalancer(clusterName string, service *v1.Service, exi
 				Location:                     &az.Location,
 				Sku:                          &network.LoadBalancerSku{Name: loadBalancerSKU},
 				LoadBalancerPropertiesFormat: &network.LoadBalancerPropertiesFormat{},
+			}
+			if az.HasExtendedLocation() {
+				selectedLB.ExtendedLocation = &network.ExtendedLocation{
+					Name: &az.ExtendedLocationName,
+					Type: &az.ExtendedLocationType,
+				}
 			}
 
 			return selectedLB, false, nil
@@ -637,7 +652,7 @@ func (az *Cloud) getServiceLoadBalancerStatus(service *v1.Service, lb *network.L
 	for _, ipConfiguration := range *lb.FrontendIPConfigurations {
 		owns, isPrimaryService, err := az.serviceOwnsFrontendIP(ipConfiguration, service)
 		if err != nil {
-			return nil, nil, fmt.Errorf("get(%s): lb(%s) - failed to filter frontend IP configs with error: %v", serviceName, to.String(lb.Name), err)
+			return nil, nil, fmt.Errorf("get(%s): lb(%s) - failed to filter frontend IP configs with error: %w", serviceName, to.String(lb.Name), err)
 		}
 		if owns {
 			klog.V(2).Infof("get(%s): lb(%s) - found frontend IP config, primary service: %v", serviceName, to.String(lb.Name), isPrimaryService)
@@ -725,12 +740,12 @@ func flipServiceInternalAnnotation(service *v1.Service) *v1.Service {
 	if copyService.Annotations == nil {
 		copyService.Annotations = map[string]string{}
 	}
-	if v, ok := copyService.Annotations[ServiceAnnotationLoadBalancerInternal]; ok && v == "true" {
+	if v, ok := copyService.Annotations[ServiceAnnotationLoadBalancerInternal]; ok && v == trueAnnotationValue {
 		// If it is internal now, we make it external by remove the annotation
 		delete(copyService.Annotations, ServiceAnnotationLoadBalancerInternal)
 	} else {
 		// If it is external now, we make it internal
-		copyService.Annotations[ServiceAnnotationLoadBalancerInternal] = "true"
+		copyService.Annotations[ServiceAnnotationLoadBalancerInternal] = trueAnnotationValue
 	}
 	return copyService
 }
@@ -823,6 +838,12 @@ func (az *Cloud) ensurePublicIPExists(service *v1.Service, pipName string, domai
 		}
 		pip.Name = to.StringPtr(pipName)
 		pip.Location = to.StringPtr(az.Location)
+		if az.HasExtendedLocation() {
+			pip.ExtendedLocation = &network.ExtendedLocation{
+				Name: &az.ExtendedLocationName,
+				Type: &az.ExtendedLocationType,
+			}
+		}
 		pip.PublicIPAddressPropertiesFormat = &network.PublicIPAddressPropertiesFormat{
 			PublicIPAllocationMethod: network.Static,
 			IPTags:                   getServiceIPTagRequestForPublicIP(service).IPTags,
@@ -1009,11 +1030,11 @@ func getIdleTimeout(s *v1.Service) (*int32, error) {
 	}
 
 	errInvalidTimeout := fmt.Errorf("idle timeout value must be a whole number representing minutes between %d and %d", min, max)
-	to, err := strconv.Atoi(val)
+	toInt, err := strconv.ParseInt(val, 10, 32)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing idle timeout value: %v: %v", err, errInvalidTimeout)
+		return nil, fmt.Errorf("error parsing idle timeout value: %w: %v", err, errInvalidTimeout)
 	}
-	to32 := int32(to)
+	to32 := int32(toInt)
 
 	if to32 < min || to32 > max {
 		return nil, errInvalidTimeout
@@ -1222,223 +1243,36 @@ func (az *Cloud) reconcileLoadBalancer(clusterName string, service *v1.Service, 
 	}
 	lbName := *lb.Name
 	lbResourceGroup := az.getLoadBalancerResourceGroup()
+	lbBackendPoolID := az.getBackendPoolID(lbName, az.getLoadBalancerResourceGroup(), getBackendPoolName(clusterName, service))
 	klog.V(2).Infof("reconcileLoadBalancer for service(%s): lb(%s/%s) wantLb(%t) resolved load balancer name", serviceName, lbResourceGroup, lbName, wantLb)
 	defaultLBFrontendIPConfigName := az.getDefaultFrontendIPConfigName(service)
 	defaultLBFrontendIPConfigID := az.getFrontendIPConfigID(lbName, lbResourceGroup, defaultLBFrontendIPConfigName)
-	lbBackendPoolName := getBackendPoolName(clusterName, service)
-	lbBackendPoolID := az.getBackendPoolID(lbName, lbResourceGroup, lbBackendPoolName)
+	dirtyLb := false
 
 	lbIdleTimeout, err := getIdleTimeout(service)
 	if wantLb && err != nil {
 		return nil, err
 	}
 
-	dirtyLb := false
-
-	// Ensure LoadBalancer's Backend Pool Configuration
+	// reconcile the load balancer's backend pool configuration.
 	if wantLb {
-		newBackendPools := []network.BackendAddressPool{}
-		if lb.BackendAddressPools != nil {
-			newBackendPools = *lb.BackendAddressPools
-		}
-
-		foundBackendPool := false
-		for _, bp := range newBackendPools {
-			if strings.EqualFold(*bp.Name, lbBackendPoolName) {
-				klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - found wanted backendpool. not adding anything", serviceName, wantLb)
-				foundBackendPool = true
-
-				var backendIPConfigurationsToBeDeleted []network.InterfaceIPConfiguration
-				if bp.BackendAddressPoolPropertiesFormat != nil && bp.BackendIPConfigurations != nil {
-					for _, ipConf := range *bp.BackendIPConfigurations {
-						ipConfID := to.String(ipConf.ID)
-						nodeName, _, err := az.VMSet.GetNodeNameByIPConfigurationID(ipConfID)
-						if err != nil {
-							return nil, err
-						}
-						if nodeName == "" {
-							// VM may under deletion
-							continue
-						}
-						// If a node is not supposed to be included in the LB, it
-						// would not be in the `nodes` slice. We need to check the nodes that
-						// have been added to the LB's backendpool, find the unwanted ones and
-						// delete them from the pool.
-						if !nodeNameInNodes(nodeName, nodes) {
-							klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - found unwanted node %s, decouple it from the LB", serviceName, wantLb, nodeName)
-							// construct a backendPool that only contains the IP config of the node to be deleted
-							backendIPConfigurationsToBeDeleted = append(backendIPConfigurationsToBeDeleted, network.InterfaceIPConfiguration{ID: to.StringPtr(ipConfID)})
-						}
-					}
-					if len(backendIPConfigurationsToBeDeleted) > 0 {
-						backendpoolToBeDeleted := &[]network.BackendAddressPool{
-							{
-								ID: to.StringPtr(lbBackendPoolID),
-								BackendAddressPoolPropertiesFormat: &network.BackendAddressPoolPropertiesFormat{
-									BackendIPConfigurations: &backendIPConfigurationsToBeDeleted,
-								},
-							},
-						}
-						vmSetName := az.mapLoadBalancerNameToVMSet(lbName, clusterName)
-						// decouple the backendPool from the node
-						err = az.VMSet.EnsureBackendPoolDeleted(service, lbBackendPoolID, vmSetName, backendpoolToBeDeleted)
-						if err != nil {
-							return nil, err
-						}
-					}
-				}
-				break
-			} else {
-				klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - found other backendpool %s", serviceName, wantLb, *bp.Name)
-			}
-		}
-		if !foundBackendPool {
-			if isBackendPoolPreConfigured {
-				klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - PreConfiguredBackendPoolLoadBalancerTypes %s has been set but can not find corresponding backend pool, ignoring it",
-					serviceName,
-					wantLb,
-					az.PreConfiguredBackendPoolLoadBalancerTypes)
-				isBackendPoolPreConfigured = false
-			}
-
-			newBackendPools = append(newBackendPools, network.BackendAddressPool{
-				Name: to.StringPtr(lbBackendPoolName),
-			})
-			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - adding backendpool", serviceName, wantLb)
-
-			dirtyLb = true
-			lb.BackendAddressPools = &newBackendPools
-		}
-	}
-
-	// Ensure LoadBalancer's Frontend IP Configurations
-	dirtyConfigs := false
-	newConfigs := []network.FrontendIPConfiguration{}
-	if lb.FrontendIPConfigurations != nil {
-		newConfigs = *lb.FrontendIPConfigurations
-	}
-
-	var ownedFIPConfig *network.FrontendIPConfiguration
-	if !wantLb {
-		for i := len(newConfigs) - 1; i >= 0; i-- {
-			config := newConfigs[i]
-			isServiceOwnsFrontendIP, _, err := az.serviceOwnsFrontendIP(config, service)
-			if err != nil {
-				return nil, err
-			}
-			if isServiceOwnsFrontendIP {
-				unsafe, err := az.isFrontendIPConfigUnsafeToDelete(lb, service, config.ID)
-				if err != nil {
-					return nil, err
-				}
-
-				// If the frontend IP configuration is not being referenced by:
-				// 1. loadBalancing rules of other services with different ports;
-				// 2. outbound rules;
-				// 3. inbound NAT rules;
-				// 4. inbound NAT pools,
-				// do the deletion, or skip it.
-				if !unsafe {
-					var configNameToBeDeleted string
-					if newConfigs[i].Name != nil {
-						configNameToBeDeleted = *newConfigs[i].Name
-						klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb frontendconfig(%s) - dropping", serviceName, wantLb, configNameToBeDeleted)
-					} else {
-						klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): nil name of lb frontendconfig", serviceName, wantLb)
-					}
-
-					newConfigs = append(newConfigs[:i], newConfigs[i+1:]...)
-					dirtyConfigs = true
-				}
-			}
-		}
-	} else {
-		for i := len(newConfigs) - 1; i >= 0; i-- {
-			config := newConfigs[i]
-			isFipChanged, err := az.isFrontendIPChanged(clusterName, config, service, defaultLBFrontendIPConfigName)
-			if err != nil {
-				return nil, err
-			}
-			if isFipChanged {
-				klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb frontendconfig(%s) - dropping", serviceName, wantLb, *config.Name)
-				newConfigs = append(newConfigs[:i], newConfigs[i+1:]...)
-				dirtyConfigs = true
-			}
-		}
-
-		ownedFIPConfig, _, err = az.findFrontendIPConfigOfService(&newConfigs, service)
+		preConfig, changed, err := az.reconcileBackendPools(clusterName, service, nodes, lb, isBackendPoolPreConfigured)
 		if err != nil {
-			return nil, err
+			return lb, err
 		}
-
-		if ownedFIPConfig == nil {
-			klog.V(4).Infof("ensure(%s): lb(%s) - creating a new frontend IP config", serviceName, lbName)
-
-			// construct FrontendIPConfigurationPropertiesFormat
-			var fipConfigurationProperties *network.FrontendIPConfigurationPropertiesFormat
-			if isInternal {
-				// azure does not support ILB for IPv6 yet.
-				// TODO: remove this check when ILB supports IPv6 *and* the SDK
-				// have been rev'ed to 2019* version
-				if utilnet.IsIPv6String(service.Spec.ClusterIP) {
-					return nil, fmt.Errorf("ensure(%s): lb(%s) - internal load balancers does not support IPv6", serviceName, lbName)
-				}
-
-				subnetName := subnet(service)
-				if subnetName == nil {
-					subnetName = &az.SubnetName
-				}
-				subnet, existsSubnet, err := az.getSubnet(az.VnetName, *subnetName)
-				if err != nil {
-					return nil, err
-				}
-
-				if !existsSubnet {
-					return nil, fmt.Errorf("ensure(%s): lb(%s) - failed to get subnet: %s/%s", serviceName, lbName, az.VnetName, az.SubnetName)
-				}
-
-				configProperties := network.FrontendIPConfigurationPropertiesFormat{
-					Subnet: &subnet,
-				}
-
-				loadBalancerIP := service.Spec.LoadBalancerIP
-				if loadBalancerIP != "" {
-					configProperties.PrivateIPAllocationMethod = network.Static
-					configProperties.PrivateIPAddress = &loadBalancerIP
-				} else {
-					// We'll need to call GetLoadBalancer later to retrieve allocated IP.
-					configProperties.PrivateIPAllocationMethod = network.Dynamic
-				}
-
-				fipConfigurationProperties = &configProperties
-			} else {
-				pipName, shouldPIPExisted, err := az.determinePublicIPName(clusterName, service)
-				if err != nil {
-					return nil, err
-				}
-				domainNameLabel, found := getPublicIPDomainNameLabel(service)
-				pip, err := az.ensurePublicIPExists(service, pipName, domainNameLabel, clusterName, shouldPIPExisted, found)
-				if err != nil {
-					return nil, err
-				}
-				fipConfigurationProperties = &network.FrontendIPConfigurationPropertiesFormat{
-					PublicIPAddress: &network.PublicIPAddress{ID: pip.ID},
-				}
-			}
-
-			newConfigs = append(newConfigs,
-				network.FrontendIPConfiguration{
-					Name:                                    to.StringPtr(defaultLBFrontendIPConfigName),
-					ID:                                      to.StringPtr(fmt.Sprintf(frontendIPConfigIDTemplate, az.SubscriptionID, az.ResourceGroup, *lb.Name, defaultLBFrontendIPConfigName)),
-					FrontendIPConfigurationPropertiesFormat: fipConfigurationProperties,
-				})
-			klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb frontendconfig(%s) - adding", serviceName, wantLb, defaultLBFrontendIPConfigName)
-			dirtyConfigs = true
+		if changed {
+			dirtyLb = true
 		}
+		isBackendPoolPreConfigured = preConfig
 	}
-	if dirtyConfigs {
+
+	// reconcile the load balancer's frontend IP configurations.
+	ownedFIPConfig, changed, err := az.reconcileFrontendIPConfigs(clusterName, service, lb, wantLb, defaultLBFrontendIPConfigName)
+	if err != nil {
+		return lb, err
+	}
+	if changed {
 		dirtyLb = true
-		lb.FrontendIPConfigurations = &newConfigs
 	}
 
 	// update probes/rules
@@ -1451,100 +1285,28 @@ func (az *Cloud) reconcileLoadBalancer(clusterName string, service *v1.Service, 
 	}
 
 	if wantLb {
-		err = az.checkLoadBalancerResourcesConflicted(lb, defaultLBFrontendIPConfigID, service)
+		err = az.checkLoadBalancerResourcesConflicts(lb, defaultLBFrontendIPConfigID, service)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	expectedProbes, expectedRules, err := az.reconcileLoadBalancerRule(service, wantLb, defaultLBFrontendIPConfigID, lbBackendPoolID, lbName, lbIdleTimeout)
+	expectedProbes, expectedRules, err := az.getExpectedLBRules(service, wantLb, defaultLBFrontendIPConfigID, lbBackendPoolID, lbName, lbIdleTimeout)
 	if err != nil {
 		return nil, err
 	}
 
-	// remove unwanted probes
-	dirtyProbes := false
-	var updatedProbes []network.Probe
-	if lb.Probes != nil {
-		updatedProbes = *lb.Probes
-	}
-	for i := len(updatedProbes) - 1; i >= 0; i-- {
-		existingProbe := updatedProbes[i]
-		if az.serviceOwnsRule(service, *existingProbe.Name) {
-			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - considering evicting", serviceName, wantLb, *existingProbe.Name)
-			keepProbe := false
-			if findProbe(expectedProbes, existingProbe) {
-				klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - keeping", serviceName, wantLb, *existingProbe.Name)
-				keepProbe = true
-			}
-			if !keepProbe {
-				updatedProbes = append(updatedProbes[:i], updatedProbes[i+1:]...)
-				klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - dropping", serviceName, wantLb, *existingProbe.Name)
-				dirtyProbes = true
-			}
-		}
-	}
-	// add missing, wanted probes
-	for _, expectedProbe := range expectedProbes {
-		foundProbe := false
-		if findProbe(updatedProbes, expectedProbe) {
-			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - already exists", serviceName, wantLb, *expectedProbe.Name)
-			foundProbe = true
-		}
-		if !foundProbe {
-			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - adding", serviceName, wantLb, *expectedProbe.Name)
-			updatedProbes = append(updatedProbes, expectedProbe)
-			dirtyProbes = true
-		}
-	}
-	if dirtyProbes {
+	changed = az.reconcileLBProbes(lb, service, serviceName, wantLb, expectedProbes)
+	if changed {
 		dirtyLb = true
-		lb.Probes = &updatedProbes
 	}
 
-	// update rules
-	dirtyRules := false
-	var updatedRules []network.LoadBalancingRule
-	if lb.LoadBalancingRules != nil {
-		updatedRules = *lb.LoadBalancingRules
-	}
-
-	// update rules: remove unwanted
-	for i := len(updatedRules) - 1; i >= 0; i-- {
-		existingRule := updatedRules[i]
-		if az.serviceOwnsRule(service, *existingRule.Name) {
-			keepRule := false
-			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) - considering evicting", serviceName, wantLb, *existingRule.Name)
-			if findRule(expectedRules, existingRule, wantLb) {
-				klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) - keeping", serviceName, wantLb, *existingRule.Name)
-				keepRule = true
-			}
-			if !keepRule {
-				klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) - dropping", serviceName, wantLb, *existingRule.Name)
-				updatedRules = append(updatedRules[:i], updatedRules[i+1:]...)
-				dirtyRules = true
-			}
-		}
-	}
-	// update rules: add needed
-	for _, expectedRule := range expectedRules {
-		foundRule := false
-		if findRule(updatedRules, expectedRule, wantLb) {
-			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) - already exists", serviceName, wantLb, *expectedRule.Name)
-			foundRule = true
-		}
-		if !foundRule {
-			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) adding", serviceName, wantLb, *expectedRule.Name)
-			updatedRules = append(updatedRules, expectedRule)
-			dirtyRules = true
-		}
-	}
-	if dirtyRules {
+	changed = az.reconcileLBRules(lb, service, serviceName, wantLb, expectedRules)
+	if changed {
 		dirtyLb = true
-		lb.LoadBalancingRules = &updatedRules
 	}
 
-	changed := az.ensureLoadBalancerTagged(lb)
+	changed = az.ensureLoadBalancerTagged(lb)
 	if changed {
 		dirtyLb = true
 	}
@@ -1599,10 +1361,316 @@ func (az *Cloud) reconcileLoadBalancer(clusterName string, service *v1.Service, 
 	return lb, nil
 }
 
-// checkLoadBalancerResourcesConflicted checks if the service is consuming
-// ports which are conflicted with the existing loadBalancer resources,
+func (az *Cloud) reconcileLBProbes(lb *network.LoadBalancer, service *v1.Service, serviceName string, wantLb bool, expectedProbes []network.Probe) bool {
+	// remove unwanted probes
+	dirtyProbes := false
+	var updatedProbes []network.Probe
+	if lb.Probes != nil {
+		updatedProbes = *lb.Probes
+	}
+	for i := len(updatedProbes) - 1; i >= 0; i-- {
+		existingProbe := updatedProbes[i]
+		if az.serviceOwnsRule(service, *existingProbe.Name) {
+			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - considering evicting", serviceName, wantLb, *existingProbe.Name)
+			keepProbe := false
+			if findProbe(expectedProbes, existingProbe) {
+				klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - keeping", serviceName, wantLb, *existingProbe.Name)
+				keepProbe = true
+			}
+			if !keepProbe {
+				updatedProbes = append(updatedProbes[:i], updatedProbes[i+1:]...)
+				klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - dropping", serviceName, wantLb, *existingProbe.Name)
+				dirtyProbes = true
+			}
+		}
+	}
+	// add missing, wanted probes
+	for _, expectedProbe := range expectedProbes {
+		foundProbe := false
+		if findProbe(updatedProbes, expectedProbe) {
+			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - already exists", serviceName, wantLb, *expectedProbe.Name)
+			foundProbe = true
+		}
+		if !foundProbe {
+			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb probe(%s) - adding", serviceName, wantLb, *expectedProbe.Name)
+			updatedProbes = append(updatedProbes, expectedProbe)
+			dirtyProbes = true
+		}
+	}
+	if dirtyProbes {
+		lb.Probes = &updatedProbes
+	}
+	return dirtyProbes
+}
+
+func (az *Cloud) reconcileLBRules(lb *network.LoadBalancer, service *v1.Service, serviceName string, wantLb bool, expectedRules []network.LoadBalancingRule) bool {
+	// update rules
+	dirtyRules := false
+	var updatedRules []network.LoadBalancingRule
+	if lb.LoadBalancingRules != nil {
+		updatedRules = *lb.LoadBalancingRules
+	}
+
+	// update rules: remove unwanted
+	for i := len(updatedRules) - 1; i >= 0; i-- {
+		existingRule := updatedRules[i]
+		if az.serviceOwnsRule(service, *existingRule.Name) {
+			keepRule := false
+			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) - considering evicting", serviceName, wantLb, *existingRule.Name)
+			if findRule(expectedRules, existingRule, wantLb) {
+				klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) - keeping", serviceName, wantLb, *existingRule.Name)
+				keepRule = true
+			}
+			if !keepRule {
+				klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) - dropping", serviceName, wantLb, *existingRule.Name)
+				updatedRules = append(updatedRules[:i], updatedRules[i+1:]...)
+				dirtyRules = true
+			}
+		}
+	}
+	// update rules: add needed
+	for _, expectedRule := range expectedRules {
+		foundRule := false
+		if findRule(updatedRules, expectedRule, wantLb) {
+			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) - already exists", serviceName, wantLb, *expectedRule.Name)
+			foundRule = true
+		}
+		if !foundRule {
+			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb rule(%s) adding", serviceName, wantLb, *expectedRule.Name)
+			updatedRules = append(updatedRules, expectedRule)
+			dirtyRules = true
+		}
+	}
+	if dirtyRules {
+		lb.LoadBalancingRules = &updatedRules
+	}
+	return dirtyRules
+}
+
+func (az *Cloud) reconcileFrontendIPConfigs(clusterName string, service *v1.Service, lb *network.LoadBalancer, wantLb bool, defaultLBFrontendIPConfigName string) (*network.FrontendIPConfiguration, bool, error) {
+	var err error
+	lbName := *lb.Name
+	serviceName := getServiceName(service)
+	isInternal := requiresInternalLoadBalancer(service)
+	dirtyConfigs := false
+	var newConfigs []network.FrontendIPConfiguration
+	if lb.FrontendIPConfigurations != nil {
+		newConfigs = *lb.FrontendIPConfigurations
+	}
+
+	var ownedFIPConfig *network.FrontendIPConfiguration
+	if !wantLb {
+		for i := len(newConfigs) - 1; i >= 0; i-- {
+			config := newConfigs[i]
+			isServiceOwnsFrontendIP, _, err := az.serviceOwnsFrontendIP(config, service)
+			if err != nil {
+				return nil, false, err
+			}
+			if isServiceOwnsFrontendIP {
+				unsafe, err := az.isFrontendIPConfigUnsafeToDelete(lb, service, config.ID)
+				if err != nil {
+					return nil, false, err
+				}
+
+				// If the frontend IP configuration is not being referenced by:
+				// 1. loadBalancing rules of other services with different ports;
+				// 2. outbound rules;
+				// 3. inbound NAT rules;
+				// 4. inbound NAT pools,
+				// do the deletion, or skip it.
+				if !unsafe {
+					var configNameToBeDeleted string
+					if newConfigs[i].Name != nil {
+						configNameToBeDeleted = *newConfigs[i].Name
+						klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb frontendconfig(%s) - dropping", serviceName, wantLb, configNameToBeDeleted)
+					} else {
+						klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): nil name of lb frontendconfig", serviceName, wantLb)
+					}
+
+					newConfigs = append(newConfigs[:i], newConfigs[i+1:]...)
+					dirtyConfigs = true
+				}
+			}
+		}
+	} else {
+		for i := len(newConfigs) - 1; i >= 0; i-- {
+			config := newConfigs[i]
+			isFipChanged, err := az.isFrontendIPChanged(clusterName, config, service, defaultLBFrontendIPConfigName)
+			if err != nil {
+				return nil, false, err
+			}
+			if isFipChanged {
+				klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb frontendconfig(%s) - dropping", serviceName, wantLb, *config.Name)
+				newConfigs = append(newConfigs[:i], newConfigs[i+1:]...)
+				dirtyConfigs = true
+			}
+		}
+
+		ownedFIPConfig, _, err = az.findFrontendIPConfigOfService(&newConfigs, service)
+		if err != nil {
+			return nil, false, err
+		}
+
+		if ownedFIPConfig == nil {
+			klog.V(4).Infof("ensure(%s): lb(%s) - creating a new frontend IP config", serviceName, lbName)
+
+			// construct FrontendIPConfigurationPropertiesFormat
+			var fipConfigurationProperties *network.FrontendIPConfigurationPropertiesFormat
+			if isInternal {
+				// azure does not support ILB for IPv6 yet.
+				// TODO: remove this check when ILB supports IPv6 *and* the SDK
+				// have been rev'ed to 2019* version
+				if utilnet.IsIPv6String(service.Spec.ClusterIP) {
+					return nil, false, fmt.Errorf("ensure(%s): lb(%s) - internal load balancers does not support IPv6", serviceName, lbName)
+				}
+
+				subnetName := subnet(service)
+				if subnetName == nil {
+					subnetName = &az.SubnetName
+				}
+				subnet, existsSubnet, err := az.getSubnet(az.VnetName, *subnetName)
+				if err != nil {
+					return nil, false, err
+				}
+
+				if !existsSubnet {
+					return nil, false, fmt.Errorf("ensure(%s): lb(%s) - failed to get subnet: %s/%s", serviceName, lbName, az.VnetName, az.SubnetName)
+				}
+
+				configProperties := network.FrontendIPConfigurationPropertiesFormat{
+					Subnet: &subnet,
+				}
+
+				loadBalancerIP := service.Spec.LoadBalancerIP
+				if loadBalancerIP != "" {
+					configProperties.PrivateIPAllocationMethod = network.Static
+					configProperties.PrivateIPAddress = &loadBalancerIP
+				} else {
+					// We'll need to call GetLoadBalancer later to retrieve allocated IP.
+					configProperties.PrivateIPAllocationMethod = network.Dynamic
+				}
+
+				fipConfigurationProperties = &configProperties
+			} else {
+				pipName, shouldPIPExisted, err := az.determinePublicIPName(clusterName, service)
+				if err != nil {
+					return nil, false, err
+				}
+				domainNameLabel, found := getPublicIPDomainNameLabel(service)
+				pip, err := az.ensurePublicIPExists(service, pipName, domainNameLabel, clusterName, shouldPIPExisted, found)
+				if err != nil {
+					return nil, false, err
+				}
+				fipConfigurationProperties = &network.FrontendIPConfigurationPropertiesFormat{
+					PublicIPAddress: &network.PublicIPAddress{ID: pip.ID},
+				}
+			}
+
+			newConfigs = append(newConfigs,
+				network.FrontendIPConfiguration{
+					Name:                                    to.StringPtr(defaultLBFrontendIPConfigName),
+					ID:                                      to.StringPtr(fmt.Sprintf(frontendIPConfigIDTemplate, az.SubscriptionID, az.ResourceGroup, *lb.Name, defaultLBFrontendIPConfigName)),
+					FrontendIPConfigurationPropertiesFormat: fipConfigurationProperties,
+				})
+			klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb frontendconfig(%s) - adding", serviceName, wantLb, defaultLBFrontendIPConfigName)
+			dirtyConfigs = true
+		}
+	}
+	if dirtyConfigs {
+		lb.FrontendIPConfigurations = &newConfigs
+	}
+	return ownedFIPConfig, dirtyConfigs, err
+}
+
+func (az *Cloud) reconcileBackendPools(clusterName string, service *v1.Service, nodes []*v1.Node, lb *network.LoadBalancer, isBackendPoolPreConfigured bool) (bool, bool, error) {
+	var newBackendPools []network.BackendAddressPool
+	var err error
+	if lb.BackendAddressPools != nil {
+		newBackendPools = *lb.BackendAddressPools
+	}
+
+	foundBackendPool := false
+	dirtyLb := false
+	wantLb := true
+	lbName := *lb.Name
+
+	serviceName := getServiceName(service)
+	lbBackendPoolName := getBackendPoolName(clusterName, service)
+	lbBackendPoolID := az.getBackendPoolID(lbName, az.getLoadBalancerResourceGroup(), lbBackendPoolName)
+	vmSetName := az.mapLoadBalancerNameToVMSet(lbName, clusterName)
+
+	for _, bp := range newBackendPools {
+		if strings.EqualFold(*bp.Name, lbBackendPoolName) {
+			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - found wanted backendpool. not adding anything", serviceName, wantLb)
+			foundBackendPool = true
+
+			var backendIPConfigurationsToBeDeleted []network.InterfaceIPConfiguration
+			if bp.BackendAddressPoolPropertiesFormat != nil && bp.BackendIPConfigurations != nil {
+				for _, ipConf := range *bp.BackendIPConfigurations {
+					ipConfID := to.String(ipConf.ID)
+					nodeName, _, err := az.VMSet.GetNodeNameByIPConfigurationID(ipConfID)
+					if err != nil {
+						return false, false, err
+					}
+					if nodeName == "" {
+						// VM may under deletion
+						continue
+					}
+					// If a node is not supposed to be included in the LB, it
+					// would not be in the `nodes` slice. We need to check the nodes that
+					// have been added to the LB's backendpool, find the unwanted ones and
+					// delete them from the pool.
+					if !nodeNameInNodes(nodeName, nodes) {
+						klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - found unwanted node %s, decouple it from the LB", serviceName, wantLb, nodeName)
+						// construct a backendPool that only contains the IP config of the node to be deleted
+						backendIPConfigurationsToBeDeleted = append(backendIPConfigurationsToBeDeleted, network.InterfaceIPConfiguration{ID: to.StringPtr(ipConfID)})
+					}
+				}
+				if len(backendIPConfigurationsToBeDeleted) > 0 {
+					backendpoolToBeDeleted := &[]network.BackendAddressPool{
+						{
+							ID: to.StringPtr(lbBackendPoolID),
+							BackendAddressPoolPropertiesFormat: &network.BackendAddressPoolPropertiesFormat{
+								BackendIPConfigurations: &backendIPConfigurationsToBeDeleted,
+							},
+						},
+					}
+					// decouple the backendPool from the node
+					err = az.VMSet.EnsureBackendPoolDeleted(service, lbBackendPoolID, vmSetName, backendpoolToBeDeleted)
+					if err != nil {
+						return false, false, err
+					}
+				}
+			}
+			break
+		} else {
+			klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - found other backendpool %s", serviceName, wantLb, *bp.Name)
+		}
+	}
+	if !foundBackendPool {
+		if isBackendPoolPreConfigured {
+			klog.V(2).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - PreConfiguredBackendPoolLoadBalancerTypes %s has been set but can not find corresponding backend pool, ignoring it",
+				serviceName,
+				wantLb,
+				az.PreConfiguredBackendPoolLoadBalancerTypes)
+			isBackendPoolPreConfigured = false
+		}
+
+		newBackendPools = append(newBackendPools, network.BackendAddressPool{
+			Name: to.StringPtr(lbBackendPoolName),
+		})
+		klog.V(10).Infof("reconcileLoadBalancer for service (%s)(%t): lb backendpool - adding backendpool", serviceName, wantLb)
+
+		dirtyLb = true
+		lb.BackendAddressPools = &newBackendPools
+	}
+	return isBackendPoolPreConfigured, dirtyLb, err
+}
+
+// checkLoadBalancerResourcesConflicts checks if the service is consuming
+// ports which conflict with the existing loadBalancer resources,
 // including inbound NAT rule, inbound NAT pools and loadBalancing rules
-func (az *Cloud) checkLoadBalancerResourcesConflicted(
+func (az *Cloud) checkLoadBalancerResourcesConflicts(
 	lb *network.LoadBalancer,
 	frontendIPConfigID string,
 	service *v1.Service,
@@ -1615,18 +1683,12 @@ func (az *Cloud) checkLoadBalancerResourcesConflicted(
 	for _, port := range ports {
 		if lb.LoadBalancingRules != nil {
 			for _, rule := range *lb.LoadBalancingRules {
-				if rule.LoadBalancingRulePropertiesFormat != nil &&
-					rule.FrontendIPConfiguration != nil &&
-					rule.FrontendIPConfiguration.ID != nil &&
-					strings.EqualFold(*rule.FrontendIPConfiguration.ID, frontendIPConfigID) &&
-					strings.EqualFold(string(rule.Protocol), string(port.Protocol)) &&
-					rule.FrontendPort != nil &&
-					*rule.FrontendPort == port.Port {
+				if lbRuleConflictsWithPort(rule, frontendIPConfigID, port) {
 					// ignore self-owned rules for unit test
 					if rule.Name != nil && az.serviceOwnsRule(service, *rule.Name) {
 						continue
 					}
-					return fmt.Errorf("checkLoadBalancerResourcesConflicted: service port %s is trying to "+
+					return fmt.Errorf("checkLoadBalancerResourcesConflicts: service port %s is trying to "+
 						"consume the port %d which is being referenced by an existing loadBalancing rule %s with "+
 						"the same protocol %s and frontend IP config with ID %s",
 						port.Name,
@@ -1640,14 +1702,8 @@ func (az *Cloud) checkLoadBalancerResourcesConflicted(
 
 		if lb.InboundNatRules != nil {
 			for _, inboundNatRule := range *lb.InboundNatRules {
-				if inboundNatRule.InboundNatRulePropertiesFormat != nil &&
-					inboundNatRule.FrontendIPConfiguration != nil &&
-					inboundNatRule.FrontendIPConfiguration.ID != nil &&
-					strings.EqualFold(*inboundNatRule.FrontendIPConfiguration.ID, frontendIPConfigID) &&
-					strings.EqualFold(string(inboundNatRule.Protocol), string(port.Protocol)) &&
-					inboundNatRule.FrontendPort != nil &&
-					*inboundNatRule.FrontendPort == port.Port {
-					return fmt.Errorf("checkLoadBalancerResourcesConflicted: service port %s is trying to "+
+				if inboundNatRuleConflictsWithPort(inboundNatRule, frontendIPConfigID, port) {
+					return fmt.Errorf("checkLoadBalancerResourcesConflicts: service port %s is trying to "+
 						"consume the port %d which is being referenced by an existing inbound NAT rule %s with "+
 						"the same protocol %s and frontend IP config with ID %s",
 						port.Name,
@@ -1661,16 +1717,8 @@ func (az *Cloud) checkLoadBalancerResourcesConflicted(
 
 		if lb.InboundNatPools != nil {
 			for _, pool := range *lb.InboundNatPools {
-				if pool.InboundNatPoolPropertiesFormat != nil &&
-					pool.FrontendIPConfiguration != nil &&
-					pool.FrontendIPConfiguration.ID != nil &&
-					strings.EqualFold(*pool.FrontendIPConfiguration.ID, frontendIPConfigID) &&
-					strings.EqualFold(string(pool.Protocol), string(port.Protocol)) &&
-					pool.FrontendPortRangeStart != nil &&
-					pool.FrontendPortRangeEnd != nil &&
-					*pool.FrontendPortRangeStart <= port.Port &&
-					*pool.FrontendPortRangeEnd >= port.Port {
-					return fmt.Errorf("checkLoadBalancerResourcesConflicted: service port %s is trying to "+
+				if inboundNatPoolConflictsWithPort(pool, frontendIPConfigID, port) {
+					return fmt.Errorf("checkLoadBalancerResourcesConflicts: service port %s is trying to "+
 						"consume the port %d which is being in the range (%d-%d) of an existing "+
 						"inbound NAT pool %s with the same protocol %s and frontend IP config with ID %s",
 						port.Name,
@@ -1686,6 +1734,38 @@ func (az *Cloud) checkLoadBalancerResourcesConflicted(
 	}
 
 	return nil
+}
+
+func inboundNatPoolConflictsWithPort(pool network.InboundNatPool, frontendIPConfigID string, port v1.ServicePort) bool {
+	return pool.InboundNatPoolPropertiesFormat != nil &&
+		pool.FrontendIPConfiguration != nil &&
+		pool.FrontendIPConfiguration.ID != nil &&
+		strings.EqualFold(*pool.FrontendIPConfiguration.ID, frontendIPConfigID) &&
+		strings.EqualFold(string(pool.Protocol), string(port.Protocol)) &&
+		pool.FrontendPortRangeStart != nil &&
+		pool.FrontendPortRangeEnd != nil &&
+		*pool.FrontendPortRangeStart <= port.Port &&
+		*pool.FrontendPortRangeEnd >= port.Port
+}
+
+func inboundNatRuleConflictsWithPort(inboundNatRule network.InboundNatRule, frontendIPConfigID string, port v1.ServicePort) bool {
+	return inboundNatRule.InboundNatRulePropertiesFormat != nil &&
+		inboundNatRule.FrontendIPConfiguration != nil &&
+		inboundNatRule.FrontendIPConfiguration.ID != nil &&
+		strings.EqualFold(*inboundNatRule.FrontendIPConfiguration.ID, frontendIPConfigID) &&
+		strings.EqualFold(string(inboundNatRule.Protocol), string(port.Protocol)) &&
+		inboundNatRule.FrontendPort != nil &&
+		*inboundNatRule.FrontendPort == port.Port
+}
+
+func lbRuleConflictsWithPort(rule network.LoadBalancingRule, frontendIPConfigID string, port v1.ServicePort) bool {
+	return rule.LoadBalancingRulePropertiesFormat != nil &&
+		rule.FrontendIPConfiguration != nil &&
+		rule.FrontendIPConfiguration.ID != nil &&
+		strings.EqualFold(*rule.FrontendIPConfiguration.ID, frontendIPConfigID) &&
+		strings.EqualFold(string(rule.Protocol), string(port.Protocol)) &&
+		rule.FrontendPort != nil &&
+		*rule.FrontendPort == port.Port
 }
 
 func parseHealthProbeProtocolAndPath(service *v1.Service) (string, string) {
@@ -1705,7 +1785,7 @@ func parseHealthProbeProtocolAndPath(service *v1.Service) (string, string) {
 	return protocol, path
 }
 
-func (az *Cloud) reconcileLoadBalancerRule(
+func (az *Cloud) getExpectedLBRules(
 	service *v1.Service,
 	wantLb bool,
 	lbFrontendIPConfigID string,
@@ -1730,9 +1810,15 @@ func (az *Cloud) reconcileLoadBalancerRule(
 
 	var expectedProbes []network.Probe
 	var expectedRules []network.LoadBalancingRule
+	highAvailabilityPortsEnabled := false
 	for _, port := range ports {
+		if highAvailabilityPortsEnabled {
+			// Since the port is always 0 when enabling HA, only one rule should be configured.
+			break
+		}
+
 		lbRuleName := az.getLoadBalancerRuleName(service, port.Protocol, port.Port)
-		klog.V(2).Infof("reconcileLoadBalancerRule lb name (%s) rule name (%s)", lbName, lbRuleName)
+		klog.V(2).Infof("getExpectedLBRules lb name (%s) rule name (%s)", lbName, lbRuleName)
 
 		transportProto, _, probeProto, err := getProtocolsFromKubernetesProtocol(port.Protocol)
 		if err != nil {
@@ -1814,10 +1900,11 @@ func (az *Cloud) reconcileLoadBalancerRule(
 
 		if requiresInternalLoadBalancer(service) &&
 			strings.EqualFold(az.LoadBalancerSku, loadBalancerSkuStandard) &&
-			strings.EqualFold(service.Annotations[ServiceAnnotationLoadBalancerEnableHighAvailabilityPorts], "true") {
+			strings.EqualFold(service.Annotations[ServiceAnnotationLoadBalancerEnableHighAvailabilityPorts], trueAnnotationValue) {
 			expectedRule.FrontendPort = to.Int32Ptr(0)
 			expectedRule.BackendPort = to.Int32Ptr(0)
 			expectedRule.Protocol = network.TransportProtocolAll
+			highAvailabilityPortsEnabled = true
 		}
 
 		// we didn't construct the probe objects for UDP or SCTP because they're not allowed on Azure.
@@ -1886,68 +1973,39 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 		}
 		sourceAddressPrefixes = append(sourceAddressPrefixes, serviceTags...)
 	}
-	expectedSecurityRules := []network.SecurityRule{}
 
-	if wantLb {
-		expectedSecurityRules = make([]network.SecurityRule, len(ports)*len(sourceAddressPrefixes))
-
-		for i, port := range ports {
-			_, securityProto, _, err := getProtocolsFromKubernetesProtocol(port.Protocol)
-			if err != nil {
-				return nil, err
-			}
-			for j := range sourceAddressPrefixes {
-				ix := i*len(sourceAddressPrefixes) + j
-				securityRuleName := az.getSecurityRuleName(service, port, sourceAddressPrefixes[j])
-				expectedSecurityRules[ix] = network.SecurityRule{
-					Name: to.StringPtr(securityRuleName),
-					SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-						Protocol:                 *securityProto,
-						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
-						SourceAddressPrefix:      to.StringPtr(sourceAddressPrefixes[j]),
-						DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
-						Access:                   network.SecurityRuleAccessAllow,
-						Direction:                network.SecurityRuleDirectionInbound,
-					},
-				}
-			}
-		}
-
-		shouldAddDenyRule := false
-		if len(sourceRanges) > 0 && !servicehelpers.IsAllowAll(sourceRanges) {
-			if v, ok := service.Annotations[ServiceAnnotationDenyAllExceptLoadBalancerSourceRanges]; ok && strings.EqualFold(v, "true") {
-				shouldAddDenyRule = true
-			}
-		}
-		if shouldAddDenyRule {
-			for _, port := range ports {
-				_, securityProto, _, err := getProtocolsFromKubernetesProtocol(port.Protocol)
-				if err != nil {
-					return nil, err
-				}
-				securityRuleName := az.getSecurityRuleName(service, port, "deny_all")
-				expectedSecurityRules = append(expectedSecurityRules, network.SecurityRule{
-					Name: to.StringPtr(securityRuleName),
-					SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-						Protocol:                 *securityProto,
-						SourcePortRange:          to.StringPtr("*"),
-						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
-						SourceAddressPrefix:      to.StringPtr("*"),
-						DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
-						Access:                   network.SecurityRuleAccessDeny,
-						Direction:                network.SecurityRuleDirectionInbound,
-					},
-				})
-			}
-		}
-	}
-
-	for _, r := range expectedSecurityRules {
-		klog.V(10).Infof("Expecting security rule for %s: %s:%s -> %s:%s", service.Name, *r.SourceAddressPrefix, *r.SourcePortRange, *r.DestinationAddressPrefix, *r.DestinationPortRange)
+	expectedSecurityRules, err := az.getExpectedSecurityRules(wantLb, ports, sourceAddressPrefixes, service, destinationIPAddress, sourceRanges)
+	if err != nil {
+		return nil, err
 	}
 
 	// update security rules
+	dirtySg, updatedRules, err := az.reconcileSecurityRules(sg, service, serviceName, wantLb, expectedSecurityRules, ports, sourceAddressPrefixes, destinationIPAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	changed := az.ensureSecurityGroupTagged(&sg)
+	if changed {
+		dirtySg = true
+	}
+
+	if dirtySg {
+		sg.SecurityRules = &updatedRules
+		klog.V(2).Infof("reconcileSecurityGroup for service(%s): sg(%s) - updating", serviceName, *sg.Name)
+		klog.V(10).Infof("CreateOrUpdateSecurityGroup(%q): start", *sg.Name)
+		err := az.CreateOrUpdateSecurityGroup(sg)
+		if err != nil {
+			klog.V(2).Infof("ensure(%s) abort backoff: sg(%s) - updating", serviceName, *sg.Name)
+			return nil, err
+		}
+		klog.V(10).Infof("CreateOrUpdateSecurityGroup(%q): end", *sg.Name)
+		_ = az.nsgCache.Delete(to.String(sg.Name))
+	}
+	return &sg, nil
+}
+
+func (az *Cloud) reconcileSecurityRules(sg network.SecurityGroup, service *v1.Service, serviceName string, wantLb bool, expectedSecurityRules []network.SecurityRule, ports []v1.ServicePort, sourceAddressPrefixes []string, destinationIPAddress string) (bool, []network.SecurityRule, error) {
 	dirtySg := false
 	var updatedRules []network.SecurityRule
 	if sg.SecurityGroupPropertiesFormat != nil && sg.SecurityGroupPropertiesFormat.SecurityRules != nil {
@@ -1976,6 +2034,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 			}
 		}
 	}
+
 	// update security rules: if the service uses a shared rule and is being deleted,
 	// then remove it from the shared rule
 	if useSharedSecurityRule(service) && !wantLb {
@@ -1985,17 +2044,17 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 				sharedIndex, sharedRule, sharedRuleFound := findSecurityRuleByName(updatedRules, sharedRuleName)
 				if !sharedRuleFound {
 					klog.V(4).Infof("Expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
-					return nil, fmt.Errorf("expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
+					return false, nil, fmt.Errorf("expected to find shared rule %s for service %s being deleted, but did not", sharedRuleName, service.Name)
 				}
 				if sharedRule.DestinationAddressPrefixes == nil {
 					klog.V(4).Infof("Expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
-					return nil, fmt.Errorf("expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
+					return false, nil, fmt.Errorf("expected to have array of destinations in shared rule for service %s being deleted, but did not", service.Name)
 				}
 				existingPrefixes := *sharedRule.DestinationAddressPrefixes
 				addressIndex, found := findIndex(existingPrefixes, destinationIPAddress)
 				if !found {
 					klog.V(4).Infof("Expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
-					return nil, fmt.Errorf("expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
+					return false, nil, fmt.Errorf("expected to find destination address %s in shared rule %s for service %s being deleted, but did not", destinationIPAddress, sharedRuleName, service.Name)
 				}
 				if len(existingPrefixes) == 1 {
 					updatedRules = append(updatedRules[:sharedIndex], updatedRules[sharedIndex+1:]...)
@@ -2037,7 +2096,7 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 
 			nextAvailablePriority, err := getNextAvailablePriority(updatedRules)
 			if err != nil {
-				return nil, err
+				return false, nil, err
 			}
 
 			expectedRule.Priority = to.Int32Ptr(nextAvailablePriority)
@@ -2049,25 +2108,71 @@ func (az *Cloud) reconcileSecurityGroup(clusterName string, service *v1.Service,
 	for _, r := range updatedRules {
 		klog.V(10).Infof("Updated security rule while processing %s: %s:%s -> %s:%s", service.Name, logSafe(r.SourceAddressPrefix), logSafe(r.SourcePortRange), logSafeCollection(r.DestinationAddressPrefix, r.DestinationAddressPrefixes), logSafe(r.DestinationPortRange))
 	}
+	return dirtySg, updatedRules, nil
+}
 
-	changed := az.ensureSecurityGroupTagged(&sg)
-	if changed {
-		dirtySg = true
-	}
+func (az *Cloud) getExpectedSecurityRules(wantLb bool, ports []v1.ServicePort, sourceAddressPrefixes []string, service *v1.Service, destinationIPAddress string, sourceRanges utilnet.IPNetSet) ([]network.SecurityRule, error) {
+	expectedSecurityRules := []network.SecurityRule{}
 
-	if dirtySg {
-		sg.SecurityRules = &updatedRules
-		klog.V(2).Infof("reconcileSecurityGroup for service(%s): sg(%s) - updating", serviceName, *sg.Name)
-		klog.V(10).Infof("CreateOrUpdateSecurityGroup(%q): start", *sg.Name)
-		err := az.CreateOrUpdateSecurityGroup(sg)
-		if err != nil {
-			klog.V(2).Infof("ensure(%s) abort backoff: sg(%s) - updating", serviceName, *sg.Name)
-			return nil, err
+	if wantLb {
+		expectedSecurityRules = make([]network.SecurityRule, len(ports)*len(sourceAddressPrefixes))
+
+		for i, port := range ports {
+			_, securityProto, _, err := getProtocolsFromKubernetesProtocol(port.Protocol)
+			if err != nil {
+				return nil, err
+			}
+			for j := range sourceAddressPrefixes {
+				ix := i*len(sourceAddressPrefixes) + j
+				securityRuleName := az.getSecurityRuleName(service, port, sourceAddressPrefixes[j])
+				expectedSecurityRules[ix] = network.SecurityRule{
+					Name: to.StringPtr(securityRuleName),
+					SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
+						Protocol:                 *securityProto,
+						SourcePortRange:          to.StringPtr("*"),
+						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
+						SourceAddressPrefix:      to.StringPtr(sourceAddressPrefixes[j]),
+						DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
+						Access:                   network.SecurityRuleAccessAllow,
+						Direction:                network.SecurityRuleDirectionInbound,
+					},
+				}
+			}
 		}
-		klog.V(10).Infof("CreateOrUpdateSecurityGroup(%q): end", *sg.Name)
-		_ = az.nsgCache.Delete(to.String(sg.Name))
+
+		shouldAddDenyRule := false
+		if len(sourceRanges) > 0 && !servicehelpers.IsAllowAll(sourceRanges) {
+			if v, ok := service.Annotations[ServiceAnnotationDenyAllExceptLoadBalancerSourceRanges]; ok && strings.EqualFold(v, trueAnnotationValue) {
+				shouldAddDenyRule = true
+			}
+		}
+		if shouldAddDenyRule {
+			for _, port := range ports {
+				_, securityProto, _, err := getProtocolsFromKubernetesProtocol(port.Protocol)
+				if err != nil {
+					return nil, err
+				}
+				securityRuleName := az.getSecurityRuleName(service, port, "deny_all")
+				expectedSecurityRules = append(expectedSecurityRules, network.SecurityRule{
+					Name: to.StringPtr(securityRuleName),
+					SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
+						Protocol:                 *securityProto,
+						SourcePortRange:          to.StringPtr("*"),
+						DestinationPortRange:     to.StringPtr(strconv.Itoa(int(port.Port))),
+						SourceAddressPrefix:      to.StringPtr("*"),
+						DestinationAddressPrefix: to.StringPtr(destinationIPAddress),
+						Access:                   network.SecurityRuleAccessDeny,
+						Direction:                network.SecurityRuleDirectionInbound,
+					},
+				})
+			}
+		}
 	}
-	return &sg, nil
+
+	for _, r := range expectedSecurityRules {
+		klog.V(10).Infof("Expecting security rule for %s: %s:%s -> %s:%s", service.Name, *r.SourceAddressPrefix, *r.SourcePortRange, *r.DestinationAddressPrefix, *r.DestinationPortRange)
+	}
+	return expectedSecurityRules, nil
 }
 
 func (az *Cloud) shouldUpdateLoadBalancer(clusterName string, service *v1.Service) bool {
@@ -2319,62 +2424,9 @@ func (az *Cloud) reconcilePublicIP(clusterName string, service *v1.Service, lbNa
 		return nil, err
 	}
 
-	var (
-		serviceAnnotationRequestsNamedPublicIP = shouldPIPExisted
-		discoveredDesiredPublicIP              bool
-		deletedDesiredPublicIP                 bool
-		pipsToBeDeleted                        []*network.PublicIPAddress
-		pipsToBeUpdated                        []*network.PublicIPAddress
-	)
-
-	for i := range pips {
-		pip := pips[i]
-		pipName := *pip.Name
-
-		// If we've been told to use a specific public ip by the client, let's track whether or not it actually existed
-		// when we inspect the set in Azure.
-		discoveredDesiredPublicIP = discoveredDesiredPublicIP || wantLb && !isInternal && pipName == desiredPipName
-
-		// Now, let's perform additional analysis to determine if we should release the public ips we have found.
-		// We can only let them go if (a) they are owned by this service and (b) they meet the criteria for deletion.
-		if serviceOwnsPublicIP(&pip, clusterName, serviceName) {
-			var dirtyPIP, toBeDeleted bool
-			if !wantLb {
-				klog.V(2).Infof("reconcilePublicIP for service(%s): unbinding the service from pip %s", serviceName, *pip.Name)
-				err = unbindServiceFromPIP(&pip, serviceName)
-				if err != nil {
-					return nil, err
-				}
-				dirtyPIP = true
-			}
-			changed := az.ensurePIPTagged(service, &pip)
-			if changed {
-				dirtyPIP = true
-			}
-			if shouldReleaseExistingOwnedPublicIP(&pip, wantLb, isInternal, desiredPipName, serviceName, serviceIPTagRequest) {
-				// Then, release the public ip
-				pipsToBeDeleted = append(pipsToBeDeleted, &pip)
-
-				// Flag if we deleted the desired public ip
-				deletedDesiredPublicIP = deletedDesiredPublicIP || pipName == desiredPipName
-
-				// An aside: It would be unusual, but possible, for us to delete a public ip referred to explicitly by name
-				// in Service annotations (which is usually reserved for non-service-owned externals), if that IP is tagged as
-				// having been owned by a particular Kubernetes cluster.
-
-				// If the pip is going to be deleted, we do not need to update it
-				toBeDeleted = true
-			}
-
-			// Update tags of PIP only instead of deleting it.
-			if !toBeDeleted && dirtyPIP {
-				pipsToBeUpdated = append(pipsToBeUpdated, &pip)
-			}
-		}
-	}
-
-	if !isInternal && serviceAnnotationRequestsNamedPublicIP && !discoveredDesiredPublicIP && wantLb {
-		return nil, fmt.Errorf("reconcilePublicIP for service(%s): pip(%s) not found", serviceName, desiredPipName)
+	discoveredDesiredPublicIP, pipsToBeDeleted, deletedDesiredPublicIP, pipsToBeUpdated, err := az.getPublicIPUpdates(clusterName, service, pips, wantLb, isInternal, desiredPipName, serviceName, serviceIPTagRequest, shouldPIPExisted)
+	if err != nil {
+		return nil, err
 	}
 
 	var deleteFuncs, updateFuncs []func() error
@@ -2406,13 +2458,73 @@ func (az *Cloud) reconcilePublicIP(clusterName string, service *v1.Service, lbNa
 		// Confirm desired public ip resource exists
 		var pip *network.PublicIPAddress
 		domainNameLabel, found := getPublicIPDomainNameLabel(service)
-		errorIfPublicIPDoesNotExist := serviceAnnotationRequestsNamedPublicIP && discoveredDesiredPublicIP && !deletedDesiredPublicIP
+		errorIfPublicIPDoesNotExist := shouldPIPExisted && discoveredDesiredPublicIP && !deletedDesiredPublicIP
 		if pip, err = az.ensurePublicIPExists(service, desiredPipName, domainNameLabel, clusterName, errorIfPublicIPDoesNotExist, found); err != nil {
 			return nil, err
 		}
 		return pip, nil
 	}
 	return nil, nil
+}
+
+func (az *Cloud) getPublicIPUpdates(clusterName string, service *v1.Service, pips []network.PublicIPAddress, wantLb bool, isInternal bool, desiredPipName string, serviceName string, serviceIPTagRequest serviceIPTagRequest, serviceAnnotationRequestsNamedPublicIP bool) (bool, []*network.PublicIPAddress, bool, []*network.PublicIPAddress, error) {
+	var (
+		err                       error
+		discoveredDesiredPublicIP bool
+		deletedDesiredPublicIP    bool
+		pipsToBeDeleted           []*network.PublicIPAddress
+		pipsToBeUpdated           []*network.PublicIPAddress
+	)
+	for i := range pips {
+		pip := pips[i]
+		pipName := *pip.Name
+
+		// If we've been told to use a specific public ip by the client, let's track whether or not it actually existed
+		// when we inspect the set in Azure.
+		discoveredDesiredPublicIP = discoveredDesiredPublicIP || wantLb && !isInternal && pipName == desiredPipName
+
+		// Now, let's perform additional analysis to determine if we should release the public ips we have found.
+		// We can only let them go if (a) they are owned by this service and (b) they meet the criteria for deletion.
+		if serviceOwnsPublicIP(&pip, clusterName, serviceName) {
+			var dirtyPIP, toBeDeleted bool
+			if !wantLb {
+				klog.V(2).Infof("reconcilePublicIP for service(%s): unbinding the service from pip %s", serviceName, *pip.Name)
+				err = unbindServiceFromPIP(&pip, serviceName)
+				if err != nil {
+					return false, nil, false, nil, err
+				}
+				dirtyPIP = true
+			}
+			changed := az.ensurePIPTagged(service, &pip)
+			if changed {
+				dirtyPIP = true
+			}
+			if shouldReleaseExistingOwnedPublicIP(&pip, wantLb, isInternal, desiredPipName, serviceName, serviceIPTagRequest) {
+				// Then, release the public ip
+				pipsToBeDeleted = append(pipsToBeDeleted, &pip)
+
+				// Flag if we deleted the desired public ip
+				deletedDesiredPublicIP = deletedDesiredPublicIP || pipName == desiredPipName
+
+				// An aside: It would be unusual, but possible, for us to delete a public ip referred to explicitly by name
+				// in Service annotations (which is usually reserved for non-service-owned externals), if that IP is tagged as
+				// having been owned by a particular Kubernetes cluster.
+
+				// If the pip is going to be deleted, we do not need to update it
+				toBeDeleted = true
+			}
+
+			// Update tags of PIP only instead of deleting it.
+			if !toBeDeleted && dirtyPIP {
+				pipsToBeUpdated = append(pipsToBeUpdated, &pip)
+			}
+		}
+	}
+
+	if !isInternal && serviceAnnotationRequestsNamedPublicIP && !discoveredDesiredPublicIP && wantLb {
+		return false, nil, false, nil, fmt.Errorf("reconcilePublicIP for service(%s): pip(%s) not found", serviceName, desiredPipName)
+	}
+	return discoveredDesiredPublicIP, pipsToBeDeleted, deletedDesiredPublicIP, pipsToBeUpdated, err
 }
 
 // safeDeletePublicIP deletes public IP by removing its reference first.
@@ -2603,7 +2715,7 @@ func (az *Cloud) isBackendPoolPreConfigured(service *v1.Service) bool {
 // Check if service requires an internal load balancer.
 func requiresInternalLoadBalancer(service *v1.Service) bool {
 	if l, found := service.Annotations[ServiceAnnotationLoadBalancerInternal]; found {
-		return l == "true"
+		return l == trueAnnotationValue
 	}
 
 	return false
@@ -2636,7 +2748,7 @@ func (az *Cloud) getServiceLoadBalancerMode(service *v1.Service) (bool, bool, st
 
 func useSharedSecurityRule(service *v1.Service) bool {
 	if l, ok := service.Annotations[ServiceAnnotationSharedSecurityRule]; ok {
-		return l == "true"
+		return l == trueAnnotationValue
 	}
 
 	return false

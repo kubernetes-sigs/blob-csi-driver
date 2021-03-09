@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package azure
+package provider
 
 import (
 	"context"
@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-30/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-12-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"k8s.io/apimachinery/pkg/util/sets"
