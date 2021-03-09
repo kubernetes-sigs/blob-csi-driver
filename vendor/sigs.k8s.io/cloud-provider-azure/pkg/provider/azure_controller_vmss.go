@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package azure
+package provider
 
 import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-06-30/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2020-12-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -161,7 +161,7 @@ func (ss *scaleSet) DetachDisk(nodeName types.NodeName, diskMap map[string]strin
 				(disk.ManagedDisk != nil && diskURI != "" && strings.EqualFold(*disk.ManagedDisk.ID, diskURI)) {
 				// found the disk
 				klog.V(2).Infof("azureDisk - detach disk: name %q uri %q", diskName, diskURI)
-				if strings.EqualFold(ss.cloud.Environment.Name, AzureStackCloudName) {
+				if strings.EqualFold(ss.cloud.Environment.Name, AzureStackCloudName) && !ss.Config.DisableAzureStackCloud {
 					disks = append(disks[:i], disks[i+1:]...)
 				} else {
 					disks[i].ToBeDetached = to.BoolPtr(true)
