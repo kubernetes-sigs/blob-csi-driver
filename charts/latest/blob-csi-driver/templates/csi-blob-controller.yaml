@@ -37,8 +37,7 @@ spec:
           args:
             - "-v=2"
             - "--csi-address=$(ADDRESS)"
-            - "--enable-leader-election"
-            - "--leader-election-type=leases"
+            - "--leader-election"
             - "--timeout=60s"
           env:
             - name: ADDRESS
