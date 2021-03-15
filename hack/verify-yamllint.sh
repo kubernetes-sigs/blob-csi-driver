@@ -22,7 +22,7 @@ LOG=/tmp/yamllint.log
 helmPath=charts/latest/blob-csi-driver/templates
 
 echo "checking yaml files num ..."
-deployDirNum=`ls deploy/*.yaml | wc -l`
+deployDirNum=`find ./deploy/ -maxdepth 1 -type f -name '*.yaml' ! -name 'kustomization.yaml' | wc -l`
 helmDirNum=`ls $helmPath/*.yaml | grep -v serviceaccount | wc -l`
 if [[ "${deployDirNum}" != "${helmDirNum}" ]]; then
   echo "yaml file num($deployDirNum) under deploy/ not equal to num($helmDirNum) under $helmPath"
