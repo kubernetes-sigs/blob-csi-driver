@@ -1,0 +1,7 @@
+Package: blobfuse-proxy
+Version: 0.1
+Section: base
+Priority: optional
+Architecture: all
+Maintainer: Blob CSI driver maintainers
+Description: runs blobfuse as a proxy

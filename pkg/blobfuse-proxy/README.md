@@ -30,3 +30,20 @@ After making the required changes you can build the new blobfuse-proxy binary by
 ```
 make blobfuse-proxy
 ```
+
+Generating dpkg file in ubuntu
+```
+make blobfuse-proxy
+cp _output/blobfuse-proxy ./pkg/blobfuse-proxy/usr/bin/blobfuse-proxy
+dpkg-deb --build pkg/blobfuse-proxy/debpackage
+```
+
+#### Installing the agent on debian/ubuntu nodes
+
+Download the blobfuse-proxy `.deb` package file onto host machine and install it using `dpkg -i blobfuse-proxy.deb`
+and then start the systemctl service.
+```
+systemctl enable blobfuse-proxy
+systemctl start blobfuse-proxy
+```
+by default blobfuse-proxy start the unix socket under `/var/lib/kubelet/blobfuse-proxy.sock`
