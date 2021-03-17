@@ -163,7 +163,7 @@ clean-proto:
 
 .PHONY: blobfuse-proxy
 blobfuse-proxy:
-	CGO_ENABLED=0 GOOS=linux go build -mod vendor -o _output/blobfuse-proxy ./pkg/blobfuse-proxy
+	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o _output/blobfuse-proxy ./pkg/blobfuse-proxy
 
 .PHONY: blobfuse-proxy-container
 blobfuse-proxy-container:
