@@ -69,5 +69,3 @@ cscope.*
 /bazel-*
 *.pyc
 profile.cov
-
-debpackage.deb
