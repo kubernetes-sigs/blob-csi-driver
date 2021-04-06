@@ -90,6 +90,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			secretNamespace = v
 		case storeAccountKeyField:
 			storeAccountKey = v
+		default:
+			return nil, fmt.Errorf("invalid option %s in storage class", k)
 		}
 	}
 
