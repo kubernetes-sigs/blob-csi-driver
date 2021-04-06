@@ -223,6 +223,34 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "invalid parameter",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				mp := make(map[string]string)
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unit-test"
+				mp[resourceGroupField] = "unit-test"
+				mp["containername"] = "unit-test"
+				mp["invalidparameter"] = "invalidvalue"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := fmt.Errorf("invalid parameter %s in storage class", "invalidparameter")
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
