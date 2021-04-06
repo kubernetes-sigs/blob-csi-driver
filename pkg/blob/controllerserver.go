@@ -90,8 +90,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			secretNamespace = v
 		case storeAccountKeyField:
 			storeAccountKey = v
+		case serverNameField:
+			// no op, only used in NodeStageVolume
+		case storageEndpointSuffixField:
+			// no op, only used in NodeStageVolume
 		default:
-			return nil, fmt.Errorf("invalid option %s in storage class", k)
+			return nil, fmt.Errorf("invalid parameter %s in storage class", k)
 		}
 	}
 
