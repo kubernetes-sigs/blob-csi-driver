@@ -17,6 +17,11 @@ $ make blob
 $ make verify
 ```
 
+ - If there is config file changed under `charts` directory, run following command to update chart file.
+```console
+helm package charts/latest/blob-csi-driver -d charts/latest/
+```
+
  - Build continer image and push to dockerhub
 ```console
 export REGISTRY_NAME=<dockerhub-alias>
