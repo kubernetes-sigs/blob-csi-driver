@@ -27,7 +27,7 @@ Blobfuse driver does not honor `fsGroup` securityContext setting, instead user c
 
   > [nfs example](../deploy/example/pv-blobfuse-nfs.yaml)
 
-  > [blobfuse read account key or SAS token from key vault example](../deploy/example/keyvault/pv-blobfuse-csi-keyvault.yaml)
+  > [blobfuse read account key or SAS token from key vault example](../deploy/example/pv-blobfuse-csi-keyvault.yaml)
 
   > [blobfuse Managed Identity and Service Principal Name auth example](../deploy/example/pv-blobfuse-auth.yaml)
 
