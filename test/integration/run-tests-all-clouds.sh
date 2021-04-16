@@ -30,13 +30,7 @@ function install_blobfuse_bin {
 readonly resource_group="$1"
 readonly cloud="$2"
 
-# copy blobfuse binary
-if [[ "$cloud" == "AzureStackCloud" ]]; then
-  install_blobfuse_bin
-else
-  mkdir -p /usr/blob
-  cp test/artifacts/blobfuse /usr/bin/blobfuse
-fi
+install_blobfuse_bin
 
 apt update && apt install libfuse2 -y
 test/integration/run-test.sh "tcp://127.0.0.1:10000" "/tmp/stagingtargetpath" "/tmp/targetpath" "$resource_group" "$cloud"
