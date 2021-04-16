@@ -20,7 +20,7 @@ GO111MODULE=off go get github.com/rexray/gocsi/csc
 
 function install_blobfuse_bin {
   echo 'Installing blobfuse...'
-  apt-get update && apt install ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget -y
+  apt-get update && apt install ca-certificates pkg-config libfuse-dev libfuse2 cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget -y
   wget https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
   dpkg -i packages-microsoft-prod.deb
   apt-get update && apt install blobfuse fuse -y
@@ -32,5 +32,4 @@ readonly cloud="$2"
 
 install_blobfuse_bin
 
-apt update && apt install libfuse2 -y
 test/integration/run-test.sh "tcp://127.0.0.1:10000" "/tmp/stagingtargetpath" "/tmp/targetpath" "$resource_group" "$cloud"

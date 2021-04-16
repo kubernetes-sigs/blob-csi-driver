@@ -32,7 +32,7 @@ function install_csi_sanity_bin {
 
 function install_blobfuse_bin {
   echo 'Installing blobfuse...'
-  apt-get update && apt install ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget -y
+  apt-get update && apt install ca-certificates pkg-config libfuse-dev libfuse2 cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget -y
   wget https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
   dpkg -i packages-microsoft-prod.deb
   apt-get update && apt install blobfuse fuse -y
@@ -41,7 +41,6 @@ function install_blobfuse_bin {
 
 install_blobfuse_bin
 
-apt update && apt install libfuse2 -y
 if [[ -z "$(command -v csi-sanity)" ]]; then
   install_csi_sanity_bin
 fi
