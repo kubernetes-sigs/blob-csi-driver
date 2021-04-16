@@ -20,11 +20,15 @@ GO111MODULE=off go get github.com/rexray/gocsi/csc
 
 function install_blobfuse_bin {
   echo 'Installing blobfuse...'
-  apt-get update && apt install ca-certificates pkg-config libfuse-dev libfuse2 cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev libboost-all-dev gcc g++ wget -y
-  wget https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb
-  dpkg -i packages-microsoft-prod.deb
-  apt-get update && apt install blobfuse fuse -y
-  rm -f packages-microsoft-prod.deb
+  apt-get update && apt install ca-certificates pkg-config libfuse-dev libfuse2 cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev libboost-all-dev gcc g++ -y
+  mkdir -p $GOPATH/src/github.com/Azure
+  pushd $GOPATH/src/github.com/Azure
+  git clone https://github.com/Azure/azure-storage-fuse/
+  pushd azure-storage-fuse
+  ./build.sh
+  cp build/blobfuse /usr/bin/blobfuse
+  popd
+  popd
 }
 
 readonly resource_group="$1"
