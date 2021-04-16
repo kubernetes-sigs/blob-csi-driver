@@ -39,16 +39,10 @@ function install_blobfuse_bin {
   rm -f packages-microsoft-prod.deb
 }
 
-# copy blobfuse binary
-if [[ "$cloud" == "AzureStackCloud" ]]; then
-  install_blobfuse_bin
-else
-  mkdir -p /usr/blob
-  cp test/artifacts/blobfuse /usr/bin/blobfuse
-fi
+install_blobfuse_bin
 
 apt update && apt install libfuse2 -y
 if [[ -z "$(command -v csi-sanity)" ]]; then
-	install_csi_sanity_bin
+  install_csi_sanity_bin
 fi
 test/sanity/run-test.sh "$nodeid"
