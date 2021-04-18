@@ -18,7 +18,6 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net"
 	"os"
 
@@ -37,6 +36,7 @@ var (
 )
 
 func main() {
+	klog.InitFlags(nil)
 	flag.Parse()
 	proto, addr, err := csicommon.ParseEndpoint(*blobfuseProxyEndpoint)
 	if err != nil {
@@ -57,8 +57,8 @@ func main() {
 
 	mountServer := server.NewMountServiceServer()
 
-	log.Printf("Listening for connections on address: %#v\n", listener.Addr())
+	klog.V(2).Info("Listening for connections on address: %v\n", listener.Addr())
 	if err = server.RunGRPCServer(mountServer, false, listener); err != nil {
-		klog.Fatalf("Listening for connections on address: %#v, error: %v", listener.Addr(), err)
+		klog.Fatalf("Error running grpc server. Error: %v", listener.Addr(), err)
 	}
 }

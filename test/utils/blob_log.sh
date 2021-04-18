@@ -49,3 +49,12 @@ echo "print out cloudprovider_azure metrics ..."
 echo "======================================================================================"
 ip=`kubectl get svc csi-blob-controller -n kube-system | grep blob | awk '{print $4}'`
 curl http://$ip:29634/metrics
+
+
+echo "print out sysctl-install-blobfuseproxy logs ..."
+echo "======================================================================================"
+LABEL='app=csi-blobfuse-proxy'
+PROXY=sysctl-install-blobfuse-proxy
+kubectl get pods -n${NS} -l${LABEL} \
+    | awk 'NR>1 {print $1}' \
+    | xargs -I {} kubectl logs {} --prefix -c${PROXY} -n${NS}

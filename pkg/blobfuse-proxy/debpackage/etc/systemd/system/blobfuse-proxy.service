@@ -2,7 +2,7 @@
 Description=Blobfuse proxy service
 
 [Service]
-ExecStart=/usr/bin/blobfuse-proxy -blobfuse-proxy-endpoint=unix://var/lib/kubelet/blobfuse-proxy.sock
+ExecStart=/usr/bin/blobfuse-proxy --v=5 --blobfuse-proxy-endpoint=unix://var/lib/kubelet/plugins/blob.csi.azure.com/blobfuse-proxy.sock
 
 [Install]
 WantedBy=multi-user.target

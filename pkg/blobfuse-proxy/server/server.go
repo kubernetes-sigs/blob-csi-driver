@@ -63,6 +63,7 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 		klog.V(2).Infof("successfully mounted")
 	}
 	result.Output = string(output)
+	klog.V(2).Infof("blobfuse output: %s\n", result.Output)
 	return &result, err
 }
 

@@ -40,7 +40,7 @@ GOBIN ?= $(GOPATH)/bin
 DOCKER_CLI_EXPERIMENTAL = enabled
 export GOPATH GOBIN GO111MODULE DOCKER_CLI_EXPERIMENTAL
 
-all: blob
+all: blob blobfuse-proxy
 
 .PHONY: verify
 verify: unit-test
