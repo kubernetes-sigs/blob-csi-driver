@@ -43,7 +43,7 @@ const (
     "resourceGroup": "{{.ResourceGroup}}",
     "location": "{{.Location}}"
 }`
-	defaultAzurePublicCloudLocation = "eastus2"
+	defaultAzurePublicCloudLocation = "eastus"
 
 	// Env vars
 	cloudNameEnvVar       = "AZURE_CLOUD_NAME"
