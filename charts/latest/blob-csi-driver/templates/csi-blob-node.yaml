@@ -12,6 +12,13 @@ spec:
     metadata:
 {{ include "blob.labels" . | indent 6 }}
         app: csi-blob-node
+        {{- if .Values.podLabels }}
+{{- toYaml .Values.podLabels | nindent 8 }}
+        {{- end }}
+{{- if .Values.podAnnotations }}
+      annotations:
+{{ toYaml .Values.podAnnotations | indent 8 }}
+{{- end }}
     spec:
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -22,6 +29,9 @@ spec:
       serviceAccountName: csi-blob-node-sa
       nodeSelector:
         kubernetes.io/os: linux
+{{- with .Values.node.nodeSelector }}
+{{ toYaml . | indent 8 }}
+{{- end }}
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -31,9 +41,15 @@ spec:
                     operator: NotIn
                     values:
                       - virtual-kubelet
-      priorityClassName: system-node-critical
+        {{- if .Values.node.affinity }}
+{{- toYaml .Values.node.affinity | nindent 8 }}
+        {{- end }}
+      priorityClassName: {{ .Values.priorityClassName | quote }}
       tolerations:
         - operator: "Exists"
+        {{- if .Values.node.tolerations }}
+{{- toYaml .Values.node.tolerations | nindent 8 }}
+        {{- end }}
       containers:
         - name: liveness-probe
           imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
@@ -46,13 +62,7 @@ spec:
             - --probe-timeout=3s
             - --health-port=29633
             - --v=2
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
+          resources: {{- toYaml .Values.node.resources.livenessProbe | nindent 12 }}
         - name: node-driver-registrar
           image: "{{ .Values.image.nodeDriverRegistrar.repository }}:{{ .Values.image.nodeDriverRegistrar.tag }}"
           args:
@@ -73,13 +83,7 @@ spec:
               mountPath: /csi
             - name: registration-dir
               mountPath: /registration
-          resources:
-            limits:
-              cpu: 100m
-              memory: 100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
+          resources: {{- toYaml .Values.node.resources.nodeDriverRegistrar | nindent 12 }}
         - name: blob
           image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
           args:
@@ -124,7 +128,7 @@ spec:
             - name: AZURE_ENVIRONMENT_FILEPATH
               value: /etc/kubernetes/azurestackcloud.json
             {{- end }}
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          imagePullPolicy: {{ .Values.image.blob.pullPolicy }}
           securityContext:
             privileged: true
           volumeMounts:
@@ -145,13 +149,7 @@ spec:
               mountPath: /etc/ssl/certs
               readOnly: true
             {{- end }}
-          resources:
-            limits:
-              cpu: 2
-              memory: 2100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
+          resources: {{- toYaml .Values.node.resources.blob | nindent 12 }}
       volumes:
         - hostPath:
             path: {{ .Values.kubelet.linuxPath }}/plugins/blob.csi.azure.com
@@ -180,3 +178,6 @@ spec:
           hostPath:
             path: /etc/ssl/certs
         {{- end }}
+      {{- if .Values.securityContext }}
+      securityContext: {{- toYaml .Values.securityContext | nindent 8 }}
+      {{- end }}
