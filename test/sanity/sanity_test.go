@@ -46,7 +46,7 @@ func TestSanity(t *testing.T) {
 
 	ctx := context.Background()
 	// Create an empty resource group for sanity test
-        log.Printf("Creating resource group %s in %s location %s", creds.ResourceGroup, creds.Cloud, creds.Location)
+	log.Printf("Creating resource group %s in %s location %s", creds.ResourceGroup, creds.Cloud, creds.Location)
 	_, err = azureClient.EnsureResourceGroup(ctx, creds.ResourceGroup, creds.Location, nil)
 	assert.NoError(t, err)
 	defer func() {
