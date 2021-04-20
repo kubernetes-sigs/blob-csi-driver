@@ -11,7 +11,8 @@ csi-blob-controller-56bfddd689-sl4ll       4/4     Running   0          35s     
 ```console
 $ kubectl logs csi-blob-controller-56bfddd689-dh5tk -c blob -n kube-system > csi-blob-controller.log
 ```
-> note: there could be multiple controller pods, if there are no helpful logs, try to get logs from other controller pods
+> note: there could be multiple controller pods, logs can be taken from all of them simultaneously, also with `follow` (realtime) mode
+> `kubectl logs deploy/csi-blob-controller -c blob -f -n kube-system`
 
 ### Case#2: volume mount/unmount failed
  - locate csi driver pod and make sure which pod do tha actual volume mount/unmount
