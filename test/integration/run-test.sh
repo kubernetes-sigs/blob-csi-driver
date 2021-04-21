@@ -66,6 +66,10 @@ if [[ "$cloud" != "AzureChinaCloud" ]]; then
   csc node stats --endpoint "$endpoint" "$volumeid:$target_path:$staging_target_path"
   sleep 2
 
+  # FIXME: this is done has a workaround to fix failing blobfuse mounts in prow
+  echo "unmounting manually"
+  umount $target_path
+
   echo 'expand volume test'
   csc controller expand-volume --endpoint "$endpoint" --req-bytes "$expanded_vol_size" "$volumeid"
 
