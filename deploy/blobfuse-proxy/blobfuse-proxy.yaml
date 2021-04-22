@@ -1,7 +1,6 @@
-# This is to be used in e2e test, while for production, we suggest install this proxy as a standalone process
 ---
-kind: DaemonSet
 apiVersion: apps/v1
+kind: DaemonSet
 metadata:
   name: csi-blobfuse-proxy
   namespace: kube-system
@@ -14,10 +13,6 @@ spec:
       labels:
         app: csi-blobfuse-proxy
     spec:
-      hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
-      nodeSelector:
-        kubernetes.io/os: linux
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -27,45 +22,54 @@ spec:
                     operator: NotIn
                     values:
                       - virtual-kubelet
-      priorityClassName: system-node-critical
-      tolerations:
-        - operator: "Exists"
       containers:
-        - name: proxy
-          image: bmanu199/blobfuse-proxy@sha256:65659c9effa9df94c42a5f8388cef9656343c8fdd47a200ab69dc53913af7a42
-          imagePullPolicy: IfNotPresent
-          args:
-            - "--blobfuse-proxy-endpoint=$(BLOBFUSE_PROXY_ENDPOINT)"
-          env:
-            - name: BLOBFUSE_PROXY_ENDPOINT
-              value: unix://csi/blobfuse-proxy.sock
-          securityContext:
-            privileged: true
-          volumeMounts:
-            - mountPath: /csi
-              name: socket-dir
-            - mountPath: /var/lib/kubelet/
-              mountPropagation: Bidirectional
-              name: mountpoint-dir
-            - mountPath: /mnt
-              name: blob-cache
-          resources:
-            limits:
-              cpu: 2
-              memory: 2100Mi
-            requests:
-              cpu: 10m
-              memory: 20Mi
-      volumes:
-        - hostPath:
-            path: /var/lib/kubelet/plugins/blob.csi.azure.com
-            type: DirectoryOrCreate
-          name: socket-dir
-        - hostPath:
-            path: /var/lib/kubelet/
-            type: DirectoryOrCreate
-          name: mountpoint-dir
-        - hostPath:
-            path: /mnt
-          name: blob-cache
----
+      - command:
+          - nsenter
+          - '--target'
+          - '1'
+          - '--mount'
+          - '--uts'
+          - '--ipc'
+          - '--net'
+          - '--pid'
+          - '--'
+          - sh
+          - '-c'
+          - |
+            set -xe
+            apt update
+            # update blobfuse version on the host to 1.3.6
+            wget https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
+            dpkg -i packages-microsoft-prod.deb
+            apt-get update
+            apt-get install -y blobfuse=1.3.6
+            # download blobfuse-proxy .deb package
+            wget https://github.com/boddumanohar/blob-csi-driver/raw/blobfuse-proxy-ds/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb -O /tmp/blobfuse-proxy-v0.1.0.deb
+            dpkg -i /tmp/blobfuse-proxy-v0.1.0.deb
+            mkdir -p /var/lib/kubelet/plugins/blob.csi.azure.com
+            echo "Enabling blobfuse proxy systemctl service"
+            systemctl daemon-reload
+            systemctl enable blobfuse-proxy
+            systemctl stop blobfuse-proxy
+            systemctl start blobfuse-proxy
+            echo "removing the file: /tmp/blobfuse-proxy-v0.1.0.deb"
+            rm /tmp/blobfuse-proxy-v0.1.0.deb
+            echo "sleeping for 19 years"
+            sleep 600000000s
+        image: alpine
+        imagePullPolicy: IfNotPresent
+        name: sysctl-install-blobfuse-proxy
+        resources:
+          requests:
+            cpu: 10m
+        securityContext:
+          privileged: true
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      hostPID: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      tolerations:
+        - operator: Exists
