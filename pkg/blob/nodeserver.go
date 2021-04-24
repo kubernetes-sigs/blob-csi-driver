@@ -32,7 +32,7 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util"
-	"k8s.io/utils/mount"
+	mount "k8s.io/mount-utils"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

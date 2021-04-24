@@ -33,8 +33,8 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
 
+	mount "k8s.io/mount-utils"
 	testingexec "k8s.io/utils/exec/testing"
-	"k8s.io/utils/mount"
 )
 
 const (
