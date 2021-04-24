@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-FROM golang:1.15.8-alpine as builder
+FROM golang:1.16.3-alpine3.13 as builder
 WORKDIR /go/src/sigs.k8s.io/blob-csi-driver
 ADD . .
 RUN GO111MODULE=on CGO_ENABLED=0 GOOS=linux go build -mod vendor -o _output/blobfuse-proxy ./pkg/blobfuse-proxy

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.13.10-alpine3.10 as builder
+FROM golang:1.16.3-alpine3.13 as builder
 WORKDIR /go/src/sigs.k8s.io/blob-csi-driver
 ADD . .
 ARG TARGETARCH
@@ -26,7 +26,8 @@ RUN apt-get update && clean-install ca-certificates pkg-config libfuse-dev cmake
 RUN wget -O /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb && dpkg -i /tmp/packages-microsoft-prod.deb && apt-get update && apt install blobfuse fuse -y && rm -f /tmp/packages-microsoft-prod.deb
 RUN apt remove wget -y
 # this is a workaround to install nfs-common & nfs-kernel-server and don't quit with error
-RUN apt update && apt install nfs-common nfs-kernel-server -y || true
+# WIP: check if updating the kernel version would fix the below error
+# RUN apt update && apt install nfs-common nfs-kernel-server -y || true
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
