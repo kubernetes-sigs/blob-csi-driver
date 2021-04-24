@@ -1,49 +1,47 @@
-### Introduction
+# Use blobfuse-proxy
 
-Currently there is (not easy way)[https://github.com/kubernetes/kubernetes/issues/70013] to update CSI drivers that use FUSE. Because when a nodeserver restarts, the FUSE daemon also restarts. This results in breaking all this connections the FUSE daemon maintains. So one workaround is to run a fuse proxy
-on all the host machines and this proxy mounts volumes and maintains FUSE connections.
+By default, restart csi-blobfuse-node daemonsetwould make current blobfuse mounts unavailable. When fuse nodeserver restarts on the node, the fuse daemon also restarts, this results in breaking all connections FUSE daemon is maintaining. You could find more details here: [No easy way how to update CSI driver that uses fuse](https://github.com/kubernetes/kubernetes/issues/70013).
 
-Blobfuse proxy receives mount request in a GRPC call and then uses this data to mount and returns the output of the blobfuse command.
+This page shows how to run a blobfuse proxy on all agent nodes and this proxy mounts volumes and maintains FUSE connections. Blobfuse proxy receives mount request in a GRPC call and then uses this data to mount and returns the output of the blobfuse command.
 
+### Prerequisite
+ - make sure [blobfuse](https://github.com/Azure/azure-storage-fuse) is already installed on agent node
 
-### Usage
+### Install blobfuse-proxy on debian-based agent node
 
-Run the following command to generate blobfuse proxy
-```
-make blobfuse-proxy
-```
-the binary will be generated in `_output/blobfuse-proxy` you can run this binary on linux k8s host machines. But for testing purposes we are using
-a daemonset.
-
-### Development
-
-make sure the all required binary are installed
-```
-./hack/install-proto.sh
-```
-when every an changes are made to proto/*.proto files, run the below command to generate
-```
-make clean-proto
-make gen-proto
-```
-After making the required changes you can build the new blobfuse-proxy binary by running
-```
-make blobfuse-proxy
-```
-
-Generating dpkg file in ubuntu
-```
-make blobfuse-proxy
-cp _output/blobfuse-proxy ./pkg/blobfuse-proxy/usr/bin/blobfuse-proxy
-dpkg-deb --build pkg/blobfuse-proxy/debpackage
-```
-
-#### Installing the agent on debian/ubuntu nodes
-
-Download the blobfuse-proxy `.deb` package file onto host machine and install it using `dpkg -i blobfuse-proxy.deb`
-and then start the systemctl service.
-```
+ - Download blobfuse-proxy package, run as a service
+```console
+wget https://github.com/kubernetes-sigs/blob-csi-driver/raw/master/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb -O /tmp/blobfuse-proxy-v0.1.0.deb
+dpkg -i /tmp/blobfuse-proxy-v0.1.0.deb
+mkdir -p /var/lib/kubelet/plugins/blob.csi.azure.com
 systemctl enable blobfuse-proxy
 systemctl start blobfuse-proxy
 ```
-by default blobfuse-proxy start the unix socket under `/var/lib/kubelet/blobfuse-proxy.sock`
+> blobfuse-proxy start unix socket under `/var/lib/kubelet/blobfuse-proxy.sock` by default
+
+#### Troubleshooting
+ - Get `blobfuse-proxy` logs
+```console
+sudo journalctl -u blobfuse-proxy -l > blobfuse-proxy.log
+```
+
+#### Development
+ - make sure all required [Protocol Buffers](https://github.com/protocolbuffers/protobuf) binaries are installed
+```console
+./hack/install-protoc.sh
+```
+ - when any change is made to `proto/*.proto` file, run below command to generate
+```console
+rm pkg/blobfuse-proxy/pb/*.go
+protoc --proto_path=pkg/blobfuse-proxy/proto --go-grpc_out=pkg/blobfuse-proxy/pb --go_out=pkg/blobfuse-proxy/pb pkg/blobfuse-proxy/proto/*.proto
+```
+ - build new blobfuse-proxy binary by running
+```console
+make blobfuse-proxy
+```
+
+ - Generate debian dpkg package
+```console
+cp _output/blobfuse-proxy ./pkg/blobfuse-proxy/usr/bin/blobfuse-proxy
+dpkg-deb --build pkg/blobfuse-proxy/debpackage
+```
