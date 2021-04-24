@@ -60,7 +60,11 @@ integration-test: blob
 
 .PHONY: e2e-test
 e2e-test:
-	go test -v -timeout=0 ./test/e2e ${GINKGO_FLAGS}
+	if [ ! -z "$(EXTERNAL_E2E_TEST)" ]; then \
+		bash ./test/external-e2e/run.sh;\
+	else \
+		go test -v -timeout=0 ./test/e2e ${GINKGO_FLAGS};\
+	fi
 
 .PHONY: e2e-bootstrap
 e2e-bootstrap: install-helm install-blobfuse-proxy
@@ -176,3 +180,19 @@ install-blobfuse-proxy:
 .PHONY: uninstall-blobfuse-proxy
 uninstall-blobfuse-proxy:
 	kubectl delete -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml --ignore-not-found
+
+.PHONY: setup-external-e2e
+setup-external-e2e:
+	curl -sL https://storage.googleapis.com/kubernetes-release/release/v1.19.0/kubernetes-test-linux-amd64.tar.gz --output e2e-tests.tar.gz
+	tar -xvf e2e-tests.tar.gz
+	rm e2e-tests.tar.gz
+	mkdir /tmp/csi-blobfuse
+	cp ./kubernetes/test/bin/e2e.test /tmp/csi-blobfuse/e2e.test
+	rm -r kubernetes
+	cp ./deploy/example/storageclass-blobfuse.yaml /tmp/csi-blobfuse/storageclass.yaml
+	cp ./test/e2e-external/testdriver.yaml /tmp/csi-blobfuse/testdriver.yaml
+	./deploy/install-driver.sh
+
+.PHONY: run-external-e2e
+run-external-e2e: setup-external-e2e install-blobfuse-proxy
+	bash ./test/e2e-external/run.sh
