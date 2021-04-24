@@ -31,8 +31,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	k8sutil "k8s.io/kubernetes/pkg/volume/util"
+	mount "k8s.io/mount-utils"
 	utilexec "k8s.io/utils/exec"
-	"k8s.io/utils/mount"
 
 	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
