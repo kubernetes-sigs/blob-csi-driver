@@ -40,6 +40,12 @@ GOBIN ?= $(GOPATH)/bin
 DOCKER_CLI_EXPERIMENTAL = enabled
 export GOPATH GOBIN GO111MODULE DOCKER_CLI_EXPERIMENTAL
 
+# Output type of docker buildx build
+OUTPUT_TYPE ?= registry
+
+ALL_ARCH.linux = amd64 arm64
+ALL_OS_ARCH = $(foreach arch, ${ALL_ARCH.linux}, linux-$(arch))
+
 all: blob
 
 .PHONY: verify
@@ -85,7 +91,7 @@ e2e-teardown:
 
 .PHONY: blob
 blob:
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin ./pkg/blobplugin
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin ./pkg/blobplugin
 
 .PHONY: blob-windows
 blob-windows:
@@ -99,28 +105,32 @@ blob-darwin:
 container: blob
 	docker build -t $(IMAGE_TAG) -f ./pkg/blobplugin/dev.Dockerfile .
 
+.PHONY: container-linux
+container-linux:
+	docker buildx build --pull --output=type=$(OUTPUT_TYPE) --platform="linux/$(ARCH)" \
+		-t $(IMAGE_TAG)-linux-$(ARCH) --build-arg ARCH=$(ARCH) -f ./pkg/blobplugin/Dockerfile .
+
 .PHONY: blob-container
 blob-container:
 	docker buildx rm container-builder || true
 	docker buildx create --use --name=container-builder
-ifdef CI
+
 ifeq ($(CLOUD), AzureStackCloud)
 	docker run --privileged --name buildx_buildkit_container-builder0 -d --mount type=bind,src=/etc/ssl/certs,dst=/etc/ssl/certs moby/buildkit:latest || true
 endif
-	docker buildx build --no-cache --build-arg LDFLAGS=${LDFLAGS} -t $(IMAGE_TAG) -f ./pkg/blobplugin/Dockerfile --platform="linux/amd64" --push .
-
-	docker manifest create $(IMAGE_TAG) $(IMAGE_TAG)
-	docker manifest inspect $(IMAGE_TAG)
-ifdef PUBLISH
-	docker manifest create $(IMAGE_TAG_LATEST) $(IMAGE_TAG)
-	docker manifest inspect $(IMAGE_TAG_LATEST)
-endif
-endif
+	# enable qemu for arm64 build
+	docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+	for arch in $(ALL_ARCH.linux); do \
+		ARCH=$${arch} $(MAKE) blob; \
+		ARCH=$${arch} $(MAKE) container-linux; \
+	done
 
 .PHONY: push
 push:
 ifdef CI
+	docker manifest create --amend $(IMAGE_TAG) $(foreach osarch, $(ALL_OS_ARCH), $(IMAGE_TAG)-${osarch})
 	docker manifest push --purge $(IMAGE_TAG)
+	docker manifest inspect $(IMAGE_TAG)
 else
 	docker push $(IMAGE_TAG)
 endif
@@ -128,7 +138,8 @@ endif
 .PHONY: push-latest
 push-latest:
 ifdef CI
-	docker manifest push --purge $(IMAGE_TAG_LATEST)
+	docker manifest create --amend $(IMAGE_TAG_LATEST) $(foreach osarch, $(ALL_OS_ARCH), $(IMAGE_TAG)-${osarch})
+	docker manifest inspect $(IMAGE_TAG_LATEST)
 else
 	docker push $(IMAGE_TAG_LATEST)
 endif

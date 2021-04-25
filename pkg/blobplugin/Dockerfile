@@ -12,22 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.16.3-alpine3.13 as builder
-WORKDIR /go/src/sigs.k8s.io/blob-csi-driver
-ADD . .
-ARG TARGETARCH
-ARG TARGETOS
-ARG LDFLAGS
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -a -ldflags "${LDFLAGS:--X sigs.k8s.io/blob-csi-driver/pkg/blob.driverVersion=latest}" -mod vendor -o _output/blobplugin ./pkg/blobplugin
+ARG ARCH
 
-FROM k8s.gcr.io/build-image/debian-base-amd64:v2.1.3
-COPY --from=builder /go/src/sigs.k8s.io/blob-csi-driver/_output/blobplugin /blobplugin
+FROM k8s.gcr.io/build-image/debian-base-${ARCH}:v2.1.3
+COPY ./_output/blobplugin /blobplugin
 RUN apt-get update && clean-install ca-certificates pkg-config libfuse-dev cmake libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev wget
 RUN wget -O /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb && dpkg -i /tmp/packages-microsoft-prod.deb && apt-get update && apt install blobfuse fuse -y && rm -f /tmp/packages-microsoft-prod.deb
 RUN apt remove wget -y
 # this is a workaround to install nfs-common & nfs-kernel-server and don't quit with error
-# WIP: check if updating the kernel version would fix the below error
-# RUN apt update && apt install nfs-common nfs-kernel-server -y || true
+RUN apt-get update && apt install nfs-common nfs-kernel-server -y || true
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
