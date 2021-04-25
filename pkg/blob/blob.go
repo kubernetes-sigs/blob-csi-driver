@@ -93,8 +93,10 @@ var (
 // Driver implements all interfaces of CSI drivers
 type Driver struct {
 	csicommon.CSIDriver
-	cloud                   *azure.Cloud
-	blobfuseProxyEndpoint   string
+	cloud                 *azure.Cloud
+	blobfuseProxyEndpoint string
+	// enableBlobMockMount is only for testing, DO NOT set as true in non-testing scenario
+	enableBlobMockMount     bool
 	enableBlobfuseProxy     bool
 	blobfuseProxyConnTimout int
 	mounter                 *mount.SafeFormatAndMount
@@ -106,7 +108,7 @@ type Driver struct {
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
 // does not support optional driver plugin info manifest field. Refer to CSI spec for more details.
-func NewDriver(nodeID, blobfuseProxyEndpoint string, enableBlobfuseProxy bool, blobfuseProxyConnTimout int) *Driver {
+func NewDriver(nodeID, blobfuseProxyEndpoint string, enableBlobfuseProxy bool, blobfuseProxyConnTimout int, enableBlobMockMount bool) *Driver {
 	driver := Driver{}
 	driver.Name = DriverName
 	driver.Version = driverVersion
@@ -116,6 +118,7 @@ func NewDriver(nodeID, blobfuseProxyEndpoint string, enableBlobfuseProxy bool, b
 	driver.blobfuseProxyEndpoint = blobfuseProxyEndpoint
 	driver.enableBlobfuseProxy = enableBlobfuseProxy
 	driver.blobfuseProxyConnTimout = blobfuseProxyConnTimout
+	driver.enableBlobMockMount = enableBlobMockMount
 	return &driver
 }
 

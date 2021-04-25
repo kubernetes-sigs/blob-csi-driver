@@ -92,6 +92,14 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	}
 
 	klog.V(2).Infof("NodePublishVolume: volume %s mounting %s at %s with mountOptions: %v", volumeID, source, target, mountOptions)
+	if d.enableBlobMockMount {
+		if err := volumehelper.MakeDir(target); err != nil {
+			klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
+			return nil, err
+		}
+		return &csi.NodePublishVolumeResponse{}, nil
+	}
+
 	if err := d.mounter.Mount(source, target, "", mountOptions); err != nil {
 		if removeErr := os.Remove(target); removeErr != nil {
 			return nil, status.Errorf(codes.Internal, "Could not remove mount target %q: %v", target, removeErr)

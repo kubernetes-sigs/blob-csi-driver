@@ -44,19 +44,19 @@ const (
 )
 
 func NewFakeDriver() *Driver {
-	driver := NewDriver(fakeNodeID, "", false, 5)
+	driver := NewDriver(fakeNodeID, "", false, 5, false)
 	driver.Name = fakeDriverName
 	driver.Version = vendorVersion
 	return driver
 }
 
 func TestNewFakeDriver(t *testing.T) {
-	d := NewDriver(fakeNodeID, "", false, 5)
+	d := NewDriver(fakeNodeID, "", false, 5, false)
 	assert.NotNil(t, d)
 }
 
 func TestNewDriver(t *testing.T) {
-	driver := NewDriver(fakeNodeID, "", false, 5)
+	driver := NewDriver(fakeNodeID, "", false, 5, false)
 	fakedriver := NewFakeDriver()
 	fakedriver.Name = DriverName
 	fakedriver.Version = driverVersion

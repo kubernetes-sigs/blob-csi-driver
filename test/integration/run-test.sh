@@ -34,7 +34,7 @@ readonly cloud="$5"
 echo "Begin to run integration test on $cloud..."
 
 # Run CSI driver as a background service
-_output/blobplugin --endpoint "$endpoint" --nodeid CSINode -v=5 &
+_output/blobplugin --endpoint "$endpoint" --nodeid CSINode --enable-blob-mock-mount -v=5 &
 trap cleanup EXIT
 
 if [[ "$cloud" == "AzureChinaCloud" ]]; then
@@ -65,10 +65,6 @@ if [[ "$cloud" != "AzureChinaCloud" ]]; then
   echo "node stats test:"
   csc node stats --endpoint "$endpoint" "$volumeid:$target_path:$staging_target_path"
   sleep 2
-
-  # FIXME: this is done has a workaround to fix failing blobfuse mounts in prow
-  echo "unmounting manually"
-  umount $target_path
 
   echo 'expand volume test'
   csc controller expand-volume --endpoint "$endpoint" --req-bytes "$expanded_vol_size" "$volumeid"
