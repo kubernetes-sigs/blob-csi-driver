@@ -151,16 +151,6 @@ create-metrics-svc:
 delete-metrics-svc:
 	kubectl delete -f deploy/example/metrics/csi-blob-controller-svc.yaml --ignore-not-found
 
-# compile .proto file to go output
-.PHONY: gen-proto
-gen-proto:
-	protoc --proto_path=pkg/blobfuse-proxy/proto --go-grpc_out=pkg/blobfuse-proxy/pb --go_out=pkg/blobfuse-proxy/pb pkg/blobfuse-proxy/proto/*.proto
-
-# clean the files generated from .proto file
-.PHONY: clean-proto
-clean-proto:
-	rm pkg/blobfuse-proxy/pb/*.go
-
 .PHONY: blobfuse-proxy
 blobfuse-proxy:
 	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o _output/blobfuse-proxy ./pkg/blobfuse-proxy

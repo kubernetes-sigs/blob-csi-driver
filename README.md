@@ -26,7 +26,8 @@ Since `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.a
 ### Driver parameters
 Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
 
-### Prerequisite
+### Prerequisites
+#### Option#1: cloud provider config file
  - The driver depends on [cloud provider config file](https://github.com/kubernetes/cloud-provider-azure/blob/master/docs/cloud-provider-config.md), usually it's `/etc/kubernetes/azure.json` on all kubernetes nodes deployed by [AKS](https://docs.microsoft.com/en-us/azure/aks/) or [aks-engine](https://github.com/Azure/aks-engine), here is [azure.json example](./deploy/example/azure.json).
  > To specify a different cloud provider config file, create `azure-cred-file` configmap before driver installation, e.g. for OpenShift, it's `/etc/kubernetes/cloud.conf` (make sure config file path is in the `volumeMounts.mountPath`)
  > ```console
@@ -35,6 +36,9 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
  - This driver also supports [read cloud config from kuberenetes secret](./docs/read-from-secret.md).
  - If cluster identity is [Managed Service Identity(MSI)](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity), make sure user assigned identity has `Contributor` role on node resource group
  - [How to set up CSI driver on Azure RedHat OpenShift(ARO)](https://github.com/ezYakaEagle442/aro-pub-storage/blob/master/setup-store-CSI-driver-azure-blob.md)
+
+#### Option#2: Bring your own storage account
+This option does not depend on cloud provider config file, supports cross subscription and on-premise cluster scenario. Refer to [detailed steps](./deploy/example/e2e_usage.md#option2-bring-your-own-storage-account).
 
 ### Install driver on a Kubernetes cluster
  - install via [kubectl](./docs/install-blob-csi-driver.md) on public Azure (please use helm for other cloud environments, e.g. Azure Stack)
