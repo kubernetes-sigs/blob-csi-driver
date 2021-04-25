@@ -43,7 +43,7 @@ export GOPATH GOBIN GO111MODULE DOCKER_CLI_EXPERIMENTAL
 # Output type of docker buildx build
 OUTPUT_TYPE ?= registry
 
-ALL_ARCH.linux = amd64 arm64
+ALL_ARCH.linux = amd64 #arm64
 ALL_OS_ARCH = $(foreach arch, ${ALL_ARCH.linux}, linux-$(arch))
 
 all: blob
@@ -119,7 +119,7 @@ ifeq ($(CLOUD), AzureStackCloud)
 	docker run --privileged --name buildx_buildkit_container-builder0 -d --mount type=bind,src=/etc/ssl/certs,dst=/etc/ssl/certs moby/buildkit:latest || true
 endif
 	# enable qemu for arm64 build
-	docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+	# docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 	for arch in $(ALL_ARCH.linux); do \
 		ARCH=$${arch} $(MAKE) blob; \
 		ARCH=$${arch} $(MAKE) container-linux; \
