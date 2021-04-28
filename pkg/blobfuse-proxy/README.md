@@ -42,6 +42,6 @@ make blobfuse-proxy
 
  - Generate debian dpkg package
 ```console
-cp _output/blobfuse-proxy ./pkg/blobfuse-proxy/usr/bin/blobfuse-proxy
+cp _output/blobfuse-proxy ./pkg/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy
 dpkg-deb --build pkg/blobfuse-proxy/debpackage
 ```
