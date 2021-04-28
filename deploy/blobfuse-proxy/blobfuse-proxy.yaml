@@ -54,8 +54,10 @@ spec:
             systemctl start blobfuse-proxy
             echo "removing the file: /tmp/blobfuse-proxy-v0.1.0.deb"
             rm /tmp/blobfuse-proxy-v0.1.0.deb
-            echo "sleeping for 19 years"
-            sleep 600000000s
+            echo "waiting for blobfuse-proxy service to start"
+            sleep 3s
+            # tail blobfuse proxy logs
+            journalctl -u blobfuse-proxy -f
         image: alpine
         imagePullPolicy: IfNotPresent
         name: sysctl-install-blobfuse-proxy
