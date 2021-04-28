@@ -69,10 +69,10 @@ e2e-test:
 	go test -v -timeout=0 ./test/e2e ${GINKGO_FLAGS}
 
 .PHONY: e2e-bootstrap
-e2e-bootstrap: install-helm install-blobfuse-proxy
+e2e-bootstrap: install-helm 
 	# Only build and push the image if it does not exist in the registry
 	docker pull $(IMAGE_TAG) || make blob-container push
-	if [[ -z "$(ENABLE_BLOBFUSE_PROXY)" ]]; then \
+	if [ ! -z "$(ENABLE_BLOBFUSE_PROXY)" ]; then \
 		make install-blobfuse-proxy;\
 	fi
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
