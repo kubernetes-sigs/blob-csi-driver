@@ -29,9 +29,9 @@ IMAGE_TAG ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
 IMAGE_TAG_LATEST = $(REGISTRY)/$(IMAGE_NAME):latest
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS ?= "-X ${PKG}/pkg/blob.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blob.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blob.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
-E2E_HELM_OPTIONS ?= --set image.blob.pullPolicy=Always --set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.blob.tag=$(IMAGE_VERSION)
+E2E_HELM_OPTIONS ?= --set image.blob.pullPolicy=Always --set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.blob.tag=$(IMAGE_VERSION) --set controller.logLevel=6 --set node.logLevel=6
 ifdef ENABLE_BLOBFUSE_PROXY
-override E2E_HELM_OPTIONS := $(E2E_HELM_OPTIONS) --set controller.logLevel=6 --set node.logLevel=6 --set node.enableBlobfuseProxy=true
+override E2E_HELM_OPTIONS := $(E2E_HELM_OPTIONS) --set node.enableBlobfuseProxy=true
 endif
 GINKGO_FLAGS = -ginkgo.v
 GO111MODULE = on
@@ -69,10 +69,11 @@ e2e-test:
 	go test -v -timeout=0 ./test/e2e ${GINKGO_FLAGS}
 
 .PHONY: e2e-bootstrap
-e2e-bootstrap: install-helm install-blobfuse-proxy
+e2e-bootstrap: install-helm
 	# Only build and push the image if it does not exist in the registry
 	docker pull $(IMAGE_TAG) || make blob-container push
-	if [[ -z "$(ENABLE_BLOBFUSE_PROXY)" ]]; then \
+	# if ENABLE_BLOBFUSE_PROXY env is not empty, the install blobfuse proxy daemonset
+	if [[ ! -z "$(ENABLE_BLOBFUSE_PROXY)" ]]; then \
 		make install-blobfuse-proxy;\
 	fi
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
