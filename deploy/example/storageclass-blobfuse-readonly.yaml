@@ -14,4 +14,5 @@ mountOptions:
   - -o ro
   - -o allow_other
   - --file-cache-timeout-in-seconds=0
+  - --cancel-list-on-mount-seconds=60  # prevent billing charges on mounting
   - --log-level=LOG_DEBUG  # only for debugging

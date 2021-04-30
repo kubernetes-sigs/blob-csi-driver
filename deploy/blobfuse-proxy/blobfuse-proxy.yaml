@@ -37,12 +37,9 @@ spec:
           - '-c'
           - |
             set -xe
-            apt update
-            # update blobfuse version on the host to 1.3.6
             wget https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
             dpkg -i packages-microsoft-prod.deb
-            apt-get update
-            apt-get install -y blobfuse=1.3.6
+            apt-get update && apt-get install -y blobfuse
             # download blobfuse-proxy .deb package
             wget https://github.com/kubernetes-sigs/blob-csi-driver/raw/master/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb -O /tmp/blobfuse-proxy-v0.1.0.deb
             dpkg -i /tmp/blobfuse-proxy-v0.1.0.deb

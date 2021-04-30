@@ -66,6 +66,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 						MountOptions: []string{
 							"-o allow_other",
 							"--file-cache-timeout-in-seconds=120",
+							"--cancel-list-on-mount-seconds=0",
 						},
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
@@ -93,6 +94,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 					MountOptions: []string{
 						"-o allow_other",
 						"--file-cache-timeout-in-seconds=120",
+						"--cancel-list-on-mount-seconds=60",
 					},
 					VolumeMount: testsuites.VolumeMountDetails{
 						NameGenerate:      "test-volume-",
