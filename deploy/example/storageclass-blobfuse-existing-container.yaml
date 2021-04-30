@@ -15,6 +15,7 @@ mountOptions:
   - -o allow_other
   - --file-cache-timeout-in-seconds=120
   - --use-attr-cache=true
+  - --cancel-list-on-mount-seconds=60  # prevent billing charges on mounting
   - -o attr_timeout=120
   - -o entry_timeout=120
   - -o negative_timeout=120
