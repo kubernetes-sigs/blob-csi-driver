@@ -33,7 +33,6 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: blob-csi-provisioner-binding
-  namespace: {{ .Release.Namespace }}
 {{ include "blob.labels" . | indent 2 }}
 subjects:
   - kind: ServiceAccount
@@ -50,7 +49,6 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: blob-external-resizer-role
-  namespace: {{ .Release.Namespace }}
 {{ include "blob.labels" . | indent 2 }}
 rules:
   - apiGroups: [""]
@@ -73,7 +71,6 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: blob-csi-resizer-role
-  namespace: {{ .Release.Namespace }}
 {{ include "blob.labels" . | indent 2 }}
 subjects:
   - kind: ServiceAccount
@@ -153,7 +150,6 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: blob-csi-snapshotter-binding
-  namespace: {{ .Release.Namespace }}
 {{ include "blob.labels" . | indent 2 }}
 subjects:
   - kind: ServiceAccount
@@ -168,7 +164,6 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  namespace: {{ .Release.Namespace }}
   name: csi-blob-controller-secret-role
 rules:
   - apiGroups: [""]
@@ -180,7 +175,6 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi-blob-controller-secret-binding
-  namespace: {{ .Release.Namespace }}
 subjects:
   - kind: ServiceAccount
     name: csi-blob-controller-sa

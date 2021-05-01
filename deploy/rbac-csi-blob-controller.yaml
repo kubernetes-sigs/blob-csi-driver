@@ -128,7 +128,6 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi-blob-controller-secret-role
-  namespace: kube-system
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
@@ -139,7 +138,6 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi-blob-controller-secret-binding
-  namespace: kube-system
 subjects:
   - kind: ServiceAccount
     name: csi-blob-controller-sa
