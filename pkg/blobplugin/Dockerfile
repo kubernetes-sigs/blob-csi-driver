@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG ARCH
+ARG ARCH=amd64
 
 FROM k8s.gcr.io/build-image/debian-base-${ARCH}:v2.1.3
 COPY ./_output/blobplugin /blobplugin
