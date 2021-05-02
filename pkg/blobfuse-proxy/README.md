@@ -45,3 +45,21 @@ make blobfuse-proxy
 cp _output/blobfuse-proxy ./pkg/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy
 dpkg-deb --build pkg/blobfuse-proxy/debpackage
 ```
+
+ - Generate redhat/centos package
+```console
+cp _output/blobfuse-proxy ./pkg/blobfuse-proxy/rpmbuild/SOURCES/blobfuse-proxy
+cd ~/rpmbuild/SPECS/
+rpmbuild --target noarch -bb utils.spec
+```
+
+- Installing blobfuse-proxy package
+```console
+# On debian based systems:
+wget https://github.com/kubernetes-sigs/blob-csi-driver/raw/master/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb
+dpkg -i blobfuse-proxy-v0.1.0.deb
+
+# On redhat/centos based systems
+wget https://github.com/kubernetes-sigs/blob-csi-driver/raw/master/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.rpm
+rpm -ivh utils-1.0.0-1.noarch.rpm
+```
