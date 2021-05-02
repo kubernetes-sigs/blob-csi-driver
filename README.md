@@ -15,10 +15,9 @@ This driver allows Kubernetes to access Azure Storage through one of following m
 ### Container Images & Kubernetes Compatibility:
 |driver version  |Image                                      | supported k8s version | built-in blobfuse version |
 |----------------|-------------------------------------------|-----------------------|---------------------------|
-|master branch   |mcr.microsoft.com/k8s/csi/blob-csi:latest  | 1.16+                 | 1.3.7                     |
+|master branch   |mcr.microsoft.com/k8s/csi/blob-csi:latest  | 1.17+                 | 1.3.7                     |
+|v1.1.0          |mcr.microsoft.com/k8s/csi/blob-csi:v1.1.0  | 1.17+                 | 1.3.7                     |
 |v1.0.0          |mcr.microsoft.com/k8s/csi/blob-csi:v1.0.0  | 1.16+                 | 1.3.6                     |
-|v0.11.0         |mcr.microsoft.com/k8s/csi/blob-csi:v0.11.0 | 1.15+                 | 1.3.6                     |
-|v0.10.0         |mcr.microsoft.com/k8s/csi/blob-csi:v0.10.0 | 1.15+                 | 1.3.5                     |
 
 #### Breaking change notice
 Since `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.azure.com`, volume created by `v0.6.0`(or prior version) could not be mounted by `v0.7.0` driver. If you have volumes created by `v0.6.0` version, just keep the driver running in your cluster.
