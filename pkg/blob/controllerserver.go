@@ -131,7 +131,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	tags, err := azure.ConvertTagsToMap(customTags)
+	tags, err := util.ConvertTagsToMap(customTags)
 	if err != nil {
 		return nil, err
 	}
