@@ -104,6 +104,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `podLabels`                                           | collection of labels to add to all the pods           | {}                                                             |
 | `priorityClassName`                                   | priority class name to be added to pods               | system-cluster-critical                                        |
 | `securityContext`                                     | security context to be added to pods                  | {}                                                             |
+| `node.livenessProbe.healthPort `                      | the health check port for liveness probe              | `29633` |
 
 ## troubleshooting
  - Add `--wait -v=5 --debug` in `helm install` command to get detailed error
