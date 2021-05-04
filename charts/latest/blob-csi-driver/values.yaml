@@ -98,6 +98,8 @@ node:
   affinity: {}
   nodeSelector: {}
   tolerations: []
+  livenessProbe:
+    healthPort: 29633
 kubelet:
   linuxPath: /var/lib/kubelet
   BlobCachePath: /mnt
