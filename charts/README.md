@@ -83,6 +83,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.metricsPort`                                    | metrics port of csi-blob-node                         | 29635                                                          |
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
 | `node.enableBlobfuseProxy`                            | node enable blobfuse-proxy                            | false                                                          |
+| `node.blobfuseCachePath`                              | blobfuse cache path(`tmp-path`)                       | `/mnt`                                                          |
 | `node.resources.livenessProbe.limits.cpu`             | liveness-probe cpu limits                             | 100m                                                           |
 | `node.resources.livenessProbe.limits.memory`          | liveness-probe memory limits                          | 100Mi                                                          |
 | `node.resources.livenessProbe.requests.cpu`           | liveness-probe cpu requests limits                    | 10m                                                            |
