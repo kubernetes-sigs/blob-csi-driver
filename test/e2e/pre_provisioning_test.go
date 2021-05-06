@@ -19,6 +19,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
 	"sigs.k8s.io/blob-csi-driver/test/e2e/testsuites"
@@ -137,6 +138,41 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 		test.Run(cs, ns)
 	})
 
+	ginkgo.It("should use a pre-provisioned volume and mount it by multiple pods", func() {
+		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
+		pods := []testsuites.PodDetails{}
+		for i := 1; i <= 6; i++ {
+			req := makeCreateVolumeReq(fmt.Sprintf("pre-provisioned-multiple-pods%d", time.Now().UnixNano()))
+			resp, err := blobDriver.CreateVolume(context.Background(), req)
+			if err != nil {
+				ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
+			}
+			volumeID := resp.Volume.VolumeId
+			ginkgo.By(fmt.Sprintf("Successfully provisioned blob volume: %q\n", volumeID))
+
+			pod := testsuites.PodDetails{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeID:  volumeID,
+						ClaimSize: volumeSize,
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			}
+			pods = append(pods, pod)
+		}
+
+		test := testsuites.PreProvisionedMultiplePods{
+			CSIDriver: testDriver,
+			Pods:      pods,
+		}
+		test.Run(cs, ns)
+	})
+
 	ginkgo.It("should use existing credentials in k8s cluster", func() {
 		req := makeCreateVolumeReq("pre-provisioned-existing-credentials")
 		resp, err := blobDriver.CreateVolume(context.Background(), req)
@@ -232,6 +268,10 @@ func makeCreateVolumeReq(volumeName string) *csi.CreateVolumeRequest {
 		CapacityRange: &csi.CapacityRange{
 			RequiredBytes: defaultVolumeSizeBytes,
 			LimitBytes:    defaultVolumeSizeBytes,
+		},
+		Parameters: map[string]string{
+			"skuname":       "Standard_LRS",
+			"containerName": "test",
 		},
 	}
 
