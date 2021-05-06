@@ -1,15 +1,32 @@
 # Use blobfuse-proxy
 
-By default, restart csi-blobfuse-node daemonsetwould make current blobfuse mounts unavailable. When fuse nodeserver restarts on the node, the fuse daemon also restarts, this results in breaking all connections FUSE daemon is maintaining. You could find more details here: [No easy way how to update CSI driver that uses fuse](https://github.com/kubernetes/kubernetes/issues/70013).
+By default, restart csi-blobfuse-node daemonset would make current blobfuse mounts unavailable. When fuse nodeserver restarts on the node, the fuse daemon also restarts, this results in breaking all connections FUSE daemon is maintaining. You could find more details here: [No easy way how to update CSI driver that uses fuse](https://github.com/kubernetes/kubernetes/issues/70013).
 
-This page shows how to run a blobfuse proxy on all agent nodes and this proxy mounts volumes and maintains FUSE connections. Blobfuse proxy receives mount request in a GRPC call and then uses this data to mount and returns the output of the blobfuse command.
+This page shows how to run a blobfuse proxy on all agent nodes and this proxy mounts volumes, maintains FUSE connections. 
+> Blobfuse proxy receives mount request in a GRPC call and then uses this data to mount and returns the output of the blobfuse command.
 
-### Prerequisite
- - make sure [blobfuse](https://github.com/Azure/azure-storage-fuse) is already installed on agent node
+### Step#1. Install blobfuse-proxy on debian based agent node
+> below daemonset would also install latest [blobfuse](https://github.com/Azure/azure-storage-fuse) version on the node
+```console
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/blobfuse-proxy/blobfuse-proxy.yaml
+```
 
-### Install blobfuse-proxy on debian-based agent node
+### Step#2. Install Blob CSI driver with `node.enableBlobfuseProxy=true` setting
+```console
+helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.1.0 --set node.enableBlobfuseProxy=true
+```
 
- - Download blobfuse-proxy package, run as a service
+#### Troubleshooting
+ - Get `blobfuse-proxy` logs on the node
+```console
+kubectl get po -n kube-system -o wide | grep blobfuse-proxy
+csi-blobfuse-proxy-47kpp                    1/1     Running   0          37m
+kubectl logs -n kube-system csi-blobfuse-proxy-47kpp
+```
+
+#### Development
+ - install blobfuse-proxy package, run as a service manually
 ```console
 wget https://github.com/kubernetes-sigs/blob-csi-driver/raw/master/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb -O /tmp/blobfuse-proxy-v0.1.0.deb
 dpkg -i /tmp/blobfuse-proxy-v0.1.0.deb
@@ -19,13 +36,6 @@ systemctl start blobfuse-proxy
 ```
 > blobfuse-proxy start unix socket under `/var/lib/kubelet/blobfuse-proxy.sock` by default
 
-#### Troubleshooting
- - Get `blobfuse-proxy` logs
-```console
-sudo journalctl -u blobfuse-proxy -l > blobfuse-proxy.log
-```
-
-#### Development
  - make sure all required [Protocol Buffers](https://github.com/protocolbuffers/protobuf) binaries are installed
 ```console
 ./hack/install-protoc.sh
@@ -55,7 +65,7 @@ rpmbuild --target noarch -bb utils.spec
 
 - Installing blobfuse-proxy package
 ```console
-# On debian based systems:
+# On debian based systems
 wget https://github.com/kubernetes-sigs/blob-csi-driver/raw/master/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb
 dpkg -i blobfuse-proxy-v0.1.0.deb
 
