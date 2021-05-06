@@ -1,4 +1,5 @@
-# Use blobfuse-proxy
+# blobfuse-proxy
+ - supported CSI driver version: v1.1.0 or later version
 
 By default, restart csi-blobfuse-node daemonset would make current blobfuse mounts unavailable. When fuse nodeserver restarts on the node, the fuse daemon also restarts, this results in breaking all connections FUSE daemon is maintaining. You could find more details here: [No easy way how to update CSI driver that uses fuse](https://github.com/kubernetes/kubernetes/issues/70013).
 
