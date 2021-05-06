@@ -47,7 +47,6 @@ spec:
             echo "Enabling blobfuse proxy systemctl service"
             systemctl daemon-reload
             systemctl enable blobfuse-proxy
-            systemctl stop blobfuse-proxy
             systemctl start blobfuse-proxy
             echo "removing the file: /tmp/blobfuse-proxy-v0.1.0.deb"
             rm /tmp/blobfuse-proxy-v0.1.0.deb
