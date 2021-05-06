@@ -73,6 +73,7 @@ node:
   metricsPort: 29635
   logLevel: 5
   enableBlobfuseProxy: false
+  blobfuseCachePath: /mnt
   resources:
     livenessProbe:
       limits:
@@ -102,7 +103,6 @@ node:
     healthPort: 29633
 kubelet:
   linuxPath: /var/lib/kubelet
-  BlobCachePath: /mnt
 
 cloud: AzurePublicCloud
 
