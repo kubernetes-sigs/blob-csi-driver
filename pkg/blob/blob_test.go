@@ -146,6 +146,20 @@ func TestGetContainerInfo(t *testing.T) {
 		expected4 error
 	}{
 		{
+			options:   "rg#f5713de20cde511e8ba4900#pvc-file-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41#uuid",
+			expected1: "rg",
+			expected2: "f5713de20cde511e8ba4900",
+			expected3: "pvc-file-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41",
+			expected4: nil,
+		},
+		{
+			options:   "rg#f5713de20cde511e8ba4900#pvc-file-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41#",
+			expected1: "rg",
+			expected2: "f5713de20cde511e8ba4900",
+			expected3: "pvc-file-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41",
+			expected4: nil,
+		},
+		{
 			options:   "rg#f5713de20cde511e8ba4900#pvc-file-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41",
 			expected1: "rg",
 			expected2: "f5713de20cde511e8ba4900",

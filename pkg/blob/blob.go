@@ -169,7 +169,7 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 }
 
 // GetContainerInfo get container info according to volume id, e.g.
-// input: "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+// input: "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41#uuid"
 // output: rg, f5713de20cde511e8ba4900, pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41
 func GetContainerInfo(id string) (string, string, string, error) {
 	segments := strings.Split(id, separator)

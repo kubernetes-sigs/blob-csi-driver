@@ -207,6 +207,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, containerName)
+	if containerName != "" {
+		// add volume name as suffix to differentiate volumeID since "containerName" is specified
+		// not necessary for dynamic container name creation since volumeID already contains volume name
+		volumeID = volumeID + "#" + name
+	}
 	klog.V(2).Infof("create container %s on storage account %s successfully", containerName, accountName)
 
 	isOperationSucceeded = true
