@@ -40,6 +40,7 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
 This option does not depend on cloud provider config file, supports cross subscription and on-premise cluster scenario. Refer to [detailed steps](./deploy/example/e2e_usage.md#option2-bring-your-own-storage-account).
 
 ### Install driver on a Kubernetes cluster
+ - install [blobfuse-proxy](./pkg/blobfuse-proxy) to make blobfuse mount still available after driver restart
  - install via [kubectl](./docs/install-blob-csi-driver.md) on public Azure (please use helm for other cloud environments, e.g. Azure Stack)
  - install via [helm charts](./charts) on public Azure and Azure Stack
 
