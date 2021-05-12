@@ -143,6 +143,7 @@ endif
 push-latest:
 ifdef CI
 	docker manifest create --amend $(IMAGE_TAG_LATEST) $(foreach osarch, $(ALL_OS_ARCH), $(IMAGE_TAG)-${osarch})
+	docker manifest push --purge $(IMAGE_TAG_LATEST)
 	docker manifest inspect $(IMAGE_TAG_LATEST)
 else
 	docker push $(IMAGE_TAG_LATEST)
