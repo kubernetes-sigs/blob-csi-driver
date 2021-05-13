@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
@@ -120,14 +120,14 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		storeAccountKey = storeAccountKeyFalse
 	}
 
-	accountKind := string(storage.StorageV2)
+	accountKind := string(storage.KindStorageV2)
 	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
-		accountKind = string(storage.BlockBlobStorage)
+		accountKind = string(storage.KindBlockBlobStorage)
 	}
 	if IsAzureStackCloud(d.cloud) {
-		accountKind = string(storage.Storage)
-		if storageAccountType != "" && storageAccountType != string(storage.StandardLRS) && storageAccountType != string(storage.PremiumLRS) {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", storageAccountType, storage.PremiumLRS, storage.StandardLRS))
+		accountKind = string(storage.KindStorage)
+		if storageAccountType != "" && storageAccountType != string(storage.SkuNameStandardLRS) && storageAccountType != string(storage.SkuNamePremiumLRS) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", storageAccountType, storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS))
 		}
 	}
 
