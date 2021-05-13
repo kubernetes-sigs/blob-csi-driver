@@ -173,9 +173,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	if containerName == "" {
-		containerName = getValidContainerName(name, protocol)
-		parameters[containerNameField] = containerName
+	validContainerName := containerName
+	if validContainerName == "" {
+		validContainerName = getValidContainerName(name, protocol)
+		parameters[containerNameField] = validContainerName
 	}
 
 	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_create_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
@@ -184,16 +185,16 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		mc.ObserveOperationWithResult(isOperationSucceeded)
 	}()
 
-	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
+	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
 	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
 	if err != nil {
 		return nil, err
 	}
 
 	blobClient := client.GetBlobService()
-	container := blobClient.GetContainerReference(containerName)
+	container := blobClient.GetContainerReference(validContainerName)
 	if _, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate}); err != nil {
-		return nil, fmt.Errorf("failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", containerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
+		return nil, fmt.Errorf("failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
 	}
 
 	if storeAccountKey != storeAccountKeyFalse && len(req.GetSecrets()) == 0 {
@@ -206,13 +207,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, containerName)
+	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, validContainerName)
 	if containerName != "" {
 		// add volume name as suffix to differentiate volumeID since "containerName" is specified
 		// not necessary for dynamic container name creation since volumeID already contains volume name
 		volumeID = volumeID + "#" + name
 	}
-	klog.V(2).Infof("create container %s on storage account %s successfully", containerName, accountName)
+	klog.V(2).Infof("create container %s on storage account %s successfully", validContainerName, accountName)
 
 	isOperationSucceeded = true
 	return &csi.CreateVolumeResponse{
