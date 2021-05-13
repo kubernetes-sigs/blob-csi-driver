@@ -25,7 +25,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-06-01/storage"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 

@@ -3,7 +3,7 @@ module sigs.k8s.io/blob-csi-driver
 go 1.16
 
 require (
-	github.com/Azure/azure-sdk-for-go v53.1.0+incompatible
+	github.com/Azure/azure-sdk-for-go v54.1.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.17
 	github.com/Azure/go-autorest/autorest/adal v0.9.10
 	github.com/container-storage-interface/spec v1.3.0
@@ -64,5 +64,5 @@ replace (
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.21.0
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.21.0
 	k8s.io/sample-controller => k8s.io/sample-controller v0.21.0
-	sigs.k8s.io/cloud-provider-azure => sigs.k8s.io/cloud-provider-azure v0.7.4-0.20210512011340-c48dea83dfbe
+	sigs.k8s.io/cloud-provider-azure => sigs.k8s.io/cloud-provider-azure v0.7.4-0.20210513142225-eef91820946e
 )
