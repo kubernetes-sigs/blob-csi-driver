@@ -83,6 +83,8 @@ const (
 
 	// containerMaxSize is the max size of the blob container. See https://docs.microsoft.com/en-us/azure/storage/blobs/scalability-targets#scale-targets-for-blob-storage
 	containerMaxSize = 100 * util.TiB
+
+	subnetTemplate = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s"
 )
 
 var (
@@ -535,4 +537,19 @@ func (d *Driver) GetStorageAccesskeyFromSecret(accountName, secretNamespace stri
 	}
 
 	return string(secret.Data[defaultSecretAccountKey][:]), nil
+}
+
+// getSubnetResourceID get default subnet resource ID from cloud provider config
+func (d *Driver) getSubnetResourceID() string {
+	subsID := d.cloud.SubscriptionID
+	if len(d.cloud.NetworkResourceSubscriptionID) > 0 {
+		subsID = d.cloud.NetworkResourceSubscriptionID
+	}
+
+	rg := d.cloud.ResourceGroup
+	if len(d.cloud.VnetResourceGroup) > 0 {
+		rg = d.cloud.VnetResourceGroup
+	}
+
+	return fmt.Sprintf(subnetTemplate, subsID, rg, d.cloud.VnetName, d.cloud.SubnetName)
 }
