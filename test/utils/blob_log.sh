@@ -28,7 +28,7 @@ kubectl get pods -n default -o wide
 echo "======================================================================================"
 
 echo "print out all $NS namespace pods status ..."
-kubectl get pods -n${NS}
+kubectl get pods -n${NS} -o wide
 echo "======================================================================================"
 
 echo "print out csi-blob-controller logs ..."
