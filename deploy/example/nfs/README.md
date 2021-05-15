@@ -3,31 +3,24 @@
 
 #### Feature Status: Alpha
 #### Supported OS: Linux
-#### Supported CSI driver version: `v0.7.0`
-
-#### [Available regions](https://azure.microsoft.com/en-us/updates/nfs-30-support-for-azure-blob-storage-preview-region-expansion/)
-`eastus`, `centralus`, `westcentralus`, `australiasoutheast`, `northeurope`, `ukwest`, `koreacentral`, `koreasouth`, `canadacentral`
+#### Supported CSI driver version: `v0.7.0`+
+> `v1.2.0`+ supports dynamic account creation
 
 #### Prerequisite
- - [Register the NFS 3.0 protocol feature with your subscription](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to#step-1-register-the-nfs-30-protocol-feature-with-your-subscription)
+ - [Register the NFS 3.0 protocol feature with your subscription](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to)
 ```console
 az feature register --name AllowNFSV3 --namespace Microsoft.Storage
 az feature register --name PremiumHns --namespace Microsoft.Storage
 az provider register --namespace Microsoft.Storage
 ```
 
- - [install CSI driver](https://github.com/kubernetes-sigs/blob-csi-driver/blob/master/docs/install-csi-driver-master.md)
- - Create a `Premium_LRS` Azure storage account with following configurations to support NFS 3.0
-   - account kind: `BlockBlobStorage`
-   - Replication: `Locally-redundant storage (LRS)`
-   - secure transfer required(enable HTTPS traffic only): `false`
-   - select virtual network of agent nodes in `Firewalls and virtual networks`
-   - Hierarchical namespace: `Enabled`
-   - NFS V3: `Enabled`
+ - [Install CSI driver](../../../docs/install-csi-driver-master.md)
+ - [Optional] Follow steps [here](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to) to create storage account that supports NFSv3 protocol
+   - specify `storageAccount` in below storage class `parameters`
 
 #### How to use NFS feature
  - Create an Azure File storage class
-> specify `storageAccount` and `protocol: nfs` in storage class `parameters`
+> specify `protocol: nfs` in storage class `parameters`
 > </br>for more details, refer to [driver parameters](../../../docs/driver-parameters.md)
 ```yaml
 apiVersion: storage.k8s.io/v1
@@ -36,8 +29,6 @@ metadata:
   name: blob-nfs
 provisioner: blob.csi.azure.com
 parameters:
-  resourceGroup: EXISTING_RESOURCE_GROUP_NAME  # optional, only set this when storage account is not in the same resource group as agent node
-  storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
   protocol: nfs
 ```
 
