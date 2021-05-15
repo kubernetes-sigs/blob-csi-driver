@@ -24,6 +24,8 @@ import (
 	"golang.org/x/net/context"
 
 	kv "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -39,6 +41,7 @@ import (
 var (
 	DefaultAzureCredentialFileEnv = "AZURE_CREDENTIAL_FILE"
 	DefaultCredFilePath           = "/etc/kubernetes/azure.json"
+	storageService                = "Microsoft.Storage"
 )
 
 // IsAzureStackCloud decides whether the driver is running on Azure Stack Cloud.
@@ -161,6 +164,62 @@ func (d *Driver) getServicePrincipalToken(env azure.Environment, resource string
 		d.cloud.AADClientID,
 		d.cloud.AADClientSecret,
 		resource)
+}
+
+func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context) error {
+	resourceGroup := d.cloud.ResourceGroup
+	if len(d.cloud.VnetResourceGroup) > 0 {
+		resourceGroup = d.cloud.VnetResourceGroup
+	}
+	location := d.cloud.Location
+	vnetName := d.cloud.VnetName
+	subnetName := d.cloud.SubnetName
+
+	if d.cloud.SubnetsClient == nil {
+		return fmt.Errorf("SubnetsClient is nil")
+	}
+
+	subnet, err := d.cloud.SubnetsClient.Get(ctx, resourceGroup, vnetName, subnetName, "")
+	if err != nil {
+		return fmt.Errorf("failed to get the subnet %s under vnet %s: %v", subnetName, vnetName, err)
+	}
+	endpointLocaions := []string{location}
+	storageServiceEndpoint := network.ServiceEndpointPropertiesFormat{
+		Service:   &storageService,
+		Locations: &endpointLocaions,
+	}
+	storageServiceExists := false
+	if subnet.SubnetPropertiesFormat == nil {
+		subnet.SubnetPropertiesFormat = &network.SubnetPropertiesFormat{}
+	}
+	if subnet.SubnetPropertiesFormat.ServiceEndpoints == nil {
+		subnet.SubnetPropertiesFormat.ServiceEndpoints = &[]network.ServiceEndpointPropertiesFormat{}
+	}
+	serviceEndpoints := *subnet.SubnetPropertiesFormat.ServiceEndpoints
+	for _, v := range serviceEndpoints {
+		if v.Service != nil && *v.Service == storageService {
+			storageServiceExists = true
+			klog.V(4).Infof("serviceEndpoint(%s) is already in subnet(%s)", storageService, subnetName)
+			break
+		}
+	}
+
+	if !storageServiceExists {
+		serviceEndpoints = append(serviceEndpoints, storageServiceEndpoint)
+		subnet.SubnetPropertiesFormat.ServiceEndpoints = &serviceEndpoints
+
+		lockKey := resourceGroup + vnetName + subnetName
+		d.subnetLockMap.LockEntry(lockKey)
+		defer d.subnetLockMap.UnlockEntry(lockKey)
+
+		err = d.cloud.SubnetsClient.CreateOrUpdate(context.Background(), resourceGroup, vnetName, subnetName, subnet)
+		if err != nil {
+			return fmt.Errorf("failed to update the subnet %s under vnet %s: %v", subnetName, vnetName, err)
+		}
+		klog.V(4).Infof("serviceEndpoint(%s) is appended in subnet(%s)", storageService, subnetName)
+	}
+
+	return nil
 }
 
 func getKubeClient(kubeconfig string) (*kubernetes.Clientset, error) {

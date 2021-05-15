@@ -56,7 +56,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 	})
 
 	testDriver = driver.InitBlobCSIDriver()
-	ginkgo.It("should create a volume on demand", func() {
+	ginkgo.It("should create a volume on demand with mount options", func() {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
@@ -277,6 +277,38 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
+	ginkgo.It("should create a NFSv3 volume on demand with mount options [nfs]", func() {
+		if isAzureStackCloud {
+			ginkgo.Skip("test case is not available for Azure Stack")
+		}
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"nconnect=16",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver: testDriver,
+			Pods:      pods,
+			StorageClassParameters: map[string]string{
+				"skuName":  "Premium_LRS",
+				"protocol": "nfs",
+			},
+		}
+		test.Run(cs, ns)
+	})
+
 	ginkgo.It("should create a volume on demand (Bring Your Own Key)", func() {
 		// get storage account secret name
 		err := os.Chdir("../..")
@@ -325,7 +357,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	ginkgo.It("should create a volume on demand and resize it [kubernetes.io/blob-csi] [blob.csi.azure.com]", func() {
+	ginkgo.It("should create a volume on demand and resize it [blob.csi.azure.com]", func() {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",

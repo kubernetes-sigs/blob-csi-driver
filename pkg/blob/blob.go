@@ -106,6 +106,8 @@ type Driver struct {
 	// A map storing all volumes with ongoing operations so that additional operations
 	// for that same volume (as defined by VolumeID) return an Aborted error
 	volumeLocks *volumeLocks
+	// only for nfs feature
+	subnetLockMap *util.LockMap
 }
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
@@ -116,6 +118,7 @@ func NewDriver(nodeID, blobfuseProxyEndpoint string, enableBlobfuseProxy bool, b
 	driver.Version = driverVersion
 	driver.NodeID = nodeID
 	driver.volLockMap = util.NewLockMap()
+	driver.subnetLockMap = util.NewLockMap()
 	driver.volumeLocks = newVolumeLocks()
 	driver.blobfuseProxyEndpoint = blobfuseProxyEndpoint
 	driver.enableBlobfuseProxy = enableBlobfuseProxy

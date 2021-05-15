@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
+	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 	"sigs.k8s.io/cloud-provider-azure/pkg/retry"
@@ -47,6 +48,7 @@ func NewFakeDriver() *Driver {
 	driver := NewDriver(fakeNodeID, "", false, 5, false)
 	driver.Name = fakeDriverName
 	driver.Version = vendorVersion
+	driver.subnetLockMap = util.NewLockMap()
 	return driver
 }
 
