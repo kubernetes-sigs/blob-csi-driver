@@ -144,28 +144,6 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "storageacount empty while nfs",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
-				mp := make(map[string]string)
-				mp["protocol"] = "nfs"
-				req := &csi.CreateVolumeRequest{
-					Name:               "unit-test",
-					VolumeCapabilities: stdVolumeCapabilities,
-					Parameters:         mp,
-				}
-				d.Cap = []*csi.ControllerServiceCapability{
-					controllerServiceCapability,
-				}
-				_, err := d.CreateVolume(context.Background(), req)
-				expectedErr := status.Errorf(codes.InvalidArgument, "storage account must be specified when provisioning nfs file share")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
-		{
 			name: "tags error",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()

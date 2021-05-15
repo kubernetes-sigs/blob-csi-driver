@@ -26,6 +26,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -111,16 +112,21 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	enableHTTPSTrafficOnly := true
+	accountKind := string(storage.KindStorageV2)
+	var vnetResourceIDs []string
+	var isHnsEnabled, enableNfsV3 *bool
 	if protocol == nfs {
-		if account == "" {
-			return nil, status.Errorf(codes.InvalidArgument, "storage account must be specified when provisioning nfs file share")
-		}
 		enableHTTPSTrafficOnly = false
+		isHnsEnabled = to.BoolPtr(true)
+		enableNfsV3 = to.BoolPtr(true)
+		// set VirtualNetworkResourceIDs for storage account firewall setting
+		vnetResourceID := d.getSubnetResourceID()
+		klog.V(2).Infof("set vnetResourceID(%s) for NFS protocol", vnetResourceID)
+		vnetResourceIDs = []string{vnetResourceID}
 		// NFS protocol does not need account key
 		storeAccountKey = storeAccountKeyFalse
 	}
 
-	accountKind := string(storage.KindStorageV2)
 	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
 		accountKind = string(storage.KindBlockBlobStorage)
 	}
@@ -137,13 +143,16 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	accountOptions := &azure.AccountOptions{
-		Name:                   account,
-		Type:                   storageAccountType,
-		Kind:                   accountKind,
-		ResourceGroup:          resourceGroup,
-		Location:               location,
-		EnableHTTPSTrafficOnly: enableHTTPSTrafficOnly,
-		Tags:                   tags,
+		Name:                      account,
+		Type:                      storageAccountType,
+		Kind:                      accountKind,
+		ResourceGroup:             resourceGroup,
+		Location:                  location,
+		EnableHTTPSTrafficOnly:    enableHTTPSTrafficOnly,
+		VirtualNetworkResourceIDs: vnetResourceIDs,
+		Tags:                      tags,
+		IsHnsEnabled:              isHnsEnabled,
+		EnableNfsV3:               enableNfsV3,
 	}
 
 	var accountKey string
