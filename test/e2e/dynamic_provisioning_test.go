@@ -278,6 +278,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 	})
 
 	ginkgo.It("should create a NFSv3 volume on demand with mount options [nfs]", func() {
+		if isAzureStackCloud {
+			ginkgo.Skip("test case is not available for Azure Stack")
+		}
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",

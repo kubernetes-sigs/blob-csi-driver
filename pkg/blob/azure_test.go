@@ -24,10 +24,16 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2020-08-01/network"
+	"github.com/golang/mock/gomock"
+
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
 
-	azure2 "sigs.k8s.io/cloud-provider-azure/pkg/provider"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/subnetclient/mocksubnetclient"
+	azureprovider "sigs.k8s.io/cloud-provider-azure/pkg/provider"
+
+	"sigs.k8s.io/cloud-provider-azure/pkg/retry"
 )
 
 // TestGetCloudProvider tests the func getCloudProvider().
@@ -160,7 +166,7 @@ func TestGetServicePrincipalToken(t *testing.T) {
 	}
 	resource := "unit-test"
 	d := NewFakeDriver()
-	d.cloud = &azure2.Cloud{}
+	d.cloud = &azureprovider.Cloud{}
 	_, err := d.getServicePrincipalToken(env, resource)
 	expectedErr := fmt.Errorf("parameter 'clientID' cannot be empty")
 	if !reflect.DeepEqual(expectedErr, err) {
@@ -178,7 +184,7 @@ func TestGetKeyvaultToken(t *testing.T) {
 		KeyVaultEndpoint:        "unit-test",
 	}
 	d := NewFakeDriver()
-	d.cloud = &azure2.Cloud{}
+	d.cloud = &azureprovider.Cloud{}
 	d.cloud.Environment = env
 	_, err := d.getKeyvaultToken()
 	expectedErr := fmt.Errorf("parameter 'clientID' cannot be empty")
@@ -198,7 +204,7 @@ func TestInitializeKvClient(t *testing.T) {
 		KeyVaultEndpoint:        "unit-test",
 	}
 	d := NewFakeDriver()
-	d.cloud = &azure2.Cloud{}
+	d.cloud = &azureprovider.Cloud{}
 	d.cloud.Environment = env
 	_, err := d.initializeKvClient()
 	expectedErr := fmt.Errorf("parameter 'clientID' cannot be empty")
@@ -217,7 +223,7 @@ func TestGetKeyVaultSecretContent(t *testing.T) {
 		KeyVaultEndpoint:        "unit-test",
 	}
 	d := NewFakeDriver()
-	d.cloud = &azure2.Cloud{}
+	d.cloud = &azureprovider.Cloud{}
 	d.cloud.Environment = env
 	valueURL := "unit-test"
 	secretName := "unit-test"
@@ -244,4 +250,124 @@ func createTestFile(path string) error {
 	defer f.Close()
 
 	return nil
+}
+
+func TestUpdateSubnetServiceEndpoints(t *testing.T) {
+	d := NewFakeDriver()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockSubnetClient := mocksubnetclient.NewMockInterface(ctrl)
+
+	config := azureprovider.Config{
+		ResourceGroup: "rg",
+		Location:      "loc",
+		VnetName:      "fake-vnet",
+		SubnetName:    "fake-subnet",
+	}
+
+	d.cloud = &azureprovider.Cloud{
+		SubnetsClient: mockSubnetClient,
+		Config:        config,
+	}
+	ctx := context.TODO()
+
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "[fail] no subnet",
+			testFunc: func(t *testing.T) {
+				retErr := retry.NewError(false, fmt.Errorf("the subnet does not exist"))
+				mockSubnetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(network.Subnet{}, retErr).Times(1)
+				expectedErr := fmt.Errorf("failed to get the subnet %s under vnet %s: %v", config.SubnetName, config.VnetName, retErr)
+				err := d.updateSubnetServiceEndpoints(ctx)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "[success] subnetPropertiesFormat is nil",
+			testFunc: func(t *testing.T) {
+				mockSubnetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(network.Subnet{}, nil).Times(1)
+				mockSubnetClient.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+				err := d.updateSubnetServiceEndpoints(ctx)
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "[success] ServiceEndpoints is nil",
+			testFunc: func(t *testing.T) {
+				fakeSubnet := network.Subnet{
+					SubnetPropertiesFormat: &network.SubnetPropertiesFormat{},
+				}
+
+				mockSubnetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeSubnet, nil).Times(1)
+				mockSubnetClient.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+				err := d.updateSubnetServiceEndpoints(ctx)
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "[success] storageService does not exists",
+			testFunc: func(t *testing.T) {
+				fakeSubnet := network.Subnet{
+					SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
+						ServiceEndpoints: &[]network.ServiceEndpointPropertiesFormat{},
+					},
+				}
+
+				mockSubnetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeSubnet, nil).Times(1)
+				mockSubnetClient.EXPECT().CreateOrUpdate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).Times(1)
+
+				err := d.updateSubnetServiceEndpoints(ctx)
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "[success] storageService already exists",
+			testFunc: func(t *testing.T) {
+				fakeSubnet := network.Subnet{
+					SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
+						ServiceEndpoints: &[]network.ServiceEndpointPropertiesFormat{
+							{
+								Service: &storageService,
+							},
+						},
+					},
+				}
+
+				mockSubnetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeSubnet, nil).Times(1)
+
+				err := d.updateSubnetServiceEndpoints(ctx)
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "[fail] SubnetsClient is nil",
+			testFunc: func(t *testing.T) {
+				d.cloud.SubnetsClient = nil
+				expectedErr := fmt.Errorf("SubnetsClient is nil")
+				err := d.updateSubnetServiceEndpoints(ctx)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
 }
