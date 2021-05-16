@@ -5,6 +5,5 @@ metadata:
   name: blob-nfs
 provisioner: blob.csi.azure.com
 parameters:
-  storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
   protocol: nfs
 volumeBindingMode: Immediate
