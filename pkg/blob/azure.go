@@ -167,6 +167,10 @@ func (d *Driver) getServicePrincipalToken(env azure.Environment, resource string
 }
 
 func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context) error {
+	if d.cloud.SubnetsClient == nil {
+		return fmt.Errorf("SubnetsClient is nil")
+	}
+
 	resourceGroup := d.cloud.ResourceGroup
 	if len(d.cloud.VnetResourceGroup) > 0 {
 		resourceGroup = d.cloud.VnetResourceGroup
@@ -175,9 +179,11 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context) error {
 	vnetName := d.cloud.VnetName
 	subnetName := d.cloud.SubnetName
 
-	if d.cloud.SubnetsClient == nil {
-		return fmt.Errorf("SubnetsClient is nil")
-	}
+	klog.V(2).Infof("updateSubnetServiceEndpoints on VnetName: %s, SubnetName: %s", vnetName, subnetName)
+
+	lockKey := resourceGroup + vnetName + subnetName
+	d.subnetLockMap.LockEntry(lockKey)
+	defer d.subnetLockMap.UnlockEntry(lockKey)
 
 	subnet, err := d.cloud.SubnetsClient.Get(ctx, resourceGroup, vnetName, subnetName, "")
 	if err != nil {
@@ -208,15 +214,11 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context) error {
 		serviceEndpoints = append(serviceEndpoints, storageServiceEndpoint)
 		subnet.SubnetPropertiesFormat.ServiceEndpoints = &serviceEndpoints
 
-		lockKey := resourceGroup + vnetName + subnetName
-		d.subnetLockMap.LockEntry(lockKey)
-		defer d.subnetLockMap.UnlockEntry(lockKey)
-
 		err = d.cloud.SubnetsClient.CreateOrUpdate(context.Background(), resourceGroup, vnetName, subnetName, subnet)
 		if err != nil {
 			return fmt.Errorf("failed to update the subnet %s under vnet %s: %v", subnetName, vnetName, err)
 		}
-		klog.V(4).Infof("serviceEndpoint(%s) is appended in subnet(%s)", storageService, subnetName)
+		klog.V(2).Infof("serviceEndpoint(%s) is appended in subnet(%s)", storageService, subnetName)
 	}
 
 	return nil
