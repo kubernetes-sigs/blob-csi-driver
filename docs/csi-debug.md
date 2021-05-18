@@ -50,6 +50,9 @@ blobfuse 1.2.4
 mount | grep blobfuse | uniq
 ```
 
+ - Troubleshooting blobfuse mount failure on the agent node
+   - collect logs `/var/log/message` if there is blobfuse mount failure, refer to [blobfuse driver troubleshooting](https://github.com/Azure/azure-storage-fuse#logging)
+
 ### troubleshooting connection failure on agent node
  - blobfuse
 
