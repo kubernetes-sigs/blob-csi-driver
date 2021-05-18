@@ -12,15 +12,20 @@ helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/
 helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system
 ```
 
+### install a specific version
+```console
+helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.1.0
+```
+
 ## install on Azure Stack
 ```console
 helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set cloud=AzureStackCloud
 ```
 
-### install a specific version
+### install on RedHat/CentOS
 ```console
-helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.1.0
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set linux.distro=fedora
 ```
 
 ### search for all available chart versions
