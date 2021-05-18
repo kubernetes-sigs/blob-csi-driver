@@ -12,15 +12,20 @@ helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/
 helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system
 ```
 
+### install a specific version
+```console
+helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.1.0
+```
+
 ## install on Azure Stack
 ```console
 helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set cloud=AzureStackCloud
 ```
 
-### install a specific version
+### install on RedHat/CentOS
 ```console
-helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.1.0
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set linux.distro=fedora
 ```
 
 ### search for all available chart versions
@@ -99,7 +104,8 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.affinity`                                       | node pod affinity                                     | {}                                                             |
 | `node.nodeSelector`                                   | node pod node selector                                | {}                                                             |
 | `node.tolerations`                                    | node pod tolerations                                  | []                                                             |
-| `kubelet.linuxPath`                                   | configure the kubelet path for Linux node             | `/var/lib/kubelet`                                             |
+| `linux.kubelet`                                       | configure kubelet directory path on Linux agent node node                  | `/var/lib/kubelet`                                                |
+| `linux.distro`                                        | configure ssl certificates for different Linux distribution(available values: `debian`, `fedora`)             | `debian`
 | `cloud`                                               | the cloud environment the driver is running on        | AzurePublicCloud                                               |
 | `podAnnotations`                                      | collection of annotations to add to all the pods      | {}                                                             |
 | `podLabels`                                           | collection of labels to add to all the pods           | {}                                                             |
