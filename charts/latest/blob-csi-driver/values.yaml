@@ -101,8 +101,10 @@ node:
   tolerations: []
   livenessProbe:
     healthPort: 29633
-kubelet:
-  linuxPath: /var/lib/kubelet
+
+linux:
+  kubelet: /var/lib/kubelet
+  distro: debian
 
 cloud: AzurePublicCloud
 
