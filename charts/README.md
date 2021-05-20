@@ -51,10 +51,10 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | v2.1.0                                                         |
 | `image.csiProvisioner.pullPolicy`                     | csi-provisioner image pull policy                     | IfNotPresent                                                   |
 | `image.livenessProbe.repository`                      | liveness-probe docker image                           | mcr.microsoft.com/oss/kubernetes-csi/livenessprobe             |
-| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | v2.2.0                                                         |
+| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | v2.3.0                                                         |
 | `image.livenessProbe.pullPolicy`                      | liveness-probe image pull policy                      | IfNotPresent                                                   |
 | `image.nodeDriverRegistrar.repository`                | csi-node-driver-registrar docker image                | mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar |
-| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | v2.0.1                                                         |
+| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | v2.2.0                                                       |
 | `image.nodeDriverRegistrar.pullPolicy`                | csi-node-driver-registrar image pull policy           | IfNotPresent                                                   |
 | `image.csiResizer.repository`                         | csi-resizer docker image                              | mcr.microsoft.com/oss/kubernetes-csi/csi-resizer               |
 | `image.csiResizer.tag`                                | csi-resizer docker image tag                          | v1.1.0                                                         |
