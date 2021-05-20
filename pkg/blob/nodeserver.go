@@ -72,11 +72,6 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
 	}
 
-	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
-		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, volumeID)
-	}
-	defer d.volumeLocks.Release(volumeID)
-
 	mountOptions := []string{"bind"}
 	if req.GetReadonly() {
 		mountOptions = append(mountOptions, "ro")
@@ -154,11 +149,6 @@ func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublish
 	}
 	targetPath := req.GetTargetPath()
 	volumeID := req.GetVolumeId()
-
-	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
-		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, volumeID)
-	}
-	defer d.volumeLocks.Release(volumeID)
 
 	klog.V(2).Infof("NodeUnpublishVolume: unmounting volume %s on %s", volumeID, targetPath)
 	err := mount.CleanupMountPoint(targetPath, d.mounter, false)

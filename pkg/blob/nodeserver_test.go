@@ -183,21 +183,6 @@ func TestNodePublishVolume(t *testing.T) {
 			expectedErr: status.Error(codes.InvalidArgument, "Target path not provided"),
 		},
 		{
-			desc: "[Error] Volume operation in progress",
-			setup: func(d *Driver) {
-				d.volumeLocks.TryAcquire("vol_1")
-			},
-			req: csi.NodePublishVolumeRequest{VolumeCapability: &csi.VolumeCapability{AccessMode: &volumeCap},
-				VolumeId:          "vol_1",
-				TargetPath:        targetTest,
-				StagingTargetPath: sourceTest,
-				Readonly:          true},
-			expectedErr: status.Error(codes.Aborted, fmt.Sprintf(volumeOperationAlreadyExistsFmt, "vol_1")),
-			cleanup: func(d *Driver) {
-				d.volumeLocks.Release("vol_1")
-			},
-		},
-		{
 			desc: "Valid request read only",
 			req: csi.NodePublishVolumeRequest{VolumeCapability: &csi.VolumeCapability{AccessMode: &volumeCap},
 				VolumeId:          "vol_1",
@@ -278,17 +263,6 @@ func TestNodeUnpublishVolume(t *testing.T) {
 			desc:        "Target missing",
 			req:         csi.NodeUnpublishVolumeRequest{VolumeId: "vol_1"},
 			expectedErr: status.Error(codes.InvalidArgument, "Target path missing in request"),
-		},
-		{
-			desc: "[Error] Volume operation in progress",
-			setup: func(d *Driver) {
-				d.volumeLocks.TryAcquire("vol_1")
-			},
-			req:         csi.NodeUnpublishVolumeRequest{TargetPath: targetTest, VolumeId: "vol_1"},
-			expectedErr: status.Error(codes.Aborted, fmt.Sprintf(volumeOperationAlreadyExistsFmt, "vol_1")),
-			cleanup: func(d *Driver) {
-				d.volumeLocks.Release("vol_1")
-			},
 		},
 		{
 			desc:        "Valid request",
