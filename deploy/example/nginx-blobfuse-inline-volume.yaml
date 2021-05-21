@@ -1,0 +1,26 @@
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-blobfuse-inline-volume
+spec:
+  nodeSelector:
+    "kubernetes.io/os": linux
+  containers:
+    - image: mcr.microsoft.com/oss/nginx/nginx:1.19.5
+      name: nginx-blobfuse
+      command:
+        - "/bin/bash"
+        - "-c"
+        - set -euo pipefail; while true; do echo $(date) >> /mnt/blobfuse/outfile; sleep 1; done
+      volumeMounts:
+        - name: persistent-storage
+          mountPath: "/mnt/blobfuse"
+  volumes:
+    - name: persistent-storage
+      csi:
+        driver: blob.csi.azure.com
+        volumeAttributes:
+          containerName: EXISTING_CONTAINER_NAME
+          secretName: azure-secret
+          secretNamespace: default  # optional, if it's empty, use pod.Namespace by default

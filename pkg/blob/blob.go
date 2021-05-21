@@ -57,6 +57,7 @@ const (
 	skuNameField               = "skuname"
 	resourceGroupField         = "resourcegroup"
 	locationField              = "location"
+	secretNameField            = "secretname"
 	secretNamespaceField       = "secretnamespace"
 	containerNameField         = "containername"
 	storeAccountKeyField       = "storeaccountkey"
@@ -236,6 +237,8 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	var (
 		accountKey            string
 		accountSasToken       string
+		secretName            string
+		secretNamespace       string
 		keyVaultURL           string
 		keyVaultSecretName    string
 		keyVaultSecretVersion string
@@ -256,6 +259,10 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			accountName = v
 		case storageAccountNameField: // for compatibility
 			accountName = v
+		case secretNameField:
+			secretName = v
+		case secretNamespaceField:
+			secretNamespace = v
 		case "azurestorageauthtype":
 			authEnv = append(authEnv, "AZURE_STORAGE_AUTH_TYPE="+v)
 		case "azurestorageidentityclientid":
@@ -297,7 +304,8 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	} else {
 		if len(secrets) == 0 {
 			// read from k8s secret first
-			accountKey, err = d.GetStorageAccesskeyFromSecret(accountName, attrib[secretNamespaceField])
+			var name string
+			name, accountKey, err = d.GetStorageAccountFromSecret(secretName, secretNamespace)
 			if err != nil {
 				klog.V(2).Infof("could not get account(%s) key from secret, error: %v, use cluster identity to get account key instead", accountName, err)
 				if rgName == "" {
@@ -307,6 +315,9 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 				if err != nil {
 					return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, rgName, err)
 				}
+			}
+			if name != "" {
+				accountName = name
 			}
 		} else {
 			for k, v := range secrets {
@@ -516,7 +527,7 @@ func (d *Driver) GetStorageAccesskey(accountOptions *azure.AccountOptions, secre
 	}
 
 	// read from k8s secret first
-	accountKey, err := d.GetStorageAccesskeyFromSecret(accountOptions.Name, secretNamespace)
+	_, accountKey, err := d.GetStorageAccountFromSecret(accountOptions.Name, secretNamespace)
 	if err != nil {
 		klog.V(2).Infof("could not get account(%s) key from secret, error: %v, use cluster identity to get account key instead", accountOptions.Name, err)
 		accountKey, err = d.cloud.GetStorageAccesskey(accountOptions.Name, accountOptions.ResourceGroup)
@@ -524,22 +535,19 @@ func (d *Driver) GetStorageAccesskey(accountOptions *azure.AccountOptions, secre
 	return accountOptions.Name, accountKey, err
 }
 
-// GetStorageAccesskeyFromSecret get storage account key from k8s secret
-func (d *Driver) GetStorageAccesskeyFromSecret(accountName, secretNamespace string) (string, error) {
+// GetStorageAccountFromSecret get storage account key from k8s secret
+// return <accountName, accountKey, error>
+func (d *Driver) GetStorageAccountFromSecret(secretName, secretNamespace string) (string, string, error) {
 	if d.cloud.KubeClient == nil {
-		return "", fmt.Errorf("could not get account(%s) key from secret: KubeClient is nil", accountName)
+		return "", "", fmt.Errorf("could not get account key from secret(%s): KubeClient is nil", secretName)
 	}
 
-	secretName := fmt.Sprintf(secretNameTemplate, accountName)
-	if secretNamespace == "" {
-		secretNamespace = defaultSecretNamespace
-	}
 	secret, err := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("could not get secret(%v): %v", secretName, err)
+		return "", "", fmt.Errorf("could not get secret(%v): %v", secretName, err)
 	}
 
-	return string(secret.Data[defaultSecretAccountKey][:]), nil
+	return string(secret.Data[defaultSecretAccountName][:]), string(secret.Data[defaultSecretAccountKey][:]), nil
 }
 
 // getSubnetResourceID get default subnet resource ID from cloud provider config

@@ -54,7 +54,8 @@ func NewMountClient(cc *grpc.ClientConn) *MountClient {
 
 // NodePublishVolume mount the volume from staging to target path
 func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	if req.GetVolumeCapability() == nil {
+	volCap := req.GetVolumeCapability()
+	if volCap == nil {
 		return nil, status.Error(codes.InvalidArgument, "Volume capability missing in request")
 	}
 	volumeID := req.GetVolumeId()
@@ -62,14 +63,35 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
 	}
 
-	source := req.GetStagingTargetPath()
-	if len(source) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Staging target not provided")
-	}
-
 	target := req.GetTargetPath()
 	if len(target) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
+	}
+
+	context := req.GetVolumeContext()
+	if context != nil && context["csi.storage.k8s.io/ephemeral"] == "true" {
+		// if secretNamespace is not set, set same namespace as pod
+		secretNamespace := context["csi.storage.k8s.io/pod.namespace"]
+		for k, v := range context {
+			switch strings.ToLower(k) {
+			case secretNamespaceField:
+				secretNamespace = v
+			}
+		}
+		context[secretNamespaceField] = secretNamespace
+		klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) mount on %s, VolumeContext: %v", volumeID, target, context)
+		_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
+			StagingTargetPath: target,
+			VolumeContext:     context,
+			VolumeCapability:  volCap,
+			VolumeId:          volumeID,
+		})
+		return &csi.NodePublishVolumeResponse{}, err
+	}
+
+	source := req.GetStagingTargetPath()
+	if len(source) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Staging target not provided")
 	}
 
 	mountOptions := []string{"bind"}
