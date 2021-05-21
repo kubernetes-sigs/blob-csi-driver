@@ -22,6 +22,16 @@ tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/mana
 
 Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check [here](https://github.com/Azure/Azure-storage-fuse#mount-options) for more mountoptions.
 
+ - account tags format created by dynamic provisioning
+```
+created-by: azure
+```
+
+ - file share name format created by dynamic provisioning(example)
+```
+pvc-92a4d7f2-f23b-4904-bad4-2cbfcff6e388
+```
+
 ### Static Provisioning(bring your own storage container)
   > [blobfuse example](../deploy/example/pv-blobfuse-csi.yaml)
 
