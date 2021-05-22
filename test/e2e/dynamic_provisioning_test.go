@@ -17,6 +17,7 @@ limitations under the License.
 package e2e
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -277,38 +278,6 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	ginkgo.It("should create a NFSv3 volume on demand with mount options [nfs]", func() {
-		if isAzureStackCloud {
-			ginkgo.Skip("test case is not available for Azure Stack")
-		}
-		pods := []testsuites.PodDetails{
-			{
-				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
-				Volumes: []testsuites.VolumeDetails{
-					{
-						ClaimSize: "10Gi",
-						MountOptions: []string{
-							"nconnect=16",
-						},
-						VolumeMount: testsuites.VolumeMountDetails{
-							NameGenerate:      "test-volume-",
-							MountPathGenerate: "/mnt/test-",
-						},
-					},
-				},
-			},
-		}
-		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
-			CSIDriver: testDriver,
-			Pods:      pods,
-			StorageClassParameters: map[string]string{
-				"skuName":  "Premium_LRS",
-				"protocol": "nfs",
-			},
-		}
-		test.Run(cs, ns)
-	})
-
 	ginkgo.It("should create a volume on demand (Bring Your Own Key)", func() {
 		// get storage account secret name
 		err := os.Chdir("../..")
@@ -376,6 +345,101 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			CSIDriver:              testDriver,
 			Pods:                   pods,
 			StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("should create an CSI inline volume [blob.csi.azure.com]", func() {
+		// get storage account secret name
+		err := os.Chdir("../..")
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		defer func() {
+			err := os.Chdir("test/e2e")
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		}()
+
+		getSecretNameScript := "test/utils/get_storage_account_secret_name.sh"
+		log.Printf("run script: %s\n", getSecretNameScript)
+
+		cmd := exec.Command("bash", getSecretNameScript)
+		output, err := cmd.CombinedOutput()
+		log.Printf("got output: %v, error: %v\n", string(output), err)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+		secretName := strings.TrimSuffix(string(output), "\n")
+		log.Printf("got storage account secret name: %v\n", secretName)
+		segments := strings.Split(secretName, "-")
+		if len(segments) != 5 {
+			ginkgo.Fail(fmt.Sprintf("%s have %d elements, expected: %d ", secretName, len(segments), 5))
+		}
+		accountName := segments[3]
+
+		containerName := "csi-inline-blobfuse-volume"
+		req := makeCreateVolumeReq(containerName)
+		req.Parameters["storageAccount"] = accountName
+		resp, err := blobDriver.CreateVolume(context.Background(), req)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
+		}
+		volumeID := resp.Volume.VolumeId
+		ginkgo.By(fmt.Sprintf("Successfully provisioned Blobfuse volume: %q\n", volumeID))
+
+		pods := []testsuites.PodDetails{
+			{
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "100Gi",
+						MountOptions: []string{
+							"-o allow_other",
+							"--file-cache-timeout-in-seconds=120",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+
+		test := testsuites.DynamicallyProvisionedInlineVolumeTest{
+			CSIDriver:     testDriver,
+			Pods:          pods,
+			SecretName:    secretName,
+			ContainerName: containerName,
+			ReadOnly:      false,
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("should create a NFSv3 volume on demand with mount options [nfs]", func() {
+		if isAzureStackCloud {
+			ginkgo.Skip("test case is not available for Azure Stack")
+		}
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"nconnect=16",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver: testDriver,
+			Pods:      pods,
+			StorageClassParameters: map[string]string{
+				"skuName":  "Premium_LRS",
+				"protocol": "nfs",
+			},
 		}
 		test.Run(cs, ns)
 	})
