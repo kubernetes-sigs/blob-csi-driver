@@ -79,7 +79,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 	})
 
 	ginkgo.It("[env] should use a pre-provisioned volume and mount it as readOnly in a pod", func() {
-		req := makeCreateVolumeReq("pre-provisioned-readOnly")
+		req := makeCreateVolumeReq("pre-provisioned-readonly")
 		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
@@ -113,7 +113,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 	})
 
 	ginkgo.It(fmt.Sprintf("[env] should use a pre-provisioned volume and retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
-		req := makeCreateVolumeReq("pre-provisioned-retain-reclaimPolicy")
+		req := makeCreateVolumeReq("pre-provisioned-retain-reclaimpolicy")
 		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
@@ -147,7 +147,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			if err != nil {
 				ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
 			}
-			volumeID := resp.Volume.VolumeId
+			volumeID = resp.Volume.VolumeId
 			ginkgo.By(fmt.Sprintf("Successfully provisioned blob volume: %q\n", volumeID))
 
 			pod := testsuites.PodDetails{
@@ -271,7 +271,7 @@ func makeCreateVolumeReq(volumeName string) *csi.CreateVolumeRequest {
 		},
 		Parameters: map[string]string{
 			"skuname":       "Standard_LRS",
-			"containerName": "test",
+			"containerName": volumeName,
 		},
 	}
 

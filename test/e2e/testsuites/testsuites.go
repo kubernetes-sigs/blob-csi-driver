@@ -24,6 +24,7 @@ import (
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -521,6 +522,31 @@ func (t *TestPod) SetupRawBlockVolume(pvc *v1.PersistentVolumeClaim, name, devic
 		VolumeSource: v1.VolumeSource{
 			PersistentVolumeClaim: &v1.PersistentVolumeClaimVolumeSource{
 				ClaimName: pvc.Name,
+			},
+		},
+	}
+	t.pod.Spec.Volumes = append(t.pod.Spec.Volumes, volume)
+}
+
+func (t *TestPod) SetupInlineVolume(name, mountPath, secretName, containerName string, readOnly bool) {
+	volumeMount := v1.VolumeMount{
+		Name:      name,
+		MountPath: mountPath,
+		ReadOnly:  readOnly,
+	}
+	t.pod.Spec.Containers[0].VolumeMounts = append(t.pod.Spec.Containers[0].VolumeMounts, volumeMount)
+
+	volume := v1.Volume{
+		Name: name,
+		VolumeSource: v1.VolumeSource{
+			CSI: &v1.CSIVolumeSource{
+				Driver: blob.DriverName,
+				VolumeAttributes: map[string]string{
+					"secretName":      secretName,
+					"secretNamespace": "default",
+					"containerName":   containerName,
+				},
+				ReadOnly: to.BoolPtr(readOnly),
 			},
 		},
 	}

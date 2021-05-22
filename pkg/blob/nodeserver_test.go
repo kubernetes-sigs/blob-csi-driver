@@ -172,7 +172,8 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			desc: "Stage path missing",
 			req: csi.NodePublishVolumeRequest{VolumeCapability: &csi.VolumeCapability{AccessMode: &volumeCap},
-				VolumeId: "vol_1"},
+				VolumeId:   "vol_1",
+				TargetPath: sourceTest},
 			expectedErr: status.Error(codes.InvalidArgument, "Staging target not provided"),
 		},
 		{
