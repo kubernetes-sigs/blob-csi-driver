@@ -78,9 +78,12 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
-			CSIDriver:              testDriver,
-			Pods:                   pods,
-			StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
+			CSIDriver: testDriver,
+			Pods:      pods,
+			StorageClassParameters: map[string]string{
+				"skuName":         "Standard_LRS",
+				"secretNamespace": "default",
+			},
 		}
 		test.Run(cs, ns)
 	})
@@ -375,7 +378,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		accountName := segments[3]
 
 		containerName := "csi-inline-blobfuse-volume"
-		req := makeCreateVolumeReq(containerName)
+		req := makeCreateVolumeReq(containerName, ns.Name)
 		req.Parameters["storageAccount"] = accountName
 		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
