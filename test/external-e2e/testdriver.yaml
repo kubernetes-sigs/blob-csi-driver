@@ -3,7 +3,7 @@
 
 ShortName: blobfuse
 StorageClass:
-  FromFile: /tmp/csi-blob/storageclass.yaml
+  FromFile: /tmp/csi/storageclass.yaml
 DriverInfo:
   Name: blob.csi.azure.com
   Capabilities:
@@ -11,3 +11,9 @@ DriverInfo:
     exec: true
     multipods: true
     RWX: true
+    fsGroup: false
+    topology: false
+    controllerExpansion: true
+    nodeExpansion: true
+    volumeLimits: false
+    snapshotDataSource: false
