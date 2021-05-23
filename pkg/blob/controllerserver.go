@@ -91,6 +91,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			secretNamespace = v
 		case storeAccountKeyField:
 			storeAccountKey = v
+		case pvcNamespaceKey:
+			if secretNamespace == "" {
+				// respect `secretNamespace` field as first priority
+				secretNamespace = v
+			}
+		case pvcNameKey:
+			// no op
+		case pvNameKey:
+			// no op
 		case serverNameField:
 			// no op, only used in NodeStageVolume
 		case storageEndpointSuffixField:
@@ -228,6 +237,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	klog.V(2).Infof("create container %s on storage account %s successfully", validContainerName, accountName)
 
 	isOperationSucceeded = true
+	// reset secretNamespace field in VolumeContext
+	parameters[secretNamespaceField] = secretNamespace
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      volumeID,

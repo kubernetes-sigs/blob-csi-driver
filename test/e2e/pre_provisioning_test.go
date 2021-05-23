@@ -79,7 +79,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 	})
 
 	ginkgo.It("[env] should use a pre-provisioned volume and mount it as readOnly in a pod", func() {
-		req := makeCreateVolumeReq("pre-provisioned-readonly")
+		req := makeCreateVolumeReq("pre-provisioned-readonly", ns.Name)
 		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
@@ -113,7 +113,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 	})
 
 	ginkgo.It(fmt.Sprintf("[env] should use a pre-provisioned volume and retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
-		req := makeCreateVolumeReq("pre-provisioned-retain-reclaimpolicy")
+		req := makeCreateVolumeReq("pre-provisioned-retain-reclaimpolicy", ns.Name)
 		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
@@ -142,7 +142,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		pods := []testsuites.PodDetails{}
 		for i := 1; i <= 6; i++ {
-			req := makeCreateVolumeReq(fmt.Sprintf("pre-provisioned-multiple-pods%d", time.Now().UnixNano()))
+			req := makeCreateVolumeReq(fmt.Sprintf("pre-provisioned-multiple-pods%d", time.Now().UnixNano()), ns.Name)
 			resp, err := blobDriver.CreateVolume(context.Background(), req)
 			if err != nil {
 				ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
@@ -174,7 +174,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 	})
 
 	ginkgo.It("should use existing credentials in k8s cluster", func() {
-		req := makeCreateVolumeReq("pre-provisioned-existing-credentials")
+		req := makeCreateVolumeReq("pre-provisioned-existing-credentials", ns.Name)
 		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
@@ -212,7 +212,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 	})
 
 	ginkgo.It("should use provided credentials", func() {
-		req := makeCreateVolumeReq("pre-provisioned-provided-credentials")
+		req := makeCreateVolumeReq("pre-provisioned-provided-credentials", ns.Name)
 		resp, err := blobDriver.CreateVolume(context.Background(), req)
 		if err != nil {
 			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
@@ -252,7 +252,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 	})
 })
 
-func makeCreateVolumeReq(volumeName string) *csi.CreateVolumeRequest {
+func makeCreateVolumeReq(volumeName, secretNamespace string) *csi.CreateVolumeRequest {
 	req := &csi.CreateVolumeRequest{
 		Name: volumeName,
 		VolumeCapabilities: []*csi.VolumeCapability{
@@ -270,8 +270,9 @@ func makeCreateVolumeReq(volumeName string) *csi.CreateVolumeRequest {
 			LimitBytes:    defaultVolumeSizeBytes,
 		},
 		Parameters: map[string]string{
-			"skuname":       "Standard_LRS",
-			"containerName": volumeName,
+			"skuname":         "Standard_LRS",
+			"containerName":   volumeName,
+			"secretNamespace": secretNamespace,
 		},
 	}
 

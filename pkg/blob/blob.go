@@ -68,7 +68,6 @@ const (
 	storeAccountKeyFalse       = "false"
 	defaultSecretAccountName   = "azurestorageaccountname"
 	defaultSecretAccountKey    = "azurestorageaccountkey"
-	defaultSecretNamespace     = "default"
 	fuse                       = "fuse"
 	nfs                        = "nfs"
 
@@ -86,6 +85,10 @@ const (
 	containerMaxSize = 100 * util.TiB
 
 	subnetTemplate = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s"
+
+	pvcNameKey      = "csi.storage.k8s.io/pvc/name"
+	pvcNamespaceKey = "csi.storage.k8s.io/pvc/namespace"
+	pvNameKey       = "csi.storage.k8s.io/pv/name"
 )
 
 var (
@@ -495,13 +498,10 @@ func setAzureCredentials(kubeClient kubernetes.Interface, accountName, accountKe
 	if accountName == "" || accountKey == "" {
 		return "", fmt.Errorf("the account info is not enough, accountName(%v), accountKey(%v)", accountName, accountKey)
 	}
-	if secretNamespace == "" {
-		secretNamespace = defaultSecretNamespace
-	}
 	secretName := fmt.Sprintf(secretNameTemplate, accountName)
 	secret := &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: defaultSecretNamespace,
+			Namespace: secretNamespace,
 			Name:      secretName,
 		},
 		Data: map[string][]byte{
