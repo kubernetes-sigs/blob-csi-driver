@@ -24,12 +24,11 @@ install_ginkgo () {
 }
 
 setup_e2e_binaries() {
-    # download k8s external e2e binary for kubernetes v1.20
-    curl -sL https://storage.googleapis.com/kubernetes-release/release/v1.20.0/kubernetes-test-linux-amd64.tar.gz --output e2e-tests.tar.gz
+    # download k8s external e2e binary
+    curl -sL https://storage.googleapis.com/kubernetes-release/release/v1.21.0/kubernetes-test-linux-amd64.tar.gz --output e2e-tests.tar.gz
     tar -xvf e2e-tests.tar.gz && rm e2e-tests.tar.gz
 
-    # install the blob csi driver
-    mkdir -p /tmp/csi && cp deploy/example/storageclass-blobfuse.yaml /tmp/csi/storageclass.yaml
+    # install blob csi driver
     make e2e-bootstrap
     make create-metrics-svc
 }
@@ -43,6 +42,17 @@ install_ginkgo
 setup_e2e_binaries
 trap print_logs EXIT
 
+mkdir -p /tmp/csi
+
+echo "begin to run blobfuse tests ...."
+cp deploy/example/storageclass-blobfuse.yaml /tmp/csi/storageclass.yaml
+ginkgo -p --progress --v -focus='External.Storage.*blob.csi.azure.com' \
+       -skip='\[Disruptive\]|\[Slow\]|allow exec of files on the volume|unmount after the subpath directory is deleted' kubernetes/test/bin/e2e.test  -- \
+       -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver.yaml \
+       --kubeconfig=$KUBECONFIG
+
+echo "begin to run NFSv3 tests ...."
+cp deploy/example/storageclass-blob-nfs.yaml /tmp/csi/storageclass.yaml
 ginkgo -p --progress --v -focus='External.Storage.*blob.csi.azure.com' \
        -skip='\[Disruptive\]|\[Slow\]' kubernetes/test/bin/e2e.test  -- \
        -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver.yaml \
