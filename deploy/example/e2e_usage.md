@@ -29,13 +29,14 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
 
  - Execute `df -h` command in the container
 ```console
-# kubectl exec -it statefulset-blob-0 sh
-# df -h
+kubectl exec -it statefulset-blob-0 -- df -h
+```
+<pre>
 Filesystem      Size  Used Avail Use% Mounted on
 ...
 blobfuse         14G   41M   13G   1% /mnt/blob
 ...
-```
+</pre>
 
 ### Static Provisioning(use an existing storage account)
 #### Option#1: Use storage class
@@ -117,10 +118,27 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
 
  - Execute `df -h` command in the container
 ```console
-$ kubectl exec -it nginx-blob -- df -h
+kubectl exec -it nginx-blob -- df -h
+```
+<pre>
 Filesystem      Size  Used Avail Use% Mounted on
 ...
 blobfuse         14G   41M   13G   1% /mnt/blob
 ...
-```
+</pre>
+
 In the above example, there is a `/mnt/blob` directory mounted as `blobfuse` filesystem.
+
+#### Option#3: Inline volume
+ > only available from `v1.2.0`
+ - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
+```console
+kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
+```
+
+ - download `nginx-pod-azurefile-inline-volume.yaml` file and edit `containerName`, `secretName`, `secretNamespace`
+```console
+wget https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/nginx-blobfuse-inline-volume.yaml
+#edit nginx-blobfuse-inline-volume.yaml
+kubectl create -f nginx-blobfuse-inline-volume.yaml
+```
