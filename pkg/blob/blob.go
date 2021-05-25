@@ -291,6 +291,11 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		return accountName, containerName, authEnv, err
 	}
 
+	// backward compatibility, old CSI driver PV does not have secretNamespace field
+	if secretNamespace == "" {
+		secretNamespace = "default"
+	}
+
 	// 1. If keyVaultURL is not nil, preferentially use the key stored in key vault.
 	// 2. Then if secrets map is not nil, use the key stored in the secrets map.
 	// 3. Finally if both keyVaultURL and secrets map are nil, get the key from Azure.
