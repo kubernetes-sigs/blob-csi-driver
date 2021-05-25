@@ -1,10 +1,8 @@
 ## NFSv3 support
 [NFS 3.0 protocol support on Azure Blob storage](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support) is now in Preview. This service is best suited for large scale read-heavy sequential access workload where data will be ingested once and minimally modified further. E.g. large scale analytic data, backup and archive, NFS apps for media rendering, and genomic sequencing etc. It offers lowest total cost of ownership.
 
-#### Feature Status: Alpha
 #### Supported OS: Linux
-#### Supported CSI driver version: `v0.7.0`+
-> `v1.2.0`+ supports dynamic account creation
+ - dynamic account creation support is available from `v1.2.0`
 
 #### Prerequisite
  - [Register the NFS 3.0 protocol feature with your subscription](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to)
@@ -15,8 +13,7 @@ az provider register --namespace Microsoft.Storage
 ```
 
  - [Install CSI driver](../../../docs/install-csi-driver-master.md)
- - [Optional] Follow steps [here](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to) to create storage account that supports NFSv3 protocol
-   - specify `storageAccount` in below storage class `parameters`
+ - [Optional][Bring Your Own Storage Account] Follow steps [here](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to) to create storage account that supports NFSv3 protocol and then specify `storageAccount` in below storage class `parameters`
 
 #### How to use NFS feature
  - Create an Azure File storage class
@@ -47,8 +44,9 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
 
  - enter pod to check
 ```console
-$ exec -it statefulset-blob-0 bash
-# df -h
+kubectl exec -it statefulset-blob-0 -- df -h
+```
+<pre>
 Filesystem      Size  Used Avail Use% Mounted on
 ...
 /dev/sda1                                                                                 29G   11G   19G  37% /etc/hosts
@@ -57,4 +55,4 @@ accountname.blob.core.windows.net:/accountname/pvc-cce02240-5d13-4bcb-b9eb-f9c7e
 # ls -lt
 total 2
 -rw-r--r-- 1 root root 1120 Sep  3 06:52 outfile
-```
+</pre>
