@@ -69,8 +69,11 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	}
 
 	context := req.GetVolumeContext()
-	if context != nil && context["csi.storage.k8s.io/ephemeral"] == "true" {
+	if context != nil && context["csi.storage.k8s.io/ephemeral"] == trueValue {
 		context[secretNamespaceField] = context["csi.storage.k8s.io/pod.namespace"]
+		// only get storage account from secret
+		context[getAccountKeyFromSecretField] = trueValue
+		context[storageAccountField] = ""
 		klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) mount on %s, VolumeContext: %v", volumeID, target, context)
 		_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
 			StagingTargetPath: target,

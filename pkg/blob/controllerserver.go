@@ -65,7 +65,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if parameters == nil {
 		parameters = make(map[string]string)
 	}
-	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, storeAccountKey, secretNamespace string
+	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, secretNamespace string
+
+	// store account key to k8s secret by default
+	storeAccountKey := true
 
 	// Apply ProvisionerParameters (case-insensitive). We leave validation of
 	// the values to the cloud provider.
@@ -90,7 +93,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case secretNamespaceField:
 			secretNamespace = v
 		case storeAccountKeyField:
-			storeAccountKey = v
+			if v == falseValue {
+				storeAccountKey = false
+			}
 		case pvcNamespaceKey:
 			if secretNamespace == "" {
 				// respect `secretNamespace` field as first priority
@@ -136,7 +141,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			return nil, status.Errorf(codes.Internal, "update service endpoints failed with error: %v", err)
 		}
 		// NFS protocol does not need account key
-		storeAccountKey = storeAccountKeyFalse
+		storeAccountKey = false
 	}
 
 	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
@@ -218,7 +223,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, fmt.Errorf("failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
 	}
 
-	if storeAccountKey != storeAccountKeyFalse && len(req.GetSecrets()) == 0 {
+	if storeAccountKey && len(req.GetSecrets()) == 0 {
 		secretName, err := setAzureCredentials(d.cloud.KubeClient, accountName, accountKey, secretNamespace)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to store storage account key: %v", err)
