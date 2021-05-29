@@ -102,6 +102,9 @@ node:
   livenessProbe:
     healthPort: 29633
 
+feature:
+  enableFSGroupPolicy: false
+
 linux:
   kubelet: /var/lib/kubelet
   distro: debian
