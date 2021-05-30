@@ -6,6 +6,11 @@ From `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.az
 ## Prerequisites
  - [install Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
 
+### Tips
+ - `--set controller.runOnMaster=true` could make csi-azuredisk-controller only run on master node
+ - `--set feature.enableFSGroupPolicy=true` could enable `fsGroupPolicy` on a k8s 1.20+ cluster
+ - `--set controller.replicas=1` could set replica of csi-azuredisk-controller as `1`
+
 ## install latest version
 ```console
 helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
@@ -44,6 +49,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 
 | Parameter                                             | Description                                           | Default                                                        |
 | ----------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
+| `feature.enableFSGroupPolicy`                     | enable `fsGroupPolicy` on a k8s 1.20+ cluster           | `false`                      |
 | `image.blob.repository`                               | blob-csi-driver docker image                          | mcr.microsoft.com/k8s/csi/blob-csi                             |
 | `image.blob.tag`                                      | blob-csi-driver docker image tag                      | latest                                                         |
 | `image.blob.pullPolicy`                               | blob-csi-driver image pull policy                     | IfNotPresent                                                   |
