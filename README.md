@@ -20,9 +20,6 @@ This driver allows Kubernetes to access Azure Storage through one of following m
 |v1.1.0          |mcr.microsoft.com/k8s/csi/blob-csi:v1.1.0  | 1.17+                 | 1.3.7                     |
 |v1.0.0          |mcr.microsoft.com/k8s/csi/blob-csi:v1.0.0  | 1.16+                 | 1.3.6                     |
 
-#### Breaking change notice
-Since `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.azure.com`, volume created by `v0.6.0`(or prior version) could not be mounted by `v0.7.0` driver. If you have volumes created by `v0.6.0` version, just keep the driver running in your cluster.
-
 ### Driver parameters
 Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
 
@@ -49,7 +46,8 @@ This option does not depend on cloud provider config file, supports cross subscr
 ### Usage
  - [Basic usage](./deploy/example/e2e_usage.md)
  - [NFSv3](./deploy/example/nfs)
- 
+ - [fsGroupPolicy](./deploy/example/fsgroup)
+
 ### Troubleshooting
  - [CSI driver troubleshooting guide](./docs/csi-debug.md)
 
