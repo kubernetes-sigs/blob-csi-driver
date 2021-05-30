@@ -62,7 +62,7 @@ if [ ! -z ${EXTERNAL_E2E_TEST_NFS} ]; then
     echo "begin to run NFSv3 tests ...."
     cp deploy/example/storageclass-blob-nfs.yaml /tmp/csi/storageclass.yaml
     ginkgo -p --progress --v -focus='External.Storage.*blob.csi.azure.com' \
-        -skip='\[Disruptive\]|\[Slow\]' kubernetes/test/bin/e2e.test  -- \
+        -skip='\[Disruptive\]|\[Slow\]|pod created with an initial fsgroup, volume contents ownership changed in first pod, new pod with same fsgroup skips ownership changes to the volume contents' kubernetes/test/bin/e2e.test  -- \
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-nfs.yaml \
         --kubeconfig=$KUBECONFIG
 fi
