@@ -13,7 +13,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
  > This option does not depend on cloud provider config file, supports cross subscription and on-premise cluster scenario.
  - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
 ```console
-kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
+kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountkey="KEY" --type=Opaque
 ```
 
  - create storage class referencing `azure-secret`
