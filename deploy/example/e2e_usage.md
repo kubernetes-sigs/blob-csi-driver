@@ -130,10 +130,10 @@ blobfuse         14G   41M   13G   1% /mnt/blob
 In the above example, there is a `/mnt/blob` directory mounted as `blobfuse` filesystem.
 
 #### Option#3: Inline volume
- > only available from `v1.2.0`
+ > only available from `v1.2.0` for SMB protocol (NFS protocol is not supported)
  - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
 ```console
-kubectl create secret generic azure-secret --from-literal accountname=NAME --from-literal accountkey="KEY" --type=Opaque
+kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountkey="KEY" --type=Opaque
 ```
 
  - download `nginx-pod-azurefile-inline-volume.yaml` file and edit `containerName`, `secretName`, `secretNamespace`
