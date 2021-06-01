@@ -131,12 +131,13 @@ In the above example, there is a `/mnt/blob` directory mounted as `blobfuse` fil
 
 #### Option#3: Inline volume
  > only available from `v1.2.0` for SMB protocol (NFS protocol is not supported)
- - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
+ - Create `azure-secret` with existing storage account name and key in the same namespace as pod
+ > in below example, both secret and pod are in `default` namespace
 ```console
 kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountkey="KEY" --type=Opaque
 ```
 
- - download `nginx-pod-azurefile-inline-volume.yaml` file and edit `containerName`, `secretName`, `secretNamespace`
+ - download `nginx-pod-azurefile-inline-volume.yaml` file and edit `containerName`, `secretName`
 ```console
 wget https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/nginx-blobfuse-inline-volume.yaml
 #edit nginx-blobfuse-inline-volume.yaml
