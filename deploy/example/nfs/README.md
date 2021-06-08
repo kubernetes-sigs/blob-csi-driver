@@ -5,13 +5,6 @@
  - dynamic account creation support is available from `v1.2.0`
 
 #### Prerequisite
- - [Register the NFS 3.0 protocol feature with your subscription](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to)
-```console
-az feature register --name AllowNFSV3 --namespace Microsoft.Storage
-az feature register --name PremiumHns --namespace Microsoft.Storage
-az provider register --namespace Microsoft.Storage
-```
-
  - [Install CSI driver](../../../docs/install-csi-driver-master.md)
  - [Optional][Bring Your Own Storage Account] Follow steps [here](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to) to create storage account that supports NFSv3 protocol and then specify `storageAccount` in below storage class `parameters`
 
