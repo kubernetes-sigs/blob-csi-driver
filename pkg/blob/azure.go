@@ -121,9 +121,10 @@ func (d *Driver) getKeyVaultSecretContent(ctx context.Context, vaultURL string, 
 		return "", fmt.Errorf("failed to get keyvaultClient: %v", err)
 	}
 
+	klog.V(2).Infof("get secret from vaultURL(%v), sercretName(%v), secretVersion(%v)", vaultURL, secretName, secretVersion)
 	secret, err := kvClient.GetSecret(ctx, vaultURL, secretName, secretVersion)
 	if err != nil {
-		return "", fmt.Errorf("failed to use vaultURL(%v), sercretName(%v), secretVersion(%v) to get secret: %v", vaultURL, secretName, secretVersion, err)
+		return "", fmt.Errorf("get secret from vaultURL(%v), sercretName(%v), secretVersion(%v) failed with error: %v", vaultURL, secretName, secretVersion, err)
 	}
 	return *secret.Value, nil
 }
