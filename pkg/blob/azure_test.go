@@ -235,7 +235,7 @@ func TestGetKeyVaultSecretContent(t *testing.T) {
 	}
 	d.cloud.AADClientID = "unit-test"
 	d.cloud.AADClientSecret = "unit-test"
-	expectedErr = fmt.Errorf("failed to use vaultURL(unit-test), sercretName(unit-test), secretVersion(v1) to get secret: keyvault.BaseClient#GetSecret: Failure preparing request: StatusCode=0 -- Original Error: autorest: No scheme detected in URL unit-test")
+	expectedErr = fmt.Errorf("get secret from vaultURL(unit-test), sercretName(unit-test), secretVersion(v1) failed with error: keyvault.BaseClient#GetSecret: Failure preparing request: StatusCode=0 -- Original Error: autorest: No scheme detected in URL unit-test")
 	_, err = d.getKeyVaultSecretContent(context.TODO(), valueURL, secretName, secretVersion)
 	if !reflect.DeepEqual(expectedErr, err) {
 		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
