@@ -17,15 +17,22 @@ set -euo pipefail
 
 echo "begin to create deployment examples ..."
 kubectl apply -f deploy/example/storageclass-blobfuse.yaml
+kubectl apply -f deploy/example/storageclass-blob-nfs.yaml
 kubectl apply -f deploy/example/deployment.yaml
 kubectl apply -f deploy/example/statefulset.yaml
 kubectl apply -f deploy/example/statefulset-nonroot.yaml
+kubectl apply -f deploy/example/deployment-nfs.yaml
+kubectl apply -f deploy/example/statefulset-nfs.yaml
+kubectl apply -f deploy/example/statefulset-nonroot-nfs.yaml
 
-echo "sleep 60s ..."
-sleep 60
+echo "sleep 90s ..."
+sleep 90
 
 kubectl get pods --field-selector status.phase=Running | grep deployment-blob
 kubectl get pods --field-selector status.phase=Running | grep statefulset-blob-0
 kubectl get pods --field-selector status.phase=Running | grep statefulset-blob-nonroot-0
+kubectl get pods --field-selector status.phase=Running | grep deployment-blob-nfs
+kubectl get pods --field-selector status.phase=Running | grep statefulset-blob-nfs-0
+kubectl get pods --field-selector status.phase=Running | grep statefulset-blob-nonroot-nfs-0
 
 echo "deployment examples running completed."

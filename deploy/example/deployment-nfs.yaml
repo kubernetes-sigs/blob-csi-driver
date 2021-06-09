@@ -1,0 +1,52 @@
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-blob-nfs
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: blob-nfs
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: deployment-blob-nfs
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+      name: deployment-blob-nfs
+    spec:
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+        - name: deployment-blob-nfs
+          image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
+          command:
+            - "/bin/sh"
+            - "-c"
+            - while true; do echo $(date) >> /mnt/blob/outfile; sleep 1; done
+          volumeMounts:
+            - name: blob
+              mountPath: "/mnt/blob"
+              readOnly: false
+      volumes:
+        - name: blob
+          persistentVolumeClaim:
+            claimName: pvc-blob-nfs
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
