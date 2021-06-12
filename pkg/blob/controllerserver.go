@@ -93,7 +93,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case secretNamespaceField:
 			secretNamespace = v
 		case storeAccountKeyField:
-			if v == falseValue {
+			if strings.EqualFold(v, falseValue) {
 				storeAccountKey = false
 			}
 		case pvcNamespaceKey:

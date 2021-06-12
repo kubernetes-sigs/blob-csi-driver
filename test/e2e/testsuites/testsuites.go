@@ -545,6 +545,7 @@ func (t *TestPod) SetupInlineVolume(name, mountPath, secretName, containerName s
 					"secretName":      secretName,
 					"secretNamespace": "default",
 					"containerName":   containerName,
+					"mountOptions":    "-o allow_other --file-cache-timeout-in-seconds=240",
 				},
 				ReadOnly: to.BoolPtr(readOnly),
 			},
