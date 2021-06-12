@@ -69,8 +69,8 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	}
 
 	context := req.GetVolumeContext()
-	if context != nil && context["csi.storage.k8s.io/ephemeral"] == trueValue {
-		context[secretNamespaceField] = context["csi.storage.k8s.io/pod.namespace"]
+	if context != nil && strings.EqualFold(context[ephemeralField], trueValue) {
+		context[secretNamespaceField] = context[podNamespaceField]
 		// only get storage account from secret
 		context[getAccountKeyFromSecretField] = trueValue
 		context[storageAccountField] = ""
@@ -210,7 +210,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
 
-	var serverAddress, storageEndpointSuffix, protocol string
+	var serverAddress, storageEndpointSuffix, protocol, ephemeralVolMountOptions string
+	var ephemeralVol bool
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
 		case serverNameField:
@@ -219,6 +220,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			protocol = v
 		case storageEndpointSuffixField:
 			storageEndpointSuffix = v
+		case ephemeralField:
+			ephemeralVol = strings.EqualFold(v, trueValue)
+		case mountOptionsField:
+			ephemeralVolMountOptions = v
 		}
 	}
 
@@ -263,6 +268,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	// Get mountOptions that the volume will be formatted and mounted with
 	mountOptions := util.JoinMountOptions(mountFlags, []string{"--use-https=true"})
+	if ephemeralVol {
+		mountOptions = util.JoinMountOptions(mountOptions, []string{ephemeralVolMountOptions})
+	}
 
 	// set different tmp-path with time info
 	tmpPath := fmt.Sprintf("%s/%s#%d", "/mnt", volumeID, time.Now().Unix())

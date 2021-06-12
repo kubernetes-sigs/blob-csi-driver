@@ -66,6 +66,9 @@ const (
 	keyVaultSecretNameField      = "keyvaultsecretname"
 	keyVaultSecretVersionField   = "keyvaultsecretversion"
 	storageAccountNameField      = "storageaccountname"
+	ephemeralField               = "csi.storage.k8s.io/ephemeral"
+	podNamespaceField            = "csi.storage.k8s.io/pod.namespace"
+	mountOptionsField            = "mountoptions"
 	falseValue                   = "false"
 	trueValue                    = "true"
 	defaultSecretAccountName     = "azurestorageaccountname"
@@ -270,9 +273,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		case secretNamespaceField:
 			secretNamespace = v
 		case getAccountKeyFromSecretField:
-			if v == trueValue {
-				getAccountKeyFromSecret = true
-			}
+			getAccountKeyFromSecret = strings.EqualFold(v, trueValue)
 		case "azurestorageauthtype":
 			authEnv = append(authEnv, "AZURE_STORAGE_AUTH_TYPE="+v)
 		case "azurestorageidentityclientid":

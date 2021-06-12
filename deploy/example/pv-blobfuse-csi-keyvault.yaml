@@ -12,7 +12,9 @@ spec:
   csi:
     driver: blob.csi.azure.com
     readOnly: false
-    volumeHandle: arbitrary-volumeid
+    # make sure this volumeid is unique in the cluster
+    # `#` is not allowed in self defined volumeHandle
+    volumeHandle: unique-volumeid
     volumeAttributes:
       containerName: EXISTING_CONTAINER_NAME
       storageAccountName: EXISTING_STORAGE_ACCOUNT_NAME
