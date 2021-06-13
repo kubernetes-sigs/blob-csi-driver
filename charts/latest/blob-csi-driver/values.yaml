@@ -67,7 +67,15 @@ controller:
         memory: 20Mi
   affinity: {}
   nodeSelector: {}
-  tolerations: []
+  tolerations:
+    - key: "node-role.kubernetes.io/master"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
+    - key: "node-role.kubernetes.io/controlplane"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
 
 node:
   metricsPort: 29635
@@ -98,7 +106,8 @@ node:
         memory: 20Mi
   affinity: {}
   nodeSelector: {}
-  tolerations: []
+  tolerations:
+    - operator: "Exists"
   livenessProbe:
     healthPort: 29633
 

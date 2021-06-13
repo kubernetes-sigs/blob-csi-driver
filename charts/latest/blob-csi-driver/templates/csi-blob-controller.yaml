@@ -40,16 +40,8 @@ spec:
 {{ toYaml . | indent 8 }}
 {{- end }}
       priorityClassName: {{ .Values.priorityClassName | quote }}
-      tolerations:
-        - key: "node-role.kubernetes.io/master"
-          operator: "Equal"
-          value: "true"
-          effect: "NoSchedule"
-        - key: "node-role.kubernetes.io/controlplane"
-          operator: "Equal"
-          value: "true"
-          effect: "NoSchedule"
 {{- with .Values.controller.tolerations }}
+      tolerations:
 {{ toYaml . | indent 8 }}
 {{- end }}
       containers:
