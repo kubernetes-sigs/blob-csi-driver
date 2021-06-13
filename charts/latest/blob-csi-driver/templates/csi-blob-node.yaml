@@ -45,11 +45,10 @@ spec:
 {{- toYaml .Values.node.affinity | nindent 8 }}
         {{- end }}
       priorityClassName: {{ .Values.priorityClassName | quote }}
+{{- with .Values.node.tolerations }}
       tolerations:
-        - operator: "Exists"
-        {{- if .Values.node.tolerations }}
-{{- toYaml .Values.node.tolerations | nindent 8 }}
-        {{- end }}
+{{ toYaml . | indent 8 }}
+{{- end }}
       containers:
         - name: liveness-probe
           imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
