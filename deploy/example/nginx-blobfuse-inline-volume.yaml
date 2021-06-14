@@ -21,6 +21,6 @@ spec:
       csi:
         driver: blob.csi.azure.com
         volumeAttributes:
-          containerName: EXISTING_CONTAINER_NAME # required
-          secretName: azure-secret # required
-          mountOptions: "-o allow_other --file-cache-timeout-in-seconds=120" # optional
+          containerName: EXISTING_CONTAINER_NAME  # required
+          secretName: azure-secret  # required
+          mountOptions: "-o allow_other --file-cache-timeout-in-seconds=120"  # optional
