@@ -372,6 +372,24 @@ func NewCloudFromConfigFile(configFilePath string, syncZones bool) (cloudprovide
 	return cloud, nil
 }
 
+func (az *Cloud) configSecretMetadata(secretName, secretNamespace, cloudConfigKey string) {
+	if secretName == "" {
+		secretName = consts.DefaultCloudProviderConfigSecName
+	}
+	if secretNamespace == "" {
+		secretNamespace = consts.DefaultCloudProviderConfigSecNamespace
+	}
+	if cloudConfigKey == "" {
+		cloudConfigKey = consts.DefaultCloudProviderConfigSecKey
+	}
+
+	az.InitSecretConfig = InitSecretConfig{
+		SecretName:      secretName,
+		SecretNamespace: secretNamespace,
+		CloudConfigKey:  cloudConfigKey,
+	}
+}
+
 func NewCloudFromSecret(clientBuilder cloudprovider.ControllerClientBuilder, secretName, secretNamespace, cloudConfigKey string) (cloudprovider.Interface, error) {
 	az := &Cloud{
 		nodeNames:          sets.NewString(),
@@ -379,12 +397,9 @@ func NewCloudFromSecret(clientBuilder cloudprovider.ControllerClientBuilder, sec
 		nodeResourceGroups: map[string]string{},
 		unmanagedNodes:     sets.NewString(),
 		routeCIDRs:         map[string]string{},
-		InitSecretConfig: InitSecretConfig{
-			SecretName:      secretName,
-			SecretNamespace: secretNamespace,
-			CloudConfigKey:  cloudConfigKey,
-		},
 	}
+
+	az.configSecretMetadata(secretName, secretNamespace, cloudConfigKey)
 
 	az.Initialize(clientBuilder, wait.NeverStop)
 
@@ -468,7 +483,7 @@ func (az *Cloud) InitializeCloudFromConfig(config *Config, fromSecret, syncZones
 		return err
 	}
 
-	servicePrincipalToken, err := auth.GetServicePrincipalToken(&config.AzureAuthConfig, env)
+	servicePrincipalToken, err := auth.GetServicePrincipalToken(&config.AzureAuthConfig, env, env.ServiceManagementEndpoint)
 	if errors.Is(err, auth.ErrorNoAuth) {
 		// Only controller-manager would lazy-initialize from secret, and credentials are required for such case.
 		if fromSecret {
@@ -552,7 +567,7 @@ func (az *Cloud) InitializeCloudFromConfig(config *Config, fromSecret, syncZones
 		// wait for the success first time of syncing zones
 		err = az.syncRegionZonesMap()
 		if err != nil {
-			klog.Errorf("InitializeCloudFromConfig: failed eto sync regional zones map for the first time: %s", err.Error())
+			klog.Errorf("InitializeCloudFromConfig: failed to sync regional zones map for the first time: %s", err.Error())
 			return err
 		}
 
