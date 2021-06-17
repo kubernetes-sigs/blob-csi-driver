@@ -27,14 +27,13 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
 
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
+	"sigs.k8s.io/cloud-provider-azure/pkg/auth"
 	azureprovider "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
 
@@ -145,28 +144,13 @@ func (d *Driver) initializeKvClient() (*kv.BaseClient, error) {
 // getKeyvaultToken retrieves a new service principal token to access keyvault
 func (d *Driver) getKeyvaultToken() (authorizer autorest.Authorizer, err error) {
 	env := d.cloud.Environment
-
 	kvEndPoint := strings.TrimSuffix(env.KeyVaultEndpoint, "/")
-	servicePrincipalToken, err := d.getServicePrincipalToken(env, kvEndPoint)
+	servicePrincipalToken, err := auth.GetServicePrincipalToken(&d.cloud.Config.AzureAuthConfig, &env, kvEndPoint)
 	if err != nil {
 		return nil, err
 	}
 	authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
 	return authorizer, nil
-}
-
-// getServicePrincipalToken creates a new service principal token based on the configuration
-func (d *Driver) getServicePrincipalToken(env azure.Environment, resource string) (*adal.ServicePrincipalToken, error) {
-	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, d.cloud.TenantID)
-	if err != nil {
-		return nil, fmt.Errorf("creating the OAuth config: %v", err)
-	}
-
-	return adal.NewServicePrincipalToken(
-		*oauthConfig,
-		d.cloud.AADClientID,
-		d.cloud.AADClientSecret,
-		resource)
 }
 
 func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context) error {
