@@ -160,24 +160,6 @@ users:
 	}
 }
 
-func TestGetServicePrincipalToken(t *testing.T) {
-	env := azure.Environment{
-		ActiveDirectoryEndpoint: "unit-test",
-	}
-	resource := "unit-test"
-	d := NewFakeDriver()
-	d.cloud = &azureprovider.Cloud{}
-	_, err := d.getServicePrincipalToken(env, resource)
-	expectedErr := fmt.Errorf("parameter 'clientID' cannot be empty")
-	if !reflect.DeepEqual(expectedErr, err) {
-		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-	}
-	d.cloud.AADClientID = "unit-test"
-	d.cloud.AADClientSecret = "unit-test"
-	_, err = d.getServicePrincipalToken(env, resource)
-	assert.NoError(t, err)
-}
-
 func TestGetKeyvaultToken(t *testing.T) {
 	env := azure.Environment{
 		ActiveDirectoryEndpoint: "unit-test",
@@ -187,7 +169,7 @@ func TestGetKeyvaultToken(t *testing.T) {
 	d.cloud = &azureprovider.Cloud{}
 	d.cloud.Environment = env
 	_, err := d.getKeyvaultToken()
-	expectedErr := fmt.Errorf("parameter 'clientID' cannot be empty")
+	expectedErr := fmt.Errorf("no credentials provided for Azure cloud provider")
 	if !reflect.DeepEqual(expectedErr, err) {
 		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 	}
@@ -207,7 +189,7 @@ func TestInitializeKvClient(t *testing.T) {
 	d.cloud = &azureprovider.Cloud{}
 	d.cloud.Environment = env
 	_, err := d.initializeKvClient()
-	expectedErr := fmt.Errorf("parameter 'clientID' cannot be empty")
+	expectedErr := fmt.Errorf("no credentials provided for Azure cloud provider")
 	if !reflect.DeepEqual(expectedErr, err) {
 		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 	}
@@ -229,7 +211,7 @@ func TestGetKeyVaultSecretContent(t *testing.T) {
 	secretName := "unit-test"
 	secretVersion := "v1"
 	_, err := d.getKeyVaultSecretContent(context.TODO(), valueURL, secretName, secretVersion)
-	expectedErr := fmt.Errorf("failed to get keyvaultClient: parameter 'clientID' cannot be empty")
+	expectedErr := fmt.Errorf("failed to get keyvaultClient: no credentials provided for Azure cloud provider")
 	if !reflect.DeepEqual(expectedErr, err) {
 		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 	}
