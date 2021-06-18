@@ -57,6 +57,39 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 	})
 
 	testDriver = driver.InitBlobCSIDriver()
+	ginkgo.It("should create a volume on demand without saving storage account key", func() {
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"-o allow_other",
+							"--file-cache-timeout-in-seconds=120",
+							"--cancel-list-on-mount-seconds=0",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver: testDriver,
+			Pods:      pods,
+			StorageClassParameters: map[string]string{
+				"skuName":         "Standard_GRS",
+				"secretNamespace": "default",
+				// make sure this is the first test case due to storeAccountKey is set as false
+				"storeAccountKey": "false",
+			},
+		}
+		test.Run(cs, ns)
+	})
+
 	ginkgo.It("should create a volume on demand with mount options", func() {
 		pods := []testsuites.PodDetails{
 			{
