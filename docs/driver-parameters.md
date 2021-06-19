@@ -16,7 +16,7 @@ storeAccountKey | whether store account key to k8s secret | `true`,`false` | No 
 protocol | specify blobfuse mount or NFSv3 mount | `fuse`, `nfs` | No | `fuse`
 containerName | specify the existing container name | existing container name | No | if empty, driver will create a new container name, starting with `pvc-fuse` for blobfuse or `pvc-nfs` for NFSv3
 server | specify Azure storage account server address | existing server address, e.g. `accountname.privatelink.blob.core.windows.net` | No | if empty, driver will use default `accountname.blob.core.windows.net` or other sovereign cloud account address
-storageEndpointSuffix | specify Azure storage endpoint suffix for agent node | `core.windows.net` | No | if empty, driver will use default storage endpoint suffix `core.windows.net`
+storageEndpointSuffix | specify Azure storage endpoint suffix | `core.windows.net` | No | if empty, driver will use default storage endpoint suffix according to cloud environment, e.g. `core.windows.net`
 tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources) would be created in newly created storage account | tag format: 'foo=aaa,bar=bbb' | No | ""
 
  - `fsGroup` securityContext setting
