@@ -290,7 +290,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		output, err = d.mountBlobfuseInsideDriver(args, authEnv)
 	}
 
-	if err != nil {
+	if err != nil || strings.Contains(string(output), "Unable to start blobfuse") {
 		err = fmt.Errorf("Mount failed with error: %v, output: %v", err, output)
 		klog.Errorf("%v", err)
 		notMnt, mntErr := d.mounter.IsLikelyNotMountPoint(targetPath)
