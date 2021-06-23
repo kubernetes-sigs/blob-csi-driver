@@ -6,7 +6,6 @@
             "orchestratorType": "Kubernetes",
             "orchestratorRelease": "1.16",
             "kubernetesConfig": {
-                "enableRbac": false,
                 "useManagedIdentity": true,
                 "userAssignedID": "blobfuse-csi-driver-e2e-test-id",
                 "useCloudControllerManager": true,
