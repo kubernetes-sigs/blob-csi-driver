@@ -47,7 +47,7 @@ kubectl edit ds csi-blob-node -n kube-system
 ```
 change below deployment config, e.g.
 ```console
-        image: mcr.microsoft.com/k8s/csi/blob-csi:v1.5.0
+        image: mcr.microsoft.com/k8s/csi/blob-csi:v1.4.0
         imagePullPolicy: Always
 ```
 
