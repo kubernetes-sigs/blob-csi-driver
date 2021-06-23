@@ -36,6 +36,21 @@ kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 > kubectl logs daemonset/csi-blob-node -c blob -n kube-system -f
 > ```
 
+#### Update driver version quickly by editting driver deployment directly
+ - update controller deployment
+```console
+kubectl edit deployment csi-blob-controller -n kube-system
+```
+ - update daemonset deployment
+```console
+kubectl edit ds csi-blob-node -n kube-system
+```
+change below deployment config, e.g.
+```console
+        image: mcr.microsoft.com/k8s/csi/blob-csi:v1.5.0
+        imagePullPolicy: Always
+```
+
 ### get blobfuse driver version
 ```console
 kubectl exec -it csi-blob-node-fmbqw -n kube-system -c blob -- sh
