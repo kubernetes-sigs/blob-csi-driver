@@ -250,6 +250,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		keyVaultURL             string
 		keyVaultSecretName      string
 		keyVaultSecretVersion   string
+		azureStorageAuthType    string
 		authEnv                 []string
 		getAccountKeyFromSecret bool
 	)
@@ -275,6 +276,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		case getAccountKeyFromSecretField:
 			getAccountKeyFromSecret = strings.EqualFold(v, trueValue)
 		case "azurestorageauthtype":
+			azureStorageAuthType = v
 			authEnv = append(authEnv, "AZURE_STORAGE_AUTH_TYPE="+v)
 		case "azurestorageidentityclientid":
 			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_CLIENT_ID="+v)
@@ -326,7 +328,8 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			if secretName == "" && accountName != "" {
 				secretName = fmt.Sprintf(secretNameTemplate, accountName)
 			}
-			if secretName != "" {
+			// if msi is specified, don't list account key using cluster identity
+			if secretName != "" && !strings.EqualFold(azureStorageAuthType, "msi") {
 				// read from k8s secret first
 				var name string
 				name, accountKey, err = d.GetStorageAccountFromSecret(secretName, secretNamespace)
