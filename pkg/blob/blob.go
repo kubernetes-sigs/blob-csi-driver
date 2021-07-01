@@ -40,8 +40,8 @@ import (
 )
 
 const (
-	// DriverName holds the name of the csi-driver
-	DriverName                   = "blob.csi.azure.com"
+	// DefaultDriverName holds the name of the csi-driver
+	DefaultDriverName            = "blob.csi.azure.com"
 	blobCSIDriverName            = "blob_csi_driver"
 	separator                    = "#"
 	volumeIDTemplate             = "%s#%s#%s"
@@ -121,9 +121,9 @@ type Driver struct {
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
 // does not support optional driver plugin info manifest field. Refer to CSI spec for more details.
-func NewDriver(nodeID, blobfuseProxyEndpoint string, enableBlobfuseProxy bool, blobfuseProxyConnTimout int, enableBlobMockMount bool) *Driver {
+func NewDriver(nodeID, driverName, blobfuseProxyEndpoint string, enableBlobfuseProxy bool, blobfuseProxyConnTimout int, enableBlobMockMount bool) *Driver {
 	driver := Driver{}
-	driver.Name = DriverName
+	driver.Name = driverName
 	driver.Version = driverVersion
 	driver.NodeID = nodeID
 	driver.volLockMap = util.NewLockMap()
@@ -138,7 +138,7 @@ func NewDriver(nodeID, blobfuseProxyEndpoint string, enableBlobfuseProxy bool, b
 
 // Run driver initialization
 func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
-	versionMeta, err := GetVersionYAML()
+	versionMeta, err := GetVersionYAML(d.Name)
 	if err != nil {
 		klog.Fatalf("%v", err)
 	}

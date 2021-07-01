@@ -540,7 +540,7 @@ func (t *TestPod) SetupInlineVolume(name, mountPath, secretName, containerName s
 		Name: name,
 		VolumeSource: v1.VolumeSource{
 			CSI: &v1.CSIVolumeSource{
-				Driver: blob.DriverName,
+				Driver: blob.DefaultDriverName,
 				VolumeAttributes: map[string]string{
 					"secretName":      secretName,
 					"secretNamespace": "default",
