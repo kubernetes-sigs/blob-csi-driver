@@ -114,6 +114,9 @@ node:
 feature:
   enableFSGroupPolicy: false
 
+driver:
+  name: blob.csi.azure.com
+
 linux:
   kubelet: /var/lib/kubelet
   distro: debian

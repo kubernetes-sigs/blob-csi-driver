@@ -45,7 +45,7 @@ const (
 )
 
 func NewFakeDriver() *Driver {
-	driver := NewDriver(fakeNodeID, "", false, 5, false)
+	driver := NewDriver(fakeNodeID, DefaultDriverName, "", false, 5, false)
 	driver.Name = fakeDriverName
 	driver.Version = vendorVersion
 	driver.subnetLockMap = util.NewLockMap()
@@ -53,14 +53,14 @@ func NewFakeDriver() *Driver {
 }
 
 func TestNewFakeDriver(t *testing.T) {
-	d := NewDriver(fakeNodeID, "", false, 5, false)
+	d := NewDriver(fakeNodeID, DefaultDriverName, "", false, 5, false)
 	assert.NotNil(t, d)
 }
 
 func TestNewDriver(t *testing.T) {
-	driver := NewDriver(fakeNodeID, "", false, 5, false)
+	driver := NewDriver(fakeNodeID, DefaultDriverName, "", false, 5, false)
 	fakedriver := NewFakeDriver()
-	fakedriver.Name = DriverName
+	fakedriver.Name = DefaultDriverName
 	fakedriver.Version = driverVersion
 	assert.Equal(t, driver, fakedriver)
 }

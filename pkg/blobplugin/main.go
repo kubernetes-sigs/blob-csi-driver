@@ -42,6 +42,7 @@ var (
 	version                 = flag.Bool("version", false, "Print the version and exit.")
 	metricsAddress          = flag.String("metrics-address", "0.0.0.0:29634", "export the metrics")
 	kubeconfig              = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
+	driverName              = flag.String("drivername", blob.DefaultDriverName, "name of the driver")
 	enableBlobfuseProxy     = flag.Bool("enable-blobfuse-proxy", false, "Whether using blobfuse proxy for mounts")
 	blobfuseProxyConnTimout = flag.Int("blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
 	enableBlobMockMount     = flag.Bool("enable-blob-mock-mount", false, "Whether enable mock mount(only for testing)")
@@ -51,7 +52,7 @@ func main() {
 	klog.InitFlags(nil)
 	flag.Parse()
 	if *version {
-		info, err := blob.GetVersionYAML()
+		info, err := blob.GetVersionYAML(*driverName)
 		if err != nil {
 			klog.Fatalln(err)
 		}
@@ -65,7 +66,7 @@ func main() {
 }
 
 func handle() {
-	driver := blob.NewDriver(*nodeID, *blobfuseProxyEndpoint, *enableBlobfuseProxy, *blobfuseProxyConnTimout, *enableBlobMockMount)
+	driver := blob.NewDriver(*nodeID, *driverName, *blobfuseProxyEndpoint, *enableBlobfuseProxy, *blobfuseProxyConnTimout, *enableBlobMockMount)
 	if driver == nil {
 		klog.Fatalln("Failed to initialize Azure Blob Storage CSI driver")
 	}
