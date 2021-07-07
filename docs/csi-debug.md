@@ -17,7 +17,7 @@ kubectl logs csi-blob-controller-56bfddd689-dh5tk -c blob -n kube-system > csi-b
 > `kubectl logs deploy/csi-blob-controller -c blob -f -n kube-system`
 
 ### Case#2: volume mount/unmount failed
- - locate csi driver pod and make sure which pod do tha actual volume mount/unmount
+ - locate csi driver pod and make sure which pod does the actual volume mount/unmount
 ```console
 kubectl get po -o wide -n kube-system | grep csi-blob-node
 ```
@@ -36,7 +36,7 @@ kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 > kubectl logs daemonset/csi-blob-node -c blob -n kube-system -f
 > ```
 
-#### Update driver version quickly by editting driver deployment directly
+#### Update driver version quickly by editing driver deployment directly
  - update controller deployment
 ```console
 kubectl edit deployment csi-blob-controller -n kube-system

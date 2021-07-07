@@ -1,4 +1,4 @@
-# Install blobfuse CSI driveri v0.4.0 on a kubernetes cluster
+# Install blobfuse CSI driver v0.4.0 on a kubernetes cluster
 
 If you have already installed Helm, you can also use it to install blobfuse CSI driver. Please see [Installation with Helm](../charts/README.md).
 
