@@ -1,5 +1,5 @@
 # Azure Blob Storage CSI driver design goals
- > Azure Blob Storage CSI driver is implemented as compatitable as possible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin, it has following goals:
+ > Azure Blob Storage CSI driver is implemented as compatible as possible with built-in [blobfuse](https://kubernetes.io/docs/concepts/storage/volumes/#blobfuse) plugin, it has following goals:
 
 Goal | Status | Notes
 --- | --- | --- |
