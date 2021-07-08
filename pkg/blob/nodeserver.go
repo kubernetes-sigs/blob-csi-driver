@@ -269,7 +269,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	// Get mountOptions that the volume will be formatted and mounted with
 	mountOptions := util.JoinMountOptions(mountFlags, []string{"--use-https=true"})
 	if ephemeralVol {
-		mountOptions = util.JoinMountOptions(mountOptions, []string{ephemeralVolMountOptions})
+		mountOptions = util.JoinMountOptions(mountOptions, strings.Split(ephemeralVolMountOptions, ","))
 	}
 
 	// set different tmp-path with time info
