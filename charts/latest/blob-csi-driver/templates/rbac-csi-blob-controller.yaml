@@ -2,7 +2,7 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blob-external-provisioner-role
+  name: {{ .Values.rbac.name }}-external-provisioner-role
 {{ include "blob.labels" . | indent 2 }}
 rules:
   - apiGroups: [""]
@@ -32,15 +32,15 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blob-csi-provisioner-binding
+  name: {{ .Values.rbac.name }}-csi-provisioner-binding
 {{ include "blob.labels" . | indent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: csi-blob-controller-sa
+    name: {{ .Values.serviceAccount.controller }}
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: blob-external-provisioner-role
+  name: {{ .Values.rbac.name }}-external-provisioner-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
@@ -48,7 +48,7 @@ roleRef:
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blob-external-resizer-role
+  name: {{ .Values.rbac.name }}-external-resizer-role
 {{ include "blob.labels" . | indent 2 }}
 rules:
   - apiGroups: [""]
@@ -70,22 +70,22 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: blob-csi-resizer-role
+  name: {{ .Values.rbac.name }}-csi-resizer-role
 {{ include "blob.labels" . | indent 2 }}
 subjects:
   - kind: ServiceAccount
-    name: csi-blob-controller-sa
+    name: {{ .Values.serviceAccount.controller }}
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: blob-external-resizer-role
+  name: {{ .Values.rbac.name }}-external-resizer-role
   apiGroup: rbac.authorization.k8s.io
 
 ---
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-blob-controller-secret-role
+  name: csi-{{ .Values.rbac.name }}-controller-secret-role
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
@@ -95,13 +95,13 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-blob-controller-secret-binding
+  name: csi-{{ .Values.rbac.name }}-controller-secret-binding
 subjects:
   - kind: ServiceAccount
-    name: csi-blob-controller-sa
+    name: {{ .Values.serviceAccount.controller }}
     namespace: {{ .Release.Namespace }}
 roleRef:
   kind: ClusterRole
-  name: csi-blob-controller-secret-role
+  name: csi-{{ .Values.rbac.name }}-controller-secret-role
   apiGroup: rbac.authorization.k8s.io
 {{ end }}

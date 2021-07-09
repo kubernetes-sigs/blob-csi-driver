@@ -1,18 +1,18 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: csi-blob-controller
+  name: {{ .Values.controller.name }}
   namespace: {{ .Release.Namespace }}
 {{ include "blob.labels" . | indent 2 }}
 spec:
   replicas: {{ .Values.controller.replicas }}
   selector:
     matchLabels:
-      app: csi-blob-controller
+      app: {{ .Values.controller.name }}
   template:
     metadata:
 {{ include "blob.labels" . | indent 6 }}
-        app: csi-blob-controller
+        app: {{ .Values.controller.name }}
         {{- if .Values.podLabels }}
 {{- toYaml .Values.podLabels | nindent 8 }}
         {{- end }}
@@ -30,7 +30,7 @@ spec:
 {{ toYaml .Values.imagePullSecrets | indent 8 }}
       {{- end }}
       hostNetwork: true
-      serviceAccountName: csi-blob-controller-sa
+      serviceAccountName: {{ .Values.serviceAccount.controller }}
       nodeSelector:
         kubernetes.io/os: linux
         {{- if .Values.controller.runOnMaster}}
@@ -66,7 +66,7 @@ spec:
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s
-            - --health-port=29632
+            - --health-port={{ .Values.controller.livenessProbe.healthPort }}
           imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
           volumeMounts:
             - name: socket-dir
@@ -80,7 +80,7 @@ spec:
             - "--metrics-address=0.0.0.0:{{ .Values.controller.metricsPort }}"
             - "--drivername={{ .Values.driver.name }}"
           ports:
-            - containerPort: 29632
+            - containerPort: {{ .Values.controller.livenessProbe.healthPort }}
               name: healthz
               protocol: TCP
             - containerPort: {{ .Values.controller.metricsPort }}

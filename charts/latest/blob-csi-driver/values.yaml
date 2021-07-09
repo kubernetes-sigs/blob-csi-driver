@@ -26,13 +26,19 @@ imagePullSecrets: []
 # - name: myRegistryKeySecretName
 
 serviceAccount:
-  create: true
+  create: true # When true, service accounts will be created for you. Set to false if you want to use your own.
+  controller: csi-blob-controller-sa # Name of Service Account to be created or used
+  node: csi-blob-node-sa # Name of Service Account to be created or used
 
 rbac:
   create: true
+  name: blob
 
 controller:
+  name: csi-blob-controller
   metricsPort: 29634
+  livenessProbe:
+    healthPort: 29632
   replicas: 2
   runOnMaster: false
   logLevel: 5
@@ -78,7 +84,10 @@ controller:
       effect: "NoSchedule"
 
 node:
+  name: csi-blob-node
   metricsPort: 29635
+  livenessProbe:
+    healthPort: 29633
   logLevel: 5
   enableBlobfuseProxy: false
   blobfuseCachePath: /mnt

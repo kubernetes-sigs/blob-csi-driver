@@ -68,9 +68,13 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.csiResizer.pullPolicy`                         | csi-resizer image pull policy                         | IfNotPresent                                                   |
 | `imagePullSecrets`                                    | Specify docker-registry secret names as an array      | [] (does not add image pull secrets to deployed pods)          |
 | `serviceAccount.create`                               | whether create service account of csi-blob-controller | true                                                           |
+| `serviceAccount.controller`                           | name of service account for csi-blob-controller       | csi-blob-controller-sa                                  |
+| `serviceAccount.node`                                 | name of service account for csi-blob-node             | csi-blob-node-sa                                        |
 | `rbac.create`                                         | whether create rbac of csi-blob-controller            | true                                                           |
+| `controller.name`                                     | name of driver deployment                  | `csi-blob-controller`
 | `controller.replicas`                                 | the replicas of csi-blob-controller                   | 2                                                              |
-| `controller.metricsPort`                              | metrics port of csi-blob-controller                   | 29634                                                          |
+| `controller.metricsPort`                              | metrics port of csi-blob-controller                   | `29634`                                                          |
+| `controller.livenessProbe.healthPort `                | health check port for liveness probe                   | `29632` |
 | `controller.runOnMaster`                              | run controller on master node                         | false                                                          |
 | `controller.logLevel`                                 | controller driver log level                           | `5`                                                            |
 | `controller.resources.csiProvisioner.limits.cpu`      | csi-provisioner cpu limits                            | 100m                                                           |
@@ -92,7 +96,9 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.affinity`                                 | controller pod affinity                               | {}                                                             |
 | `controller.nodeSelector`                             | controller pod node selector                          | {}                                                             |
 | `controller.tolerations`                              | controller pod tolerations                            | []                                                             |
-| `node.metricsPort`                                    | metrics port of csi-blob-node                         | 29635                                                          |
+| `node.name`                                           | name of driver daemonset                  | `csi-blob-node`
+| `node.metricsPort`                                    | metrics port of csi-blob-node                         | `29635`                                                          |
+| `node.livenessProbe.healthPort `                      | health check port for liveness probe                   | `29633` |
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
 | `node.enableBlobfuseProxy`                            | node enable blobfuse-proxy                            | false                                                          |
 | `node.blobfuseCachePath`                              | blobfuse cache path(`tmp-path`)                       | `/mnt`                                                          |

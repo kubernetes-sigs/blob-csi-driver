@@ -17,6 +17,7 @@
 set -xe
 
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
+DRIVER="test"
 
 install_ginkgo () {
     apt update -y
@@ -33,8 +34,12 @@ setup_e2e_binaries() {
         export EXTRA_HELM_OPTIONS="--set feature.enableFSGroupPolicy=true"
     fi
 
-    # install csi driver
+     # test on alternative driver name
+    EXTRA_HELM_OPTIONS=$EXTRA_HELM_OPTIONS" --set driver.name=$DRIVER.csi.azure.com --set controller.name=csi-$DRIVER-controller --set node.name=csi-$DRIVER-node"
+    sed -i "s/blob.csi.azure.com/$DRIVER.csi.azure.com/g" deploy/example/storageclass-blobfuse.yaml
+    sed -i "s/blob.csi.azure.com/$DRIVER.csi.azure.com/g" deploy/example/storageclass-blob-nfs.yaml
     make e2e-bootstrap
+    sed -i "s/csi-blob-controller/csi-$DRIVER-controller/g" deploy/example/metrics/csi-blob-controller-svc.yaml
     make create-metrics-svc
 }
 
@@ -53,7 +58,7 @@ mkdir -p /tmp/csi
 if [ ! -z ${EXTERNAL_E2E_TEST_BLOBFUSE} ]; then
     echo "begin to run blobfuse tests ...."
     cp deploy/example/storageclass-blobfuse.yaml /tmp/csi/storageclass.yaml
-    ginkgo -p --progress --v -focus='External.Storage.*blob.csi.azure.com' \
+    ginkgo -p --progress --v -focus="External.Storage.*$DRIVER.csi.azure.com" \
         -skip='\[Disruptive\]|\[Slow\]|allow exec of files on the volume|unmount after the subpath directory is deleted' kubernetes/test/bin/e2e.test  -- \
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-blobfuse.yaml \
         --kubeconfig=$KUBECONFIG
@@ -62,7 +67,7 @@ fi
 if [ ! -z ${EXTERNAL_E2E_TEST_NFS} ]; then
     echo "begin to run NFSv3 tests ...."
     cp deploy/example/storageclass-blob-nfs.yaml /tmp/csi/storageclass.yaml
-    ginkgo -p --progress --v -focus='External.Storage.*blob.csi.azure.com' \
+    ginkgo -p --progress --v -focus="External.Storage.*$DRIVER.csi.azure.com" \
         -skip='\[Disruptive\]|\[Slow\]|pod created with an initial fsgroup, volume contents ownership changed in first pod, new pod with same fsgroup skips ownership changes to the volume contents' kubernetes/test/bin/e2e.test  -- \
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-nfs.yaml \
         --kubeconfig=$KUBECONFIG
