@@ -46,7 +46,7 @@ setup_e2e_binaries() {
 print_logs() {
     bash ./hack/verify-examples.sh
     echo "print out driver logs ..."
-    bash ./test/utils/blob_log.sh
+    bash ./test/utils/blob_log.sh $DRIVER
 }
 
 install_ginkgo
