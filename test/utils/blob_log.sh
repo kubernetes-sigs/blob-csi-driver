@@ -18,6 +18,10 @@ set -e
 
 NS=kube-system
 CONTAINER=blob
+DRIVER=blob
+if [[ "$#" -gt 0 ]]; then
+    DRIVER=$1
+fi
 
 echo "print out all nodes status ..."
 kubectl get nodes -o wide
@@ -31,23 +35,23 @@ echo "print out all $NS namespace pods status ..."
 kubectl get pods -n${NS} -o wide
 echo "======================================================================================"
 
-echo "print out csi-blob-controller logs ..."
+echo "print out csi-$DRIVER-controller logs ..."
 echo "======================================================================================"
-LABEL='app=csi-blob-controller'
+LABEL="app=csi-$DRIVER-controller"
 kubectl get pods -n${NS} -l${LABEL} \
     | awk 'NR>1 {print $1}' \
     | xargs -I {} kubectl logs {} --prefix -c${CONTAINER} -n${NS}
 
-echo "print out csi-blob-node logs ..."
+echo "print out csi-$DRIVER-node logs ..."
 echo "======================================================================================"
-LABEL='app=csi-blob-node'
+LABEL="app=csi-$DRIVER-node"
 kubectl get pods -n${NS} -l${LABEL} \
     | awk 'NR>1 {print $1}' \
     | xargs -I {} kubectl logs {} --prefix -c${CONTAINER} -n${NS}
 
 echo "print out cloudprovider_azure metrics ..."
 echo "======================================================================================"
-ip=`kubectl get svc csi-blob-controller -n kube-system | grep blob | awk '{print $4}'`
+ip=`kubectl get svc csi-$DRIVER-controller -n kube-system | awk '{print $4}'`
 curl http://$ip:29634/metrics
 
 
