@@ -36,6 +36,24 @@ kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 > kubectl logs daemonset/csi-blob-node -c blob -n kube-system -f
 > ```
 
+ - check blobfuse mount inside driver
+```console
+kubectl exec -it csi-blob-node-9vl9t -c blob -n kube-system -- mount | grep blobfuse
+```
+<pre>
+blobfuse on /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-efce16db-bf15-4634-b82b-068385019d7c/globalmount type fuse (rw,nosuid,nodev,relatime,user_id=0,group_id=0,allow_other)
+blobfuse on /var/lib/kubelet/pods/e73d0984-a253-4203-9e8c-9237ae5c55d5/volumes/kubernetes.io~csi/pvc-efce16db-bf15-4634-b82b-068385019d7c/mount type fuse (rw,relatime,user_id=0,group_id=0,allow_other)
+</pre>
+
+ - check nfs mount inside driver
+```console
+kubectl exec -it csi-blob-node-9vl9t -n kube-system -c blob -- mount | grep nfs
+```
+<pre>
+accountname.file.core.windows.net:/accountname/pvcn-46c357b2-333b-4c42-8a7f-2133023d6c48 on /var/lib/kubelet/plugins/kubernetes.io/csi/pv/pvc-46c357b2-333b-4c42-8a7f-2133023d6c48/globalmount type nfs4 (rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.244.0.6,local_lock=none,addr=20.150.29.168)
+accountname.file.core.windows.net:/accountname/pvcn-46c357b2-333b-4c42-8a7f-2133023d6c48 on /var/lib/kubelet/pods/7994e352-a4ee-4750-8cb4-db4fcf48543e/volumes/kubernetes.io~csi/pvc-46c357b2-333b-4c42-8a7f-2133023d6c48/mount type nfs4 (rw,relatime,vers=4.1,rsize=1048576,wsize=1048576,namlen=255,hard,proto=tcp,timeo=600,retrans=2,sec=sys,clientaddr=10.244.0.6,local_lock=none,addr=20.150.29.168)
+</pre>
+
 #### Update driver version quickly by editing driver deployment directly
  - update controller deployment
 ```console
