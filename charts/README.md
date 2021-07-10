@@ -7,9 +7,9 @@ From `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.az
  - [install Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
 
 ### Tips
- - `--set controller.runOnMaster=true` could make csi-azuredisk-controller only run on master node
- - `--set feature.enableFSGroupPolicy=true` could enable `fsGroupPolicy` on a k8s 1.20+ cluster
- - `--set controller.replicas=1` could set replica of csi-azuredisk-controller as `1`
+ - make controller only run on master node: `--set controller.runOnMaster=true`
+ - enable `fsGroupPolicy` on a k8s 1.20+ cluster: `--set feature.enableFSGroupPolicy=true`
+ - set replica of controller as `1`: `--set controller.replicas=1`
 
 ## install latest version
 ```console
@@ -33,6 +33,13 @@ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-sy
 helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set linux.distro=fedora
 ```
 
+### install driver with customized driver name, deployment name
+> only supported from `v1.4.0`+
+ - following example would install a driver with name `blob2`
+```console
+helm install blob2-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set driver.name="blob2.csi.azure.com" --set controller.name="csi-blob2-controller" --set rbac.name=blob2 --set serviceAccount.controller=csi-blob2-controller-sa --set serviceAccount.node=csi-blob2-node-sa --set node.name=csi-blob2-node --set node.livenessProbe.healthPort=29633
+```
+
 ### search for all available chart versions
 ```console
 helm search repo -l blob-csi-driver
@@ -51,31 +58,31 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | ----------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
 | `driver.name`                                     | alternative driver name                        | `blob.csi.azure.com` |
 | `feature.enableFSGroupPolicy`                     | enable `fsGroupPolicy` on a k8s 1.20+ cluster           | `false`                      |
-| `image.blob.repository`                               | blob-csi-driver docker image                          | mcr.microsoft.com/k8s/csi/blob-csi                             |
-| `image.blob.tag`                                      | blob-csi-driver docker image tag                      | latest                                                         |
-| `image.blob.pullPolicy`                               | blob-csi-driver image pull policy                     | IfNotPresent                                                   |
-| `image.csiProvisioner.repository`                     | csi-provisioner docker image                          | mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner           |
-| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | v2.1.0                                                         |
-| `image.csiProvisioner.pullPolicy`                     | csi-provisioner image pull policy                     | IfNotPresent                                                   |
-| `image.livenessProbe.repository`                      | liveness-probe docker image                           | mcr.microsoft.com/oss/kubernetes-csi/livenessprobe             |
-| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | v2.3.0                                                         |
-| `image.livenessProbe.pullPolicy`                      | liveness-probe image pull policy                      | IfNotPresent                                                   |
-| `image.nodeDriverRegistrar.repository`                | csi-node-driver-registrar docker image                | mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar |
-| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | v2.2.0                                                       |
-| `image.nodeDriverRegistrar.pullPolicy`                | csi-node-driver-registrar image pull policy           | IfNotPresent                                                   |
-| `image.csiResizer.repository`                         | csi-resizer docker image                              | mcr.microsoft.com/oss/kubernetes-csi/csi-resizer               |
-| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | v1.1.0                                                         |
-| `image.csiResizer.pullPolicy`                         | csi-resizer image pull policy                         | IfNotPresent                                                   |
+| `image.blob.repository`                               | blob-csi-driver docker image                          | `mcr.microsoft.com/k8s/csi/blob-csi`                             |
+| `image.blob.tag`                                      | blob-csi-driver docker image tag                      | `latest`                                                         |
+| `image.blob.pullPolicy`                               | blob-csi-driver image pull policy                     | `IfNotPresent`                                                   |
+| `image.csiProvisioner.repository`                     | csi-provisioner docker image                          | `mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner`           |
+| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | `v2.1.0`                                                         |
+| `image.csiProvisioner.pullPolicy`                     | csi-provisioner image pull policy                     | `IfNotPresent`                                                   |
+| `image.livenessProbe.repository`                      | liveness-probe docker image                           | `mcr.microsoft.com/oss/kubernetes-csi/livenessprobe`             |
+| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | `v2.3.0`                                                         |
+| `image.livenessProbe.pullPolicy`                      | liveness-probe image pull policy                      | `IfNotPresent`                                                   |
+| `image.nodeDriverRegistrar.repository`                | csi-node-driver-registrar docker image                | `mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar` |
+| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | `v2.2.0`                                                      |
+| `image.nodeDriverRegistrar.pullPolicy`                | csi-node-driver-registrar image pull policy           | `IfNotPresent`                                                   |
+| `image.csiResizer.repository`                         | csi-resizer docker image                              | `mcr.microsoft.com/oss/kubernetes-csi/csi-resizer`               |
+| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.1.0`                                                         |
+| `image.csiResizer.pullPolicy`                         | csi-resizer image pull policy                         | `IfNotPresent`                                                   |
 | `imagePullSecrets`                                    | Specify docker-registry secret names as an array      | [] (does not add image pull secrets to deployed pods)          |
-| `serviceAccount.create`                               | whether create service account of csi-blob-controller | true                                                           |
-| `serviceAccount.controller`                           | name of service account for csi-blob-controller       | csi-blob-controller-sa                                  |
-| `serviceAccount.node`                                 | name of service account for csi-blob-node             | csi-blob-node-sa                                        |
-| `rbac.create`                                         | whether create rbac of csi-blob-controller            | true                                                           |
+| `serviceAccount.create`                               | whether create service account of csi-blob-controller | `true`                                                           |
+| `serviceAccount.controller`                           | name of service account for csi-blob-controller       | `csi-blob-controller-sa`                                  |
+| `serviceAccount.node`                                 | name of service account for csi-blob-node             | `csi-blob-node-sa`                                        |
+| `rbac.create`                                         | whether create rbac of csi-blob-controller            | `true`                                                           |
 | `controller.name`                                     | name of driver deployment                  | `csi-blob-controller`
-| `controller.replicas`                                 | the replicas of csi-blob-controller                   | 2                                                              |
+| `controller.replicas`                                 | the replicas of csi-blob-controller                   | `2`                                                              |
 | `controller.metricsPort`                              | metrics port of csi-blob-controller                   | `29634`                                                          |
 | `controller.livenessProbe.healthPort `                | health check port for liveness probe                   | `29632` |
-| `controller.runOnMaster`                              | run controller on master node                         | false                                                          |
+| `controller.runOnMaster`                              | run controller on master node                         | `true`                                                          |
 | `controller.logLevel`                                 | controller driver log level                           | `5`                                                            |
 | `controller.resources.csiProvisioner.limits.cpu`      | csi-provisioner cpu limits                            | 100m                                                           |
 | `controller.resources.csiProvisioner.limits.memory`   | csi-provisioner memory limits                         | 100Mi                                                          |
@@ -100,7 +107,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.metricsPort`                                    | metrics port of csi-blob-node                         | `29635`                                                          |
 | `node.livenessProbe.healthPort `                      | health check port for liveness probe                   | `29633` |
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
-| `node.enableBlobfuseProxy`                            | node enable blobfuse-proxy                            | false                                                          |
+| `node.enableBlobfuseProxy`                            | node enable blobfuse-proxy                            | `false`                                                          |
 | `node.blobfuseCachePath`                              | blobfuse cache path(`tmp-path`)                       | `/mnt`                                                          |
 | `node.resources.livenessProbe.limits.cpu`             | liveness-probe cpu limits                             | 100m                                                           |
 | `node.resources.livenessProbe.limits.memory`          | liveness-probe memory limits                          | 100Mi                                                          |
@@ -119,12 +126,11 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.tolerations`                                    | node pod tolerations                                  | []                                                             |
 | `linux.kubelet`                                       | configure kubelet directory path on Linux agent node node                  | `/var/lib/kubelet`                                                |
 | `linux.distro`                                        | configure ssl certificates for different Linux distribution(available values: `debian`, `fedora`)             | `debian`
-| `cloud`                                               | the cloud environment the driver is running on        | AzurePublicCloud                                               |
+| `cloud`                                               | the cloud environment the driver is running on        | `AzurePublicCloud`                                               |
 | `podAnnotations`                                      | collection of annotations to add to all the pods      | {}                                                             |
 | `podLabels`                                           | collection of labels to add to all the pods           | {}                                                             |
-| `priorityClassName`                                   | priority class name to be added to pods               | system-cluster-critical                                        |
+| `priorityClassName`                                   | priority class name to be added to pods               | `system-cluster-critical`                                        |
 | `securityContext`                                     | security context to be added to pods                  | {}                                                             |
-| `node.livenessProbe.healthPort `                      | the health check port for liveness probe              | `29633` |
 
 ## troubleshooting
  - Add `--wait -v=5 --debug` in `helm install` command to get detailed error
