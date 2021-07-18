@@ -45,7 +45,15 @@ const (
 )
 
 func NewFakeDriver() *Driver {
-	driver := NewDriver(fakeNodeID, DefaultDriverName, "", false, 5, false)
+	driverOptions := DriverOptions{
+		NodeID:                  fakeNodeID,
+		DriverName:              DefaultDriverName,
+		BlobfuseProxyEndpoint:   "",
+		EnableBlobfuseProxy:     false,
+		BlobfuseProxyConnTimout: 5,
+		EnableBlobMockMount:     false,
+	}
+	driver := NewDriver(&driverOptions)
 	driver.Name = fakeDriverName
 	driver.Version = vendorVersion
 	driver.subnetLockMap = util.NewLockMap()
@@ -53,12 +61,28 @@ func NewFakeDriver() *Driver {
 }
 
 func TestNewFakeDriver(t *testing.T) {
-	d := NewDriver(fakeNodeID, DefaultDriverName, "", false, 5, false)
+	driverOptions := DriverOptions{
+		NodeID:                  fakeNodeID,
+		DriverName:              DefaultDriverName,
+		BlobfuseProxyEndpoint:   "",
+		EnableBlobfuseProxy:     false,
+		BlobfuseProxyConnTimout: 5,
+		EnableBlobMockMount:     false,
+	}
+	d := NewDriver(&driverOptions)
 	assert.NotNil(t, d)
 }
 
 func TestNewDriver(t *testing.T) {
-	driver := NewDriver(fakeNodeID, DefaultDriverName, "", false, 5, false)
+	driverOptions := DriverOptions{
+		NodeID:                  fakeNodeID,
+		DriverName:              DefaultDriverName,
+		BlobfuseProxyEndpoint:   "",
+		EnableBlobfuseProxy:     false,
+		BlobfuseProxyConnTimout: 5,
+		EnableBlobMockMount:     false,
+	}
+	driver := NewDriver(&driverOptions)
 	fakedriver := NewFakeDriver()
 	fakedriver.Name = DefaultDriverName
 	fakedriver.Version = driverVersion
