@@ -36,16 +36,18 @@ func init() {
 }
 
 var (
-	endpoint                = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	blobfuseProxyEndpoint   = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
-	nodeID                  = flag.String("nodeid", "", "node id")
-	version                 = flag.Bool("version", false, "Print the version and exit.")
-	metricsAddress          = flag.String("metrics-address", "0.0.0.0:29634", "export the metrics")
-	kubeconfig              = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
-	driverName              = flag.String("drivername", blob.DefaultDriverName, "name of the driver")
-	enableBlobfuseProxy     = flag.Bool("enable-blobfuse-proxy", false, "Whether using blobfuse proxy for mounts")
-	blobfuseProxyConnTimout = flag.Int("blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
-	enableBlobMockMount     = flag.Bool("enable-blob-mock-mount", false, "Whether enable mock mount(only for testing)")
+	endpoint                   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	blobfuseProxyEndpoint      = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
+	nodeID                     = flag.String("nodeid", "", "node id")
+	version                    = flag.Bool("version", false, "Print the version and exit.")
+	metricsAddress             = flag.String("metrics-address", "0.0.0.0:29634", "export the metrics")
+	kubeconfig                 = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
+	driverName                 = flag.String("drivername", blob.DefaultDriverName, "name of the driver")
+	enableBlobfuseProxy        = flag.Bool("enable-blobfuse-proxy", false, "Whether using blobfuse proxy for mounts")
+	blobfuseProxyConnTimout    = flag.Int("blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
+	enableBlobMockMount        = flag.Bool("enable-blob-mock-mount", false, "Whether enable mock mount(only for testing)")
+	cloudConfigSecretName      = flag.String("cloud-config-secret-name", "azure-cloud-provider", "secret name of cloud config")
+	cloudConfigSecretNamespace = flag.String("cloud-config-secret-namespace", "kube-system", "secret namespace of cloud config")
 )
 
 func main() {
@@ -67,12 +69,14 @@ func main() {
 
 func handle() {
 	driverOptions := blob.DriverOptions{
-		NodeID:                  *nodeID,
-		DriverName:              *driverName,
-		BlobfuseProxyEndpoint:   *blobfuseProxyEndpoint,
-		EnableBlobfuseProxy:     *enableBlobfuseProxy,
-		BlobfuseProxyConnTimout: *blobfuseProxyConnTimout,
-		EnableBlobMockMount:     *enableBlobMockMount,
+		NodeID:                     *nodeID,
+		DriverName:                 *driverName,
+		CloudConfigSecretName:      *cloudConfigSecretName,
+		CloudConfigSecretNamespace: *cloudConfigSecretNamespace,
+		BlobfuseProxyEndpoint:      *blobfuseProxyEndpoint,
+		EnableBlobfuseProxy:        *enableBlobfuseProxy,
+		BlobfuseProxyConnTimout:    *blobfuseProxyConnTimout,
+		EnableBlobMockMount:        *enableBlobMockMount,
 	}
 	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {
