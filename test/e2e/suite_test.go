@@ -107,10 +107,17 @@ var _ = ginkgo.BeforeSuite(func() {
 	}
 	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
 
-	nodeid := os.Getenv("nodeid")
 	kubeconfig := os.Getenv(kubeconfigEnvVar)
 	_, useBlobfuseProxy := os.LookupEnv("ENABLE_BLOBFUSE_PROXY")
-	blobDriver = blob.NewDriver(nodeid, blob.DefaultDriverName, "", useBlobfuseProxy, 5, false)
+	driverOptions := blob.DriverOptions{
+		NodeID:                  os.Getenv("nodeid"),
+		DriverName:              blob.DefaultDriverName,
+		BlobfuseProxyEndpoint:   "",
+		EnableBlobfuseProxy:     useBlobfuseProxy,
+		BlobfuseProxyConnTimout: 5,
+		EnableBlobMockMount:     false,
+	}
+	blobDriver = blob.NewDriver(&driverOptions)
 	go func() {
 		os.Setenv("AZURE_CREDENTIAL_FILE", credentials.TempAzureCredentialFilePath)
 		blobDriver.Run(fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String()), kubeconfig, false)

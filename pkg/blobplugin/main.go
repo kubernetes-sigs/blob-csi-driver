@@ -66,7 +66,15 @@ func main() {
 }
 
 func handle() {
-	driver := blob.NewDriver(*nodeID, *driverName, *blobfuseProxyEndpoint, *enableBlobfuseProxy, *blobfuseProxyConnTimout, *enableBlobMockMount)
+	driverOptions := blob.DriverOptions{
+		NodeID:                  *nodeID,
+		DriverName:              *driverName,
+		BlobfuseProxyEndpoint:   *blobfuseProxyEndpoint,
+		EnableBlobfuseProxy:     *enableBlobfuseProxy,
+		BlobfuseProxyConnTimout: *blobfuseProxyConnTimout,
+		EnableBlobMockMount:     *enableBlobMockMount,
+	}
+	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {
 		klog.Fatalln("Failed to initialize Azure Blob Storage CSI driver")
 	}

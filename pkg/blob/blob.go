@@ -101,6 +101,16 @@ var (
 	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, shareNotFound, shareBeingDeleted, clientThrottled}
 )
 
+// DriverOptions defines driver parameters specified in driver deployment
+type DriverOptions struct {
+	NodeID                  string
+	DriverName              string
+	BlobfuseProxyEndpoint   string
+	EnableBlobfuseProxy     bool
+	BlobfuseProxyConnTimout int
+	EnableBlobMockMount     bool
+}
+
 // Driver implements all interfaces of CSI drivers
 type Driver struct {
 	csicommon.CSIDriver
@@ -121,19 +131,20 @@ type Driver struct {
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
 // does not support optional driver plugin info manifest field. Refer to CSI spec for more details.
-func NewDriver(nodeID, driverName, blobfuseProxyEndpoint string, enableBlobfuseProxy bool, blobfuseProxyConnTimout int, enableBlobMockMount bool) *Driver {
-	driver := Driver{}
-	driver.Name = driverName
-	driver.Version = driverVersion
-	driver.NodeID = nodeID
-	driver.volLockMap = util.NewLockMap()
-	driver.subnetLockMap = util.NewLockMap()
-	driver.volumeLocks = newVolumeLocks()
-	driver.blobfuseProxyEndpoint = blobfuseProxyEndpoint
-	driver.enableBlobfuseProxy = enableBlobfuseProxy
-	driver.blobfuseProxyConnTimout = blobfuseProxyConnTimout
-	driver.enableBlobMockMount = enableBlobMockMount
-	return &driver
+func NewDriver(options *DriverOptions) *Driver {
+	d := Driver{
+		volLockMap:              util.NewLockMap(),
+		subnetLockMap:           util.NewLockMap(),
+		volumeLocks:             newVolumeLocks(),
+		blobfuseProxyEndpoint:   options.BlobfuseProxyEndpoint,
+		enableBlobfuseProxy:     options.EnableBlobfuseProxy,
+		blobfuseProxyConnTimout: options.BlobfuseProxyConnTimout,
+		enableBlobMockMount:     options.EnableBlobMockMount,
+	}
+	d.Name = options.DriverName
+	d.Version = driverVersion
+	d.NodeID = options.NodeID
+	return &d
 }
 
 // Run driver initialization
