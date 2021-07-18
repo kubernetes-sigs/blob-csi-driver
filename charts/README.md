@@ -79,6 +79,8 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `serviceAccount.node`                                 | name of service account for csi-blob-node             | `csi-blob-node-sa`                                        |
 | `rbac.create`                                         | whether create rbac of csi-blob-controller            | `true`                                                           |
 | `controller.name`                                     | name of driver deployment                  | `csi-blob-controller`
+| `controller.cloudConfigSecretName`                    | cloud config secret name of controller driver               | `azure-cloud-provider`
+| `controller.cloudConfigSecretNamespace`               | cloud config secret namespace of controller driver          | `kube-system`
 | `controller.replicas`                                 | the replicas of csi-blob-controller                   | `2`                                                              |
 | `controller.metricsPort`                              | metrics port of csi-blob-controller                   | `29634`                                                          |
 | `controller.livenessProbe.healthPort `                | health check port for liveness probe                   | `29632` |
@@ -104,6 +106,8 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.nodeSelector`                             | controller pod node selector                          | {}                                                             |
 | `controller.tolerations`                              | controller pod tolerations                            | []                                                             |
 | `node.name`                                           | name of driver daemonset                  | `csi-blob-node`
+| `node.cloudConfigSecretName`                          | cloud config secret name of node driver               | `azure-cloud-provider`
+| `node.cloudConfigSecretNamespace`                     | cloud config secret namespace of node driver          | `kube-system`
 | `node.metricsPort`                                    | metrics port of csi-blob-node                         | `29635`                                                          |
 | `node.livenessProbe.healthPort `                      | health check port for liveness probe                   | `29633` |
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |

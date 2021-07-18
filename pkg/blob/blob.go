@@ -103,19 +103,23 @@ var (
 
 // DriverOptions defines driver parameters specified in driver deployment
 type DriverOptions struct {
-	NodeID                  string
-	DriverName              string
-	BlobfuseProxyEndpoint   string
-	EnableBlobfuseProxy     bool
-	BlobfuseProxyConnTimout int
-	EnableBlobMockMount     bool
+	NodeID                     string
+	DriverName                 string
+	CloudConfigSecretName      string
+	CloudConfigSecretNamespace string
+	BlobfuseProxyEndpoint      string
+	EnableBlobfuseProxy        bool
+	BlobfuseProxyConnTimout    int
+	EnableBlobMockMount        bool
 }
 
 // Driver implements all interfaces of CSI drivers
 type Driver struct {
 	csicommon.CSIDriver
-	cloud                 *azure.Cloud
-	blobfuseProxyEndpoint string
+	cloud                      *azure.Cloud
+	cloudConfigSecretName      string
+	cloudConfigSecretNamespace string
+	blobfuseProxyEndpoint      string
 	// enableBlobMockMount is only for testing, DO NOT set as true in non-testing scenario
 	enableBlobMockMount     bool
 	enableBlobfuseProxy     bool
@@ -133,13 +137,15 @@ type Driver struct {
 // does not support optional driver plugin info manifest field. Refer to CSI spec for more details.
 func NewDriver(options *DriverOptions) *Driver {
 	d := Driver{
-		volLockMap:              util.NewLockMap(),
-		subnetLockMap:           util.NewLockMap(),
-		volumeLocks:             newVolumeLocks(),
-		blobfuseProxyEndpoint:   options.BlobfuseProxyEndpoint,
-		enableBlobfuseProxy:     options.EnableBlobfuseProxy,
-		blobfuseProxyConnTimout: options.BlobfuseProxyConnTimout,
-		enableBlobMockMount:     options.EnableBlobMockMount,
+		volLockMap:                 util.NewLockMap(),
+		subnetLockMap:              util.NewLockMap(),
+		volumeLocks:                newVolumeLocks(),
+		cloudConfigSecretName:      options.CloudConfigSecretName,
+		cloudConfigSecretNamespace: options.CloudConfigSecretNamespace,
+		blobfuseProxyEndpoint:      options.BlobfuseProxyEndpoint,
+		enableBlobfuseProxy:        options.EnableBlobfuseProxy,
+		blobfuseProxyConnTimout:    options.BlobfuseProxyConnTimout,
+		enableBlobMockMount:        options.EnableBlobMockMount,
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion
@@ -155,7 +161,7 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 	}
 	klog.Infof("\nDRIVER INFORMATION:\n-------------------\n%s\n\nStreaming logs below:", versionMeta)
 
-	d.cloud, err = getCloudProvider(kubeconfig, d.NodeID)
+	d.cloud, err = getCloudProvider(kubeconfig, d.NodeID, d.cloudConfigSecretName, d.cloudConfigSecretNamespace)
 	if err != nil {
 		klog.Fatalf("failed to get Azure Cloud Provider, error: %v", err)
 	}

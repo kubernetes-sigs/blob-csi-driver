@@ -36,6 +36,8 @@ rbac:
 
 controller:
   name: csi-blob-controller
+  cloudConfigSecretName: azure-cloud-provider
+  cloudConfigSecretNamespace: kube-system
   metricsPort: 29634
   livenessProbe:
     healthPort: 29632
@@ -83,6 +85,8 @@ controller:
 
 node:
   name: csi-blob-node
+  cloudConfigSecretName: azure-cloud-provider
+  cloudConfigSecretNamespace: kube-system
   metricsPort: 29635
   livenessProbe:
     healthPort: 29633
