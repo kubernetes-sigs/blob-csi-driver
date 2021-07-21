@@ -274,7 +274,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	// set different tmp-path with time info
 	tmpPath := fmt.Sprintf("%s/%s#%d", "/mnt", volumeID, time.Now().Unix())
-	args := fmt.Sprintf("%s --tmp-path=%s --container-name=%s", targetPath, tmpPath, containerName)
+	args := fmt.Sprintf("%s --pre-mount-validate=true --tmp-path=%s --container-name=%s", targetPath, tmpPath, containerName)
 	for _, opt := range mountOptions {
 		args = args + " " + opt
 	}
@@ -283,6 +283,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		targetPath, protocol, volumeID, attrib, mountFlags, mountOptions, args, serverAddress)
 
 	authEnv = append(authEnv, "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
+	if d.enableBlobMockMount {
+		klog.Warningf("NodeStageVolume: mock mount on volumeID(%s), this is only for TESTING!!!", volumeID)
+		if err := volumehelper.MakeDir(targetPath); err != nil {
+			klog.Errorf("MakeDir failed on target: %s (%v)", targetPath, err)
+			return nil, err
+		}
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
+
 	var output string
 	if d.enableBlobfuseProxy {
 		output, err = d.mountBlobfuseWithProxy(args, authEnv)
@@ -290,7 +299,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		output, err = d.mountBlobfuseInsideDriver(args, authEnv)
 	}
 
-	if err != nil || strings.Contains(string(output), "Unable to start blobfuse") {
+	if err != nil {
 		err = fmt.Errorf("Mount failed with error: %v, output: %v", err, output)
 		klog.Errorf("%v", err)
 		notMnt, mntErr := d.mounter.IsLikelyNotMountPoint(targetPath)
