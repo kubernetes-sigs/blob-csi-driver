@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
@@ -770,6 +771,50 @@ func TestSetAzureCredentials(t *testing.T) {
 		if result != test.expectedName || !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("desc: %s,\n input: kubeClient(%v), accountName(%v), accountKey(%v),\n setAzureCredentials result: %v, expectedName: %v err: %v, expectedErr: %v",
 				test.desc, test.kubeClient, test.accountName, test.accountKey, result, test.expectedName, err, test.expectedErr)
+		}
+	}
+}
+
+func TestAppendDefaultMountOptions(t *testing.T) {
+	tests := []struct {
+		options       []string
+		tmpPath       string
+		containerName string
+		expected      []string
+	}{
+		{
+			options:       []string{"targetPath"},
+			tmpPath:       "/tmp",
+			containerName: "containerName",
+			expected: []string{"--cancel-list-on-mount-seconds=60",
+				"--container-name=containerName",
+				"--pre-mount-validate=true",
+				"--tmp-path=/tmp",
+				"--use-https=true",
+				"targetPath",
+			},
+		},
+		{
+			options:       []string{"targetPath", "--cancel-list-on-mount-seconds=0", "--pre-mount-validate=false"},
+			tmpPath:       "/tmp",
+			containerName: "containerName",
+			expected: []string{"--cancel-list-on-mount-seconds=0",
+				"--container-name=containerName",
+				"--pre-mount-validate=false",
+				"--tmp-path=/tmp",
+				"--use-https=true",
+				"targetPath",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		result := appendDefaultMountOptions(test.options, test.tmpPath, test.containerName)
+		sort.Strings(result)
+		sort.Strings(test.expected)
+
+		if !reflect.DeepEqual(result, test.expected) {
+			t.Errorf("input: %q, appendDefaultMountOptions result: %q, expected: %q", test.options, result, test.expected)
 		}
 	}
 }
