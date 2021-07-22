@@ -38,6 +38,7 @@ controller:
   name: csi-blob-controller
   cloudConfigSecretName: azure-cloud-provider
   cloudConfigSecretNamespace: kube-system
+  hostNetwork: true # this setting could be disabled if controller does not depend on MSI setting
   metricsPort: 29634
   livenessProbe:
     healthPort: 29632
