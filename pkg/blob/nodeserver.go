@@ -267,14 +267,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	// Get mountOptions that the volume will be formatted and mounted with
-	mountOptions := util.JoinMountOptions(mountFlags, []string{"--use-https=true"})
+	mountOptions := mountFlags
 	if ephemeralVol {
 		mountOptions = util.JoinMountOptions(mountOptions, strings.Split(ephemeralVolMountOptions, ","))
 	}
-
 	// set different tmp-path with time info
 	tmpPath := fmt.Sprintf("%s/%s#%d", "/mnt", volumeID, time.Now().Unix())
-	args := fmt.Sprintf("%s --pre-mount-validate=true --tmp-path=%s --container-name=%s", targetPath, tmpPath, containerName)
+	mountOptions = appendDefaultMountOptions(mountOptions, tmpPath, containerName)
+
+	args := targetPath
 	for _, opt := range mountOptions {
 		args = args + " " + opt
 	}

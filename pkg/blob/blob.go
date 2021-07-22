@@ -604,3 +604,40 @@ func (d *Driver) getSubnetResourceID() string {
 
 	return fmt.Sprintf(subnetTemplate, subsID, rg, d.cloud.VnetName, d.cloud.SubnetName)
 }
+
+// appendDefaultMountOptions return mount options combined with mountOptions and defaultMountOptions
+func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName string) []string {
+	var defaultMountOptions = map[string]string{
+		"--pre-mount-validate": "true",
+		"--use-https":          "true",
+		"--tmp-path":           tmpPath,
+		"--container-name":     containerName,
+		// prevent billing charges on mounting
+		"--cancel-list-on-mount-seconds": "60",
+	}
+
+	// stores the mount options already included in mountOptions
+	included := make(map[string]bool)
+
+	for _, mountOption := range mountOptions {
+		for k := range defaultMountOptions {
+			if strings.HasPrefix(mountOption, k) {
+				included[k] = true
+			}
+		}
+	}
+
+	allMountOptions := mountOptions
+
+	for k, v := range defaultMountOptions {
+		if _, isIncluded := included[k]; !isIncluded {
+			if v != "" {
+				allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%s", k, v))
+			} else {
+				allMountOptions = append(allMountOptions, k)
+			}
+		}
+	}
+
+	return allMountOptions
+}
