@@ -15,7 +15,7 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driv
 ### Step#2. Install Blob CSI driver with `node.enableBlobfuseProxy=true` setting
 ```console
 helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.1.0 --set node.enableBlobfuseProxy=true
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.4.0 --set node.enableBlobfuseProxy=true
 ```
 
 #### Troubleshooting
