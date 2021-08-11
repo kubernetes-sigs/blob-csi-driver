@@ -1,12 +1,10 @@
-#### Breaking change
-From `v0.7.0`, driver name changed from `blobfuse.csi.azure.com` to `blob.csi.azure.com`, volume created by `v0.6.0`(or prior version) could not be mounted by `v0.7.0` driver. If you have volumes created by `v0.6.0` version, DO NOT upgrade to `v0.7.0` or higher version.
-
 # Install CSI driver with Helm 3
 
 ## Prerequisites
  - [install Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
 
 ### Tips
+ - configure with [blobfuse-proxy](../pkg/blobfuse-proxy) to make blobfuse mount still available after driver restart
  - make controller only run on master node: `--set controller.runOnMaster=true`
  - enable `fsGroupPolicy` on a k8s 1.20+ cluster: `--set feature.enableFSGroupPolicy=true`
  - set replica of controller as `1`: `--set controller.replicas=1`
