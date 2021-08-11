@@ -150,7 +150,7 @@ users:
 			}
 			os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 		}
-		cloud, err := getCloudProvider(test.kubeconfig, test.nodeID, "", "")
+		cloud, err := getCloudProvider(test.kubeconfig, test.nodeID, "", "", "")
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
 		}
