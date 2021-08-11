@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/routeclient/mockrouteclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/routetableclient/mockroutetableclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/securitygroupclient/mocksecuritygroupclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/snapshotclient/mocksnapshotclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/subnetclient/mocksubnetclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/vmclient/mockvmclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/vmssclient/mockvmssclient"
@@ -88,6 +89,7 @@ func GetTestCloud(ctrl *gomock.Controller) (az *Cloud) {
 		eventRecorder:      &record.FakeRecorder{},
 	}
 	az.DisksClient = mockdiskclient.NewMockInterface(ctrl)
+	az.SnapshotsClient = mocksnapshotclient.NewMockInterface(ctrl)
 	az.InterfacesClient = mockinterfaceclient.NewMockInterface(ctrl)
 	az.LoadBalancerClient = mockloadbalancerclient.NewMockInterface(ctrl)
 	az.PublicIPAddressesClient = mockpublicipclient.NewMockInterface(ctrl)
@@ -104,9 +106,8 @@ func GetTestCloud(ctrl *gomock.Controller) (az *Cloud) {
 	az.nsgCache, _ = az.newNSGCache()
 	az.rtCache, _ = az.newRouteTableCache()
 
-	common := &controllerCommon{cloud: az, resourceGroup: "rg", location: "westus"}
-	az.controllerCommon = common
-	az.ManagedDiskController = &ManagedDiskController{common: common}
+	_ = initDiskControllers(az)
+
 	az.regionZonesMap = map[string][]string{az.Location: {"1", "2", "3"}}
 
 	return az

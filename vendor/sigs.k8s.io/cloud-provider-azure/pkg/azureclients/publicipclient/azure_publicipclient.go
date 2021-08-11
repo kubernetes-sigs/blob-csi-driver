@@ -105,7 +105,7 @@ func (c *Client) Get(ctx context.Context, resourceGroupName string, publicIPAddr
 	}
 
 	result, rerr := c.getPublicIPAddress(ctx, resourceGroupName, publicIPAddressName, expand)
-	_ = mc.Observe(rerr.Error())
+	mc.Observe(rerr)
 	if rerr != nil {
 		if rerr.IsThrottled() {
 			// Update RetryAfterReader so that no more requests would be sent until RetryAfter expires.
@@ -166,7 +166,7 @@ func (c *Client) GetVirtualMachineScaleSetPublicIPAddress(ctx context.Context, r
 	}
 
 	result, rerr := c.getVMSSPublicIPAddress(ctx, resourceGroupName, virtualMachineScaleSetName, virtualmachineIndex, networkInterfaceName, IPConfigurationName, publicIPAddressName, expand)
-	_ = mc.Observe(rerr.Error())
+	mc.Observe(rerr)
 	if rerr != nil {
 		if rerr.IsThrottled() {
 			// Update RetryAfterReader so that no more requests would be sent until RetryAfter expires.
@@ -243,7 +243,7 @@ func (c *Client) List(ctx context.Context, resourceGroupName string) ([]network.
 	}
 
 	result, rerr := c.listPublicIPAddress(ctx, resourceGroupName)
-	_ = mc.Observe(rerr.Error())
+	mc.Observe(rerr)
 	if rerr != nil {
 		if rerr.IsThrottled() {
 			// Update RetryAfterReader so that no more requests would be sent until RetryAfter expires.
@@ -314,7 +314,7 @@ func (c *Client) CreateOrUpdate(ctx context.Context, resourceGroupName string, p
 	}
 
 	rerr := c.createOrUpdatePublicIP(ctx, resourceGroupName, publicIPAddressName, parameters)
-	_ = mc.Observe(rerr.Error())
+	mc.Observe(rerr)
 	if rerr != nil {
 		if rerr.IsThrottled() {
 			// Update RetryAfterReader so that no more requests would be sent until RetryAfter expires.
@@ -382,7 +382,7 @@ func (c *Client) Delete(ctx context.Context, resourceGroupName string, publicIPA
 	}
 
 	rerr := c.deletePublicIP(ctx, resourceGroupName, publicIPAddressName)
-	_ = mc.Observe(rerr.Error())
+	mc.Observe(rerr)
 	if rerr != nil {
 		if rerr.IsThrottled() {
 			// Update RetryAfterReader so that no more requests would be sent until RetryAfter expires.
@@ -495,4 +495,69 @@ func (page PublicIPAddressListResultPage) Values() []network.PublicIPAddress {
 		return nil
 	}
 	return *page.pialr.Value
+}
+
+// ListAll gets all of PublicIPAddress in the subscription.
+func (c *Client) ListAll(ctx context.Context) ([]network.PublicIPAddress, *retry.Error) {
+	// Report errors if the client is rate limited.
+	if !c.rateLimiterReader.TryAccept() {
+		return nil, retry.GetRateLimitError(false, "PublicIPListAll")
+	}
+
+	// Report errors if the client is throttled.
+	if c.RetryAfterReader.After(time.Now()) {
+		rerr := retry.GetThrottlingError("PublicIPListAll", "client throttled", c.RetryAfterReader)
+		return nil, rerr
+	}
+
+	result, rerr := c.listAllPublicIPAddress(ctx)
+	if rerr != nil {
+		if rerr.IsThrottled() {
+			// Update RetryAfterReader so that no more requests would be sent until RetryAfter expires.
+			c.RetryAfterReader = rerr.RetryAfter
+		}
+
+		return result, rerr
+	}
+
+	return result, nil
+}
+
+// listAllPublicIPAddress gets all of PublicIPAddress in the subscription.
+func (c *Client) listAllPublicIPAddress(ctx context.Context) ([]network.PublicIPAddress, *retry.Error) {
+	resourceID := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.Network/publicIPAddresses",
+		autorest.Encode("path", c.subscriptionID))
+	result := make([]network.PublicIPAddress, 0)
+	page := &PublicIPAddressListResultPage{}
+	page.fn = c.listNextResults
+
+	resp, rerr := c.armClient.GetResource(ctx, resourceID, "")
+	defer c.armClient.CloseResponse(ctx, resp)
+	if rerr != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "publicip.listall.request", resourceID, rerr.Error())
+		return result, rerr
+	}
+
+	var err error
+	page.pialr, err = c.listResponder(resp)
+	if err != nil {
+		klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "publicip.listall.respond", resourceID, err)
+		return result, retry.GetError(resp, err)
+	}
+
+	for {
+		result = append(result, page.Values()...)
+
+		// Abort the loop when there's no nextLink in the response.
+		if to.String(page.Response().NextLink) == "" {
+			break
+		}
+
+		if err = page.NextWithContext(ctx); err != nil {
+			klog.V(5).Infof("Received error in %s: resourceID: %s, error: %s", "publicip.listall.next", resourceID, err)
+			return result, retry.GetError(page.Response().Response.Response, err)
+		}
+	}
+
+	return result, nil
 }

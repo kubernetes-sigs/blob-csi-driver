@@ -368,8 +368,6 @@ func (az *Cloud) serviceOwnsFrontendIP(fip network.FrontendIPConfiguration, serv
 				return true, isPrimaryService, nil
 			}
 			klog.V(4).Infof("serviceOwnsFrontendIP: the public IP with ID %s is being referenced by other service with public IP address %s", *pip.ID, *pip.IPAddress)
-
-			return false, isPrimaryService, nil
 		}
 
 		return false, isPrimaryService, nil
@@ -1071,6 +1069,11 @@ func (as *availabilitySet) EnsureBackendPoolDeleted(service *v1.Service, backend
 }
 
 func getAvailabilitySetNameByID(asID string) (string, error) {
+	// for standalone VM
+	if asID == "" {
+		return "", nil
+	}
+
 	matches := vmasIDRE.FindStringSubmatch(asID)
 	if len(matches) != 2 {
 		return "", fmt.Errorf("getAvailabilitySetNameByID: failed to parse the VMAS ID %s", asID)
