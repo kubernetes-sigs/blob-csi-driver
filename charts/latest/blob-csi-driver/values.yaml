@@ -88,6 +88,7 @@ node:
   name: csi-blob-node
   cloudConfigSecretName: azure-cloud-provider
   cloudConfigSecretNamespace: kube-system
+  maxUnavailable: 1
   metricsPort: 29635
   livenessProbe:
     healthPort: 29633
