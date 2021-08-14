@@ -66,6 +66,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		parameters = make(map[string]string)
 	}
 	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, secretNamespace string
+	var isHnsEnabled *bool
 
 	// store account key to k8s secret by default
 	storeAccountKey := true
@@ -92,6 +93,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			customTags = v
 		case secretNamespaceField:
 			secretNamespace = v
+		case isHnsEnabledField:
+			if strings.EqualFold(v, trueValue) {
+				isHnsEnabled = to.BoolPtr(true)
+			}
 		case storeAccountKeyField:
 			if strings.EqualFold(v, falseValue) {
 				storeAccountKey = false
@@ -127,8 +132,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	enableHTTPSTrafficOnly := true
 	accountKind := string(storage.KindStorageV2)
-	var vnetResourceIDs []string
-	var isHnsEnabled, enableNfsV3 *bool
+	var (
+		vnetResourceIDs []string
+		enableNfsV3     *bool
+	)
 	if protocol == nfs {
 		enableHTTPSTrafficOnly = false
 		isHnsEnabled = to.BoolPtr(true)

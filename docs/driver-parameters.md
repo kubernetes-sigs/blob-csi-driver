@@ -15,6 +15,7 @@ storageAccount | specify Azure storage account name| STORAGE_ACCOUNT_NAME | - No
 storeAccountKey | whether store account key to k8s secret | `true`,`false` | No | `true`
 protocol | specify blobfuse mount or NFSv3 mount | `fuse`, `nfs` | No | `fuse`
 containerName | specify the existing container name | existing container name | No | if empty, driver will create a new container name, starting with `pvc-fuse` for blobfuse or `pvc-nfs` for NFSv3
+isHnsEnabled | enable `Hierarchical namespace` for Azure DataLake storage account(only for blobfuse) | `true`,`false` | No | `false`
 server | specify Azure storage account server address | existing server address, e.g. `accountname.privatelink.blob.core.windows.net` | No | if empty, driver will use default `accountname.blob.core.windows.net` or other sovereign cloud account address
 storageEndpointSuffix | specify Azure storage endpoint suffix | `core.windows.net` | No | if empty, driver will use default storage endpoint suffix according to cloud environment, e.g. `core.windows.net`
 tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources) would be created in newly created storage account | tag format: 'foo=aaa,bar=bbb' | No | ""
@@ -22,6 +23,10 @@ tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/mana
  - `fsGroup` securityContext setting
 
 Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check [here](https://github.com/Azure/Azure-storage-fuse#mount-options) for more mountoptions.
+
+ - Azure DataLake storage account support
+   - set `isHnsEnabled: "true"` in storage class parameter to create ADLS account by driver.
+   - mount option `--use-adls=true` must be specified to enable blobfuse access ADLS account.
 
  - account tags format created by dynamic provisioning
 ```
