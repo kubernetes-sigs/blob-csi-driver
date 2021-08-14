@@ -61,6 +61,7 @@ const (
 	secretNamespaceField         = "secretnamespace"
 	containerNameField           = "containername"
 	storeAccountKeyField         = "storeaccountkey"
+	isHnsEnabledField            = "ishnsenabled"
 	getAccountKeyFromSecretField = "getaccountkeyfromsecret"
 	keyVaultURLField             = "keyvaulturl"
 	keyVaultSecretNameField      = "keyvaultsecretname"

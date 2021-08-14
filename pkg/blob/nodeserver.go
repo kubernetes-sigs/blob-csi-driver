@@ -211,7 +211,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	secrets := req.GetSecrets()
 
 	var serverAddress, storageEndpointSuffix, protocol, ephemeralVolMountOptions string
-	var ephemeralVol bool
+	var ephemeralVol, isHnsEnabled bool
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
 		case serverNameField:
@@ -224,6 +224,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			ephemeralVol = strings.EqualFold(v, trueValue)
 		case mountOptionsField:
 			ephemeralVolMountOptions = v
+		case isHnsEnabledField:
+			isHnsEnabled = strings.EqualFold(v, trueValue)
 		}
 	}
 
@@ -270,6 +272,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	mountOptions := mountFlags
 	if ephemeralVol {
 		mountOptions = util.JoinMountOptions(mountOptions, strings.Split(ephemeralVolMountOptions, ","))
+	}
+	if isHnsEnabled {
+		mountOptions = util.JoinMountOptions(mountOptions, []string{"--use-adls=true"})
 	}
 	// set different tmp-path with time info
 	tmpPath := fmt.Sprintf("%s/%s#%d", "/mnt", volumeID, time.Now().Unix())

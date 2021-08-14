@@ -147,7 +147,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				Cmd:            []string{"cat", "/mnt/test-1/data"},
 				ExpectedString: "hello world\nhello world\n", // pod will be restarted so expect to see 2 instances of string
 			},
-			StorageClassParameters: map[string]string{"skuName": "Premium_LRS"},
+			StorageClassParameters: map[string]string{
+				"skuName":      "Premium_LRS",
+				"isHnsEnabled": "true",
+			},
 		}
 		test.Run(cs, ns)
 	})
