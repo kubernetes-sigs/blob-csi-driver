@@ -71,7 +71,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | `v2.3.0`                                                         |
 | `image.livenessProbe.pullPolicy`                      | liveness-probe image pull policy                      | `IfNotPresent`                                                   |
 | `image.nodeDriverRegistrar.repository`                | csi-node-driver-registrar docker image                | `mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar` |
-| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | `v2.2.0`                                                      |
+| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | `v2.3.0`                                                      |
 | `image.nodeDriverRegistrar.pullPolicy`                | csi-node-driver-registrar image pull policy           | `IfNotPresent`                                                   |
 | `image.csiResizer.repository`                         | csi-resizer docker image                              | `mcr.microsoft.com/oss/kubernetes-csi/csi-resizer`               |
 | `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.1.0`                                                         |
