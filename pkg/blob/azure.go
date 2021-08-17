@@ -25,6 +25,7 @@ import (
 
 	kv "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
+	"github.com/Azure/azure-sdk-for-go/storage"
 
 	"github.com/Azure/go-autorest/autorest"
 
@@ -98,6 +99,9 @@ func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent
 
 	if err != nil {
 		klog.V(2).Infof("no cloud config provided, error: %v, driver will run without cloud config", err)
+		if az.Environment.StorageEndpointSuffix == "" {
+			az.Environment.StorageEndpointSuffix = storage.DefaultBaseURL
+		}
 	}
 
 	isController := (nodeID == "")

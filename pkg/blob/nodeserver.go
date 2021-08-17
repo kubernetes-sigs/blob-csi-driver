@@ -26,6 +26,7 @@ import (
 
 	volumehelper "sigs.k8s.io/blob-csi-driver/pkg/util"
 
+	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -238,7 +239,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		if d.cloud.Environment.StorageEndpointSuffix != "" {
 			storageEndpointSuffix = d.cloud.Environment.StorageEndpointSuffix
 		} else {
-			storageEndpointSuffix = "core.windows.net"
+			storageEndpointSuffix = storage.DefaultBaseURL
 		}
 	}
 
