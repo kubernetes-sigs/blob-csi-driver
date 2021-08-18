@@ -129,6 +129,8 @@ feature:
 
 driver:
   name: blob.csi.azure.com
+  customUserAgent: ""
+  userAgentSuffix: ""
 
 linux:
   kubelet: /var/lib/kubelet

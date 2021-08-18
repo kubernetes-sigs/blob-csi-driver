@@ -48,6 +48,8 @@ var (
 	enableBlobMockMount        = flag.Bool("enable-blob-mock-mount", false, "Whether enable mock mount(only for testing)")
 	cloudConfigSecretName      = flag.String("cloud-config-secret-name", "azure-cloud-provider", "secret name of cloud config")
 	cloudConfigSecretNamespace = flag.String("cloud-config-secret-namespace", "kube-system", "secret namespace of cloud config")
+	customUserAgent            = flag.String("custom-user-agent", "", "custom userAgent")
+	userAgentSuffix            = flag.String("user-agent-suffix", "", "userAgent suffix")
 )
 
 func main() {
@@ -77,6 +79,8 @@ func handle() {
 		EnableBlobfuseProxy:        *enableBlobfuseProxy,
 		BlobfuseProxyConnTimout:    *blobfuseProxyConnTimout,
 		EnableBlobMockMount:        *enableBlobMockMount,
+		CustomUserAgent:            *customUserAgent,
+		UserAgentSuffix:            *userAgentSuffix,
 	}
 	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {
