@@ -35,7 +35,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/cloud-provider-azure/pkg/auth"
-	azureprovider "sigs.k8s.io/cloud-provider-azure/pkg/provider"
+	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
 
 var (
@@ -45,63 +45,80 @@ var (
 )
 
 // IsAzureStackCloud decides whether the driver is running on Azure Stack Cloud.
-func IsAzureStackCloud(cloud *azureprovider.Cloud) bool {
+func IsAzureStackCloud(cloud *azure.Cloud) bool {
 	return strings.EqualFold(cloud.Config.Cloud, "AZURESTACKCLOUD")
 }
 
 // getCloudProvider get Azure Cloud Provider
-func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent string) (*azureprovider.Cloud, error) {
-	az := &azureprovider.Cloud{
-		InitSecretConfig: azureprovider.InitSecretConfig{
+func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent string) (*azure.Cloud, error) {
+	az := &azure.Cloud{
+		InitSecretConfig: azure.InitSecretConfig{
 			SecretName:      secretName,
 			SecretNamespace: secretNamespace,
 			CloudConfigKey:  "cloud-config",
 		},
 	}
-	az.UserAgent = userAgent
-	kubeClient, err := getKubeClient(kubeconfig)
-	if err != nil && !os.IsNotExist(err) && err != rest.ErrNotInCluster {
-		return az, fmt.Errorf("failed to get KubeClient: %v", err)
-	}
+	az.Environment.StorageEndpointSuffix = storage.DefaultBaseURL
 
-	if kubeClient != nil {
-		klog.V(2).Infof("reading cloud config from secret")
-		az.KubeClient = kubeClient
-		if err := az.InitializeCloudFromSecret(); err != nil {
-			klog.V(2).Infof("InitializeCloudFromSecret failed with error: %v", err)
+	kubeClient, err := getKubeClient(kubeconfig)
+	if err != nil {
+		klog.Warningf("get kubeconfig(%s) failed with error: %v", kubeconfig, err)
+		if !os.IsNotExist(err) && err != rest.ErrNotInCluster {
+			return az, fmt.Errorf("failed to get KubeClient: %v", err)
 		}
 	}
 
-	if az.TenantID == "" || az.SubscriptionID == "" || az.ResourceGroup == "" {
-		klog.V(2).Infof("could not read cloud config from secret")
+	var (
+		config     *azure.Config
+		fromSecret bool
+	)
+
+	if kubeClient != nil {
+		klog.V(2).Infof("reading cloud config from secret %s/%s", az.SecretNamespace, az.SecretName)
+		az.KubeClient = kubeClient
+		config, err = az.GetConfigFromSecret()
+		if err == nil && config != nil {
+			fromSecret = true
+		}
+		if err != nil {
+			klog.Warningf("InitializeCloudFromSecret: failed to get cloud config from secret %s/%s: %v", az.SecretNamespace, az.SecretName, err)
+		}
+	}
+
+	if config == nil {
+		klog.V(2).Infof("could not read cloud config from secret %s/%s", az.SecretNamespace, az.SecretName)
 		credFile, ok := os.LookupEnv(DefaultAzureCredentialFileEnv)
-		if ok {
+		if ok && strings.TrimSpace(credFile) != "" {
 			klog.V(2).Infof("%s env var set as %v", DefaultAzureCredentialFileEnv, credFile)
 		} else {
 			credFile = DefaultCredFilePath
 			klog.V(2).Infof("use default %s env var: %v", DefaultAzureCredentialFileEnv, credFile)
 		}
 
-		config, errOpenFile := os.Open(credFile)
-		if errOpenFile != nil {
-			err = fmt.Errorf("load azure config from file(%s) failed with %v", credFile, errOpenFile)
+		credFileConfig, err := os.Open(credFile)
+		if err != nil {
+			klog.Warningf("load azure config from file(%s) failed with %v", credFile, err)
 		} else {
-			defer config.Close()
+			defer credFileConfig.Close()
 			klog.V(2).Infof("read cloud config from file: %s successfully", credFile)
-			az, err = azureprovider.NewCloudWithoutFeatureGates(config, false)
+			if config, err = azure.ParseConfig(credFileConfig); err != nil {
+				klog.Warningf("parse config file(%s) failed with error: %v", credFile, err)
+			}
+		}
+	}
+
+	if config == nil {
+		klog.V(2).Infof("no cloud config provided, error: %v, driver will run without cloud config", err)
+	} else {
+		config.UserAgent = userAgent
+		if err = az.InitializeCloudFromConfig(config, fromSecret, false); err != nil {
+			klog.Warningf("InitializeCloudFromConfig failed with error: %v", err)
 		}
 	}
 
 	// reassign kubeClient
 	if kubeClient != nil && az.KubeClient == nil {
 		az.KubeClient = kubeClient
-	}
-
-	if err != nil {
-		klog.V(2).Infof("no cloud config provided, error: %v, driver will run without cloud config", err)
-		if az.Environment.StorageEndpointSuffix == "" {
-			az.Environment.StorageEndpointSuffix = storage.DefaultBaseURL
-		}
 	}
 
 	isController := (nodeID == "")
@@ -117,6 +134,9 @@ func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent
 		klog.V(2).Infof("starting node server on node(%s)", nodeID)
 	}
 
+	if az.Environment.StorageEndpointSuffix == "" {
+		az.Environment.StorageEndpointSuffix = storage.DefaultBaseURL
+	}
 	return az, nil
 }
 

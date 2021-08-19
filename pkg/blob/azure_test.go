@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
+	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -81,6 +82,7 @@ users:
 		desc        string
 		kubeconfig  string
 		nodeID      string
+		userAgent   string
 		expectedErr error
 	}{
 		{
@@ -111,6 +113,7 @@ users:
 			desc:        "[success] out of cluster & in cluster, no kubeconfig, a fake credential file",
 			kubeconfig:  "",
 			nodeID:      "",
+			userAgent:   "useragent",
 			expectedErr: nil,
 		},
 	}
@@ -150,12 +153,15 @@ users:
 			}
 			os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 		}
-		cloud, err := getCloudProvider(test.kubeconfig, test.nodeID, "", "", "")
+		cloud, err := getCloudProvider(test.kubeconfig, test.nodeID, "", "", test.userAgent)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
 		}
 		if cloud == nil {
 			t.Errorf("return value of getCloudProvider should not be nil even there is error")
+		} else {
+			assert.Equal(t, cloud.Environment.StorageEndpointSuffix, storage.DefaultBaseURL)
+			assert.Equal(t, cloud.UserAgent, test.userAgent)
 		}
 	}
 }
