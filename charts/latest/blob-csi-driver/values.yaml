@@ -130,7 +130,7 @@ feature:
 driver:
   name: blob.csi.azure.com
   customUserAgent: ""
-  userAgentSuffix: ""
+  userAgentSuffix: "OSS-helm"
 
 linux:
   kubelet: /var/lib/kubelet
