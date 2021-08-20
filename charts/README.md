@@ -61,7 +61,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | ----------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
 | `driver.name`                                         | alternative driver name                        | `blob.csi.azure.com` |
 | `driver.customUserAgent`                              | custom userAgent               | `` |
-| `driver.userAgentSuffix`                              | userAgent suffix               | `` |
+| `driver.userAgentSuffix`                              | userAgent suffix               | `OSS-helm` |
 | `feature.enableFSGroupPolicy`                         | enable `fsGroupPolicy` on a k8s 1.20+ cluster           | `false`                      |
 | `image.blob.repository`                               | blob-csi-driver docker image                          | `mcr.microsoft.com/k8s/csi/blob-csi`                             |
 | `image.blob.tag`                                      | blob-csi-driver docker image tag                      | `latest`                                                         |
