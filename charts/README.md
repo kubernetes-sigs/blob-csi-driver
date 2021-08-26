@@ -13,7 +13,7 @@
    - `--set controller.cloudConfigSecretNamesapce`
    - `--set node.cloudConfigSecretName`
    - `--set node.cloudConfigSecretNamesapce`
- - switch to `mcr.azk8s.cn` repository in Azure China
+ - switch to `mcr.azk8s.cn` repository in Azure China: `--set image.baseRepo=mcr.azk8s.cn`
 
 ## install latest version
 ```console
@@ -64,6 +64,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `driver.customUserAgent`                              | custom userAgent               | `` |
 | `driver.userAgentSuffix`                              | userAgent suffix               | `OSS-helm` |
 | `feature.enableFSGroupPolicy`                         | enable `fsGroupPolicy` on a k8s 1.20+ cluster           | `false`                      |
+| `image.baseRepo`                                      | base repository of driver images                          | `mcr.microsoft.com`                      |
 | `image.blob.repository`                               | blob-csi-driver docker image                          | `mcr.microsoft.com/k8s/csi/blob-csi`                             |
 | `image.blob.tag`                                      | blob-csi-driver docker image tag                      | `latest`                                                         |
 | `image.blob.pullPolicy`                               | blob-csi-driver image pull policy                     | `IfNotPresent`                                                   |
