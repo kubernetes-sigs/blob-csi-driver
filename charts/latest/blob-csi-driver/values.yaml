@@ -1,22 +1,23 @@
 image:
+  baseRepo: mcr.microsoft.com
   blob:
-    repository: mcr.microsoft.com/k8s/csi/blob-csi
+    repository: /k8s/csi/blob-csi
     tag: latest
     pullPolicy: IfNotPresent
   csiProvisioner:
-    repository: mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner
+    repository: /oss/kubernetes-csi/csi-provisioner
     tag: v2.1.0
     pullPolicy: IfNotPresent
   livenessProbe:
-    repository: mcr.microsoft.com/oss/kubernetes-csi/livenessprobe
+    repository: /oss/kubernetes-csi/livenessprobe
     tag: v2.3.0
     pullPolicy: IfNotPresent
   nodeDriverRegistrar:
-    repository: mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar
+    repository: /oss/kubernetes-csi/csi-node-driver-registrar
     tag: v2.3.0
     pullPolicy: IfNotPresent
   csiResizer:
-    repository: mcr.microsoft.com/oss/kubernetes-csi/csi-resizer
+    repository: /oss/kubernetes-csi/csi-resizer
     tag: v1.1.0
     pullPolicy: IfNotPresent
 

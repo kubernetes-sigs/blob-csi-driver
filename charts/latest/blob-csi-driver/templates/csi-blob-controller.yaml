@@ -46,7 +46,11 @@ spec:
 {{- end }}
       containers:
         - name: csi-provisioner
-          image: {{ .Values.image.csiProvisioner.repository }}:{{ .Values.image.csiProvisioner.tag }}
+{{- if hasPrefix "/" .Values.image.csiProvisioner.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.csiProvisioner.repository }}:{{ .Values.image.csiProvisioner.tag }}"
+{{- else }}
+          image: "{{ .Values.image.csiProvisioner.repository }}:{{ .Values.image.csiProvisioner.tag }}"
+{{- end }}
           args:
             - "-v=2"
             - "--csi-address=$(ADDRESS)"
@@ -62,7 +66,11 @@ spec:
               name: socket-dir
           resources: {{- toYaml .Values.controller.resources.csiProvisioner | nindent 12 }}
         - name: liveness-probe
+{{- if hasPrefix "/" .Values.image.livenessProbe.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.livenessProbe.repository }}:{{ .Values.image.livenessProbe.tag }}"
+{{- else }}
           image: "{{ .Values.image.livenessProbe.repository }}:{{ .Values.image.livenessProbe.tag }}"
+{{- end }}
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s
@@ -73,7 +81,11 @@ spec:
               mountPath: /csi
           resources: {{- toYaml .Values.controller.resources.livenessProbe | nindent 12 }}
         - name: blob
+{{- if hasPrefix "/" .Values.image.blob.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- else }}
           image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- end }}
           args:
             - "--v={{ .Values.controller.logLevel }}"
             - "--endpoint=$(CSI_ENDPOINT)"
@@ -135,7 +147,11 @@ spec:
             {{- end }}
           resources: {{- toYaml .Values.controller.resources.blob | nindent 12 }}
         - name: csi-resizer
+{{- if hasPrefix "/" .Values.image.csiResizer.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.csiResizer.repository }}:{{ .Values.image.csiResizer.tag }}"
+{{- else }}
           image: "{{ .Values.image.csiResizer.repository }}:{{ .Values.image.csiResizer.tag }}"
+{{- end }}
           args:
             - "-csi-address=$(ADDRESS)"
             - "-v=2"
