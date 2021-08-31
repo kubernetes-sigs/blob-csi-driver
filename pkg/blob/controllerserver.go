@@ -186,7 +186,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		d.volLockMap.LockEntry(lockKey)
 		err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
 			var retErr error
-			accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(accountOptions, protocol)
+			accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(ctx, accountOptions, protocol)
 			if isRetriableError(retErr) {
 				klog.Warningf("EnsureStorageAccount(%s) failed with error(%v), waiting for retrying", account, retErr)
 				return false, nil
