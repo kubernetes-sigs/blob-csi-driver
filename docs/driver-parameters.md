@@ -17,6 +17,7 @@ protocol | specify blobfuse mount or NFSv3 mount | `fuse`, `nfs` | No | `fuse`
 containerName | specify the existing container name | existing container name | No | if empty, driver will create a new container name, starting with `pvc-fuse` for blobfuse or `pvc-nfs` for NFSv3
 isHnsEnabled | enable `Hierarchical namespace` for Azure DataLake storage account(only for blobfuse) | `true`,`false` | No | `false`
 server | specify Azure storage account server address | existing server address, e.g. `accountname.privatelink.blob.core.windows.net` | No | if empty, driver will use default `accountname.blob.core.windows.net` or other sovereign cloud account address
+allowBlobPublicAccess | Allow or disallow public access to all blobs or containers for storage account created by driver | `true`,`false` | No | `true`
 storageEndpointSuffix | specify Azure storage endpoint suffix | `core.windows.net` | No | if empty, driver will use default storage endpoint suffix according to cloud environment, e.g. `core.windows.net`
 tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources) would be created in newly created storage account | tag format: 'foo=aaa,bar=bbb' | No | ""
 

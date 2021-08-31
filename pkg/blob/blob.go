@@ -67,6 +67,7 @@ const (
 	keyVaultSecretNameField      = "keyvaultsecretname"
 	keyVaultSecretVersionField   = "keyvaultsecretversion"
 	storageAccountNameField      = "storageaccountname"
+	allowBlobPublicAccessField   = "allowblobpublicaccess"
 	ephemeralField               = "csi.storage.k8s.io/ephemeral"
 	podNamespaceField            = "csi.storage.k8s.io/pod.namespace"
 	mountOptionsField            = "mountoptions"
