@@ -148,8 +148,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				ExpectedString: "hello world\nhello world\n", // pod will be restarted so expect to see 2 instances of string
 			},
 			StorageClassParameters: map[string]string{
-				"skuName":      "Premium_LRS",
-				"isHnsEnabled": "true",
+				"skuName":               "Premium_LRS",
+				"isHnsEnabled":          "true",
+				"allowBlobPublicAccess": "false",
 			},
 		}
 		test.Run(cs, ns)
@@ -214,10 +215,13 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedCollocatedPodTest{
-			CSIDriver:              testDriver,
-			Pods:                   pods,
-			ColocatePods:           true,
-			StorageClassParameters: map[string]string{"skuName": "Standard_RAGRS"},
+			CSIDriver:    testDriver,
+			Pods:         pods,
+			ColocatePods: true,
+			StorageClassParameters: map[string]string{
+				"skuName":               "Standard_RAGRS",
+				"allowBlobPublicAccess": "false",
+			},
 		}
 		if isAzureStackCloud {
 			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
@@ -252,10 +256,13 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedReclaimPolicyTest{
-			CSIDriver:              testDriver,
-			Volumes:                volumes,
-			Driver:                 blobDriver,
-			StorageClassParameters: map[string]string{"skuName": "Standard_GRS"},
+			CSIDriver: testDriver,
+			Volumes:   volumes,
+			Driver:    blobDriver,
+			StorageClassParameters: map[string]string{
+				"skuName":               "Standard_GRS",
+				"allowBlobPublicAccess": "false",
+			},
 		}
 		if isAzureStackCloud {
 			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
@@ -310,9 +317,12 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedInvalidMountOptions{
-			CSIDriver:              testDriver,
-			Pods:                   pods,
-			StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
+			CSIDriver: testDriver,
+			Pods:      pods,
+			StorageClassParameters: map[string]string{
+				"skuName":               "Standard_LRS",
+				"allowBlobPublicAccess": "true",
+			},
 		}
 		test.Run(cs, ns)
 	})
