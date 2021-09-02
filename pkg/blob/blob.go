@@ -366,7 +366,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 				if err != nil && !getAccountKeyFromSecret {
 					klog.V(2).Infof("get account(%s) key from secret(%s, %s) failed with error: %v, use cluster identity to get account key instead",
 						accountName, secretNamespace, secretName, err)
-					accountKey, err = d.cloud.GetStorageAccesskey(accountName, rgName)
+					accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, rgName)
 					if err != nil {
 						return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, rgName, err)
 					}
@@ -466,7 +466,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 				rgName = d.cloud.ResourceGroup
 			}
 
-			accountKey, err = d.cloud.GetStorageAccesskey(accountName, rgName)
+			accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, rgName)
 			if err != nil {
 				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, rgName, err)
 			}
@@ -571,7 +571,7 @@ func setAzureCredentials(kubeClient kubernetes.Interface, accountName, accountKe
 }
 
 // GetStorageAccesskey get Azure storage (account name, account key)
-func (d *Driver) GetStorageAccesskey(accountOptions *azure.AccountOptions, secrets map[string]string, secretNamespace string) (string, string, error) {
+func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.AccountOptions, secrets map[string]string, secretNamespace string) (string, string, error) {
 	if len(secrets) > 0 {
 		return getStorageAccount(secrets)
 	}
@@ -580,7 +580,7 @@ func (d *Driver) GetStorageAccesskey(accountOptions *azure.AccountOptions, secre
 	_, accountKey, err := d.GetStorageAccountFromSecret(accountOptions.Name, secretNamespace)
 	if err != nil {
 		klog.V(2).Infof("could not get account(%s) key from secret, error: %v, use cluster identity to get account key instead", accountOptions.Name, err)
-		accountKey, err = d.cloud.GetStorageAccesskey(accountOptions.Name, accountOptions.ResourceGroup)
+		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountOptions.Name, accountOptions.ResourceGroup)
 	}
 	return accountOptions.Name, accountKey, err
 }

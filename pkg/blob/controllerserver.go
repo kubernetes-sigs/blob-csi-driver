@@ -206,7 +206,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	accountOptions.Name = accountName
 
 	if accountKey == "" {
-		if accountName, accountKey, err = d.GetStorageAccesskey(accountOptions, req.GetSecrets(), secretNamespace); err != nil {
+		if accountName, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, req.GetSecrets(), secretNamespace); err != nil {
 			return nil, fmt.Errorf("failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
 		}
 	}
@@ -299,7 +299,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 
 	var accountKey string
 	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
-		accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
+		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, resourceGroupName)
 		if err != nil {
 			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
 		}
@@ -356,7 +356,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 
 	var accountKey string
 	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
-		accountKey, err = d.cloud.GetStorageAccesskey(accountName, resourceGroupName)
+		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, resourceGroupName)
 		if err != nil {
 			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
 		}
