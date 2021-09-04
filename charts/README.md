@@ -60,25 +60,25 @@ The following table lists the configurable parameters of the latest Azure Blob S
 
 | Parameter                                             | Description                                           | Default                                                        |
 | ----------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- |
-| `driver.name`                                         | alternative driver name                        | `blob.csi.azure.com` |
-| `driver.customUserAgent`                              | custom userAgent               | `` |
-| `driver.userAgentSuffix`                              | userAgent suffix               | `OSS-helm` |
-| `feature.enableFSGroupPolicy`                         | enable `fsGroupPolicy` on a k8s 1.20+ cluster           | `false`                      |
-| `image.baseRepo`                                      | base repository of driver images                          | `mcr.microsoft.com`                      |
+| `driver.name`                                         | alternative driver name                               | `blob.csi.azure.com` |
+| `driver.customUserAgent`                              | custom userAgent                                      | `` |
+| `driver.userAgentSuffix`                              | userAgent suffix                                      | `OSS-helm` |
+| `feature.enableFSGroupPolicy`                         | enable `fsGroupPolicy` on a k8s 1.20+ cluster         | `false`                      |
+| `image.baseRepo`                                      | base repository of driver images                      | `mcr.microsoft.com`                      |
 | `image.blob.repository`                               | blob-csi-driver docker image                          | `mcr.microsoft.com/k8s/csi/blob-csi`                             |
 | `image.blob.tag`                                      | blob-csi-driver docker image tag                      | `latest`                                                         |
 | `image.blob.pullPolicy`                               | blob-csi-driver image pull policy                     | `IfNotPresent`                                                   |
 | `image.csiProvisioner.repository`                     | csi-provisioner docker image                          | `mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner`           |
-| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | `v2.1.0`                                                         |
+| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | `v2.2.2`                                                         |
 | `image.csiProvisioner.pullPolicy`                     | csi-provisioner image pull policy                     | `IfNotPresent`                                                   |
 | `image.livenessProbe.repository`                      | liveness-probe docker image                           | `mcr.microsoft.com/oss/kubernetes-csi/livenessprobe`             |
-| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | `v2.3.0`                                                         |
+| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | `v2.4.0`                                                         |
 | `image.livenessProbe.pullPolicy`                      | liveness-probe image pull policy                      | `IfNotPresent`                                                   |
 | `image.nodeDriverRegistrar.repository`                | csi-node-driver-registrar docker image                | `mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar` |
 | `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | `v2.3.0`                                                      |
 | `image.nodeDriverRegistrar.pullPolicy`                | csi-node-driver-registrar image pull policy           | `IfNotPresent`                                                   |
 | `image.csiResizer.repository`                         | csi-resizer docker image                              | `mcr.microsoft.com/oss/kubernetes-csi/csi-resizer`               |
-| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.1.0`                                                         |
+| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.3.0`                                                         |
 | `image.csiResizer.pullPolicy`                         | csi-resizer image pull policy                         | `IfNotPresent`                                                   |
 | `imagePullSecrets`                                    | Specify docker-registry secret names as an array      | [] (does not add image pull secrets to deployed pods)          |
 | `serviceAccount.create`                               | whether create service account of csi-blob-controller | `true`                                                           |
@@ -113,12 +113,12 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.affinity`                                 | controller pod affinity                               | {}                                                             |
 | `controller.nodeSelector`                             | controller pod node selector                          | {}                                                             |
 | `controller.tolerations`                              | controller pod tolerations                            | []                                                             |
-| `node.name`                                           | name of driver daemonset                  | `csi-blob-node`
+| `node.name`                                           | name of driver daemonset                              | `csi-blob-node`
 | `node.cloudConfigSecretName`                          | cloud config secret name of node driver               | `azure-cloud-provider`
 | `node.cloudConfigSecretNamespace`                     | cloud config secret namespace of node driver          | `kube-system`
-| `node.maxUnavailable`                                 | `maxUnavailable` value of driver node daemonset                            | `1`
+| `node.maxUnavailable`                                 | `maxUnavailable` value of driver node daemonset       | `1`
 | `node.metricsPort`                                    | metrics port of csi-blob-node                         | `29635`                                                          |
-| `node.livenessProbe.healthPort `                      | health check port for liveness probe                   | `29633` |
+| `node.livenessProbe.healthPort `                      | health check port for liveness probe                  | `29633` |
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
 | `node.enableBlobfuseProxy`                            | node enable blobfuse-proxy                            | `false`                                                          |
 | `node.blobfuseCachePath`                              | blobfuse cache path(`tmp-path`)                       | `/mnt`                                                          |
