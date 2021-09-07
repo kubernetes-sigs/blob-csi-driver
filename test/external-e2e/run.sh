@@ -29,7 +29,7 @@ setup_e2e_binaries() {
     curl -sL https://storage.googleapis.com/kubernetes-release/release/v1.21.0/kubernetes-test-linux-amd64.tar.gz --output e2e-tests.tar.gz
     tar -xvf e2e-tests.tar.gz && rm e2e-tests.tar.gz
 
-    export EXTRA_HELM_OPTIONS="--set driver.name=$DRIVER.csi.azure.com --set controller.name=csi-$DRIVER-controller --set node.name=csi-$DRIVER-node"
+    export EXTRA_HELM_OPTIONS="--set driver.name=$DRIVER.csi.azure.com --set controller.name=csi-$DRIVER-controller --set node.name=csi-$DRIVER-node --set image.csiProvisioner.tag=v3.0.0"
     if [ ! -z ${EXTERNAL_E2E_TEST_NFS} ]; then
         # enable fsGroupPolicy (only available from k8s 1.20)
         export EXTRA_HELM_OPTIONS=$EXTRA_HELM_OPTIONS" --set feature.enableFSGroupPolicy=true"
