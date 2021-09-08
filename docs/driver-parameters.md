@@ -31,7 +31,7 @@ Blobfuse driver does not honor `fsGroup` securityContext setting, instead user c
 
  - account tags format created by dynamic provisioning
 ```
-created-by: azure
+k8s-azure-created-by: azure
 ```
 
  - file share name format created by dynamic provisioning(example)
