@@ -8,7 +8,6 @@
             "kubernetesConfig": {
                 "useManagedIdentity": false,
                 "useCloudControllerManager": true,
-                "customCcmImage": "mcr.microsoft.com/k8s/core/azure-cloud-controller-manager:v0.3.0",
                 "networkPlugin": "azure",
                 "containerRuntime": "containerd",
                 "addons": [
