@@ -32,12 +32,16 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 	d.AddVolumeCapabilityAccessModes([]csi.VolumeCapability_AccessMode_Mode{
 		csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
 		csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY,
+		csi.VolumeCapability_AccessMode_SINGLE_NODE_SINGLE_WRITER,
+		csi.VolumeCapability_AccessMode_SINGLE_NODE_MULTI_WRITER,
 		csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
 	})
 
 	capability := []*csi.VolumeCapability{
 		{AccessMode: NewVolumeCapabilityAccessMode(csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER)},
 		{AccessMode: NewVolumeCapabilityAccessMode(csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY)},
+		{AccessMode: NewVolumeCapabilityAccessMode(csi.VolumeCapability_AccessMode_SINGLE_NODE_SINGLE_WRITER)},
+		{AccessMode: NewVolumeCapabilityAccessMode(csi.VolumeCapability_AccessMode_SINGLE_NODE_MULTI_WRITER)},
 		{AccessMode: NewVolumeCapabilityAccessMode(csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY)},
 	}
 	capabilityDisjoint := []*csi.VolumeCapability{
