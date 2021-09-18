@@ -43,7 +43,7 @@ This option does not depend on cloud provider config file, supports cross subscr
 ### Install driver on a Kubernetes cluster
  - install via [kubectl](./docs/install-blob-csi-driver.md) on public Azure (please use helm for Azure Stack, RedHat/CentOS)
  - install via [helm charts](./charts) on public Azure, Azure Stack, RedHat/CentOS
-   - configure with [blobfuse-proxy](./pkg/blobfuse-proxy) to make blobfuse mount still available after driver restart
+   - configure with [blobfuse-proxy](./deploy/blobfuse-proxy) to make blobfuse mount still available after driver restart
 
 ### Usage
  - [Basic usage](./deploy/example/e2e_usage.md)
