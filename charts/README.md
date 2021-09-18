@@ -4,7 +4,8 @@
  - [install Helm](https://helm.sh/docs/intro/quickstart/#install-helm)
 
 ### Tips
- - configure with [blobfuse-proxy](../pkg/blobfuse-proxy) to make blobfuse mount still available after driver restart
+ - configure with [blobfuse-proxy](../deploy/blobfuse-proxy) to make blobfuse mount still available after driver restart
+   - specify `node.enableBlobfuseProxy=true` together with [blobfuse-proxy](../deploy/blobfuse-proxy)
  - make controller only run on master node: `--set controller.runOnMaster=true`
  - enable `fsGroupPolicy` on a k8s 1.20+ cluster: `--set feature.enableFSGroupPolicy=true`
  - set replica of controller as `1`: `--set controller.replicas=1`
