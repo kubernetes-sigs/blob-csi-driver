@@ -25,7 +25,7 @@ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-sy
 ### install a specific version
 ```console
 helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.4.0
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.5.0
 ```
 
 ## install on Azure Stack
@@ -39,7 +39,7 @@ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-sy
 ```
 
 ### install driver with customized driver name, deployment name
-> only supported from `v1.4.0`+
+> only supported from `v1.5.0`+
  - following example would install a driver with name `blob2`
 ```console
 helm install blob2-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set driver.name="blob2.csi.azure.com" --set controller.name="csi-blob2-controller" --set rbac.name=blob2 --set serviceAccount.controller=csi-blob2-controller-sa --set serviceAccount.node=csi-blob2-node-sa --set node.name=csi-blob2-node --set node.livenessProbe.healthPort=29633
