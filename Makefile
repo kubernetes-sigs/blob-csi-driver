@@ -108,7 +108,7 @@ blob-darwin:
 
 .PHONY: container
 container: blob
-	docker build -t $(IMAGE_TAG) --output=type=docker -f ./pkg/blobplugin/dev.Dockerfile .
+	docker build -t $(IMAGE_TAG) --output=type=docker -f ./pkg/blobplugin/Dockerfile .
 
 .PHONY: container-linux
 container-linux:
