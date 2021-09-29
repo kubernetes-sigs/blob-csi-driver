@@ -24,8 +24,8 @@ spec:
                       - virtual-kubelet
       initContainers:
       - name: prepare-binaries
-        image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
-        command: ['sh', '-c', "wget -O /tmp/blobfuse-proxy-v0.1.0.deb https://github.com/kubernetes-sigs/blob-csi-driver/raw/master/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb;wget -O /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb"]
+        image: mcr.microsoft.com/k8s/csi/blob-csi:latest
+        command: ['sh', '-c', "cp /blobfuse-proxy/*.deb /tmp/"]
         volumeMounts:
         - mountPath: /tmp
           name: tmp-dir
