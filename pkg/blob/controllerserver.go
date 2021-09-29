@@ -66,7 +66,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		parameters = make(map[string]string)
 	}
 	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, secretNamespace string
-	var isHnsEnabled, allowBlobPublicAccess *bool
+	var isHnsEnabled *bool
+	// set allowBlobPublicAccess as false by default
+	allowBlobPublicAccess := to.BoolPtr(false)
 
 	// store account key to k8s secret by default
 	storeAccountKey := true
@@ -102,8 +104,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 				storeAccountKey = false
 			}
 		case allowBlobPublicAccessField:
-			if strings.EqualFold(v, falseValue) {
-				allowBlobPublicAccess = to.BoolPtr(false)
+			if strings.EqualFold(v, trueValue) {
+				allowBlobPublicAccess = to.BoolPtr(true)
 			}
 		case pvcNamespaceKey:
 			if secretNamespace == "" {
