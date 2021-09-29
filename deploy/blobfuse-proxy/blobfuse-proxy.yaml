@@ -22,6 +22,13 @@ spec:
                     operator: NotIn
                     values:
                       - virtual-kubelet
+      initContainers:
+      - name: prepare-binaries
+        image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
+        command: ['sh', '-c', "wget -O /tmp/blobfuse-proxy-v0.1.0.deb https://github.com/kubernetes-sigs/blob-csi-driver/raw/master/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb;wget -O /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb"]
+        volumeMounts:
+        - mountPath: /tmp
+          name: tmp-dir
       containers:
       - command:
           - nsenter
@@ -39,21 +46,15 @@ spec:
             set -xe
             if (( "${INSTALL_BLOBFUSE}" == "true" ))
             then
-              wget -O /tmp/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
               dpkg -i /tmp/packages-microsoft-prod.deb
               apt-get update && apt-get install -y blobfuse
-              rm -f /tmp/packages-microsoft-prod.deb
             fi
-            # download blobfuse-proxy .deb package
-            wget -O /tmp/blobfuse-proxy-v0.1.0.deb https://github.com/kubernetes-sigs/blob-csi-driver/raw/master/deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb
             dpkg -i /tmp/blobfuse-proxy-v0.1.0.deb
             mkdir -p /var/lib/kubelet/plugins/blob.csi.azure.com
             echo "Enabling blobfuse proxy systemctl service"
             systemctl daemon-reload
             systemctl enable blobfuse-proxy
             systemctl start blobfuse-proxy
-            echo "removing the file: /tmp/blobfuse-proxy-v0.1.0.deb"
-            rm -f /tmp/blobfuse-proxy-v0.1.0.deb
             echo "waiting for blobfuse-proxy service to start"
             sleep 3s
             # tail blobfuse proxy logs
@@ -69,7 +70,6 @@ spec:
             cpu: 10m
         securityContext:
           privileged: true
-      dnsPolicy: ClusterFirstWithHostNet
       hostNetwork: true
       hostPID: true
       nodeSelector:
@@ -78,3 +78,8 @@ spec:
       restartPolicy: Always
       tolerations:
         - operator: Exists
+      volumes:
+        - hostPath:
+            path: /tmp
+            type: DirectoryOrCreate
+          name: tmp-dir
