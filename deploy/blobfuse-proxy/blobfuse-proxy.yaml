@@ -65,6 +65,8 @@ spec:
         env:
           - name: INSTALL_BLOBFUSE
             value: "true"
+          - name: "DEBIAN_FRONTEND"
+            value: "noninteractive"
         resources:
           requests:
             cpu: 10m
