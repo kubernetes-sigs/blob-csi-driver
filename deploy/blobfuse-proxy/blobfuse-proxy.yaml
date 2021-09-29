@@ -59,7 +59,7 @@ spec:
             sleep 3s
             # tail blobfuse proxy logs
             journalctl -u blobfuse-proxy -f
-        image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
+        image: mcr.microsoft.com/k8s/csi/blob-csi:latest
         imagePullPolicy: IfNotPresent
         name: sysctl-install-blobfuse-proxy
         env:
