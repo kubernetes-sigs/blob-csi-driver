@@ -19,3 +19,4 @@ mountOptions:
   - -o attr_timeout=120
   - -o entry_timeout=120
   - -o negative_timeout=120
+  - --cache-size-mb=1000  # Default will be 80% of available memory, eviction will happen beyond that.
