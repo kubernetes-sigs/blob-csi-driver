@@ -303,6 +303,11 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			secretName = v
 		case secretNamespaceField:
 			secretNamespace = v
+		case pvcNamespaceKey:
+			if secretNamespace == "" {
+				// respect `secretNamespace` field as first priority
+				secretNamespace = v
+			}
 		case getAccountKeyFromSecretField:
 			getAccountKeyFromSecret = strings.EqualFold(v, trueValue)
 		case "azurestorageauthtype":
