@@ -44,11 +44,8 @@ spec:
           - '-c'
           - |
             set -xe
-            if (( "${INSTALL_BLOBFUSE}" == "true" ))
-            then
-              dpkg -i /tmp/packages-microsoft-prod.deb
-              apt-get install -y blobfuse
-            fi
+            dpkg -i /tmp/packages-microsoft-prod.deb
+            apt-get install -y blobfuse
             dpkg -i /tmp/blobfuse-proxy-v0.1.0.deb
             mkdir -p /var/lib/kubelet/plugins/blob.csi.azure.com
             echo "Enabling blobfuse proxy systemctl service"
@@ -62,9 +59,6 @@ spec:
         image: mcr.microsoft.com/k8s/csi/blob-csi:latest
         imagePullPolicy: IfNotPresent
         name: sysctl-install-blobfuse-proxy
-        env:
-          - name: INSTALL_BLOBFUSE
-            value: "true"
         resources:
           requests:
             cpu: 10m
