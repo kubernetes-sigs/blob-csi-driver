@@ -69,3 +69,5 @@ cscope.*
 /bazel-*
 *.pyc
 profile.cov
+
+pkg/blobfuse-proxy/debpackage/usr/

@@ -170,7 +170,9 @@ delete-metrics-svc:
 
 .PHONY: blobfuse-proxy
 blobfuse-proxy:
-	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o _output/blobfuse-proxy ./pkg/blobfuse-proxy
+	mkdir -p ./pkg/blobfuse-proxy/debpackage/usr/bin/
+	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o ./pkg/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy ./pkg/blobfuse-proxy
+	dpkg-deb --build pkg/blobfuse-proxy/debpackage
 
 .PHONY: blobfuse-proxy-container
 blobfuse-proxy-container:
