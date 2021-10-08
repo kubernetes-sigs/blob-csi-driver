@@ -41,6 +41,7 @@ jobs:
       run: |
         export PATH=$PATH:$HOME/.local/bin
         make blobfuse-proxy
+        sudo dpkg -i pkg/blobfuse-proxy/debpackage.deb
 
     - name: Get code coverage
       env:
