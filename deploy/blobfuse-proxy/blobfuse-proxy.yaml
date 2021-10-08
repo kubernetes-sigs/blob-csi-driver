@@ -46,7 +46,8 @@ spec:
             set -xe
             dpkg -i /tmp/packages-microsoft-prod.deb
             apt-get install -y blobfuse
-            dpkg -i /tmp/blobfuse-proxy-v0.1.0.deb
+            dpkg -i /tmp/blobfuse-proxy.deb
+            rm -f /tmp/packages-microsoft-prod.deb /tmp/blobfuse-proxy.deb
             mkdir -p /var/lib/kubelet/plugins/blob.csi.azure.com
             echo "Enabling blobfuse proxy systemctl service"
             systemctl daemon-reload
