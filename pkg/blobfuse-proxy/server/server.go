@@ -65,7 +65,10 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 	}
 	result.Output = string(output)
 	klog.V(2).Infof("blobfuse output: %s\n", result.Output)
-	return &result, fmt.Errorf("%v %s", err, result.Output)
+	if err != nil {
+		return &result, fmt.Errorf("%v %s", err, result.Output)
+	}
+	return &result, nil
 }
 
 func RunGRPCServer(
