@@ -33,6 +33,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 	"sigs.k8s.io/cloud-provider-azure/pkg/metrics"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
@@ -189,20 +190,30 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var accountKey string
 	accountName := account
 	if len(req.GetSecrets()) == 0 && accountName == "" {
-		lockKey := storageAccountType + accountKind + resourceGroup + location
-		d.volLockMap.LockEntry(lockKey)
-		err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
-			var retErr error
-			accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(ctx, accountOptions, protocol)
-			if isRetriableError(retErr) {
-				klog.Warningf("EnsureStorageAccount(%s) failed with error(%v), waiting for retrying", account, retErr)
-				return false, nil
-			}
-			return true, retErr
-		})
-		d.volLockMap.UnlockEntry(lockKey)
+		lockKey := fmt.Sprintf("%s%s%s%s%s", storageAccountType, accountKind, resourceGroup, location, protocol)
+		// search in cache first
+		cache, err := d.accountSearchCache.Get(lockKey, azcache.CacheReadTypeDefault)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to ensure storage account: %v", err)
+			return nil, err
+		}
+		if cache != nil {
+			accountName = cache.(string)
+		} else {
+			d.volLockMap.LockEntry(lockKey)
+			err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+				var retErr error
+				accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(ctx, accountOptions, protocol)
+				if isRetriableError(retErr) {
+					klog.Warningf("EnsureStorageAccount(%s) failed with error(%v), waiting for retrying", account, retErr)
+					return false, nil
+				}
+				return true, retErr
+			})
+			d.volLockMap.UnlockEntry(lockKey)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to ensure storage account: %v", err)
+			}
+			d.accountSearchCache.Set(lockKey, accountName)
 		}
 	}
 	accountOptions.Name = accountName
