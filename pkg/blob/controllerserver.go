@@ -33,6 +33,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 	"sigs.k8s.io/cloud-provider-azure/pkg/metrics"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
@@ -45,18 +46,18 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	volumeCapabilities := req.GetVolumeCapabilities()
-	name := req.GetName()
-	if len(name) == 0 {
+	volName := req.GetName()
+	if len(volName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "CreateVolume Name must be provided")
 	}
 	if len(volumeCapabilities) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "CreateVolume Volume capabilities must be provided")
 	}
 
-	if acquired := d.volumeLocks.TryAcquire(name); !acquired {
-		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, name)
+	if acquired := d.volumeLocks.TryAcquire(volName); !acquired {
+		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, volName)
 	}
-	defer d.volumeLocks.Release(name)
+	defer d.volumeLocks.Release(volName)
 
 	volSizeBytes := int64(req.GetCapacityRange().GetRequiredBytes())
 	requestGiB := int(util.RoundUpGiB(volSizeBytes))
@@ -189,20 +190,35 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var accountKey string
 	accountName := account
 	if len(req.GetSecrets()) == 0 && accountName == "" {
-		lockKey := storageAccountType + accountKind + resourceGroup + location
-		d.volLockMap.LockEntry(lockKey)
-		err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
-			var retErr error
-			accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(ctx, accountOptions, protocol)
-			if isRetriableError(retErr) {
-				klog.Warningf("EnsureStorageAccount(%s) failed with error(%v), waiting for retrying", account, retErr)
-				return false, nil
+		if v, ok := d.volMap.Load(volName); ok {
+			accountName = v.(string)
+		} else {
+			lockKey := fmt.Sprintf("%s%s%s%s%s", storageAccountType, accountKind, resourceGroup, location, protocol)
+			// search in cache first
+			cache, err := d.accountSearchCache.Get(lockKey, azcache.CacheReadTypeDefault)
+			if err != nil {
+				return nil, err
 			}
-			return true, retErr
-		})
-		d.volLockMap.UnlockEntry(lockKey)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to ensure storage account: %v", err)
+			if cache != nil {
+				accountName = cache.(string)
+			} else {
+				d.volLockMap.LockEntry(lockKey)
+				err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+					var retErr error
+					accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(ctx, accountOptions, protocol)
+					if isRetriableError(retErr) {
+						klog.Warningf("EnsureStorageAccount(%s) failed with error(%v), waiting for retrying", account, retErr)
+						return false, nil
+					}
+					return true, retErr
+				})
+				d.volLockMap.UnlockEntry(lockKey)
+				if err != nil {
+					return nil, status.Errorf(codes.Internal, "failed to ensure storage account: %v", err)
+				}
+				d.accountSearchCache.Set(lockKey, accountName)
+				d.volMap.Store(volName, accountName)
+			}
 		}
 	}
 	accountOptions.Name = accountName
@@ -215,7 +231,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	validContainerName := containerName
 	if validContainerName == "" {
-		validContainerName = getValidContainerName(name, protocol)
+		validContainerName = getValidContainerName(volName, protocol)
 		parameters[containerNameField] = validContainerName
 	}
 
@@ -251,7 +267,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if containerName != "" {
 		// add volume name as suffix to differentiate volumeID since "containerName" is specified
 		// not necessary for dynamic container name creation since volumeID already contains volume name
-		volumeID = volumeID + "#" + name
+		volumeID = volumeID + "#" + volName
 	}
 	klog.V(2).Infof("create container %s on storage account %s successfully", validContainerName, accountName)
 

@@ -87,6 +87,7 @@ func TestNewDriver(t *testing.T) {
 	fakedriver := NewFakeDriver()
 	fakedriver.Name = DefaultDriverName
 	fakedriver.Version = driverVersion
+	fakedriver.accountSearchCache = driver.accountSearchCache
 	assert.Equal(t, driver, fakedriver)
 }
 
