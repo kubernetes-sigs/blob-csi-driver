@@ -19,6 +19,7 @@ package blob
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/net/context"
@@ -139,6 +140,8 @@ type Driver struct {
 	volumeLocks *volumeLocks
 	// only for nfs feature
 	subnetLockMap *util.LockMap
+	// a map storing all volumes created by this driver <volumeName, accountName>
+	volMap sync.Map
 	// a timed cache storing acount search history (solve account list throttling issue)
 	accountSearchCache *azcache.TimedCache
 }
