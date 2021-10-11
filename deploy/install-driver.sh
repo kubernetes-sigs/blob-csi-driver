@@ -33,6 +33,14 @@ if [ $ver != "master" ]; then
   repo="$repo/$ver"
 fi
 
+if [[ "$#" -gt 1 ]]; then
+  if [[ "$2" == *"local"* ]] && [[ "$2" == *"enable-blobfuse-proxy"* ]]; then
+    echo "set enable-blobfuse-proxy as true ..."
+    kubectl apply -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml
+    sed -i 's/enable-blobfuse-proxy=false/enable-blobfuse-proxy=true/g' $repo/csi-blob-node.yaml
+  fi
+fi
+
 echo "Installing Azure Blob Storage CSI driver, version: $ver ..."
 kubectl apply -f $repo/rbac-csi-blob-controller.yaml
 kubectl apply -f $repo/rbac-csi-blob-node.yaml
