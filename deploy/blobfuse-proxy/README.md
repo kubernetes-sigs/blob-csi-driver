@@ -7,7 +7,7 @@ By default, restart csi-blobfuse-node daemonset would make current blobfuse moun
 This guide shows how to install a blobfuse proxy on all agent nodes and the proxy would mount volumes, maintain  FUSE connections.
 
 ### Step#1. Install blobfuse-proxy on debian based agent nodes
-> following daemonset would also install latest [blobfuse](https://github.com/Azure/azure-storage-fuse) version on the node, set `INSTALL_BLOBFUSE` environment variable as `false` to disable blobfuse installation.
+> following daemonset would also install latest [blobfuse](https://github.com/Azure/azure-storage-fuse) version on the node by default.
 ```console
 kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/blobfuse-proxy/blobfuse-proxy.yaml
 ```
