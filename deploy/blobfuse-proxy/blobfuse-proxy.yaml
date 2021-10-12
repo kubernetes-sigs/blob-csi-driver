@@ -49,6 +49,8 @@ spec:
             dpkg -i /tmp/blobfuse-proxy.deb
             rm -f /tmp/packages-microsoft-prod.deb /tmp/blobfuse-proxy.deb
             mkdir -p /var/lib/kubelet/plugins/blob.csi.azure.com
+            echo "set max open file num"
+            sysctl -w fs.file-max=9000000
             echo "Enabling blobfuse proxy systemctl service"
             systemctl daemon-reload
             systemctl enable blobfuse-proxy
