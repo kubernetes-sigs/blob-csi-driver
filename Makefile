@@ -77,9 +77,6 @@ e2e-test:
 e2e-bootstrap: install-helm
 	# Only build and push the image if it does not exist in the registry
 	docker pull $(IMAGE_TAG) || make blob-container push
-	if [ ! -z "$(ENABLE_BLOBFUSE_PROXY)" ]; then \
-		make install-blobfuse-proxy;\
-	fi
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
 		--set controller.runOnMaster=true \
 		--set controller.replicas=1 \
@@ -177,11 +174,3 @@ blobfuse-proxy:
 .PHONY: blobfuse-proxy-container
 blobfuse-proxy-container:
 	sudo docker build -t blobfuse-proxy -f pkg/blobfuse-proxy/Dockerfile .
-
-.PHONY: install-blobfuse-proxy
-install-blobfuse-proxy:
-	kubectl apply -f ./deploy/blobfuse-proxy.yaml
-
-.PHONY: uninstall-blobfuse-proxy
-uninstall-blobfuse-proxy:
-	kubectl delete -f ./deploy/blobfuse-proxy.yaml --ignore-not-found
