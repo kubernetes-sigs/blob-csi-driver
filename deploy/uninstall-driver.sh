@@ -33,6 +33,13 @@ if [ $ver != "master" ]; then
   repo="$repo/$ver"
 fi
 
+if [[ "$#" -gt 1 ]]; then
+  if [[ "$2" == *"blobfuse-proxy"* ]]; then
+    echo "remove blobfuse-proxy deployment ..."
+    kubectl delete -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml
+  fi
+fi
+
 echo "Uninstalling Azure Blob Storage CSI driver, version: $ver ..."
 kubectl delete -f $repo/csi-blob-controller.yaml --ignore-not-found
 kubectl delete -f $repo/csi-blob-node.yaml --ignore-not-found

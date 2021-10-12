@@ -34,7 +34,7 @@ if [ $ver != "master" ]; then
 fi
 
 if [[ "$#" -gt 1 ]]; then
-  if [[ "$2" == *"local"* ]] && [[ "$2" == *"enable-blobfuse-proxy"* ]]; then
+  if [[ "$2" == *"local"* ]] && [[ "$2" == *"blobfuse-proxy"* ]]; then
     echo "set enable-blobfuse-proxy as true ..."
     kubectl apply -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml
     sed -i 's/enable-blobfuse-proxy=false/enable-blobfuse-proxy=true/g' $repo/csi-blob-node.yaml
