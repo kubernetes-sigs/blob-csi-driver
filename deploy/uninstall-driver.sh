@@ -36,7 +36,7 @@ fi
 if [[ "$#" -gt 1 ]]; then
   if [[ "$2" == *"blobfuse-proxy"* ]]; then
     echo "remove blobfuse-proxy deployment ..."
-    kubectl delete -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml
+    kubectl delete -f ./deploy/blobfuse-proxy.yaml
   fi
 fi
 
