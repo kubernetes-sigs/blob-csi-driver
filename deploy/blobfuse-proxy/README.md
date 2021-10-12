@@ -9,7 +9,7 @@ This guide shows how to install a blobfuse proxy on all agent nodes and the prox
 ### Step#1. Install blobfuse-proxy on debian based agent nodes
 > following daemonset would also install latest [blobfuse](https://github.com/Azure/azure-storage-fuse) version on the node by default.
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/blobfuse-proxy/blobfuse-proxy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/blobfuse-proxy.yaml
 ```
 
 ### Step#2. Install Blob CSI driver with `node.enableBlobfuseProxy=true` helm chart setting

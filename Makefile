@@ -180,8 +180,8 @@ blobfuse-proxy-container:
 
 .PHONY: install-blobfuse-proxy
 install-blobfuse-proxy:
-	kubectl apply -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml
+	kubectl apply -f ./deploy/blobfuse-proxy.yaml
 
 .PHONY: uninstall-blobfuse-proxy
 uninstall-blobfuse-proxy:
-	kubectl delete -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml --ignore-not-found
+	kubectl delete -f ./deploy/blobfuse-proxy.yaml --ignore-not-found
