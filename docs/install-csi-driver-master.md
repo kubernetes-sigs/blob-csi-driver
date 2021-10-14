@@ -1,18 +1,19 @@
 # Install Azure Blob Storage CSI driver master version on a kubernetes cluster
-
+> `blobfuse-proxy` parameter is only available for debian based agent nodes, remove it if it's not applicable for your cluster.
+> 
 If you have already installed Helm, you can also use it to install Azure Blob Storage CSI driver. Please see [Installation with Helm](../charts/README.md).
 
 ## Install with kubectl
  - remote install
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/install-driver.sh | bash -s master --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/install-driver.sh | bash -s master blobfuse-proxy --
 ```
 
  - local install
 ```console
 git clone https://github.com/kubernetes-sigs/blob-csi-driver.git
 cd blob-csi-driver
-./deploy/install-driver.sh master local
+./deploy/install-driver.sh master local,blobfuse-proxy
 ```
 
 - check pods status:
@@ -33,5 +34,5 @@ csi-blob-node-dr4s4                        3/3     Running   0          35s     
 
 - clean up Azure Blob Storage CSI driver
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/uninstall-driver.sh | bash -s master --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/uninstall-driver.sh | bash -s master blobfuse-proxy --
 ```
