@@ -77,9 +77,6 @@ e2e-test:
 e2e-bootstrap: install-helm
 	# Only build and push the image if it does not exist in the registry
 	docker pull $(IMAGE_TAG) || make blob-container push
-	if [ ! -z "$(ENABLE_BLOBFUSE_PROXY)" ]; then \
-		make install-blobfuse-proxy;\
-	fi
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
 		--set controller.runOnMaster=true \
 		--set controller.replicas=1 \
@@ -107,7 +104,7 @@ blob-darwin:
 	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin ./pkg/blobplugin
 
 .PHONY: container
-container: blob
+container: blob blobfuse-proxy
 	docker build -t $(IMAGE_TAG) --output=type=docker -f ./pkg/blobplugin/Dockerfile .
 
 .PHONY: container-linux
@@ -116,7 +113,7 @@ container-linux:
 		-t $(IMAGE_TAG)-linux-$(ARCH) --build-arg ARCH=$(ARCH) -f ./pkg/blobplugin/Dockerfile .
 
 .PHONY: blob-container
-blob-container:
+blob-container: blobfuse-proxy
 	docker buildx rm container-builder || true
 	docker buildx create --use --name=container-builder
 
@@ -172,16 +169,8 @@ delete-metrics-svc:
 blobfuse-proxy:
 	mkdir -p ./pkg/blobfuse-proxy/debpackage/usr/bin/
 	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o ./pkg/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy ./pkg/blobfuse-proxy
-	dpkg-deb --build pkg/blobfuse-proxy/debpackage
+	dpkg-deb --build pkg/blobfuse-proxy/debpackage deploy/blobfuse-proxy/blobfuse-proxy.deb
 
 .PHONY: blobfuse-proxy-container
 blobfuse-proxy-container:
 	sudo docker build -t blobfuse-proxy -f pkg/blobfuse-proxy/Dockerfile .
-
-.PHONY: install-blobfuse-proxy
-install-blobfuse-proxy:
-	kubectl apply -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml
-
-.PHONY: uninstall-blobfuse-proxy
-uninstall-blobfuse-proxy:
-	kubectl delete -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml --ignore-not-found

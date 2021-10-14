@@ -42,7 +42,7 @@ kubectl apply -f $repo/csi-blob-controller.yaml
 if [[ "$#" -gt 1 ]]; then
   if [[ "$2" == *"blobfuse-proxy"* ]]; then
     echo "set enable-blobfuse-proxy as true ..."
-    kubectl apply -f ./deploy/blobfuse-proxy/blobfuse-proxy.yaml
+    kubectl apply -f ./deploy/blobfuse-proxy.yaml
     if [[ "$2" == *"local"* ]]; then
       cat $repo/csi-blob-node.yaml | sed 's/enable-blobfuse-proxy=false/enable-blobfuse-proxy=true/g' | kubectl apply -f -
     else
@@ -51,5 +51,7 @@ if [[ "$#" -gt 1 ]]; then
   else
     kubectl apply -f $repo/csi-blob-node.yaml
   fi
+else
+  kubectl apply -f $repo/csi-blob-node.yaml
 fi
 echo 'Azure Blob Storage CSI driver installed successfully.'

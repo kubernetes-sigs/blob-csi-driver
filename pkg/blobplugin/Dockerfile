@@ -19,7 +19,7 @@ RUN clean-install ca-certificates libfuse-dev libcurl4-gnutls-dev libgnutls28-de
 RUN mkdir /blobfuse-proxy/
 # for compatibility, remove this after v1.6.0 release (todo)
 COPY deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb /blobfuse-proxy/
-COPY deploy/blobfuse-proxy/v0.1.1/blobfuse-proxy.deb /blobfuse-proxy/
+COPY deploy/blobfuse-proxy/blobfuse-proxy.deb /blobfuse-proxy/
 RUN wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
 RUN dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse fuse -y
 # this is a workaround to install nfs-kernel-server and don't quit with error
