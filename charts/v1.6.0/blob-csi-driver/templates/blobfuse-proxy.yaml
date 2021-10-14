@@ -1,4 +1,4 @@
----
+{{- if .Values.node.enableBlobfuseProxy -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -24,7 +24,7 @@ spec:
                       - virtual-kubelet
       initContainers:
         - name: prepare-binaries
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v1.6.0
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
           command: ['sh', '-c', "cp /blobfuse-proxy/*.deb /tmp/"]
           volumeMounts:
             - mountPath: /tmp
@@ -57,7 +57,7 @@ spec:
               sleep 3s
               # tail blobfuse proxy logs
               journalctl -u blobfuse-proxy -f
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v1.6.0
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
           imagePullPolicy: IfNotPresent
           name: sysctl-install-blobfuse-proxy
           env:
@@ -85,3 +85,4 @@ spec:
             path: /tmp
             type: DirectoryOrCreate
           name: tmp-dir
+{{ end }}
