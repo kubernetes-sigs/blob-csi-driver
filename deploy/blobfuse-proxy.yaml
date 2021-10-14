@@ -44,7 +44,7 @@ spec:
             - '-c'
             - |
               set -xe
-              dpkg -i /tmp/packages-microsoft-prod.deb && apt-get install -y blobfuse
+              dpkg -i /tmp/packages-microsoft-prod.deb && apt-get install -y blobfuse=1.4.1
               dpkg -i /tmp/blobfuse-proxy.deb
               rm -f /tmp/packages-microsoft-prod.deb /tmp/blobfuse-proxy.deb
               mkdir -p /var/lib/kubelet/plugins/blob.csi.azure.com
