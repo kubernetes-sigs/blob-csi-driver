@@ -92,7 +92,7 @@ e2e-teardown:
 	helm delete blob-csi-driver --namespace kube-system
 
 .PHONY: blob
-blob:
+blob: blobfuse-proxy
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin ./pkg/blobplugin
 
 .PHONY: blob-windows
@@ -104,7 +104,7 @@ blob-darwin:
 	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin ./pkg/blobplugin
 
 .PHONY: container
-container: blob blobfuse-proxy
+container: blob
 	docker build -t $(IMAGE_TAG) --output=type=docker -f ./pkg/blobplugin/Dockerfile .
 
 .PHONY: container-linux
@@ -113,7 +113,7 @@ container-linux:
 		-t $(IMAGE_TAG)-linux-$(ARCH) --build-arg ARCH=$(ARCH) -f ./pkg/blobplugin/Dockerfile .
 
 .PHONY: blob-container
-blob-container: blobfuse-proxy
+blob-container:
 	docker buildx rm container-builder || true
 	docker buildx create --use --name=container-builder
 
@@ -170,7 +170,3 @@ blobfuse-proxy:
 	mkdir -p ./pkg/blobfuse-proxy/debpackage/usr/bin/
 	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o ./pkg/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy ./pkg/blobfuse-proxy
 	dpkg-deb --build pkg/blobfuse-proxy/debpackage deploy/blobfuse-proxy/blobfuse-proxy.deb
-
-.PHONY: blobfuse-proxy-container
-blobfuse-proxy-container:
-	sudo docker build -t blobfuse-proxy -f pkg/blobfuse-proxy/Dockerfile .

@@ -71,3 +71,4 @@ cscope.*
 profile.cov
 
 pkg/blobfuse-proxy/debpackage/usr/
+deploy/blobfuse-proxy/blobfuse-proxy.deb
