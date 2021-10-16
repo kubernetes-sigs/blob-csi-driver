@@ -61,7 +61,7 @@ spec:
                 sysctl -w fs.file-max=${MAX_FILE_NUM}
               fi
 
-              echo "waiting for blobfuse-proxy service to start"
+              # "waiting for blobfuse-proxy service to start"
               sleep 3s
               # tail blobfuse proxy logs
               journalctl -u blobfuse-proxy -f
