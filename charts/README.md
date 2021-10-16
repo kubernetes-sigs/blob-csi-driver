@@ -121,7 +121,11 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.metricsPort`                                    | metrics port of csi-blob-node                         | `29635`                                                          |
 | `node.livenessProbe.healthPort `                      | health check port for liveness probe                  | `29633` |
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
-| `node.enableBlobfuseProxy`                            | node enable blobfuse-proxy                            | `false`                                                          |
+| `node.enableBlobfuseProxy`                            | enable blobfuse-proxy on agent node                           | `false`                                                          |
+| `node.blobfuseProxy.installBlobfuse`                  | whether install blobfuse on agent node| `true`                                                          |
+| `node.blobfuseProxy.blobfuseVersion`                  | installed blobfuse version on agent node| `1.4.1`                                                          |
+| `node.blobfuseProxy.setMaxOpenFileNum`                | whether set max open file num on agent node| `true`                                                          |
+| `node.blobfuseProxy.maxOpenFileNum`                   | max open file num on agent node| `9000000`                                                          |
 | `node.blobfuseCachePath`                              | blobfuse cache path(`tmp-path`)                       | `/mnt`                                                          |
 | `node.resources.livenessProbe.limits.cpu`             | liveness-probe cpu limits                             | 100m                                                           |
 | `node.resources.livenessProbe.limits.memory`          | liveness-probe memory limits                          | 100Mi                                                          |

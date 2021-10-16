@@ -95,6 +95,11 @@ node:
     healthPort: 29633
   logLevel: 5
   enableBlobfuseProxy: false
+  blobfuseProxy:
+    installBlobfuse: true
+    blobfuseVersion: 1.4.1
+    setMaxOpenFileNum: true
+    maxOpenFileNum: "9000000"
   blobfuseCachePath: /mnt
   resources:
     livenessProbe:
