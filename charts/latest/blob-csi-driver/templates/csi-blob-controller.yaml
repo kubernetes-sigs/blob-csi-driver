@@ -45,7 +45,7 @@ spec:
 {{ toYaml . | indent 8 }}
 {{- end }}
       containers:
-        - name: csi-provisioner
+        - name: csi-provisioner-blob
 {{- if hasPrefix "/" .Values.image.csiProvisioner.repository }}
           image: "{{ .Values.image.baseRepo }}{{ .Values.image.csiProvisioner.repository }}:{{ .Values.image.csiProvisioner.tag }}"
 {{- else }}
@@ -65,7 +65,7 @@ spec:
             - mountPath: /csi
               name: socket-dir
           resources: {{- toYaml .Values.controller.resources.csiProvisioner | nindent 12 }}
-        - name: liveness-probe
+        - name: liveness-probe-blob
 {{- if hasPrefix "/" .Values.image.livenessProbe.repository }}
           image: "{{ .Values.image.baseRepo }}{{ .Values.image.livenessProbe.repository }}:{{ .Values.image.livenessProbe.tag }}"
 {{- else }}
