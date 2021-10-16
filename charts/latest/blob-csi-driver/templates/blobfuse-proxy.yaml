@@ -77,16 +77,16 @@ spec:
           imagePullPolicy: IfNotPresent
           name: sysctl-install-blobfuse-proxy
           env:
-            - name: "DEBIAN_FRONTEND"
+            - name: DEBIAN_FRONTEND
               value: "noninteractive"
-            - name: "INSTALL_BLOBFUSE"
-              value: "true"
-            - name: "BLOBFUSE_VERSION"
-              value: "1.4.1"
-            - name: "SET_MAX_OPEN_FILE_NUM"
-              value: "true"
-            - name: "MAX_FILE_NUM"
-              value: "9000000"
+            - name: INSTALL_BLOBFUSE
+              value: "{{ .Values.node.blobfuseProxy.installBlobfuse }}"
+            - name: BLOBFUSE_VERSION
+              value: "{{ .Values.node.blobfuseProxy.blobfuseVersion }}"
+            - name: SET_MAX_OPEN_FILE_NUM
+              value: "{{ .Values.node.blobfuseProxy.setMaxOpenFileNum }}"
+            - name: MAX_FILE_NUM
+              value: "{{ .Values.node.blobfuseProxy.maxOpenFileNum }}"
           resources:
             limits:
               cpu: 200m
