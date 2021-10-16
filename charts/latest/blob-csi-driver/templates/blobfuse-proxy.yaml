@@ -24,7 +24,11 @@ spec:
                       - virtual-kubelet
       initContainers:
         - name: prepare-binaries
+{{- if hasPrefix "/" .Values.image.blob.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- else }}
           image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- end }}
           command: ['sh', '-c', "cp /blobfuse-proxy/*.deb /tmp/"]
           volumeMounts:
             - mountPath: /tmp
@@ -61,11 +65,15 @@ spec:
                 sysctl -w fs.file-max=${MAX_FILE_NUM}
               fi
 
-              echo "waiting for blobfuse-proxy service to start"
+              # "waiting for blobfuse-proxy service to start"
               sleep 3s
               # tail blobfuse proxy logs
               journalctl -u blobfuse-proxy -f
+{{- if hasPrefix "/" .Values.image.blob.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- else }}
           image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- end }}
           imagePullPolicy: IfNotPresent
           name: sysctl-install-blobfuse-proxy
           env:
