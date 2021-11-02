@@ -55,7 +55,7 @@ spec:
             - "-v=2"
             - "--csi-address=$(ADDRESS)"
             - "--leader-election"
-            - "--timeout=60s"
+            - "--timeout=120s"
             - "--extra-create-metadata=true"
           env:
             - name: ADDRESS
