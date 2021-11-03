@@ -33,7 +33,7 @@ spec:
             - "-v=2"
             - "--csi-address=$(ADDRESS)"
             - "--leader-election"
-            - "--timeout=60s"
+            - "--timeout=120s"
             - "--extra-create-metadata=true"
           env:
             - name: ADDRESS
@@ -43,7 +43,7 @@ spec:
               name: socket-dir
           resources:
             limits:
-              cpu: 100m
+              cpu: 200m
               memory: 300Mi
             requests:
               cpu: 10m
@@ -123,7 +123,7 @@ spec:
               mountPath: /csi
           resources:
             limits:
-              cpu: 100m
+              cpu: 200m
               memory: 300Mi
             requests:
               cpu: 10m
