@@ -3,7 +3,8 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ .Values.rbac.name }}-external-provisioner-role
-{{ include "blob.labels" . | indent 2 }}
+  labels:
+    {{- include "blob.labels" . | nindent 4 }}
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -33,7 +34,8 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ .Values.rbac.name }}-csi-provisioner-binding
-{{ include "blob.labels" . | indent 2 }}
+  labels:
+    {{- include "blob.labels" . | nindent 4 }}
 subjects:
   - kind: ServiceAccount
     name: {{ .Values.serviceAccount.controller }}
@@ -49,7 +51,8 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ .Values.rbac.name }}-external-resizer-role
-{{ include "blob.labels" . | indent 2 }}
+  labels:
+    {{- include "blob.labels" . | nindent 4 }}
 rules:
   - apiGroups: [""]
     resources: ["persistentvolumes"]
@@ -71,7 +74,8 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: {{ .Values.rbac.name }}-csi-resizer-role
-{{ include "blob.labels" . | indent 2 }}
+  labels:
+    {{- include "blob.labels" . | nindent 4 }}
 subjects:
   - kind: ServiceAccount
     name: {{ .Values.serviceAccount.controller }}
@@ -86,6 +90,8 @@ kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi-{{ .Values.rbac.name }}-controller-secret-role
+  labels:
+    {{- include "blob.labels" . | nindent 4 }}
 rules:
   - apiGroups: [""]
     resources: ["secrets"]
@@ -96,6 +102,8 @@ kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: csi-{{ .Values.rbac.name }}-controller-secret-binding
+  labels:
+    {{- include "blob.labels" . | nindent 4 }}
 subjects:
   - kind: ServiceAccount
     name: {{ .Values.serviceAccount.controller }}

@@ -4,6 +4,8 @@ kind: DaemonSet
 metadata:
   name: csi-blobfuse-proxy
   namespace: kube-system
+  labels:
+    {{- include "blob.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:

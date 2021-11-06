@@ -82,6 +82,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.3.0`                                                         |
 | `image.csiResizer.pullPolicy`                         | csi-resizer image pull policy                         | `IfNotPresent`                                                   |
 | `imagePullSecrets`                                    | Specify docker-registry secret names as an array      | [] (does not add image pull secrets to deployed pods)          |
+| `customLabels`                                        | Custom labels to add into metadata                    | `{}`                                                             |
 | `serviceAccount.create`                               | whether create service account of csi-blob-controller | `true`                                                           |
 | `serviceAccount.controller`                           | name of service account for csi-blob-controller       | `csi-blob-controller-sa`                                  |
 | `serviceAccount.node`                                 | name of service account for csi-blob-node             | `csi-blob-node-sa`                                        |

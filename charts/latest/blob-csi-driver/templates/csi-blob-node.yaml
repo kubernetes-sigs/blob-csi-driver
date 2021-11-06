@@ -3,7 +3,9 @@ apiVersion: apps/v1
 metadata:
   name: {{ .Values.node.name }}
   namespace: {{ .Release.Namespace }}
-{{ include "blob.labels" . | indent 2 }}
+  labels:
+    {{- include "blob.labels" . | nindent 4 }}
+    app: {{ .Values.node.name }}
 spec:
   updateStrategy:
     rollingUpdate:
@@ -11,10 +13,12 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
+      {{- include "blob.selectorLabels" . | nindent 6 }}
       app: {{ .Values.node.name }}
   template:
     metadata:
-{{ include "blob.labels" . | indent 6 }}
+      labels:
+        {{- include "blob.labels" . | nindent 8 }}
         app: {{ .Values.node.name }}
         {{- if .Values.podLabels }}
 {{- toYaml .Values.podLabels | nindent 8 }}
