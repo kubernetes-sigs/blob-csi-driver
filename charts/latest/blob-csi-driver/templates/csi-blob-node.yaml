@@ -4,8 +4,8 @@ metadata:
   name: {{ .Values.node.name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "blob.labels" . | nindent 4 }}
     app: {{ .Values.node.name }}
+    {{- include "blob.labels" . | nindent 4 }}
 spec:
   updateStrategy:
     rollingUpdate:
@@ -13,13 +13,13 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      {{- include "blob.selectorLabels" . | nindent 6 }}
       app: {{ .Values.node.name }}
+      {{- include "blob.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "blob.labels" . | nindent 8 }}
         app: {{ .Values.node.name }}
+        {{- include "blob.labels" . | nindent 8 }}
         {{- if .Values.podLabels }}
 {{- toYaml .Values.podLabels | nindent 8 }}
         {{- end }}

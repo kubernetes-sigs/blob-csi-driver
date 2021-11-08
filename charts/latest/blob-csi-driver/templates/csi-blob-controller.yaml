@@ -4,19 +4,19 @@ metadata:
   name: {{ .Values.controller.name }}
   namespace: {{ .Release.Namespace }}
   labels:
-    {{- include "blob.labels" . | nindent 4 }}
     app: {{ .Values.controller.name }}
+    {{- include "blob.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.controller.replicas }}
   selector:
     matchLabels:
-      {{- include "blob.selectorLabels" . | nindent 6 }}
       app: {{ .Values.controller.name }}
+      {{- include "blob.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       labels:
-        {{- include "blob.labels" . | nindent 8 }}
         app: {{ .Values.controller.name }}
+        {{- include "blob.labels" . | nindent 8 }}
         {{- if .Values.podLabels }}
 {{- toYaml .Values.podLabels | nindent 8 }}
         {{- end }}
