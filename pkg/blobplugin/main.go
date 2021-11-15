@@ -50,6 +50,7 @@ var (
 	cloudConfigSecretNamespace = flag.String("cloud-config-secret-namespace", "kube-system", "secret namespace of cloud config")
 	customUserAgent            = flag.String("custom-user-agent", "", "custom userAgent")
 	userAgentSuffix            = flag.String("user-agent-suffix", "", "userAgent suffix")
+	allowEmptyCloudConfig      = flag.Bool("allow-empty-cloud-config", true, "Whether allow running driver without cloud config")
 )
 
 func main() {
@@ -81,6 +82,7 @@ func handle() {
 		EnableBlobMockMount:        *enableBlobMockMount,
 		CustomUserAgent:            *customUserAgent,
 		UserAgentSuffix:            *userAgentSuffix,
+		AllowEmptyCloudConfig:      *allowEmptyCloudConfig,
 	}
 	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {

@@ -118,6 +118,7 @@ type DriverOptions struct {
 	EnableBlobfuseProxy        bool
 	BlobfuseProxyConnTimout    int
 	EnableBlobMockMount        bool
+	AllowEmptyCloudConfig      bool
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -132,6 +133,7 @@ type Driver struct {
 	// enableBlobMockMount is only for testing, DO NOT set as true in non-testing scenario
 	enableBlobMockMount     bool
 	enableBlobfuseProxy     bool
+	allowEmptyCloudConfig   bool
 	blobfuseProxyConnTimout int
 	mounter                 *mount.SafeFormatAndMount
 	volLockMap              *util.LockMap
@@ -161,6 +163,7 @@ func NewDriver(options *DriverOptions) *Driver {
 		enableBlobfuseProxy:        options.EnableBlobfuseProxy,
 		blobfuseProxyConnTimout:    options.BlobfuseProxyConnTimout,
 		enableBlobMockMount:        options.EnableBlobMockMount,
+		allowEmptyCloudConfig:      options.AllowEmptyCloudConfig,
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion
@@ -184,7 +187,7 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 
 	userAgent := GetUserAgent(d.Name, d.customUserAgent, d.userAgentSuffix)
 	klog.V(2).Infof("driver userAgent: %s", userAgent)
-	d.cloud, err = getCloudProvider(kubeconfig, d.NodeID, d.cloudConfigSecretName, d.cloudConfigSecretNamespace, userAgent)
+	d.cloud, err = getCloudProvider(kubeconfig, d.NodeID, d.cloudConfigSecretName, d.cloudConfigSecretNamespace, userAgent, d.allowEmptyCloudConfig)
 	if err != nil {
 		klog.Fatalf("failed to get Azure Cloud Provider, error: %v", err)
 	}
