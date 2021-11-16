@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
@@ -79,49 +80,65 @@ users:
 	}()
 
 	tests := []struct {
-		desc        string
-		kubeconfig  string
-		nodeID      string
-		userAgent   string
-		expectedErr error
+		desc                  string
+		createFakeCredFile    bool
+		createFakeKubeConfig  bool
+		kubeconfig            string
+		nodeID                string
+		userAgent             string
+		allowEmptyCloudConfig bool
+		expectedErr           error
 	}{
 		{
-			desc:        "[failure] out of cluster, no kubeconfig, no credential file",
-			kubeconfig:  "",
-			nodeID:      "",
-			expectedErr: nil,
+			desc:                  "out of cluster, no kubeconfig, no credential file",
+			kubeconfig:            "",
+			nodeID:                "",
+			allowEmptyCloudConfig: true,
+			expectedErr:           nil,
 		},
 		{
-			desc:        "[failure] out of cluster & in cluster, specify a non-exist kubeconfig, no credential file",
-			kubeconfig:  "/tmp/non-exist.json",
-			nodeID:      "",
-			expectedErr: nil,
+			desc:                  "[failure][disallowEmptyCloudConfig]  out of cluster, no kubeconfig, no credential file",
+			kubeconfig:            "",
+			nodeID:                "",
+			allowEmptyCloudConfig: false,
+			expectedErr:           nil,
 		},
 		{
-			desc:        "[failure] out of cluster & in cluster, specify a empty kubeconfig, no credential file",
-			kubeconfig:  emptyKubeConfig,
-			nodeID:      "",
-			expectedErr: fmt.Errorf("failed to get KubeClient: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable"),
+			desc:                  "[failure] out of cluster & in cluster, specify a non-exist kubeconfig, no credential file",
+			kubeconfig:            "/tmp/non-exist.json",
+			nodeID:                "",
+			allowEmptyCloudConfig: true,
+			expectedErr:           nil,
 		},
 		{
-			desc:        "[failure] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
-			kubeconfig:  fakeKubeConfig,
-			nodeID:      "",
-			expectedErr: nil,
+			desc:                  "[failure] out of cluster & in cluster, specify a empty kubeconfig, no credential file",
+			kubeconfig:            emptyKubeConfig,
+			nodeID:                "",
+			allowEmptyCloudConfig: true,
+			expectedErr:           fmt.Errorf("failed to get KubeClient: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable"),
 		},
 		{
-			desc:        "[success] out of cluster & in cluster, no kubeconfig, a fake credential file",
-			kubeconfig:  "",
-			nodeID:      "",
-			userAgent:   "useragent",
-			expectedErr: nil,
+			desc:                  "[failure] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
+			createFakeKubeConfig:  true,
+			kubeconfig:            fakeKubeConfig,
+			nodeID:                "",
+			allowEmptyCloudConfig: true,
+			expectedErr:           nil,
+		},
+		{
+			desc:                  "[success] out of cluster & in cluster, no kubeconfig, a fake credential file",
+			createFakeCredFile:    true,
+			kubeconfig:            "",
+			nodeID:                "",
+			userAgent:             "useragent",
+			allowEmptyCloudConfig: true,
+			expectedErr:           nil,
 		},
 	}
 
 	for _, test := range tests {
-		if test.desc == "[failure] out of cluster & in cluster, specify a fake kubeconfig, no credential file" {
-			err := createTestFile(fakeKubeConfig)
-			if err != nil {
+		if test.createFakeKubeConfig {
+			if err := createTestFile(fakeKubeConfig); err != nil {
 				t.Error(err)
 			}
 			defer func() {
@@ -134,9 +151,8 @@ users:
 				t.Error(err)
 			}
 		}
-		if test.desc == "[success] out of cluster & in cluster, no kubeconfig, a fake credential file" {
-			err := createTestFile(fakeCredFile)
-			if err != nil {
+		if test.createFakeCredFile {
+			if err := createTestFile(fakeCredFile); err != nil {
 				t.Error(err)
 			}
 			defer func() {
@@ -153,8 +169,8 @@ users:
 			}
 			os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 		}
-		cloud, err := getCloudProvider(test.kubeconfig, test.nodeID, "", "", test.userAgent)
-		if !reflect.DeepEqual(err, test.expectedErr) {
+		cloud, err := getCloudProvider(test.kubeconfig, test.nodeID, "", "", test.userAgent, test.allowEmptyCloudConfig)
+		if !reflect.DeepEqual(err, test.expectedErr) && test.expectedErr != nil && !strings.Contains(err.Error(), test.expectedErr.Error()) {
 			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
 		}
 		if cloud == nil {
