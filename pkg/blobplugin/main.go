@@ -43,14 +43,15 @@ var (
 	metricsAddress             = flag.String("metrics-address", "0.0.0.0:29634", "export the metrics")
 	kubeconfig                 = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
 	driverName                 = flag.String("drivername", blob.DefaultDriverName, "name of the driver")
-	enableBlobfuseProxy        = flag.Bool("enable-blobfuse-proxy", false, "Whether using blobfuse proxy for mounts")
+	enableBlobfuseProxy        = flag.Bool("enable-blobfuse-proxy", false, "using blobfuse proxy for mounts")
 	blobfuseProxyConnTimout    = flag.Int("blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
-	enableBlobMockMount        = flag.Bool("enable-blob-mock-mount", false, "Whether enable mock mount(only for testing)")
+	enableBlobMockMount        = flag.Bool("enable-blob-mock-mount", false, "enable mock mount(only for testing)")
 	cloudConfigSecretName      = flag.String("cloud-config-secret-name", "azure-cloud-provider", "secret name of cloud config")
 	cloudConfigSecretNamespace = flag.String("cloud-config-secret-namespace", "kube-system", "secret namespace of cloud config")
 	customUserAgent            = flag.String("custom-user-agent", "", "custom userAgent")
 	userAgentSuffix            = flag.String("user-agent-suffix", "", "userAgent suffix")
-	allowEmptyCloudConfig      = flag.Bool("allow-empty-cloud-config", true, "Whether allow running driver without cloud config")
+	allowEmptyCloudConfig      = flag.Bool("allow-empty-cloud-config", true, "allow running driver without cloud config")
+	enableGetVolumeStats       = flag.Bool("enable-get-volume-stats", false, "allow GET_VOLUME_STATS on agent node")
 )
 
 func main() {
@@ -83,6 +84,7 @@ func handle() {
 		CustomUserAgent:            *customUserAgent,
 		UserAgentSuffix:            *userAgentSuffix,
 		AllowEmptyCloudConfig:      *allowEmptyCloudConfig,
+		EnableGetVolumeStats:       *enableGetVolumeStats,
 	}
 	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {
