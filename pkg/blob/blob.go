@@ -119,6 +119,7 @@ type DriverOptions struct {
 	BlobfuseProxyConnTimout    int
 	EnableBlobMockMount        bool
 	AllowEmptyCloudConfig      bool
+	EnableGetVolumeStats       bool
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -134,6 +135,7 @@ type Driver struct {
 	enableBlobMockMount     bool
 	enableBlobfuseProxy     bool
 	allowEmptyCloudConfig   bool
+	enableGetVolumeStats    bool
 	blobfuseProxyConnTimout int
 	mounter                 *mount.SafeFormatAndMount
 	volLockMap              *util.LockMap
@@ -164,6 +166,7 @@ func NewDriver(options *DriverOptions) *Driver {
 		blobfuseProxyConnTimout:    options.BlobfuseProxyConnTimout,
 		enableBlobMockMount:        options.EnableBlobMockMount,
 		allowEmptyCloudConfig:      options.AllowEmptyCloudConfig,
+		enableGetVolumeStats:       options.EnableGetVolumeStats,
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion
@@ -216,11 +219,14 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 		csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER,
 	})
 
-	d.AddNodeServiceCapabilities([]csi.NodeServiceCapability_RPC_Type{
+	nodeCap := []csi.NodeServiceCapability_RPC_Type{
 		csi.NodeServiceCapability_RPC_STAGE_UNSTAGE_VOLUME,
-		csi.NodeServiceCapability_RPC_GET_VOLUME_STATS,
 		csi.NodeServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER,
-	})
+	}
+	if d.enableGetVolumeStats {
+		nodeCap = append(nodeCap, csi.NodeServiceCapability_RPC_GET_VOLUME_STATS)
+	}
+	d.AddNodeServiceCapabilities(nodeCap)
 
 	s := csicommon.NewNonBlockingGRPCServer()
 	// Driver d act as IdentityServer, ControllerServer and NodeServer

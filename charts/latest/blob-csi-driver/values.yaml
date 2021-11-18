@@ -138,6 +138,7 @@ node:
 
 feature:
   enableFSGroupPolicy: false
+  enableGetVolumeStats: false
 
 driver:
   name: blob.csi.azure.com
