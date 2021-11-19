@@ -81,7 +81,7 @@ spec:
               value: "9000000"
           resources:
             limits:
-              cpu: 200m
+              cpu: 1
               memory: 200Mi
             requests:
               cpu: 10m
