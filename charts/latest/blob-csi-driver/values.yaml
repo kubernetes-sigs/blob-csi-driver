@@ -21,14 +21,12 @@ image:
     tag: v1.3.0
     pullPolicy: IfNotPresent
 
+cloud: AzurePublicCloud
+
 ## Reference to one or more secrets to be used when pulling images
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
 imagePullSecrets: []
 # - name: myRegistryKeySecretName
-
-# -- Custom labels to add into metadata
-customLabels: {}
-  # k8s-app: blob-csi-driver
 
 serviceAccount:
   create: true # When true, service accounts will be created for you. Set to false if you want to use your own.
@@ -38,6 +36,22 @@ serviceAccount:
 rbac:
   create: true
   name: blob
+
+## Collection of annotations to add to all the pods
+podAnnotations: {}
+## Collection of labels to add to all the pods
+podLabels: {}
+# -- Custom labels to add into metadata
+customLabels: {}
+  # k8s-app: blob-csi-driver
+
+## Leverage a PriorityClass to ensure your pods survive resource shortages
+## ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+priorityClassName: system-cluster-critical
+## Security context give the opportunity to run container as nonroot by setting a securityContext
+## by example :
+## securityContext: { runAsUser: 1001 }
+securityContext: {}
 
 controller:
   name: csi-blob-controller
@@ -106,6 +120,7 @@ node:
     blobfuseVersion: 1.4.1
     setMaxOpenFileNum: true
     maxOpenFileNum: "9000000"
+    removeMlocate: true
   blobfuseCachePath: /mnt
   resources:
     livenessProbe:
@@ -148,17 +163,3 @@ driver:
 linux:
   kubelet: /var/lib/kubelet
   distro: debian
-
-cloud: AzurePublicCloud
-
-## Collection of annotations to add to all the pods
-podAnnotations: {}
-## Collection of labels to add to all the pods
-podLabels: {}
-## Leverage a PriorityClass to ensure your pods survive resource shortages
-## ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
-priorityClassName: system-cluster-critical
-## Security context give the opportunity to run container as nonroot by setting a securityContext
-## by example :
-## securityContext: { runAsUser: 1001 }
-securityContext: {}

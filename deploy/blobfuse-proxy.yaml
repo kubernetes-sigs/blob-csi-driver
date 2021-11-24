@@ -61,6 +61,12 @@ spec:
                 sysctl -w fs.file-max=${MAX_FILE_NUM}
               fi
 
+              REMOVE_MLOCATE=${REMOVE_MLOCATE:-true}
+              if (( "${REMOVE_MLOCATE}" == "true" ))
+              then
+                rm /etc/cron.daily/mlocate -f
+              fi
+
               # "waiting for blobfuse-proxy service to start"
               sleep 3s
               # tail blobfuse proxy logs
@@ -79,6 +85,8 @@ spec:
               value: "true"
             - name: MAX_FILE_NUM
               value: "9000000"
+            - name: REMOVE_MLOCATE
+              value: "true"
           resources:
             limits:
               cpu: 1
