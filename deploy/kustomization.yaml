@@ -7,3 +7,4 @@ resources:
   - csi-blob-node.yaml
   - rbac-csi-blob-controller.yaml
   - rbac-csi-blob-node.yaml
+  - blobfuse-proxy.yaml

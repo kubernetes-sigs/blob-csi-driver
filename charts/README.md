@@ -77,7 +77,12 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.3.0`                                                         |
 | `image.csiResizer.pullPolicy`                         | csi-resizer image pull policy                         | `IfNotPresent`                                                   |
 | `imagePullSecrets`                                    | Specify docker-registry secret names as an array      | [] (does not add image pull secrets to deployed pods)          |
+| `cloud`                                               | the cloud environment the driver is running on        | `AzurePublicCloud`                                               |
+| `podAnnotations`                                      | collection of annotations to add to all the pods      | {}                                                             |
+| `podLabels`                                           | collection of labels to add to all the pods           | {}                                                             |
 | `customLabels`                                        | Custom labels to add into metadata                    | `{}`                                                             |
+| `priorityClassName`                                   | priority class name to be added to pods               | `system-cluster-critical`                                        |
+| `securityContext`                                     | security context to be added to pods                  | {}                                                             |
 | `serviceAccount.create`                               | whether create service account of csi-blob-controller | `true`                                                           |
 | `serviceAccount.controller`                           | name of service account for csi-blob-controller       | `csi-blob-controller-sa`                                  |
 | `serviceAccount.node`                                 | name of service account for csi-blob-node             | `csi-blob-node-sa`                                        |
@@ -124,6 +129,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.blobfuseProxy.blobfuseVersion`                  | installed blobfuse version on agent node| `1.4.1`                                                          |
 | `node.blobfuseProxy.setMaxOpenFileNum`                | whether set max open file num on agent node| `true`                                                          |
 | `node.blobfuseProxy.maxOpenFileNum`                   | max open file num on agent node| `9000000`                                                          |
+| `node.blobfuseProxy.removeMlocate`                    | whether remove `/etc/cron.daily/mlocate` (saving storage account list usage) | `true`                                                          |
 | `node.blobfuseCachePath`                              | blobfuse cache path(`tmp-path`)                       | `/mnt`                                                          |
 | `node.resources.livenessProbe.limits.cpu`             | liveness-probe cpu limits                             | 1                                                           |
 | `node.resources.livenessProbe.limits.memory`          | liveness-probe memory limits                          | 100Mi                                                          |
@@ -142,11 +148,6 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.tolerations`                                    | node pod tolerations                                  | []                                                             |
 | `linux.kubelet`                                       | configure kubelet directory path on Linux agent node node                  | `/var/lib/kubelet`                                                |
 | `linux.distro`                                        | configure ssl certificates for different Linux distribution(available values: `debian`, `fedora`)             | `debian`
-| `cloud`                                               | the cloud environment the driver is running on        | `AzurePublicCloud`                                               |
-| `podAnnotations`                                      | collection of annotations to add to all the pods      | {}                                                             |
-| `podLabels`                                           | collection of labels to add to all the pods           | {}                                                             |
-| `priorityClassName`                                   | priority class name to be added to pods               | `system-cluster-critical`                                        |
-| `securityContext`                                     | security context to be added to pods                  | {}                                                             |
 
 ## troubleshooting
  - Add `--wait -v=5 --debug` in `helm install` command to get detailed error

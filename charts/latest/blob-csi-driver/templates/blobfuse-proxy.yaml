@@ -67,6 +67,12 @@ spec:
                 sysctl -w fs.file-max=${MAX_FILE_NUM}
               fi
 
+              REMOVE_MLOCATE=${REMOVE_MLOCATE:-true}
+              if (( "${REMOVE_MLOCATE}" == "true" ))
+              then
+                rm /etc/cron.daily/mlocate -f
+              fi
+
               # "waiting for blobfuse-proxy service to start"
               sleep 3s
               # tail blobfuse proxy logs
@@ -89,9 +95,11 @@ spec:
               value: "{{ .Values.node.blobfuseProxy.setMaxOpenFileNum }}"
             - name: MAX_FILE_NUM
               value: "{{ .Values.node.blobfuseProxy.maxOpenFileNum }}"
+            - name: REMOVE_MLOCATE
+              value: "{{ .Values.node.blobfuseProxy.removeMlocate }}"
           resources:
             limits:
-              cpu: 200m
+              cpu: 1
               memory: 200Mi
             requests:
               cpu: 10m
