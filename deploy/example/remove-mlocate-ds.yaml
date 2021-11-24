@@ -1,0 +1,52 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    component: remove-mlocate
+  name: remove-mlocate
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      component: remove-mlocate
+      tier: node
+  template:
+    metadata:
+      labels:
+        component: remove-mlocate
+        tier: node
+    spec:
+      containers:
+        - command:
+            - nsenter
+            - --target
+            - "1"
+            - --mount
+            - --uts
+            - --ipc
+            - --net
+            - --pid
+            - --
+            - sh
+            - -c
+            - |
+              rm /etc/cron.daily/mlocate -f
+              sleep 600000000s
+          image: alpine
+          imagePullPolicy: IfNotPresent
+          name: remove-mlocate
+          resources:
+            requests:
+              cpu: 10m
+          securityContext:
+            privileged: true
+      hostPID: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+      restartPolicy: Always
+  updateStrategy:
+    type: OnDelete
