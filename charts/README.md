@@ -126,7 +126,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
 | `node.enableBlobfuseProxy`                            | enable blobfuse-proxy on agent node                           | `false`                                                          |
 | `node.blobfuseProxy.installBlobfuse`                  | whether install blobfuse on agent node| `true`                                                          |
-| `node.blobfuseProxy.blobfuseVersion`                  | installed blobfuse version on agent node| `1.4.1`                                                          |
+| `node.blobfuseProxy.blobfuseVersion`                  | installed blobfuse version on agent node| `1.4.2`                                                          |
 | `node.blobfuseProxy.setMaxOpenFileNum`                | whether set max open file num on agent node| `true`                                                          |
 | `node.blobfuseProxy.maxOpenFileNum`                   | max open file num on agent node| `9000000`                                                          |
 | `node.blobfuseProxy.removeMlocate`                    | whether remove `/etc/cron.daily/mlocate` (saving storage account list usage) | `true`                                                          |
