@@ -271,8 +271,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	if ephemeralVol {
 		mountOptions = util.JoinMountOptions(mountOptions, strings.Split(ephemeralVolMountOptions, ","))
 	}
-	// set different tmp-path with time info
-	tmpPath := fmt.Sprintf("%s/%s#%d", "/mnt", volumeID, time.Now().Unix())
+	tmpPath := fmt.Sprintf("%s/%s", "/mnt", volumeID)
 	mountOptions = appendDefaultMountOptions(mountOptions, tmpPath, containerName)
 
 	args := targetPath
