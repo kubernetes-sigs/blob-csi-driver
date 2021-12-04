@@ -53,7 +53,7 @@ spec:
               INSTALL_BLOBFUSE=${INSTALL_BLOBFUSE:-true}
               if (( "${INSTALL_BLOBFUSE}" == "true" ))
               then
-                dpkg -i /tmp/packages-microsoft-prod.deb && apt-get install -y blobfuse=${BLOBFUSE_VERSION}
+                dpkg -i /tmp/packages-microsoft-prod.deb && apt update && apt-get install -y blobfuse=${BLOBFUSE_VERSION}
               fi
               dpkg -i /tmp/blobfuse-proxy.deb
               rm -f /tmp/packages-microsoft-prod.deb /tmp/blobfuse-proxy.deb
