@@ -19,6 +19,8 @@ package csicommon
 import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"golang.org/x/net/context"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type DefaultNodeServer struct {
@@ -35,4 +37,28 @@ func (ns *DefaultNodeServer) NodeGetCapabilities(ctx context.Context, req *csi.N
 	return &csi.NodeGetCapabilitiesResponse{
 		Capabilities: ns.Driver.NSCap,
 	}, nil
+}
+
+func (ns *DefaultNodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (ns *DefaultNodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (ns *DefaultNodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (ns *DefaultNodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (ns *DefaultNodeServer) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (ns *DefaultNodeServer) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
 }
