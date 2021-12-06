@@ -53,8 +53,8 @@ func (cs *DefaultControllerServer) ValidateVolumeCapabilities(ctx context.Contex
 		}
 		if !found {
 			return &csi.ValidateVolumeCapabilitiesResponse{
-				Message: "Driver doesnot support mode:" + c.GetAccessMode().GetMode().String(),
-			}, status.Error(codes.InvalidArgument, "Driver doesnot support mode:"+c.GetAccessMode().GetMode().String())
+				Message: "Driver does not support mode:" + c.GetAccessMode().GetMode().String(),
+			}, status.Error(codes.InvalidArgument, "Driver does not support mode:"+c.GetAccessMode().GetMode().String())
 		}
 		// TODO: Ignoring mount & block tyeps for now.
 	}
@@ -87,5 +87,13 @@ func (cs *DefaultControllerServer) DeleteSnapshot(ctx context.Context, req *csi.
 }
 
 func (cs *DefaultControllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (cs *DefaultControllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "")
+}
+
+func (cs *DefaultControllerServer) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "")
 }

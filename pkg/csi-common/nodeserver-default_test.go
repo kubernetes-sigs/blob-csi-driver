@@ -18,10 +18,13 @@ package csicommon
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestNodeGetInfo(t *testing.T) {
@@ -45,4 +48,70 @@ func TestNodeGetCapabilities(t *testing.T) {
 	req := csi.NodeGetCapabilitiesRequest{}
 	_, err := ns.NodeGetCapabilities(context.Background(), &req)
 	assert.NoError(t, err)
+}
+
+func TestNodeStageVolume(t *testing.T) {
+	d := NewFakeDriver()
+	ns := NewDefaultNodeServer(d)
+	req := csi.NodeStageVolumeRequest{}
+	resp, err := ns.NodeStageVolume(context.Background(), &req)
+	assert.Nil(t, resp)
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestNodeUnstageVolume(t *testing.T) {
+	d := NewFakeDriver()
+	ns := NewDefaultNodeServer(d)
+	req := csi.NodeUnstageVolumeRequest{}
+	resp, err := ns.NodeUnstageVolume(context.Background(), &req)
+	assert.Nil(t, resp)
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestNodePublishVolume(t *testing.T) {
+	d := NewFakeDriver()
+	ns := NewDefaultNodeServer(d)
+	req := csi.NodePublishVolumeRequest{}
+	resp, err := ns.NodePublishVolume(context.Background(), &req)
+	assert.Nil(t, resp)
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestNodeUnpublishVolume(t *testing.T) {
+	d := NewFakeDriver()
+	ns := NewDefaultNodeServer(d)
+	req := csi.NodeUnpublishVolumeRequest{}
+	resp, err := ns.NodeUnpublishVolume(context.Background(), &req)
+	assert.Nil(t, resp)
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestNodeGetVolumeStats(t *testing.T) {
+	d := NewFakeDriver()
+	ns := NewDefaultNodeServer(d)
+	req := csi.NodeGetVolumeStatsRequest{}
+	resp, err := ns.NodeGetVolumeStats(context.Background(), &req)
+	assert.Nil(t, resp)
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+func TestNodeExpandVolume(t *testing.T) {
+	d := NewFakeDriver()
+	ns := NewDefaultNodeServer(d)
+	req := csi.NodeExpandVolumeRequest{}
+	resp, err := ns.NodeExpandVolume(context.Background(), &req)
+	assert.Nil(t, resp)
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+		t.Errorf("Unexpected error: %v", err)
+	}
 }
