@@ -50,7 +50,6 @@ spec:
                 dpkg -i /tmp/packages-microsoft-prod.deb && apt update && apt-get install -y blobfuse=${BLOBFUSE_VERSION}
               fi
               dpkg -i /tmp/blobfuse-proxy.deb
-              rm -f /tmp/packages-microsoft-prod.deb /tmp/blobfuse-proxy.deb
               mkdir -p /var/lib/kubelet/plugins/blob.csi.azure.com
               systemctl enable blobfuse-proxy
               systemctl start blobfuse-proxy
@@ -61,10 +60,16 @@ spec:
                 sysctl -w fs.file-max=${MAX_FILE_NUM}
               fi
 
-              REMOVE_MLOCATE=${REMOVE_MLOCATE:-true}
-              if (( "${REMOVE_MLOCATE}" == "true" ))
+              updateDBConfigPath="/etc/updatedb.conf"
+              DISABLE_UPDATEDB=${DISABLE_UPDATEDB:-true}
+              if (( "${DISABLE_UPDATEDB}" == "true" )) && (( test -f ${updateDBConfigPath} ))
               then
-                rm /etc/cron.daily/mlocate -f
+                echo "before changing ${updateDBConfigPath}:"
+                cat ${updateDBConfigPath}
+                sed -i 's/PRUNEPATHS="\/tmp/PRUNEPATHS="\/mnt \/var\/lib\/kubelet \/tmp/g' ${updateDBConfigPath}
+                sed -i 's/PRUNEFS="NFS/PRUNEFS="fuse blobfuse NFS/g' ${updateDBConfigPath}
+                echo "after change:"
+                cat ${updateDBConfigPath}
               fi
 
               # "waiting for blobfuse-proxy service to start"
@@ -85,7 +90,7 @@ spec:
               value: "true"
             - name: MAX_FILE_NUM
               value: "9000000"
-            - name: REMOVE_MLOCATE
+            - name: DISABLE_UPDATEDB
               value: "true"
           resources:
             limits:

@@ -120,7 +120,7 @@ node:
     blobfuseVersion: 1.4.2
     setMaxOpenFileNum: true
     maxOpenFileNum: "9000000"
-    removeMlocate: true
+    disableUpdateDB: true
   blobfuseCachePath: /mnt
   resources:
     livenessProbe:
