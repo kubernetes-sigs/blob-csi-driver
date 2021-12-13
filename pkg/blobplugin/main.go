@@ -52,6 +52,7 @@ var (
 	userAgentSuffix            = flag.String("user-agent-suffix", "", "userAgent suffix")
 	allowEmptyCloudConfig      = flag.Bool("allow-empty-cloud-config", true, "allow running driver without cloud config")
 	enableGetVolumeStats       = flag.Bool("enable-get-volume-stats", false, "allow GET_VOLUME_STATS on agent node")
+	appendTimeStampInCacheDir  = flag.Bool("append-timestamp-cache-dir", false, "append timestamp into cache directory on agent node")
 )
 
 func main() {
@@ -85,6 +86,7 @@ func handle() {
 		UserAgentSuffix:            *userAgentSuffix,
 		AllowEmptyCloudConfig:      *allowEmptyCloudConfig,
 		EnableGetVolumeStats:       *enableGetVolumeStats,
+		AppendTimeStampInCacheDir:  *appendTimeStampInCacheDir,
 	}
 	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {
