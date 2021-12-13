@@ -120,6 +120,7 @@ type DriverOptions struct {
 	EnableBlobMockMount        bool
 	AllowEmptyCloudConfig      bool
 	EnableGetVolumeStats       bool
+	AppendTimeStampInCacheDir  bool
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -132,13 +133,14 @@ type Driver struct {
 	userAgentSuffix            string
 	blobfuseProxyEndpoint      string
 	// enableBlobMockMount is only for testing, DO NOT set as true in non-testing scenario
-	enableBlobMockMount     bool
-	enableBlobfuseProxy     bool
-	allowEmptyCloudConfig   bool
-	enableGetVolumeStats    bool
-	blobfuseProxyConnTimout int
-	mounter                 *mount.SafeFormatAndMount
-	volLockMap              *util.LockMap
+	enableBlobMockMount       bool
+	enableBlobfuseProxy       bool
+	allowEmptyCloudConfig     bool
+	enableGetVolumeStats      bool
+	appendTimeStampInCacheDir bool
+	blobfuseProxyConnTimout   int
+	mounter                   *mount.SafeFormatAndMount
+	volLockMap                *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
 	// for that same volume (as defined by VolumeID) return an Aborted error
 	volumeLocks *volumeLocks

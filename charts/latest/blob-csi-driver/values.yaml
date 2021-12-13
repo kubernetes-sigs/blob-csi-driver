@@ -122,6 +122,7 @@ node:
     maxOpenFileNum: "9000000"
     disableUpdateDB: true
   blobfuseCachePath: /mnt
+  appendTimeStampInCacheDir: false
   resources:
     livenessProbe:
       limits:

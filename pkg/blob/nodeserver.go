@@ -278,6 +278,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		mountOptions = util.JoinMountOptions(mountOptions, []string{"--use-adls=true"})
 	}
 	tmpPath := fmt.Sprintf("%s/%s", "/mnt", volumeID)
+	if d.appendTimeStampInCacheDir {
+		tmpPath += fmt.Sprintf("#%d", time.Now().Unix())
+	}
 	mountOptions = appendDefaultMountOptions(mountOptions, tmpPath, containerName)
 
 	args := targetPath
