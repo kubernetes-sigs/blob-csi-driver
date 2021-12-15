@@ -40,25 +40,25 @@ func (ns *DefaultNodeServer) NodeGetCapabilities(ctx context.Context, req *csi.N
 }
 
 func (ns *DefaultNodeServer) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRequest) (*csi.NodeStageVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "NodeStageVolume is not yet implemented")
 }
 
 func (ns *DefaultNodeServer) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "NodeUnstageVolume is not yet implemented")
 }
 
 func (ns *DefaultNodeServer) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolumeRequest) (*csi.NodePublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "NodePublishVolume is not yet implemented")
 }
 
 func (ns *DefaultNodeServer) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "NodeUnpublishVolume is not yet implemented")
 }
 
 func (ns *DefaultNodeServer) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeStatsRequest) (*csi.NodeGetVolumeStatsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "NodeGetVolumeStats is not yet implemented")
 }
 
 func (ns *DefaultNodeServer) NodeExpandVolume(ctx context.Context, req *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "NodeExpandVolume is not yet implemented")
 }

@@ -56,7 +56,7 @@ func TestNodeStageVolume(t *testing.T) {
 	req := csi.NodeStageVolumeRequest{}
 	resp, err := ns.NodeStageVolume(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "NodeStageVolume is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -67,7 +67,7 @@ func TestNodeUnstageVolume(t *testing.T) {
 	req := csi.NodeUnstageVolumeRequest{}
 	resp, err := ns.NodeUnstageVolume(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "NodeUnstageVolume is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -78,7 +78,7 @@ func TestNodePublishVolume(t *testing.T) {
 	req := csi.NodePublishVolumeRequest{}
 	resp, err := ns.NodePublishVolume(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "NodePublishVolume is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -89,7 +89,7 @@ func TestNodeUnpublishVolume(t *testing.T) {
 	req := csi.NodeUnpublishVolumeRequest{}
 	resp, err := ns.NodeUnpublishVolume(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "NodeUnpublishVolume is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -100,7 +100,7 @@ func TestNodeGetVolumeStats(t *testing.T) {
 	req := csi.NodeGetVolumeStatsRequest{}
 	resp, err := ns.NodeGetVolumeStats(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "NodeGetVolumeStats is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -111,7 +111,7 @@ func TestNodeExpandVolume(t *testing.T) {
 	req := csi.NodeExpandVolumeRequest{}
 	resp, err := ns.NodeExpandVolume(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "NodeExpandVolume is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }

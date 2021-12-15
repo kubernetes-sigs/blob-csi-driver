@@ -492,7 +492,7 @@ func TestGetCapacity(t *testing.T) {
 	req := csi.GetCapacityRequest{}
 	resp, err := d.GetCapacity(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "GetCapacity is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -502,7 +502,7 @@ func TestListVolumes(t *testing.T) {
 	req := csi.ListVolumesRequest{}
 	resp, err := d.ListVolumes(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "ListVolumes is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -512,7 +512,7 @@ func TestControllerPublishVolume(t *testing.T) {
 	req := csi.ControllerPublishVolumeRequest{}
 	resp, err := d.ControllerPublishVolume(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "ControllerPublishVolume is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -522,7 +522,7 @@ func TestControllerUnpublishVolume(t *testing.T) {
 	req := csi.ControllerUnpublishVolumeRequest{}
 	resp, err := d.ControllerUnpublishVolume(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "ControllerUnpublishVolume is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -532,7 +532,7 @@ func TestCreateSnapshots(t *testing.T) {
 	req := csi.CreateSnapshotRequest{}
 	resp, err := d.CreateSnapshot(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "CreateSnapshot is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -541,7 +541,7 @@ func TestDeleteSnapshots(t *testing.T) {
 	req := csi.DeleteSnapshotRequest{}
 	resp, err := d.DeleteSnapshot(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "DeleteSnapshot is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }
@@ -551,7 +551,7 @@ func TestListSnapshots(t *testing.T) {
 	req := csi.ListSnapshotsRequest{}
 	resp, err := d.ListSnapshots(context.Background(), &req)
 	assert.Nil(t, resp)
-	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "")) {
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "ListSnapshots is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 }

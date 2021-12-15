@@ -28,19 +28,19 @@ type DefaultControllerServer struct {
 }
 
 func (cs *DefaultControllerServer) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest) (*csi.CreateVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "CreateVolume is not yet implemented")
 }
 
 func (cs *DefaultControllerServer) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest) (*csi.DeleteVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "DeleteVolume is not yet implemented")
 }
 
 func (cs *DefaultControllerServer) ControllerPublishVolume(ctx context.Context, req *csi.ControllerPublishVolumeRequest) (*csi.ControllerPublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "ControllerPublishVolume is not yet implemented")
 }
 
 func (cs *DefaultControllerServer) ControllerUnpublishVolume(ctx context.Context, req *csi.ControllerUnpublishVolumeRequest) (*csi.ControllerUnpublishVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "ControllerUnpublishVolume is not yet implemented")
 }
 
 func (cs *DefaultControllerServer) ValidateVolumeCapabilities(ctx context.Context, req *csi.ValidateVolumeCapabilitiesRequest) (*csi.ValidateVolumeCapabilitiesResponse, error) {
@@ -63,11 +63,11 @@ func (cs *DefaultControllerServer) ValidateVolumeCapabilities(ctx context.Contex
 }
 
 func (cs *DefaultControllerServer) ListVolumes(ctx context.Context, req *csi.ListVolumesRequest) (*csi.ListVolumesResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "ListVolumes is not yet implemented")
 }
 
 func (cs *DefaultControllerServer) GetCapacity(ctx context.Context, req *csi.GetCapacityRequest) (*csi.GetCapacityResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "GetCapacity is not yet implemented")
 }
 
 // ControllerGetCapabilities implements the default GRPC callout.
@@ -79,21 +79,21 @@ func (cs *DefaultControllerServer) ControllerGetCapabilities(ctx context.Context
 }
 
 func (cs *DefaultControllerServer) CreateSnapshot(ctx context.Context, req *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "CreateSnapshot is not yet implemented")
 }
 
 func (cs *DefaultControllerServer) DeleteSnapshot(ctx context.Context, req *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "DeleteSnapshot is not yet implemented")
 }
 
 func (cs *DefaultControllerServer) ListSnapshots(ctx context.Context, req *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "ListSnapshots is not yet implemented")
 }
 
 func (cs *DefaultControllerServer) ControllerExpandVolume(ctx context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "ControllerExpandVolume is not yet implemented")
 }
 
 func (cs *DefaultControllerServer) ControllerGetVolume(ctx context.Context, req *csi.ControllerGetVolumeRequest) (*csi.ControllerGetVolumeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "")
+	return nil, status.Error(codes.Unimplemented, "ControllerGetVolume is not yet implemented")
 }
