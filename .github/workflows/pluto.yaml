@@ -1,4 +1,4 @@
-name: apiVersion deprecation test
+name: k8s api version check
 on:
     pull_request: {}
     push: {}

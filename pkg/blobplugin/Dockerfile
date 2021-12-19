@@ -17,7 +17,7 @@ COPY ./_output/blobplugin /blobplugin
 RUN apt update && apt-mark unhold libcap2
 RUN clean-install ca-certificates libfuse-dev libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev util-linux mount udev wget e2fsprogs nfs-common netbase
 # install updated packages to fix CVE issues
-RUN clean-install libssl1.1 libgssapi-krb5-2 libk5crypto3 libkrb5-3 libkrb5support0
+RUN clean-install libssl1.1 libgssapi-krb5-2 libk5crypto3 libkrb5-3 libkrb5support0 libgmp10
 RUN mkdir /blobfuse-proxy/
 COPY ./_output/blobfuse-proxy.deb /blobfuse-proxy/
 # for compatibility, remove this after v1.6.0 release (todo)
