@@ -12,14 +12,17 @@ skuName | Azure storage account type (alias: `storageAccountType`) | `Standard_L
 location | Azure location | `eastus`, `westus`, etc. | No | if empty, driver will use the same location name as current k8s cluster
 resourceGroup | Azure resource group name | existing resource group name | No | if empty, driver will use the same resource group name as current k8s cluster
 storageAccount | specify Azure storage account name| STORAGE_ACCOUNT_NAME | - No for blobfuse mount </br> - Yes for NFSv3 mount |  - For blobfuse mount: if empty, driver will find a suitable storage account that matches `skuName` in the same resource group; if a storage account name is provided, storage account must exist. </br>  - For NFSv3 mount, storage account name must be provided
-storeAccountKey | whether store account key to k8s secret | `true`,`false` | No | `true`
 protocol | specify blobfuse mount or NFSv3 mount | `fuse`, `nfs` | No | `fuse`
 containerName | specify the existing container name | existing container name | No | if empty, driver will create a new container name, starting with `pvc-fuse` for blobfuse or `pvc-nfs` for NFSv3
-isHnsEnabled | enable `Hierarchical namespace` for Azure DataLake storage account(only for blobfuse) | `true`,`false` | No | `false`
 server | specify Azure storage account server address | existing server address, e.g. `accountname.privatelink.blob.core.windows.net` | No | if empty, driver will use default `accountname.blob.core.windows.net` or other sovereign cloud account address
 allowBlobPublicAccess | Allow or disallow public access to all blobs or containers for storage account created by driver | `true`,`false` | No | `false`
 storageEndpointSuffix | specify Azure storage endpoint suffix | `core.windows.net` | No | if empty, driver will use default storage endpoint suffix according to cloud environment, e.g. `core.windows.net`
 tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources) would be created in newly created storage account | tag format: 'foo=aaa,bar=bbb' | No | ""
+--- | **Following parameters are only for blobfuse** | --- | --- |
+storeAccountKey | whether store account key to k8s secret <br><br> Note:  <br> `false` means driver would leverage kubelet identity to get account key | `true`,`false` | No | `true`
+secretName | specify secret name to store account key | | No |
+secretNamespace | specify the namespace of secret to store account key | `default`,`kube-system`, etc | No | `default`
+isHnsEnabled | enable `Hierarchical namespace` for Azure DataLake storage account | `true`,`false` | No | `false`
 
  - `fsGroup` securityContext setting
 
@@ -54,8 +57,11 @@ volumeAttributes.resourceGroup | Azure resource group name | existing resource g
 volumeAttributes.storageAccount | existing storage account name | existing storage account name | Yes |
 volumeAttributes.containerName | existing container name | existing container name | Yes |
 volumeAttributes.protocol | specify blobfuse mount or NFSv3 mount | `fuse`, `nfs` | No | `fuse`
+--- | **Following parameters are only for blobfuse** | --- | --- |
+volumeAttributes.secretName | secret name that stores storage account name and key(only applies for SMB) | | No |
+volumeAttributes.secretNamespace | secret namespace | `default`,`kube-system`, etc | No | `default`
 nodeStageSecretRef.name | secret name that stores(check below examples):<br>`azurestorageaccountkey`<br>`azurestorageaccountsastoken`<br>`msisecret`<br>`azurestoragespnclientsecret` | existing Kubernetes secret name |  No  |
-nodeStageSecretRef.namespace | namespace where the secret is | k8s namespace  |  Yes  |
+nodeStageSecretRef.namespace | secret namespace | k8s namespace  |  Yes  |
 --- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse#environment-variables)** | --- | --- |
 volumeAttributes.AzureStorageAuthType | Authentication Type | `Key`, `SAS`, `MSI`, `SPN` | No | `Key`
 volumeAttributes.AzureStorageIdentityClientID | Identity Client ID |  | No |
@@ -70,6 +76,9 @@ volumeAttributes.keyVaultURL | Azure Key Vault DNS name | existing Azure Key Vau
 volumeAttributes.keyVaultSecretName | Azure Key Vault secret name | existing Azure Key Vault secret name | No |
 volumeAttributes.keyVaultSecretVersion | Azure Key Vault secret version | existing version | No |if empty, driver will use "current version"
 
+ - Note
+   - only mounting blobfuse requires account key, and if secret is not provided in PV config, driver would try to get `azure-storage-account-{accountname}-secret` in the pod namespace, if not found, driver would try using kubelet identity to get account key directly using Azure API.
+   - mounting blob storage NFSv3 does not need account key, it requires storage account configured with same vnet with agent node.
 
  - create a Kubernetes secret for `nodeStageSecretRef.name`
  ```console

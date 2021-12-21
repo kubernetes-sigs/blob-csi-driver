@@ -66,7 +66,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if parameters == nil {
 		parameters = make(map[string]string)
 	}
-	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, secretNamespace string
+	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, secretName, secretNamespace string
 	var isHnsEnabled *bool
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := to.BoolPtr(false)
@@ -94,6 +94,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			protocol = v
 		case tagsField:
 			customTags = v
+		case secretNameField:
+			secretName = v
 		case secretNamespaceField:
 			secretNamespace = v
 		case isHnsEnabledField:
@@ -224,7 +226,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	accountOptions.Name = accountName
 
 	if accountKey == "" {
-		if accountName, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, req.GetSecrets(), secretNamespace); err != nil {
+		if accountName, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, req.GetSecrets(), secretName, secretNamespace); err != nil {
 			return nil, fmt.Errorf("failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
 		}
 	}
