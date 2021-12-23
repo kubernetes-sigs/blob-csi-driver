@@ -613,14 +613,19 @@ func setAzureCredentials(kubeClient kubernetes.Interface, accountName, accountKe
 	return secretName, err
 }
 
-// GetStorageAccesskey get Azure storage (account name, account key)
-func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.AccountOptions, secrets map[string]string, secretNamespace string) (string, string, error) {
+// GetStorageAccesskey get Azure storage account key from
+// 	1. secrets (if not empty)
+// 	2. use k8s client identity to read from k8s secret
+// 	3. use cluster identity to get from storage account directly
+func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, string, error) {
 	if len(secrets) > 0 {
 		return getStorageAccount(secrets)
 	}
 
 	// read from k8s secret first
-	secretName := fmt.Sprintf(secretNameTemplate, accountOptions.Name)
+	if secretName == "" {
+		secretName = fmt.Sprintf(secretNameTemplate, accountOptions.Name)
+	}
 	_, accountKey, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
 	if err != nil {
 		klog.V(2).Infof("could not get account(%s) key from secret(%s) namespace(%s), error: %v, use cluster identity to get account key instead", accountOptions.Name, secretName, secretNamespace, err)
