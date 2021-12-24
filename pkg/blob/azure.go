@@ -195,7 +195,10 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context) error {
 	vnetName := d.cloud.VnetName
 	subnetName := d.cloud.SubnetName
 
-	klog.V(2).Infof("updateSubnetServiceEndpoints on VnetName: %s, SubnetName: %s", vnetName, subnetName)
+	klog.V(2).Infof("updateSubnetServiceEndpoints on vnetName: %s, subnetName: %s, location: %s", vnetName, subnetName, location)
+	if subnetName == "" || vnetName == "" || location == "" {
+		return fmt.Errorf("value of subnetName, vnetName or location is empty")
+	}
 
 	lockKey := resourceGroup + vnetName + subnetName
 	d.subnetLockMap.LockEntry(lockKey)
@@ -230,8 +233,7 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context) error {
 		serviceEndpoints = append(serviceEndpoints, storageServiceEndpoint)
 		subnet.SubnetPropertiesFormat.ServiceEndpoints = &serviceEndpoints
 
-		err = d.cloud.SubnetsClient.CreateOrUpdate(context.Background(), resourceGroup, vnetName, subnetName, subnet)
-		if err != nil {
+		if err := d.cloud.SubnetsClient.CreateOrUpdate(ctx, resourceGroup, vnetName, subnetName, subnet); err != nil {
 			return fmt.Errorf("failed to update the subnet %s under vnet %s: %v", subnetName, vnetName, err)
 		}
 		klog.V(2).Infof("serviceEndpoint(%s) is appended in subnet(%s)", storageService, subnetName)
