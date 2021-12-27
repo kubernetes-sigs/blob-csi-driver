@@ -104,7 +104,6 @@ spec:
               value: "{{ .Values.node.blobfuseProxy.disableUpdateDB }}"
           resources:
             limits:
-              cpu: 1
               memory: 200Mi
             requests:
               cpu: 10m

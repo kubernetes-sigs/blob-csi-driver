@@ -97,19 +97,15 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.livenessProbe.healthPort `                | health check port for liveness probe                   | `29632` |
 | `controller.runOnMaster`                              | run controller on master node                         | `true`                                                          |
 | `controller.logLevel`                                 | controller driver log level                           | `5`                                                            |
-| `controller.resources.csiProvisioner.limits.cpu`      | csi-provisioner cpu limits                            | 1                                                           |
 | `controller.resources.csiProvisioner.limits.memory`   | csi-provisioner memory limits                         | 100Mi                                                          |
 | `controller.resources.csiProvisioner.requests.cpu`    | csi-provisioner cpu requests limits                   | 10m                                                            |
 | `controller.resources.csiProvisioner.requests.memory` | csi-provisioner memory requests limits                | 20Mi                                                           |
-| `controller.resources.livenessProbe.limits.cpu`       | liveness-probe cpu limits                             | 1                                                           |
 | `controller.resources.livenessProbe.limits.memory`    | liveness-probe memory limits                          | 300Mi                                                          |
 | `controller.resources.livenessProbe.requests.cpu`     | liveness-probe cpu requests limits                    | 10m                                                            |
 | `controller.resources.livenessProbe.requests.memory`  | liveness-probe memory requests limits                 | 20Mi                                                           |
-| `controller.resources.blob.limits.cpu`                | blob-csi-driver cpu limits                            | 1                                                           |
 | `controller.resources.blob.limits.memory`             | blob-csi-driver memory limits                         | 200Mi                                                          |
 | `controller.resources.blob.requests.cpu`              | blob-csi-driver cpu requests limits                   | 10m                                                            |
 | `controller.resources.blob.requests.memory`           | blob-csi-driver memory requests limits                | 20Mi                                                           |
-| `controller.resources.csiResizer.limits.cpu`          | csi-resizer cpu limits                                | 1                                                           |
 | `controller.resources.csiResizer.limits.memory`       | csi-resizer memory limits                             | 300Mi                                                          |
 | `controller.resources.csiResizer.requests.cpu`        | csi-resizer cpu requests limits                       | 10m                                                            |
 | `controller.resources.csiResizer.requests.memory`     | csi-resizer memory requests limits                    | 20Mi                                                           |
@@ -131,15 +127,12 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.blobfuseProxy.maxOpenFileNum`                   | max open file num on agent node| `9000000`                                                          |
 | `node.blobfuseProxy.disableUpdateDB`                  | whether disable updateDB on blobfuse (saving storage account list usage) | `true`                                                          |
 | `node.blobfuseCachePath`                              | blobfuse cache path(`tmp-path`)                       | `/mnt`                                                          |
-| `node.resources.livenessProbe.limits.cpu`             | liveness-probe cpu limits                             | 1                                                           |
 | `node.resources.livenessProbe.limits.memory`          | liveness-probe memory limits                          | 100Mi                                                          |
 | `node.resources.livenessProbe.requests.cpu`           | liveness-probe cpu requests limits                    | 10m                                                            |
 | `node.resources.livenessProbe.requests.memory`        | liveness-probe memory requests limits                 | 20Mi                                                           |
-| `node.resources.nodeDriverRegistrar.limits.cpu`       | csi-node-driver-registrar cpu limits                  | 1                                                           |
 | `node.resources.nodeDriverRegistrar.limits.memory`    | csi-node-driver-registrar memory limits               | 100Mi                                                          |
 | `node.resources.nodeDriverRegistrar.requests.cpu`     | csi-node-driver-registrar cpu requests limits         | 10m                                                            |
 | `node.resources.nodeDriverRegistrar.requests.memory`  | csi-node-driver-registrar memory requests limits      | 20Mi                                                           |
-| `node.resources.blob.limits.cpu`                      | blob-csi-driver cpu limits                            | `2`                                                            |
 | `node.resources.blob.limits.memory`                   | blob-csi-driver memory limits                         | 2100Mi                                                         |
 | `node.resources.blob.requests.cpu`                    | blob-csi-driver cpu requests limits                   | 10m                                                            |
 | `node.resources.blob.requests.memory`                 | blob-csi-driver memory requests limits                | 20Mi                                                           |
