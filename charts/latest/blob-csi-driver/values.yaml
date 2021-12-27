@@ -119,6 +119,7 @@ node:
     disableUpdateDB: true
   blobfuseCachePath: /mnt
   appendTimeStampInCacheDir: false
+  mountPermissions: 0777
   resources:
     livenessProbe:
       limits:

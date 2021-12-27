@@ -121,6 +121,7 @@ type DriverOptions struct {
 	AllowEmptyCloudConfig      bool
 	EnableGetVolumeStats       bool
 	AppendTimeStampInCacheDir  bool
+	MountPermissions           uint64
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -146,6 +147,7 @@ type Driver struct {
 	enableGetVolumeStats      bool
 	appendTimeStampInCacheDir bool
 	blobfuseProxyConnTimout   int
+	mountPermissions          uint64
 	mounter                   *mount.SafeFormatAndMount
 	volLockMap                *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
@@ -176,6 +178,7 @@ func NewDriver(options *DriverOptions) *Driver {
 		enableBlobMockMount:        options.EnableBlobMockMount,
 		allowEmptyCloudConfig:      options.AllowEmptyCloudConfig,
 		enableGetVolumeStats:       options.EnableGetVolumeStats,
+		mountPermissions:           options.MountPermissions,
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion

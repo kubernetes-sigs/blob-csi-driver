@@ -107,7 +107,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	klog.V(2).Infof("NodePublishVolume: volume %s mounting %s at %s with mountOptions: %v", volumeID, source, target, mountOptions)
 	if d.enableBlobMockMount {
 		klog.Warningf("NodePublishVolume: mock mount on volumeID(%s), this is only for TESTING!!!", volumeID)
-		if err := volumehelper.MakeDir(target); err != nil {
+		if err := volumehelper.MakeDir(target, os.FileMode(d.mountPermissions)); err != nil {
 			klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
 			return nil, err
 		}
@@ -260,11 +260,11 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with %v", volumeID, source, targetPath, err))
 		}
 
-		// set 0777 for NFSv3 root folder
-		if err := os.Chmod(targetPath, 0777); err != nil {
+		// set permisssions for NFSv3 root folder
+		if err := os.Chmod(targetPath, os.FileMode(d.mountPermissions)); err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("Chmod(%s) failed with %v", targetPath, err))
 		}
-		klog.V(2).Infof("volume(%s) mount %q on %q succeeded", volumeID, source, targetPath)
+		klog.V(2).Infof("volume(%s) mount %q on %q with 0%o succeeded", volumeID, source, targetPath, d.mountPermissions)
 
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
@@ -294,7 +294,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	authEnv = append(authEnv, "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
 	if d.enableBlobMockMount {
 		klog.Warningf("NodeStageVolume: mock mount on volumeID(%s), this is only for TESTING!!!", volumeID)
-		if err := volumehelper.MakeDir(targetPath); err != nil {
+		if err := volumehelper.MakeDir(targetPath, os.FileMode(d.mountPermissions)); err != nil {
 			klog.Errorf("MakeDir failed on target: %s (%v)", targetPath, err)
 			return nil, err
 		}
@@ -475,7 +475,7 @@ func (d *Driver) ensureMountPoint(target string) (bool, error) {
 		notMnt = true
 		return !notMnt, err
 	}
-	if err := volumehelper.MakeDir(target); err != nil {
+	if err := volumehelper.MakeDir(target, os.FileMode(d.mountPermissions)); err != nil {
 		klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
 		return !notMnt, err
 	}

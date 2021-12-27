@@ -159,7 +159,7 @@ func TestGetMountOptions(t *testing.T) {
 func TestMakeDir(t *testing.T) {
 	//Successfully create directory
 	targetTest := "./target_test"
-	err := MakeDir(targetTest)
+	err := MakeDir(targetTest, 0777)
 	assert.NoError(t, err)
 
 	// Remove the directory created
