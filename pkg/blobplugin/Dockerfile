@@ -13,7 +13,10 @@
 # limitations under the License.
 
 FROM k8s.gcr.io/build-image/debian-base:bullseye-v1.0.0
-COPY ./_output/blobplugin /blobplugin
+
+ARG ARCH=amd64
+COPY ./_output/${ARCH}/blobplugin /blobplugin
+
 RUN apt update && apt-mark unhold libcap2
 RUN clean-install ca-certificates libfuse-dev libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev util-linux mount udev wget e2fsprogs nfs-common netbase
 # install updated packages to fix CVE issues
@@ -23,7 +26,8 @@ COPY ./_output/blobfuse-proxy.deb /blobfuse-proxy/
 # for compatibility, remove this after v1.6.0 release (todo)
 COPY deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb /blobfuse-proxy/
 RUN wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
-RUN dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse fuse -y
+ARG ARCH=amd64
+RUN if [ "$ARCH" = "amd64" ] ; then dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse fuse -y; fi
 RUN apt remove wget -y
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"

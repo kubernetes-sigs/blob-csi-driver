@@ -41,10 +41,13 @@ GOBIN ?= $(GOPATH)/bin
 DOCKER_CLI_EXPERIMENTAL = enabled
 export GOPATH GOBIN GO111MODULE DOCKER_CLI_EXPERIMENTAL
 
+# The current context of image building
+# The architecture of the image
+ARCH ?= amd64
 # Output type of docker buildx build
 OUTPUT_TYPE ?= registry
 
-ALL_ARCH.linux = amd64 #arm64
+ALL_ARCH.linux = amd64 arm64
 ALL_OS_ARCH = $(foreach arch, ${ALL_ARCH.linux}, linux-$(arch))
 
 all: blob blobfuse-proxy
@@ -93,7 +96,7 @@ e2e-teardown:
 
 .PHONY: blob
 blob: blobfuse-proxy
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin ./pkg/blobplugin
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/${ARCH}/blobplugin ./pkg/blobplugin
 
 .PHONY: blob-windows
 blob-windows:
@@ -121,7 +124,9 @@ ifeq ($(CLOUD), AzureStackCloud)
 	docker run --privileged --name buildx_buildkit_container-builder0 -d --mount type=bind,src=/etc/ssl/certs,dst=/etc/ssl/certs moby/buildkit:latest || true
 endif
 	# enable qemu for arm64 build
-	# docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
+	# https://github.com/docker/buildx/issues/464#issuecomment-741507760
+	docker run --privileged --rm tonistiigi/binfmt --uninstall qemu-aarch64
+	docker run --rm --privileged tonistiigi/binfmt --install all
 	for arch in $(ALL_ARCH.linux); do \
 		ARCH=$${arch} $(MAKE) blob; \
 		ARCH=$${arch} $(MAKE) container-linux; \
