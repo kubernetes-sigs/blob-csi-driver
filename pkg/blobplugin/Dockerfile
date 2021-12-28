@@ -18,17 +18,18 @@ ARG ARCH=amd64
 COPY ./_output/${ARCH}/blobplugin /blobplugin
 
 RUN apt update && apt-mark unhold libcap2
-RUN clean-install ca-certificates libfuse-dev libcurl4-gnutls-dev libgnutls28-dev uuid-dev libgcrypt20-dev util-linux mount udev wget e2fsprogs nfs-common netbase
+RUN clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase
 # install updated packages to fix CVE issues
 RUN clean-install libssl1.1 libgssapi-krb5-2 libk5crypto3 libkrb5-3 libkrb5support0 libgmp10
 RUN mkdir /blobfuse-proxy/
 COPY ./_output/blobfuse-proxy.deb /blobfuse-proxy/
 # for compatibility, remove this after v1.6.0 release (todo)
 COPY deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb /blobfuse-proxy/
-RUN wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
 ARG ARCH=amd64
-RUN if [ "$ARCH" = "amd64" ] ; then dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse fuse -y; fi
-RUN apt remove wget -y
+RUN if [ "$ARCH" = "amd64" ] ; then \
+  clean-install libfuse-dev libcurl4-gnutls-dev libgnutls28-dev libgcrypt20-dev && \
+  wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb && \
+  dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse fuse -y && apt remove wget -y; fi
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
