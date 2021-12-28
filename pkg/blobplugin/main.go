@@ -53,6 +53,7 @@ var (
 	allowEmptyCloudConfig      = flag.Bool("allow-empty-cloud-config", true, "allow running driver without cloud config")
 	enableGetVolumeStats       = flag.Bool("enable-get-volume-stats", false, "allow GET_VOLUME_STATS on agent node")
 	appendTimeStampInCacheDir  = flag.Bool("append-timestamp-cache-dir", false, "append timestamp into cache directory on agent node")
+	mountPermissions           = flag.Uint64("mount-permissions", 0777, "mounted folder permissions")
 )
 
 func main() {
@@ -87,6 +88,7 @@ func handle() {
 		AllowEmptyCloudConfig:      *allowEmptyCloudConfig,
 		EnableGetVolumeStats:       *enableGetVolumeStats,
 		AppendTimeStampInCacheDir:  *appendTimeStampInCacheDir,
+		MountPermissions:           *mountPermissions,
 	}
 	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {

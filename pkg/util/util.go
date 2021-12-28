@@ -77,8 +77,8 @@ func GetMountOptions(options []string) string {
 	return str
 }
 
-func MakeDir(pathname string) error {
-	err := os.MkdirAll(pathname, os.FileMode(0755))
+func MakeDir(pathname string, perm os.FileMode) error {
+	err := os.MkdirAll(pathname, perm)
 	if err != nil {
 		if !os.IsExist(err) {
 			return err

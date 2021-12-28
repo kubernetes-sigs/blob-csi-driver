@@ -120,6 +120,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.metricsPort`                                    | metrics port of csi-blob-node                         | `29635`                                                          |
 | `node.livenessProbe.healthPort `                      | health check port for liveness probe                  | `29633` |
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
+| `node.mountPermissions`                               | mounted folder permissions (only applies for NFS)                 | `0777`
 | `node.enableBlobfuseProxy`                            | enable blobfuse-proxy on agent node                           | `false`                                                          |
 | `node.blobfuseProxy.installBlobfuse`                  | whether install blobfuse on agent node| `true`                                                          |
 | `node.blobfuseProxy.blobfuseVersion`                  | installed blobfuse version on agent node| `1.4.2`                                                          |

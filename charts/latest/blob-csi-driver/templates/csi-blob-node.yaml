@@ -124,6 +124,7 @@ spec:
             - "--allow-empty-cloud-config={{ .Values.node.allowEmptyCloudConfig }}"
             - "--enable-get-volume-stats={{ .Values.feature.enableGetVolumeStats }}"
             - "--append-timestamp-cache-dir={{ .Values.node.appendTimeStampInCacheDir }}"
+            - "--mount-permissions={{ .Values.node.mountPermissions }}"
           ports:
             - containerPort: {{ .Values.node.livenessProbe.healthPort }}
               name: healthz
