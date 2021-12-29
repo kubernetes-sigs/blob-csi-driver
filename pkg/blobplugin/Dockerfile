@@ -27,7 +27,7 @@ COPY ./_output/blobfuse-proxy.deb /blobfuse-proxy/
 COPY deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb /blobfuse-proxy/
 ARG ARCH=amd64
 RUN if [ "$ARCH" = "amd64" ] ; then \
-  clean-install libfuse-dev libcurl4-gnutls-dev libgnutls28-dev libgcrypt20-dev && \
+  clean-install libcurl4-gnutls-dev && \
   wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb && \
   dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse fuse -y && apt remove wget -y; fi
 LABEL maintainers="andyzhangx"
