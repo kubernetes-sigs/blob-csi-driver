@@ -80,6 +80,9 @@ const (
 	defaultSecretAccountKey      = "azurestorageaccountkey"
 	fuse                         = "fuse"
 	nfs                          = "nfs"
+	vnetResourceGroupField       = "vnetresourcegroup"
+	vnetNameField                = "vnetname"
+	subnetNameField              = "subnetname"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3

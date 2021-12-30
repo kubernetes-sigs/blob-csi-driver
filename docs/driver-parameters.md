@@ -62,6 +62,10 @@ volumeAttributes.secretName | secret name that stores storage account name and k
 volumeAttributes.secretNamespace | secret namespace | `default`,`kube-system`, etc | No | `default`
 nodeStageSecretRef.name | secret name that stores(check below examples):<br>`azurestorageaccountkey`<br>`azurestorageaccountsastoken`<br>`msisecret`<br>`azurestoragespnclientsecret` | existing Kubernetes secret name |  No  |
 nodeStageSecretRef.namespace | secret namespace | k8s namespace  |  Yes  |
+--- | **Following parameters are only for NFS vnet setting** | --- | --- |
+vnetResourceGroup | specify vnet resource group where virtual network is | existing resource group name | No | if empty, driver will use the `vnetResourceGroup` value in azure cloud config file
+vnetName | virtual network name | existing virtual network name | No | if empty, driver will use the `vnetName` value in azure cloud config file
+subnetName | subnet name | existing subnet name of the agent node | No | if empty, driver will use the `subnetName` value in azure cloud config file
 --- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse#environment-variables)** | --- | --- |
 volumeAttributes.AzureStorageAuthType | Authentication Type | `Key`, `SAS`, `MSI`, `SPN` | No | `Key`
 volumeAttributes.AzureStorageIdentityClientID | Identity Client ID |  | No |
