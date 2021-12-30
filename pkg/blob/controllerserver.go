@@ -68,6 +68,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, secretName, secretNamespace string
 	var isHnsEnabled *bool
+	var vnetResourceGroup, vnetName, subnetName string
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := to.BoolPtr(false)
 
@@ -123,6 +124,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			// no op, only used in NodeStageVolume
 		case storageEndpointSuffixField:
 			// no op, only used in NodeStageVolume
+		case vnetResourceGroupField:
+			vnetResourceGroup = v
+		case vnetNameField:
+			vnetName = v
+		case subnetNameField:
+			subnetName = v
 		default:
 			return nil, fmt.Errorf("invalid parameter %s in storage class", k)
 		}
@@ -153,7 +160,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		vnetResourceID := d.getSubnetResourceID()
 		klog.V(2).Infof("set vnetResourceID(%s) for NFS protocol", vnetResourceID)
 		vnetResourceIDs = []string{vnetResourceID}
-		if err := d.updateSubnetServiceEndpoints(ctx); err != nil {
+		if err := d.updateSubnetServiceEndpoints(ctx, vnetResourceGroup, vnetName, subnetName); err != nil {
 			return nil, status.Errorf(codes.Internal, "update service endpoints failed with error: %v", err)
 		}
 		// NFS protocol does not need account key
@@ -187,6 +194,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		IsHnsEnabled:              isHnsEnabled,
 		EnableNfsV3:               enableNfsV3,
 		AllowBlobPublicAccess:     allowBlobPublicAccess,
+		VNetResourceGroup:         vnetResourceGroup,
+		VNetName:                  vnetName,
+		SubnetName:                subnetName,
 	}
 
 	var accountKey string
