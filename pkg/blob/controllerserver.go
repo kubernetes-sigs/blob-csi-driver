@@ -413,7 +413,12 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	}
 
 	// blob driver supports all AccessModes, no need to check capabilities here
-	return &csi.ValidateVolumeCapabilitiesResponse{Message: ""}, nil
+	return &csi.ValidateVolumeCapabilitiesResponse{
+		Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
+			VolumeCapabilities: req.GetVolumeCapabilities(),
+		},
+		Message: "",
+	}, nil
 }
 
 // ControllerGetCapabilities returns the capabilities of the Controller plugin
