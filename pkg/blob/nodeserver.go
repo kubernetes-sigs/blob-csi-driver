@@ -129,8 +129,8 @@ func (d *Driver) mountBlobfuseWithProxy(args string, authEnv []string) (string, 
 	klog.V(2).Infof("mouting using blobfuse proxy")
 	var resp *mount_azure_blob.MountAzureBlobResponse
 	var output string
-	connectionTimout := time.Duration(d.blobfuseProxyConnTimout)
-	ctx, cancel := context.WithTimeout(context.Background(), connectionTimout*time.Second)
+	connectionTimout := time.Duration(d.blobfuseProxyConnTimout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), connectionTimout)
 	defer cancel()
 	conn, err := grpc.DialContext(ctx, d.blobfuseProxyEndpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err == nil {
@@ -309,7 +309,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	if err != nil {
-		err = fmt.Errorf("Mount failed with error: %v, output: %v", err, output)
+		err = fmt.Errorf("Mount failed with error: %w, output: %v", err, output)
 		klog.Errorf("%v", err)
 		notMnt, mntErr := d.mounter.IsLikelyNotMountPoint(targetPath)
 		if mntErr != nil {

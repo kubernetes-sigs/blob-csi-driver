@@ -130,7 +130,7 @@ func CreateAzureCredentialFile() (*Credentials, error) {
 // DeleteAzureCredentialFile deletes the temporary Azure credential file
 func DeleteAzureCredentialFile() error {
 	if err := os.Remove(TempAzureCredentialFilePath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("error removing %s %v", TempAzureCredentialFilePath, err)
+		return fmt.Errorf("error removing %s %w", TempAzureCredentialFilePath, err)
 	}
 
 	return nil
@@ -142,12 +142,12 @@ func getCredentialsFromAzureCredentials(azureCredentialsPath string) (*FromProw,
 	content, err := ioutil.ReadFile(azureCredentialsPath)
 	log.Printf("Reading credentials file %v", azureCredentialsPath)
 	if err != nil {
-		return nil, fmt.Errorf("error reading credentials file %v %v", azureCredentialsPath, err)
+		return nil, fmt.Errorf("error reading credentials file %v %w", azureCredentialsPath, err)
 	}
 
 	c := Config{}
 	if err := toml.Unmarshal(content, &c); err != nil {
-		return nil, fmt.Errorf("error parsing credentials file %v %v", azureCredentialsPath, err)
+		return nil, fmt.Errorf("error parsing credentials file %v %w", azureCredentialsPath, err)
 	}
 
 	return &c.Creds, nil
@@ -158,12 +158,12 @@ func parseAndExecuteTemplate(cloud, tenantID, subscriptionID, aadClientID, aadCl
 	t := template.New("AzureCredentialFileTemplate")
 	t, err := t.Parse(azureCredentialFileTemplate)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing azureCredentialFileTemplate %v", err)
+		return nil, fmt.Errorf("error parsing azureCredentialFileTemplate %w", err)
 	}
 
 	f, err := os.Create(TempAzureCredentialFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("error creating %s %v", TempAzureCredentialFilePath, err)
+		return nil, fmt.Errorf("error creating %s %w", TempAzureCredentialFilePath, err)
 	}
 	defer f.Close()
 
@@ -178,7 +178,7 @@ func parseAndExecuteTemplate(cloud, tenantID, subscriptionID, aadClientID, aadCl
 	}
 	err = t.Execute(f, c)
 	if err != nil {
-		return nil, fmt.Errorf("error executing parsed azure credential file template %v", err)
+		return nil, fmt.Errorf("error executing parsed azure credential file template %w", err)
 	}
 
 	return &c, nil

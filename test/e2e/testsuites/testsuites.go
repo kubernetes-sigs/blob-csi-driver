@@ -384,7 +384,7 @@ func (t *TestDeployment) DeletePodAndWait() {
 	err := t.client.CoreV1().Pods(t.namespace.Name).Delete(context.TODO(), t.podName, metav1.DeleteOptions{})
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
-			framework.ExpectNoError(fmt.Errorf("pod %q Delete API error: %v", t.podName, err))
+			framework.ExpectNoError(fmt.Errorf("pod %q Delete API error: %w", t.podName, err))
 		}
 		return
 	}
@@ -392,7 +392,7 @@ func (t *TestDeployment) DeletePodAndWait() {
 	err = e2epod.WaitForPodNoLongerRunningInNamespace(t.client, t.podName, t.namespace.Name)
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
-			framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %v", t.podName, err))
+			framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %w", t.podName, err))
 		}
 	}
 }
@@ -401,7 +401,7 @@ func (t *TestDeployment) Cleanup() {
 	e2elog.Logf("deleting Deployment %q/%q", t.namespace.Name, t.deployment.Name)
 	body, err := t.Logs()
 	if err != nil {
-		e2elog.Logf("Error getting logs for pod %s: %v", t.podName, err)
+		e2elog.Logf("Error getting logs for pod %s: %w", t.podName, err)
 	} else {
 		e2elog.Logf("Pod %s has the following logs: %s", t.podName, body)
 	}
@@ -602,7 +602,7 @@ func cleanupPodOrFail(client clientset.Interface, name, namespace string) {
 	e2elog.Logf("deleting Pod %q/%q", namespace, name)
 	body, err := podLogs(client, name, namespace)
 	if err != nil {
-		e2elog.Logf("Error getting logs for pod %s: %v", name, err)
+		e2elog.Logf("Error getting logs for pod %s: %w", name, err)
 	} else {
 		e2elog.Logf("Pod %s has the following logs: %s", name, body)
 	}
@@ -623,7 +623,7 @@ func waitForPersistentVolumeClaimDeleted(c clientset.Interface, ns string, pvcNa
 				framework.Logf("Claim %q in namespace %q doesn't exist in the system", pvcName, ns)
 				return nil
 			}
-			framework.Logf("Failed to get claim %q in namespace %q, retrying in %v. Error: %v", pvcName, ns, Poll, err)
+			framework.Logf("Failed to get claim %q in namespace %q, retrying in %v. Error: %w", pvcName, ns, Poll, err)
 		}
 	}
 	return fmt.Errorf("PersistentVolumeClaim %s is not removed from the system within %v", pvcName, timeout)

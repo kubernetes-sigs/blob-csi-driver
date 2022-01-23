@@ -17,6 +17,7 @@ limitations under the License.
 package blob
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -63,8 +64,8 @@ func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent
 	kubeClient, err := getKubeClient(kubeconfig)
 	if err != nil {
 		klog.Warningf("get kubeconfig(%s) failed with error: %v", kubeconfig, err)
-		if !os.IsNotExist(err) && err != rest.ErrNotInCluster {
-			return az, fmt.Errorf("failed to get KubeClient: %v", err)
+		if !os.IsNotExist(err) && !errors.Is(err, rest.ErrNotInCluster) {
+			return az, fmt.Errorf("failed to get KubeClient: %w", err)
 		}
 	}
 
@@ -111,7 +112,7 @@ func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent
 		if allowEmptyCloudConfig {
 			klog.V(2).Infof("no cloud config provided, error: %v, driver will run without cloud config", err)
 		} else {
-			return az, fmt.Errorf("no cloud config provided, error: %v", err)
+			return az, fmt.Errorf("no cloud config provided, error: %w", err)
 		}
 	} else {
 		config.UserAgent = userAgent
@@ -148,13 +149,13 @@ func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent
 func (d *Driver) getKeyVaultSecretContent(ctx context.Context, vaultURL string, secretName string, secretVersion string) (content string, err error) {
 	kvClient, err := d.initializeKvClient()
 	if err != nil {
-		return "", fmt.Errorf("failed to get keyvaultClient: %v", err)
+		return "", fmt.Errorf("failed to get keyvaultClient: %w", err)
 	}
 
 	klog.V(2).Infof("get secret from vaultURL(%v), sercretName(%v), secretVersion(%v)", vaultURL, secretName, secretVersion)
 	secret, err := kvClient.GetSecret(ctx, vaultURL, secretName, secretVersion)
 	if err != nil {
-		return "", fmt.Errorf("get secret from vaultURL(%v), sercretName(%v), secretVersion(%v) failed with error: %v", vaultURL, secretName, secretVersion, err)
+		return "", fmt.Errorf("get secret from vaultURL(%v), sercretName(%v), secretVersion(%v) failed with error: %w", vaultURL, secretName, secretVersion, err)
 	}
 	return *secret.Value, nil
 }

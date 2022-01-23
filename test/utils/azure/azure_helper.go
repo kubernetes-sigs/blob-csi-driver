@@ -88,7 +88,7 @@ func (az *Client) DeleteResourceGroup(ctx context.Context, groupName string) err
 	if err == nil {
 		future, err := az.groupsClient.Delete(ctx, groupName)
 		if err != nil {
-			return fmt.Errorf("cannot delete resource group %v: %v", groupName, err)
+			return fmt.Errorf("cannot delete resource group %v: %w", groupName, err)
 		}
 		err = future.WaitForCompletionRef(ctx, az.groupsClient.Client)
 		if err != nil {
