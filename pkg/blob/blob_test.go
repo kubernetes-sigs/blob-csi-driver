@@ -24,6 +24,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
@@ -472,7 +473,7 @@ func TestGetAuthEnv(t *testing.T) {
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				_, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				expectedErr := fmt.Errorf("no key for storage account(storageaccountname) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
-				if !reflect.DeepEqual(err, expectedErr) {
+				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
 			},
@@ -581,7 +582,7 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
 				expectedErr := fmt.Errorf("no key for storage account(f5713de20cde511e8ba4900) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
-				if !reflect.DeepEqual(err, expectedErr) {
+				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
 			},

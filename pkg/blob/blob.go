@@ -417,7 +417,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 						accountName, secretNamespace, secretName, err)
 					accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, rgName)
 					if err != nil {
-						return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, rgName, err)
+						return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
 					}
 				}
 			}
@@ -517,7 +517,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 
 			accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, rgName)
 			if err != nil {
-				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, rgName, err)
+				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
 			}
 		}
 	}
@@ -614,7 +614,7 @@ func setAzureCredentials(kubeClient kubernetes.Interface, accountName, accountKe
 		err = nil
 	}
 	if err != nil {
-		return "", fmt.Errorf("couldn't create secret %v", err)
+		return "", fmt.Errorf("couldn't create secret %w", err)
 	}
 	return secretName, err
 }
@@ -649,7 +649,7 @@ func (d *Driver) GetStorageAccountFromSecret(secretName, secretNamespace string)
 
 	secret, err := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Get(context.TODO(), secretName, metav1.GetOptions{})
 	if err != nil {
-		return "", "", fmt.Errorf("could not get secret(%v): %v", secretName, err)
+		return "", "", fmt.Errorf("could not get secret(%v): %w", secretName, err)
 	}
 
 	return string(secret.Data[defaultSecretAccountName][:]), string(secret.Data[defaultSecretAccountKey][:]), nil

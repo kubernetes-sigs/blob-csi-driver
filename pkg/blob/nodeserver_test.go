@@ -139,7 +139,6 @@ func TestNewMountClient(t *testing.T) {
 	// will result in following error: failed to build resolver: invalid (non-empty) authority: tmp
 	client := NewMountClient(conn)
 	valueType := reflect.TypeOf(client).String()
-	fmt.Println(valueType)
 	assert.Equal(t, valueType, "*blob.MountClient")
 }
 

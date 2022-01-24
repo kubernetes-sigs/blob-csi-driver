@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -314,7 +315,7 @@ func TestDeleteVolume(t *testing.T) {
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				expectedErr := fmt.Errorf("no key for storage account(test) under resource group(unit), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				_, err := d.DeleteVolume(context.Background(), req)
-				if !reflect.DeepEqual(err, expectedErr) {
+				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
 			},
@@ -443,7 +444,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				expectedErr := fmt.Errorf("no key for storage account(test) under resource group(unit), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				if !reflect.DeepEqual(err, expectedErr) {
+				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
 			},

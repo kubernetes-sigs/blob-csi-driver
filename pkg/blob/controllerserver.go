@@ -237,7 +237,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	if accountKey == "" {
 		if accountName, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, req.GetSecrets(), secretName, secretNamespace); err != nil {
-			return nil, fmt.Errorf("failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
+			return nil, fmt.Errorf("failed to GetStorageAccesskey on account(%s) rg(%s), error: %w", accountOptions.Name, accountOptions.ResourceGroup, err)
 		}
 	}
 
@@ -262,7 +262,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	blobClient := client.GetBlobService()
 	container := blobClient.GetContainerReference(validContainerName)
 	if _, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate}); err != nil {
-		return nil, fmt.Errorf("failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
+		return nil, fmt.Errorf("failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %w", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
 	}
 
 	if storeAccountKey && len(req.GetSecrets()) == 0 {
@@ -331,7 +331,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
 		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, resourceGroupName)
 		if err != nil {
-			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
+			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, resourceGroupName, err)
 		}
 	} else {
 		accountName, accountKey, err = getStorageAccount(req.GetSecrets())
@@ -351,7 +351,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
 		_, err := container.DeleteIfExists(nil)
 		if err != nil && !strings.Contains(err.Error(), "ContainerBeingDeleted") {
-			return false, fmt.Errorf("failed to delete container(%s) on account(%s), error: %v", containerName, accountName, err)
+			return false, fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", containerName, accountName, err)
 		}
 		return true, nil
 	})
@@ -388,7 +388,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
 		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, resourceGroupName)
 		if err != nil {
-			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %v", accountName, resourceGroupName, err)
+			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, resourceGroupName, err)
 		}
 	} else {
 		accountName, accountKey, err = getStorageAccount(req.GetSecrets())
