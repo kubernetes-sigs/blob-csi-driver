@@ -131,12 +131,6 @@ type DriverOptions struct {
 type Driver struct {
 	csicommon.CSIDriver
 
-	// Embed these structs to inherit interfaces implementation from csicommon
-	// Each of them contains a pointer to CSIDriver struct
-	csicommon.DefaultIdentityServer
-	csicommon.DefaultControllerServer
-	csicommon.DefaultNodeServer
-
 	cloud                      *azure.Cloud
 	cloudConfigSecretName      string
 	cloudConfigSecretNamespace string
@@ -186,10 +180,6 @@ func NewDriver(options *DriverOptions) *Driver {
 	d.Name = options.DriverName
 	d.Version = driverVersion
 	d.NodeID = options.NodeID
-
-	d.DefaultControllerServer.Driver = &d.CSIDriver
-	d.DefaultIdentityServer.Driver = &d.CSIDriver
-	d.DefaultNodeServer.Driver = &d.CSIDriver
 
 	var err error
 	getter := func(key string) (interface{}, error) { return nil, nil }
