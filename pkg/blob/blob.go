@@ -413,6 +413,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			}
 		} else {
 			for k, v := range secrets {
+				v = strings.TrimSpace(v)
 				switch strings.ToLower(k) {
 				case accountNameField:
 					accountName = v
@@ -555,6 +556,7 @@ func getStorageAccount(secrets map[string]string) (string, string, error) {
 
 	var accountName, accountKey string
 	for k, v := range secrets {
+		v = strings.TrimSpace(v)
 		switch strings.ToLower(k) {
 		case accountNameField:
 			accountName = v
@@ -642,7 +644,9 @@ func (d *Driver) GetStorageAccountFromSecret(secretName, secretNamespace string)
 		return "", "", fmt.Errorf("could not get secret(%v): %w", secretName, err)
 	}
 
-	return string(secret.Data[defaultSecretAccountName][:]), string(secret.Data[defaultSecretAccountKey][:]), nil
+	accountName := strings.TrimSpace(string(secret.Data[defaultSecretAccountName][:]))
+	accountKey := strings.TrimSpace(string(secret.Data[defaultSecretAccountKey][:]))
+	return accountName, accountKey, nil
 }
 
 // getSubnetResourceID get default subnet resource ID from cloud provider config
