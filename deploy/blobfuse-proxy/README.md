@@ -15,7 +15,7 @@ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-sy
 
  - kubectl install
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v1.7.0/deploy/install-driver.sh | bash -s v1.8.0 blobfuse-proxy --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v1.8.0/deploy/install-driver.sh | bash -s v1.8.0 blobfuse-proxy --
 ```
 
 ### Enable blobfuse proxy on existing Blob CSI driver
