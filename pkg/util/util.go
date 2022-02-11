@@ -30,13 +30,13 @@ const (
 	tagKeyValueDelimiter = "="
 )
 
-// RoundUpBytes rounds up the volume size in bytes upto multiplications of GiB
+// RoundUpBytes rounds up the volume size in bytes up to multiplications of GiB
 // in the unit of Bytes
 func RoundUpBytes(volumeSizeBytes int64) int64 {
 	return roundUpSize(volumeSizeBytes, GiB) * GiB
 }
 
-// RoundUpGiB rounds up the volume size in bytes upto multiplications of GiB
+// RoundUpGiB rounds up the volume size in bytes up to multiplications of GiB
 // in the unit of GiB
 func RoundUpGiB(volumeSizeBytes int64) int64 {
 	return roundUpSize(volumeSizeBytes, GiB)
