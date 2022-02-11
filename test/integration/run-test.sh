@@ -22,7 +22,8 @@ function cleanup {
   pkill -f blobplugin
 }
 
-readonly volname="citest-$(date +%s)"
+t=$(date +%s)
+readonly volname="citest-$t"
 readonly volsize="2147483648"
 readonly expanded_vol_size="2147483650"
 readonly endpoint="$1"
