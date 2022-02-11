@@ -154,7 +154,7 @@ type Driver struct {
 	subnetLockMap *util.LockMap
 	// a map storing all volumes created by this driver <volumeName, accountName>
 	volMap sync.Map
-	// a timed cache storing acount search history (solve account list throttling issue)
+	// a timed cache storing account search history (solve account list throttling issue)
 	accountSearchCache *azcache.TimedCache
 }
 
