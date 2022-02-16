@@ -456,6 +456,19 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 // return <true, nil> if it's already a mounted point otherwise return <false, nil>
 func (d *Driver) ensureMountPoint(target string) (bool, error) {
 	notMnt := true
+
+	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
+	if err != nil && !os.IsNotExist(err) {
+		if IsCorruptedDir(target) {
+			notMnt = false
+			klog.Warningf("detected corrupted mount for targetPath [%s]", target)
+		} else {
+			return !notMnt, err
+		}
+	}
+
+	// Check all the mountpoints in case IsLikelyNotMountPoint
+	// cannot handle --bind mount
 	mountList, err := d.mounter.List()
 	if err != nil {
 		return !notMnt, err
