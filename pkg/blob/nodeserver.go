@@ -461,13 +461,13 @@ func (d *Driver) ensureMountPoint(target string) (bool, error) {
 		return !notMnt, err
 	}
 
-	target, err = filepath.Abs(target)
+	targetAbs, err := filepath.Abs(target)
 	if err != nil {
 		return !notMnt, err
 	}
 
 	for _, mountPoint := range mountList {
-		if mountPoint.Path == target {
+		if mountPoint.Path == targetAbs {
 			notMnt = false
 			break
 		}
