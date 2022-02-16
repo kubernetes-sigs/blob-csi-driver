@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -454,13 +455,21 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 // ensureMountPoint: create mount point if not exists
 // return <true, nil> if it's already a mounted point otherwise return <false, nil>
 func (d *Driver) ensureMountPoint(target string) (bool, error) {
-	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
-	if err != nil && !os.IsNotExist(err) {
-		if IsCorruptedDir(target) {
+	notMnt := true
+	mountList, err := d.mounter.List()
+	if err != nil {
+		return !notMnt, err
+	}
+
+	target, err = filepath.Abs(target)
+	if err != nil {
+		return !notMnt, err
+	}
+
+	for _, mountPoint := range mountList {
+		if mountPoint.Path == target {
 			notMnt = false
-			klog.Warningf("detected corrupted mount for targetPath [%s]", target)
-		} else {
-			return !notMnt, err
+			break
 		}
 	}
 
