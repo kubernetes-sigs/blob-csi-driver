@@ -21,10 +21,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
-	"strconv"
-	"strings"
 	"syscall"
 	"testing"
 
@@ -274,18 +273,21 @@ func TestNodePublishVolumeIdempotentMount(t *testing.T) {
 	assert.NoError(t, err)
 
 	// ensure the target not be mounted twice
-	cmd := d.mounter.Exec.Command("/usr/bin/bash", "-c", "/usr/bin/mount | /usr/bin/grep target | /usr/bin/wc -l")
-	out, err := cmd.Output()
+	targetAbs, err := filepath.Abs(targetTest)
 	assert.NoError(t, err)
-	outStr := string(out)
-	outStr = strings.Trim(outStr, "\n")
-	mountPointNum, err := strconv.Atoi(outStr)
-	assert.NoError(t, err)
-	assert.Equal(t, 1, mountPointNum)
 
-	_ = d.mounter.Unmount(sourceTest)
+	mountList, err := d.mounter.List()
+	assert.NoError(t, err)
+	mountPointNum := 0
+	for _, mountPoint := range mountList {
+		if mountPoint.Path == targetAbs {
+			mountPointNum++
+		}
+	}
+	assert.Equal(t, 1, mountPointNum)
 	err = d.mounter.Unmount(targetTest)
 	assert.NoError(t, err)
+	_ = d.mounter.Unmount(targetTest)
 	err = os.RemoveAll(sourceTest)
 	assert.NoError(t, err)
 	err = os.RemoveAll(targetTest)
