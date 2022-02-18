@@ -250,16 +250,6 @@ func TestIsRetriableError(t *testing.T) {
 			expectedBool: true,
 		},
 		{
-			desc:         "shareNotFound",
-			rpcErr:       errors.New("storage.FileSharesClient#Get: Failure responding to request: StatusCode=404 -- Original Error: autorest/azure: Service returned an error. Status=404 Code=\"ShareNotFound\" Message=\"The specified share does not exist\""),
-			expectedBool: true,
-		},
-		{
-			desc:         "shareBeingDeleted",
-			rpcErr:       errors.New("storage.FileSharesClient#Create: Failure sending request: StatusCode=409 -- Original Error: autorest/azure: Service returned an error. Status=<nil> Code=\"ShareBeingDeleted\" Message=\"The specified share is being deleted. Try operation later.\""),
-			expectedBool: true,
-		},
-		{
 			desc:         "clientThrottled",
 			rpcErr:       errors.New("could not list storage accounts for account type : Retriable: true, RetryAfter: 16s, HTTPStatusCode: 0, RawError: azure cloud provider throttled for operation StorageAccountListByResourceGroup with reason \"client throttled\""),
 			expectedBool: true,
@@ -471,7 +461,7 @@ func TestGetAuthEnv(t *testing.T) {
 					RawError: fmt.Errorf("test"),
 				}
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
-				_, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				expectedErr := fmt.Errorf("no key for storage account(storageaccountname) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
@@ -500,7 +490,7 @@ func TestGetAuthEnv(t *testing.T) {
 					Keys: &accountkeylist,
 				}
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
-				_, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				expectedErr := error(nil)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
@@ -521,11 +511,13 @@ func TestGetAuthEnv(t *testing.T) {
 				secret["azurestorageaccountsastoken"] = "unit-test"
 				secret["msisecret"] = "unit-test"
 				secret["azurestoragespnclientsecret"] = "unit-test"
-				accountName, containerName, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				rg, accountName, accountkey, containerName, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				if err != nil {
 					t.Errorf("actualErr: (%v), expectedErr: nil", err)
 				}
+				assert.Equal(t, rg, "rg")
 				assert.Equal(t, accountName, "accountname")
+				assert.Equal(t, accountkey, "unit-test")
 				assert.Equal(t, containerName, "containername")
 			},
 		},
@@ -538,12 +530,14 @@ func TestGetAuthEnv(t *testing.T) {
 				volumeID := "unique-volumeid"
 				attrib[storageAccountField] = "accountname"
 				attrib[containerNameField] = "containername"
-				accountName, containerName, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, nfs, attrib, secret)
+				rg, accountName, accountkey, containerName, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, nfs, attrib, secret)
 				if err != nil {
 					t.Errorf("actualErr: (%v), expect no error", err)
 				}
 
+				assert.Equal(t, rg, "")
 				assert.Equal(t, accountName, "accountname")
+				assert.Equal(t, accountkey, "")
 				assert.Equal(t, containerName, "containername")
 				assert.Equal(t, len(authEnv), 0)
 			},

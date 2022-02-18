@@ -90,9 +90,10 @@ const (
 
 	accountNotProvisioned = "StorageAccountIsNotProvisioned"
 	tooManyRequests       = "TooManyRequests"
-	shareNotFound         = "The specified share does not exist"
-	shareBeingDeleted     = "The specified share is being deleted"
 	clientThrottled       = "client throttled"
+	containerBeingDeleted = "ContainerBeingDeleted"
+	statusCodeNotFound    = "StatusCode=404"
+	httpCodeNotFound      = "HTTPStatusCode: 404"
 
 	// containerMaxSize is the max size of the blob container. See https://docs.microsoft.com/en-us/azure/storage/blobs/scalability-targets#scale-targets-for-blob-storage
 	containerMaxSize = 100 * util.TiB
@@ -106,7 +107,7 @@ const (
 
 var (
 	supportedProtocolList = []string{fuse, nfs}
-	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, shareNotFound, shareBeingDeleted, clientThrottled}
+	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, statusCodeNotFound, containerBeingDeleted, clientThrottled}
 )
 
 // DriverOptions defines driver parameters specified in driver deployment
@@ -295,11 +296,11 @@ func isSASToken(key string) bool {
 }
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
-func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, []string, error) {
+func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, string, string, []string, error) {
 	rgName, accountName, containerName, err := GetContainerInfo(volumeID)
 	if err != nil {
 		// ignore volumeID parsing error
-		klog.Warningf("parsing volumeID(%s) return with error: %v", volumeID, err)
+		klog.V(2).Info("parsing volumeID(%s) return with error: %v", volumeID, err)
 		err = nil
 	}
 
@@ -364,7 +365,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 
 	if protocol == nfs {
 		// nfs protocol does not need account key, return directly
-		return accountName, containerName, authEnv, err
+		return rgName, accountName, accountKey, containerName, authEnv, err
 	}
 
 	// backward compatibility, old CSI driver PV does not have secretNamespace field
@@ -382,7 +383,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	if keyVaultURL != "" {
 		key, err := d.getKeyVaultSecretContent(ctx, keyVaultURL, keyVaultSecretName, keyVaultSecretVersion)
 		if err != nil {
-			return accountName, containerName, authEnv, err
+			return rgName, accountName, accountKey, containerName, authEnv, err
 		}
 		if isSASToken(key) {
 			accountSasToken = key
@@ -407,7 +408,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 						accountName, secretNamespace, secretName, err)
 					accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, rgName)
 					if err != nil {
-						return accountName, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
+						return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
 					}
 				}
 			}
@@ -446,7 +447,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		authEnv = append(authEnv, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
 	}
 
-	return accountName, containerName, authEnv, err
+	return rgName, accountName, accountKey, containerName, authEnv, err
 }
 
 // GetStorageAccountAndContainer get storage account and container info

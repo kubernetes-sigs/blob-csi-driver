@@ -98,17 +98,17 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.runOnMaster`                              | run controller on master node                         | `true`                                                          |
 | `controller.logLevel`                                 | controller driver log level                           | `5`                                                            |
 | `controller.resources.csiProvisioner.limits.memory`   | csi-provisioner memory limits                         | 100Mi                                                          |
-| `controller.resources.csiProvisioner.requests.cpu`    | csi-provisioner cpu requests limits                   | 10m                                                            |
-| `controller.resources.csiProvisioner.requests.memory` | csi-provisioner memory requests limits                | 20Mi                                                           |
+| `controller.resources.csiProvisioner.requests.cpu`    | csi-provisioner cpu requests                   | 10m                                                            |
+| `controller.resources.csiProvisioner.requests.memory` | csi-provisioner memory requests                | 20Mi                                                           |
 | `controller.resources.livenessProbe.limits.memory`    | liveness-probe memory limits                          | 300Mi                                                          |
-| `controller.resources.livenessProbe.requests.cpu`     | liveness-probe cpu requests limits                    | 10m                                                            |
-| `controller.resources.livenessProbe.requests.memory`  | liveness-probe memory requests limits                 | 20Mi                                                           |
+| `controller.resources.livenessProbe.requests.cpu`     | liveness-probe cpu requests                    | 10m                                                            |
+| `controller.resources.livenessProbe.requests.memory`  | liveness-probe memory requests                 | 20Mi                                                           |
 | `controller.resources.blob.limits.memory`             | blob-csi-driver memory limits                         | 200Mi                                                          |
-| `controller.resources.blob.requests.cpu`              | blob-csi-driver cpu requests limits                   | 10m                                                            |
-| `controller.resources.blob.requests.memory`           | blob-csi-driver memory requests limits                | 20Mi                                                           |
+| `controller.resources.blob.requests.cpu`              | blob-csi-driver cpu requests                   | 10m                                                            |
+| `controller.resources.blob.requests.memory`           | blob-csi-driver memory requests                | 20Mi                                                           |
 | `controller.resources.csiResizer.limits.memory`       | csi-resizer memory limits                             | 300Mi                                                          |
-| `controller.resources.csiResizer.requests.cpu`        | csi-resizer cpu requests limits                       | 10m                                                            |
-| `controller.resources.csiResizer.requests.memory`     | csi-resizer memory requests limits                    | 20Mi                                                           |
+| `controller.resources.csiResizer.requests.cpu`        | csi-resizer cpu requests                       | 10m                                                            |
+| `controller.resources.csiResizer.requests.memory`     | csi-resizer memory requests                    | 20Mi                                                           |
 | `controller.affinity`                                 | controller pod affinity                               | {}                                                             |
 | `controller.nodeSelector`                             | controller pod node selector                          | {}                                                             |
 | `controller.tolerations`                              | controller pod tolerations                            | []                                                             |
@@ -129,14 +129,14 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.blobfuseProxy.disableUpdateDB`                  | whether disable updateDB on blobfuse (saving storage account list usage) | `true`                                                          |
 | `node.blobfuseCachePath`                              | blobfuse cache path(`tmp-path`)                       | `/mnt`                                                          |
 | `node.resources.livenessProbe.limits.memory`          | liveness-probe memory limits                          | 100Mi                                                          |
-| `node.resources.livenessProbe.requests.cpu`           | liveness-probe cpu requests limits                    | 10m                                                            |
-| `node.resources.livenessProbe.requests.memory`        | liveness-probe memory requests limits                 | 20Mi                                                           |
+| `node.resources.livenessProbe.requests.cpu`           | liveness-probe cpu requests                    | 10m                                                            |
+| `node.resources.livenessProbe.requests.memory`        | liveness-probe memory requests                 | 20Mi                                                           |
 | `node.resources.nodeDriverRegistrar.limits.memory`    | csi-node-driver-registrar memory limits               | 100Mi                                                          |
-| `node.resources.nodeDriverRegistrar.requests.cpu`     | csi-node-driver-registrar cpu requests limits         | 10m                                                            |
-| `node.resources.nodeDriverRegistrar.requests.memory`  | csi-node-driver-registrar memory requests limits      | 20Mi                                                           |
+| `node.resources.nodeDriverRegistrar.requests.cpu`     | csi-node-driver-registrar cpu requests         | 10m                                                            |
+| `node.resources.nodeDriverRegistrar.requests.memory`  | csi-node-driver-registrar memory requests      | 20Mi                                                           |
 | `node.resources.blob.limits.memory`                   | blob-csi-driver memory limits                         | 2100Mi                                                         |
-| `node.resources.blob.requests.cpu`                    | blob-csi-driver cpu requests limits                   | 10m                                                            |
-| `node.resources.blob.requests.memory`                 | blob-csi-driver memory requests limits                | 20Mi                                                           |
+| `node.resources.blob.requests.cpu`                    | blob-csi-driver cpu requests                   | 10m                                                            |
+| `node.resources.blob.requests.memory`                 | blob-csi-driver memory requests                | 20Mi                                                           |
 | `node.affinity`                                       | node pod affinity                                     | {}                                                             |
 | `node.nodeSelector`                                   | node pod node selector                                | {}                                                             |
 | `node.tolerations`                                    | node pod tolerations                                  | []                                                             |

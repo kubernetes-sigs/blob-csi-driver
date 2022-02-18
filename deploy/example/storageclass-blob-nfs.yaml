@@ -7,3 +7,4 @@ provisioner: blob.csi.azure.com
 parameters:
   protocol: nfs
 volumeBindingMode: Immediate
+allowVolumeExpansion: true
