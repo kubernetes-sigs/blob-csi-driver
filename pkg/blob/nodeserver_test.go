@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"syscall"
@@ -34,6 +35,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	mount "k8s.io/mount-utils"
+	utilexec "k8s.io/utils/exec"
 	testingexec "k8s.io/utils/exec/testing"
 )
 
@@ -240,6 +242,52 @@ func TestNodePublishVolume(t *testing.T) {
 	_ = d.mounter.Unmount(sourceTest)
 	err := d.mounter.Unmount(targetTest)
 	assert.NoError(t, err)
+	err = os.RemoveAll(sourceTest)
+	assert.NoError(t, err)
+	err = os.RemoveAll(targetTest)
+	assert.NoError(t, err)
+}
+
+func TestNodePublishVolumeIdempotentMount(t *testing.T) {
+	if runtime.GOOS != "linux" || os.Getuid() != 0 {
+		return
+	}
+	_ = makeDir(sourceTest)
+	_ = makeDir(targetTest)
+	d := NewFakeDriver()
+	d.mounter = &mount.SafeFormatAndMount{
+		Interface: mount.New(""),
+		Exec:      utilexec.New(),
+	}
+
+	volumeCap := csi.VolumeCapability_AccessMode{Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER}
+	req := csi.NodePublishVolumeRequest{VolumeCapability: &csi.VolumeCapability{AccessMode: &volumeCap},
+		VolumeId:          "vol_1",
+		TargetPath:        targetTest,
+		StagingTargetPath: sourceTest,
+		Readonly:          true}
+
+	_, err := d.NodePublishVolume(context.Background(), &req)
+	assert.NoError(t, err)
+	_, err = d.NodePublishVolume(context.Background(), &req)
+	assert.NoError(t, err)
+
+	// ensure the target not be mounted twice
+	targetAbs, err := filepath.Abs(targetTest)
+	assert.NoError(t, err)
+
+	mountList, err := d.mounter.List()
+	assert.NoError(t, err)
+	mountPointNum := 0
+	for _, mountPoint := range mountList {
+		if mountPoint.Path == targetAbs {
+			mountPointNum++
+		}
+	}
+	assert.Equal(t, 1, mountPointNum)
+	err = d.mounter.Unmount(targetTest)
+	assert.NoError(t, err)
+	_ = d.mounter.Unmount(targetTest)
 	err = os.RemoveAll(sourceTest)
 	assert.NoError(t, err)
 	err = os.RemoveAll(targetTest)

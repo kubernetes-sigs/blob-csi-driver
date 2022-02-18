@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -461,6 +462,25 @@ func (d *Driver) ensureMountPoint(target string) (bool, error) {
 			klog.Warningf("detected corrupted mount for targetPath [%s]", target)
 		} else {
 			return !notMnt, err
+		}
+	}
+
+	// Check all the mountpoints in case IsLikelyNotMountPoint
+	// cannot handle --bind mount
+	mountList, err := d.mounter.List()
+	if err != nil {
+		return !notMnt, err
+	}
+
+	targetAbs, err := filepath.Abs(target)
+	if err != nil {
+		return !notMnt, err
+	}
+
+	for _, mountPoint := range mountList {
+		if mountPoint.Path == targetAbs {
+			notMnt = false
+			break
 		}
 	}
 
