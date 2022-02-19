@@ -279,6 +279,7 @@ func TestDeleteVolume(t *testing.T) {
 			name: "invalid volume Id",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
 				d.Cap = []*csi.ControllerServiceCapability{
 					controllerServiceCapability,
 				}
@@ -288,7 +289,7 @@ func TestDeleteVolume(t *testing.T) {
 				_, err := d.DeleteVolume(context.Background(), req)
 				expectedErr := error(nil)
 				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+					t.Errorf("actualErr: %v, expectedErr:(%v", err, expectedErr)
 				}
 			},
 		},

@@ -5,9 +5,10 @@ metadata:
   name: blob
 provisioner: blob.csi.azure.com
 parameters:
-  skuName: Standard_LRS  # available values: Standard_LRS, Premium_LRS, Standard_GRS, Standard_RAGRS
+  skuName: Premium_LRS  # available values: Standard_LRS, Premium_LRS, Standard_GRS, Standard_RAGRS
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
+allowVolumeExpansion: true
 mountOptions:
   - -o allow_other
   - --file-cache-timeout-in-seconds=120

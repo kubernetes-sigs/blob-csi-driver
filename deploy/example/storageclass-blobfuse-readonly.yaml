@@ -10,6 +10,7 @@ parameters:
   containerName: EXISTING_CONTAINER_NAME
 reclaimPolicy: Retain  # if set as "Delete" container would be removed after pvc deletion
 volumeBindingMode: Immediate
+allowVolumeExpansion: true
 mountOptions:
   - -o ro
   - -o allow_other

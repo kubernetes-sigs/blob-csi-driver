@@ -311,10 +311,23 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 	defer d.volumeLocks.Release(volumeID)
 
-	resourceGroupName, accountName, containerName, err := GetContainerInfo(volumeID)
-	if err != nil {
+	if _, _, _, err := GetContainerInfo(volumeID); err != nil {
+		// According to CSI Driver Sanity Tester, should succeed when an invalid volume id is used
 		klog.Errorf("GetContainerInfo(%s) in DeleteVolume failed with error: %v", volumeID, err)
 		return &csi.DeleteVolumeResponse{}, nil
+	}
+
+	resourceGroupName, accountName, accountKey, containerName, _, err := d.GetAuthEnv(ctx, volumeID, "", nil, req.GetSecrets())
+	if err != nil {
+		return nil, err
+	}
+
+	if accountName == "" {
+		return nil, status.Error(codes.InvalidArgument, "accountName is empty")
+	}
+
+	if accountKey == "" {
+		return nil, status.Error(codes.InvalidArgument, "accountKey is empty")
 	}
 
 	if resourceGroupName == "" {
@@ -327,19 +340,6 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		mc.ObserveOperationWithResult(isOperationSucceeded)
 	}()
 
-	var accountKey string
-	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
-		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, resourceGroupName)
-		if err != nil {
-			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, resourceGroupName, err)
-		}
-	} else {
-		accountName, accountKey, err = getStorageAccount(req.GetSecrets())
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get storage account from secrets: %v", err)
-		}
-	}
-
 	klog.V(2).Infof("deleting container(%s) rg(%s) account(%s) volumeID(%s)", containerName, resourceGroupName, accountName, volumeID)
 	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
 	if err != nil {
@@ -350,7 +350,13 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	// todo: check what value to add into DeleteContainerOptions
 	err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
 		_, err := container.DeleteIfExists(nil)
-		if err != nil && !strings.Contains(err.Error(), "ContainerBeingDeleted") {
+		if err != nil {
+			if strings.Contains(err.Error(), containerBeingDeleted) ||
+				strings.Contains(err.Error(), statusCodeNotFound) ||
+				strings.Contains(err.Error(), httpCodeNotFound) {
+				klog.Warningf("delete container(%s) on account(%s) failed with error(%v), return as success", containerName, accountName, err)
+				return true, nil
+			}
 			return false, fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", containerName, accountName, err)
 		}
 		return true, nil
