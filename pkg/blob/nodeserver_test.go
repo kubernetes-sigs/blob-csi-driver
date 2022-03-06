@@ -122,7 +122,7 @@ func TestEnsureMountPoint(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := d.ensureMountPoint(test.target)
+		_, err := d.ensureMountPoint(test.target, 0777)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("[%s]: Unexpected Error: %v, expected error: %v", test.desc, err, test.expectedErr)
 		}
@@ -186,11 +186,16 @@ func TestNodePublishVolume(t *testing.T) {
 		},
 		{
 			desc: "Valid request read only",
-			req: csi.NodePublishVolumeRequest{VolumeCapability: &csi.VolumeCapability{AccessMode: &volumeCap},
+			req: csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
 				VolumeId:          "vol_1",
 				TargetPath:        targetTest,
 				StagingTargetPath: sourceTest,
-				Readonly:          true},
+				VolumeContext: map[string]string{
+					mountPermissionsField: "0755",
+				},
+				Readonly: true,
+			},
 			expectedErr: nil,
 		},
 		{
@@ -210,6 +215,19 @@ func TestNodePublishVolume(t *testing.T) {
 				StagingTargetPath: sourceTest,
 				Readonly:          true},
 			expectedErr: nil,
+		},
+		{
+			desc: "[Error] invalid mountPermissions",
+			req: csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					mountPermissionsField: "07ab",
+				},
+			},
+			expectedErr: status.Error(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s", "07ab")),
 		},
 	}
 
@@ -414,6 +432,25 @@ func TestNodeStageVolume(t *testing.T) {
 				defer d.volumeLocks.Release("unit-test")
 				_, err := d.NodeStageVolume(context.TODO(), req)
 				expectedErr := status.Error(codes.Aborted, fmt.Sprintf(volumeOperationAlreadyExistsFmt, "unit-test"))
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "[Error] invalid mountPermissions",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						mountPermissionsField: "07ab",
+					},
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s", "07ab"))
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}

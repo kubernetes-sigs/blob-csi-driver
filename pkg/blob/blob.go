@@ -83,6 +83,7 @@ const (
 	vnetResourceGroupField       = "vnetresourcegroup"
 	vnetNameField                = "vnetname"
 	subnetNameField              = "subnetname"
+	mountPermissionsField        = "mountpermissions"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3

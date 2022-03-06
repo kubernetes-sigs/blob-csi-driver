@@ -520,8 +520,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 			StorageClassParameters: map[string]string{
-				"skuName":  "Premium_LRS",
-				"protocol": "nfs",
+				"skuName":          "Premium_LRS",
+				"protocol":         "nfs",
+				"mountPermissions": "0755",
 			},
 		}
 		test.Run(cs, ns)

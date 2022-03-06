@@ -122,13 +122,14 @@ func TestCreateVolume(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
 				mp := make(map[string]string)
-				mp["protocol"] = "unit-test"
+				mp[protocolField] = "unit-test"
 				mp[skuNameField] = "unit-test"
 				mp[storageAccountTypeField] = "unit-test"
 				mp[locationField] = "unit-test"
 				mp[storageAccountField] = "unit-test"
 				mp[resourceGroupField] = "unit-test"
-				mp["containername"] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
@@ -150,8 +151,9 @@ func TestCreateVolume(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
 				mp := make(map[string]string)
-				mp["tags"] = "unit-test"
+				mp[tagsField] = "unit-test"
 				mp[storageAccountTypeField] = "premium"
+				mp[mountPermissionsField] = "0700"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
@@ -177,7 +179,8 @@ func TestCreateVolume(t *testing.T) {
 				mp[locationField] = "unit-test"
 				mp[storageAccountField] = "unit-test"
 				mp[resourceGroupField] = "unit-test"
-				mp["containername"] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0755"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
@@ -196,7 +199,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 				mockStorageAccountsClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any()).Return(nil, rerr).AnyTimes()
 				_, err := d.CreateVolume(context.Background(), req)
-				expectedErr := status.Errorf(codes.Internal, "failed to ensure storage account: could not list storage accounts for account type : Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				expectedErr := status.Errorf(codes.Internal, "ensure storage account failed with could not list storage accounts for account type : Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -223,7 +226,29 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := fmt.Errorf("invalid parameter %s in storage class", "invalidparameter")
+				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", "invalidparameter"))
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "invalid mountPermissions",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				mp := make(map[string]string)
+				mp[mountPermissionsField] = "0abc"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s %s in storage class", "mountPermissions", "0abc"))
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
