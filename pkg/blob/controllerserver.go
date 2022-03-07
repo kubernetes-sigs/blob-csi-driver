@@ -19,6 +19,7 @@ package blob
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"google.golang.org/grpc/codes"
@@ -130,8 +131,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			vnetName = v
 		case subnetNameField:
 			subnetName = v
+		case mountPermissionsField:
+			// only do validations here, used in NodeStageVolume, NodePublishVolume
+			if v != "" {
+				if _, err := strconv.ParseUint(v, 8, 32); err != nil {
+					return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s in storage class", v))
+				}
+			}
 		default:
-			return nil, fmt.Errorf("invalid parameter %s in storage class", k)
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", k))
 		}
 	}
 
@@ -226,7 +234,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 				})
 				d.volLockMap.UnlockEntry(lockKey)
 				if err != nil {
-					return nil, status.Errorf(codes.Internal, "failed to ensure storage account: %v", err)
+					return nil, status.Errorf(codes.Internal, "ensure storage account failed with %v", err)
 				}
 				d.accountSearchCache.Set(lockKey, accountName)
 				d.volMap.Store(volName, accountName)

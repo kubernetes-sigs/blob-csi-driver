@@ -23,6 +23,8 @@ storeAccountKey | whether store account key to k8s secret <br><br> Note:  <br> `
 secretName | specify secret name to store account key | | No |
 secretNamespace | specify the namespace of secret to store account key | `default`,`kube-system`, etc | No | `default`
 isHnsEnabled | enable `Hierarchical namespace` for Azure DataLake storage account | `true`,`false` | No | `false`
+--- | **Following parameters are only for NFS protocol** | --- | --- |
+mountPermissions | mounted folder permissions | `0777` | No |
 
  - `fsGroup` securityContext setting
 
@@ -62,6 +64,8 @@ volumeAttributes.secretName | secret name that stores storage account name and k
 volumeAttributes.secretNamespace | secret namespace | `default`,`kube-system`, etc | No | `default`
 nodeStageSecretRef.name | secret name that stores(check below examples):<br>`azurestorageaccountkey`<br>`azurestorageaccountsastoken`<br>`msisecret`<br>`azurestoragespnclientsecret` | existing Kubernetes secret name |  No  |
 nodeStageSecretRef.namespace | secret namespace | k8s namespace  |  Yes  |
+--- | **Following parameters are only for NFS protocol** | --- | --- |
+volumeAttributes.mountPermissions | mounted folder permissions | `0777` | No |
 --- | **Following parameters are only for NFS vnet setting** | --- | --- |
 vnetResourceGroup | specify vnet resource group where virtual network is | existing resource group name | No | if empty, driver will use the `vnetResourceGroup` value in azure cloud config file
 vnetName | virtual network name | existing virtual network name | No | if empty, driver will use the `vnetName` value in azure cloud config file
