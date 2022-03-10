@@ -23,8 +23,6 @@ RUN clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs 
 RUN clean-install libgmp10 bsdutils
 RUN mkdir /blobfuse-proxy/
 COPY ./_output/blobfuse-proxy.deb /blobfuse-proxy/
-# for compatibility, remove this after v1.6.0 release (todo)
-COPY deploy/blobfuse-proxy/v0.1.0/blobfuse-proxy-v0.1.0.deb /blobfuse-proxy/
 ARG ARCH=amd64
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \
