@@ -84,12 +84,14 @@ const (
 	defaultSecretAccountName     = "azurestorageaccountname"
 	defaultSecretAccountKey      = "azurestorageaccountkey"
 	fuse                         = "fuse"
+	fuse2                        = "fuse2"
 	nfs                          = "nfs"
 	vnetResourceGroupField       = "vnetresourcegroup"
 	vnetNameField                = "vnetname"
 	subnetNameField              = "subnetname"
 	mountPermissionsField        = "mountpermissions"
 	useDataPlaneAPIField         = "usedataplaneapi"
+	fuse2ConfigFilePath          = "/usr/share/blobfuse2/config.yaml"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3
@@ -121,7 +123,7 @@ const (
 )
 
 var (
-	supportedProtocolList = []string{fuse, nfs}
+	supportedProtocolList = []string{fuse, fuse2, nfs}
 	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, statusCodeNotFound, containerBeingDeletedDataplaneAPIError, containerBeingDeletedManagementAPIError, clientThrottled}
 )
 
@@ -753,16 +755,20 @@ func (d *Driver) useDataPlaneAPI(volumeID, accountName string) bool {
 }
 
 // appendDefaultMountOptions return mount options combined with mountOptions and defaultMountOptions
-func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName string) []string {
+func appendDefaultMountOptions(protocol string, mountOptions []string, tmpPath, containerName string) []string {
 	var defaultMountOptions = map[string]string{
-		"--pre-mount-validate": "true",
-		"--use-https":          "true",
-		"--tmp-path":           tmpPath,
-		"--container-name":     containerName,
+		"--tmp-path":       tmpPath,
+		"--container-name": containerName,
+	}
+	if protocol == fuse2 {
+		defaultMountOptions["--config-file"] = fuse2ConfigFilePath
+	} else {
+		defaultMountOptions["--pre-mount-validate"] = "true"
+		defaultMountOptions["--use-https"] = "true"
 		// prevent billing charges on mounting
-		"--cancel-list-on-mount-seconds": "10",
+		defaultMountOptions["--cancel-list-on-mount-seconds"] = "10"
 		// allow remounting using a non-empty tmp-path
-		"--empty-dir-check": "false",
+		defaultMountOptions["--empty-dir-check"] = "false"
 	}
 
 	// stores the mount options already included in mountOptions

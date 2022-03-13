@@ -825,6 +825,7 @@ func TestSetAzureCredentials(t *testing.T) {
 
 func TestAppendDefaultMountOptions(t *testing.T) {
 	tests := []struct {
+		protocol      string
 		options       []string
 		tmpPath       string
 		containerName string
@@ -856,10 +857,22 @@ func TestAppendDefaultMountOptions(t *testing.T) {
 				"targetPath",
 			},
 		},
+		{
+			protocol:      "fuse2",
+			options:       []string{"targetPath"},
+			tmpPath:       "/tmp",
+			containerName: "containerName",
+			expected: []string{
+				"--config-file=/usr/share/blobfuse2/config.yaml",
+				"--container-name=containerName",
+				"--tmp-path=/tmp",
+				"targetPath",
+			},
+		},
 	}
 
 	for _, test := range tests {
-		result := appendDefaultMountOptions(test.options, test.tmpPath, test.containerName)
+		result := appendDefaultMountOptions(test.protocol, test.options, test.tmpPath, test.containerName)
 		sort.Strings(result)
 		sort.Strings(test.expected)
 

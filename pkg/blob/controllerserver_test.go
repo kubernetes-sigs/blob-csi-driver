@@ -165,7 +165,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 				_, err := d.CreateVolume(context.Background(), req)
-				expectedErr := status.Errorf(codes.InvalidArgument, "protocol(unit-test) is not supported, supported protocol list: [fuse nfs]")
+				expectedErr := status.Errorf(codes.InvalidArgument, "protocol(unit-test) is not supported, supported protocol list: [fuse fuse2 nfs]")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}

@@ -140,8 +140,8 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
-func (d *Driver) mountBlobfuseWithProxy(args string, authEnv []string) (string, error) {
-	klog.V(2).Infof("mouting using blobfuse proxy")
+func (d *Driver) mountBlobfuseWithProxy(protocol, args string, authEnv []string) (string, error) {
+	klog.V(2).Infof("mouting using blobfuse proxy, protocol: %s", protocol)
 	var resp *mount_azure_blob.MountAzureBlobResponse
 	var output string
 	connectionTimout := time.Duration(d.blobfuseProxyConnTimout) * time.Second
@@ -164,9 +164,14 @@ func (d *Driver) mountBlobfuseWithProxy(args string, authEnv []string) (string, 
 	return output, err
 }
 
-func (d *Driver) mountBlobfuseInsideDriver(args string, authEnv []string) (string, error) {
-	klog.V(2).Infof("mounting blobfuse inside driver")
-	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
+func (d *Driver) mountBlobfuseInsideDriver(protocol, args string, authEnv []string) (string, error) {
+	klog.V(2).Infof("mounting blobfuse inside driver, protocol: %s", protocol)
+	binaryName := "blobfuse"
+	if protocol == fuse2 {
+		binaryName = "blobfuse2"
+		args = "mount " + args
+	}
+	cmd := exec.Command(binaryName, strings.Split(args, " ")...)
 	cmd.Env = append(os.Environ(), authEnv...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
@@ -326,7 +331,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	if d.appendTimeStampInCacheDir {
 		tmpPath += fmt.Sprintf("#%d", time.Now().Unix())
 	}
-	mountOptions = appendDefaultMountOptions(mountOptions, tmpPath, containerName)
+	mountOptions = appendDefaultMountOptions(protocol, mountOptions, tmpPath, containerName)
 
 	args := targetPath
 	for _, opt := range mountOptions {
@@ -348,9 +353,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	var output string
 	if d.enableBlobfuseProxy {
-		output, err = d.mountBlobfuseWithProxy(args, authEnv)
+		output, err = d.mountBlobfuseWithProxy(protocol, args, authEnv)
 	} else {
-		output, err = d.mountBlobfuseInsideDriver(args, authEnv)
+		output, err = d.mountBlobfuseInsideDriver(protocol, args, authEnv)
 	}
 
 	if err != nil {
