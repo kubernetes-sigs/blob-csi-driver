@@ -46,13 +46,15 @@ const (
 	defaultReportDir = "/workspace/_artifacts"
 )
 
-var isAzureStackCloud = strings.EqualFold(os.Getenv("AZURE_CLOUD_NAME"), "AZURESTACKCLOUD")
-var blobDriver *blob.Driver
-
-var bringKeyStorageClassParameters = map[string]string{
-	"csi.storage.k8s.io/provisioner-secret-namespace": "default",
-	"csi.storage.k8s.io/node-stage-secret-namespace":  "default",
-}
+var (
+	blobDriver                     *blob.Driver
+	isAzureStackCloud              = strings.EqualFold(os.Getenv("AZURE_CLOUD_NAME"), "AZURESTACKCLOUD")
+	isUsingBlobfuseProxy           = os.Getenv("ENABLE_BLOBFUSE_PROXY") == "true"
+	bringKeyStorageClassParameters = map[string]string{
+		"csi.storage.k8s.io/provisioner-secret-namespace": "default",
+		"csi.storage.k8s.io/node-stage-secret-namespace":  "default",
+	}
+)
 
 type testCmd struct {
 	command  string
