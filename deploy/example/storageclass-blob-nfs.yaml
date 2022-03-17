@@ -8,3 +8,5 @@ parameters:
   protocol: nfs
 volumeBindingMode: Immediate
 allowVolumeExpansion: true
+mountOptions:
+  - nconnect=8
