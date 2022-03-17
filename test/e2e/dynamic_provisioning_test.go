@@ -506,7 +506,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 					{
 						ClaimSize: "10Gi",
 						MountOptions: []string{
-							"nconnect=16",
+							"nconnect=8",
 						},
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
