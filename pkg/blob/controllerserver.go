@@ -255,10 +255,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		parameters[containerNameField] = validContainerName
 	}
 
+	var volumeID string
 	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_create_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
 	isOperationSucceeded := false
 	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded)
+		mc.ObserveOperationWithResult(isOperationSucceeded, volumeID, "")
 	}()
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
@@ -283,7 +284,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	volumeID := fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, validContainerName)
+	volumeID = fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, validContainerName)
 	if containerName != "" {
 		// add volume name as suffix to differentiate volumeID since "containerName" is specified
 		// not necessary for dynamic container name creation since volumeID already contains volume name
@@ -345,7 +346,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_delete_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
 	isOperationSucceeded := false
 	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded)
+		mc.ObserveOperationWithResult(isOperationSucceeded, volumeID, "")
 	}()
 
 	klog.V(2).Infof("deleting container(%s) rg(%s) account(%s) volumeID(%s)", containerName, resourceGroupName, accountName, volumeID)
