@@ -59,7 +59,7 @@ if [ ! -z ${EXTERNAL_E2E_TEST_BLOBFUSE} ]; then
     echo "begin to run blobfuse tests ...."
     cp deploy/example/storageclass-blobfuse.yaml /tmp/csi/storageclass.yaml
     ginkgo -p --progress --v -focus="External.Storage.*$DRIVER.csi.azure.com" \
-        -skip='\[Disruptive\]|\[Slow\]|allow exec of files on the volume|unmount after the subpath directory is deleted' kubernetes/test/bin/e2e.test  -- \
+        -skip='\[Disruptive\]|\[Slow\]' kubernetes/test/bin/e2e.test  -- \
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-blobfuse.yaml \
         --kubeconfig=$KUBECONFIG
 fi
