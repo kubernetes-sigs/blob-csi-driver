@@ -154,6 +154,7 @@ driver:
   name: blob.csi.azure.com
   customUserAgent: ""
   userAgentSuffix: "OSS-helm"
+  azureGoSDKLogLevel: "" # available values: ""(no logs), DEBUG, INFO, WARNING, ERROR
 
 linux:
   kubelet: /var/lib/kubelet
