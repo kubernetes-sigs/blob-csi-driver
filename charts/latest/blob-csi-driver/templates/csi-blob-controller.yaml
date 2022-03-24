@@ -59,6 +59,7 @@ spec:
             - "-v=2"
             - "--csi-address=$(ADDRESS)"
             - "--leader-election"
+            - "--leader-election-namespace={{ .Release.Namespace }}"
             - "--timeout=120s"
             - "--extra-create-metadata=true"
           env:
@@ -160,6 +161,7 @@ spec:
             - "-csi-address=$(ADDRESS)"
             - "-v=2"
             - "-leader-election"
+            - "--leader-election-namespace={{ .Release.Namespace }}"
             - '-handle-volume-inuse-error=false'
           env:
             - name: ADDRESS
