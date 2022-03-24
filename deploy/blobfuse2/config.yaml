@@ -1,0 +1,24 @@
+allow-other: true
+
+logging:
+  type: syslog
+  level: log_debug
+
+components:
+  - libfuse
+  - file_cache
+  - attr_cache
+  - azstorage
+
+libfuse:
+  attribute-expiration-sec: 120
+  entry-expiration-sec: 120
+  negative-entry-expiration-sec: 240
+
+file_cache:
+  path: /tmp/blobfuse/
+  timeout-sec: 120
+  max-size-mb: 4096
+
+attr_cache:
+  timeout-sec: 7200
