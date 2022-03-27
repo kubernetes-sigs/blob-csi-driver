@@ -15,7 +15,8 @@
 FROM k8s.gcr.io/build-image/debian-base:bullseye-v1.1.0
 
 ARG ARCH=amd64
-COPY ./_output/${ARCH}/blobplugin /blobplugin
+ARG binary=./_output/${ARCH}/blobplugin
+COPY ${binary} /blobplugin
 
 RUN apt update && apt-mark unhold libcap2
 RUN clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase
