@@ -21,7 +21,7 @@ tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/mana
 --- | **Following parameters are only for blobfuse** | --- | --- |
 storeAccountKey | whether store account key to k8s secret <br><br> Note:  <br> `false` means driver would leverage kubelet identity to get account key | `true`,`false` | No | `true`
 secretName | specify secret name to store account key | | No |
-secretNamespace | specify the namespace of secret to store account key | `default`,`kube-system`, etc | No | `default`
+secretNamespace | specify the namespace of secret to store account key | `default`,`kube-system`, etc | No | pvc namespace
 isHnsEnabled | enable `Hierarchical namespace` for Azure DataLake storage account | `true`,`false` | No | `false`
 --- | **Following parameters are only for NFS protocol** | --- | --- |
 mountPermissions | mounted folder permissions | `0777` | No |
@@ -61,7 +61,7 @@ volumeAttributes.containerName | existing container name | existing container na
 volumeAttributes.protocol | specify blobfuse mount or NFSv3 mount | `fuse`, `nfs` | No | `fuse`
 --- | **Following parameters are only for blobfuse** | --- | --- |
 volumeAttributes.secretName | secret name that stores storage account name and key(only applies for SMB) | | No |
-volumeAttributes.secretNamespace | secret namespace | `default`,`kube-system`, etc | No | `default`
+volumeAttributes.secretNamespace | secret namespace | `default`,`kube-system`, etc | No | pvc namespace
 nodeStageSecretRef.name | secret name that stores(check below examples):<br>`azurestorageaccountkey`<br>`azurestorageaccountsastoken`<br>`msisecret`<br>`azurestoragespnclientsecret` | existing Kubernetes secret name |  No  |
 nodeStageSecretRef.namespace | secret namespace | k8s namespace  |  Yes  |
 --- | **Following parameters are only for NFS protocol** | --- | --- |
