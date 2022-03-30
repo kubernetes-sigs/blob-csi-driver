@@ -67,7 +67,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if parameters == nil {
 		parameters = make(map[string]string)
 	}
-	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, secretName, secretNamespace string
+	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, secretName, secretNamespace, pvcNamespace string
 	var isHnsEnabled *bool
 	var vnetResourceGroup, vnetName, subnetName string
 	// set allowBlobPublicAccess as false by default
@@ -113,10 +113,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 				allowBlobPublicAccess = to.BoolPtr(true)
 			}
 		case pvcNamespaceKey:
-			if secretNamespace == "" {
-				// respect `secretNamespace` field as first priority
-				secretNamespace = v
-			}
+			pvcNamespace = v
 		case pvcNameKey:
 			// no op
 		case pvNameKey:
@@ -145,6 +142,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	if resourceGroup == "" {
 		resourceGroup = d.cloud.ResourceGroup
+	}
+
+	if secretNamespace == "" {
+		secretNamespace = pvcNamespace
 	}
 
 	if protocol == "" {

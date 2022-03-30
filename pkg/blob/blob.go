@@ -310,6 +310,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		accountSasToken         string
 		secretName              string
 		secretNamespace         string
+		pvcNamespace            string
 		keyVaultURL             string
 		keyVaultSecretName      string
 		keyVaultSecretVersion   string
@@ -337,10 +338,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		case secretNamespaceField:
 			secretNamespace = v
 		case pvcNamespaceKey:
-			if secretNamespace == "" {
-				// respect `secretNamespace` field as first priority
-				secretNamespace = v
-			}
+			pvcNamespace = v
 		case getAccountKeyFromSecretField:
 			getAccountKeyFromSecret = strings.EqualFold(v, trueValue)
 		case "azurestorageauthtype":
@@ -369,9 +367,8 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		return rgName, accountName, accountKey, containerName, authEnv, err
 	}
 
-	// backward compatibility, old CSI driver PV does not have secretNamespace field
 	if secretNamespace == "" {
-		secretNamespace = "default"
+		secretNamespace = pvcNamespace
 	}
 
 	if rgName == "" {
