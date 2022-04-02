@@ -8,7 +8,8 @@ spec:
     storage: 10Gi
   accessModes:
     - ReadWriteMany
-  persistentVolumeReclaimPolicy: Retain  # "Delete" is not supported in static provisioning
+  persistentVolumeReclaimPolicy: Retain  # If set as "Delete" container would be removed after pvc deletion
+  storageClassName: blob
   mountOptions:
     - -o allow_other
     - --file-cache-timeout-in-seconds=120
