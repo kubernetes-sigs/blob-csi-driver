@@ -108,6 +108,7 @@ node:
   cloudConfigSecretName: azure-cloud-provider
   cloudConfigSecretNamespace: kube-system
   allowEmptyCloudConfig: true
+  allowInlineVolumeKeyAccessWithIdentity: false
   maxUnavailable: 1
   metricsPort: 29635
   livenessProbe:
