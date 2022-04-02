@@ -20,6 +20,8 @@ metadata:
 provisioner: blob.csi.azure.com
 parameters:
   protocol: nfs
+mountOptions:
+    - nconnect=8  # only supported on linux kernel version >= 5.3
 ```
 
 run following command to create a storage class:
