@@ -73,7 +73,7 @@ require (
 	github.com/opencontainers/selinux v1.8.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.11.0 // indirect
+	github.com/prometheus/client_golang v1.11.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.28.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
@@ -114,7 +114,7 @@ require (
 
 replace (
 	github.com/niemeyer/pretty => github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
-	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.7.1
+	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.11.1
 	go.etcd.io/etcd => go.etcd.io/etcd v0.0.0-20200410171415-59f5fb25a533
 	golang.org/x/text => golang.org/x/text v0.3.7
 	k8s.io/api => k8s.io/api v0.23.3
