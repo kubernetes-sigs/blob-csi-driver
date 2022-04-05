@@ -34,7 +34,7 @@ ARG ARCH=amd64
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \
   wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb && \
-  wget -O /blobfuse-proxy/blobfuse2.deb https://gaprauswest2.blob.core.windows.net/packages/blobfuse2-2.0.0-preview.1-ubuntu-18.04-x86-64.deb && \
+  wget -O /blobfuse-proxy/blobfuse2.deb https://blobfuse2demo.blob.core.windows.net/package/blobfuse2-2.0.0-preview.1-ubuntu-18.04-x86-64.deb && \
   dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse fuse -y && apt remove wget -y && \
   dpkg -i /blobfuse-proxy/blobfuse2.deb; fi
 
