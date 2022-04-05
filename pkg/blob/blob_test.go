@@ -460,7 +460,7 @@ func TestGetAuthEnv(t *testing.T) {
 				rerr := &retry.Error{
 					RawError: fmt.Errorf("test"),
 				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				expectedErr := fmt.Errorf("no key for storage account(storageaccountname) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
@@ -489,7 +489,7 @@ func TestGetAuthEnv(t *testing.T) {
 				list := storage.AccountListKeysResult{
 					Keys: &accountkeylist,
 				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				expectedErr := error(nil)
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -573,7 +573,7 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 				rerr := &retry.Error{
 					RawError: fmt.Errorf("test"),
 				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
 				expectedErr := fmt.Errorf("no key for storage account(f5713de20cde511e8ba4900) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
@@ -602,7 +602,7 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 				list := storage.AccountListKeysResult{
 					Keys: &accountkeylist,
 				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
 				expectedErr := error(nil)
 				if !reflect.DeepEqual(err, expectedErr) {
