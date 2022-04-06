@@ -197,7 +197,7 @@ func TestCreateVolume(t *testing.T) {
 				rerr := &retry.Error{
 					RawError: fmt.Errorf("test"),
 				}
-				mockStorageAccountsClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any()).Return(nil, rerr).AnyTimes()
+				mockStorageAccountsClient.EXPECT().ListByResourceGroup(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, rerr).AnyTimes()
 				_, err := d.CreateVolume(context.Background(), req)
 				expectedErr := status.Errorf(codes.Internal, "ensure storage account failed with could not list storage accounts for account type : Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -338,7 +338,7 @@ func TestDeleteVolume(t *testing.T) {
 					RawError: fmt.Errorf("test"),
 				}
 				accountListKeysResult := storage.AccountListKeysResult{}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				expectedErr := fmt.Errorf("no key for storage account(test) under resource group(unit), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				_, err := d.DeleteVolume(context.Background(), req)
 				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
@@ -370,7 +370,7 @@ func TestDeleteVolume(t *testing.T) {
 				list := storage.AccountListKeysResult{
 					Keys: &accountkeylist,
 				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 				expectedErr := fmt.Errorf("azure: base storage service url required")
 				_, err := d.DeleteVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -467,7 +467,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 					RawError: fmt.Errorf("test"),
 				}
 				accountListKeysResult := storage.AccountListKeysResult{}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
 				expectedErr := fmt.Errorf("no key for storage account(test) under resource group(unit), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
 				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
@@ -500,7 +500,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				list := storage.AccountListKeysResult{
 					Keys: &accountkeylist,
 				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 				expectedErr := fmt.Errorf("azure: base storage service url required")
 				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {

@@ -67,7 +67,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if parameters == nil {
 		parameters = make(map[string]string)
 	}
-	var storageAccountType, resourceGroup, location, account, containerName, protocol, customTags, secretName, secretNamespace, pvcNamespace string
+	var storageAccountType, subsID, resourceGroup, location, account, containerName, protocol, customTags, secretName, secretNamespace, pvcNamespace string
 	var isHnsEnabled *bool
 	var vnetResourceGroup, vnetName, subnetName string
 	// set allowBlobPublicAccess as false by default
@@ -88,6 +88,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			location = v
 		case storageAccountField:
 			account = v
+		case subscriptionIDField:
+			subsID = v
 		case resourceGroupField:
 			resourceGroup = v
 		case containerNameField:
@@ -137,6 +139,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			}
 		default:
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", k))
+		}
+	}
+
+	if subsID != "" && subsID != d.cloud.SubscriptionID {
+		if protocol == nfs {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("NFS protocol is not supported in cross subscription(%s)", subsID))
+		}
+		if !storeAccountKey {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("storeAccountKey must set as true in cross subscription(%s)", subsID))
 		}
 	}
 
@@ -199,6 +210,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		Name:                      account,
 		Type:                      storageAccountType,
 		Kind:                      accountKind,
+		SubscriptionID:            subsID,
 		ResourceGroup:             resourceGroup,
 		Location:                  location,
 		EnableHTTPSTrafficOnly:    enableHTTPSTrafficOnly,
@@ -406,7 +418,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 
 	var accountKey string
 	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
-		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, resourceGroupName)
+		accountKey, err = d.cloud.GetStorageAccesskey(ctx, "", accountName, resourceGroupName)
 		if err != nil {
 			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, resourceGroupName, err)
 		}

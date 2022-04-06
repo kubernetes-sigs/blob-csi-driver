@@ -58,6 +58,7 @@ const (
 	storageAccountField          = "storageaccount"
 	storageAccountTypeField      = "storageaccounttype"
 	skuNameField                 = "skuname"
+	subscriptionIDField          = "subscriptionid"
 	resourceGroupField           = "resourcegroup"
 	locationField                = "location"
 	secretNameField              = "secretname"
@@ -311,6 +312,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	}
 
 	var (
+		subsID                  string
 		accountKey              string
 		accountSasToken         string
 		secretName              string
@@ -326,6 +328,8 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
+		case subscriptionIDField:
+			subsID = v
 		case containerNameField:
 			containerName = v
 		case keyVaultURLField:
@@ -413,7 +417,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 				if err != nil && !getAccountKeyFromSecret {
 					klog.V(2).Infof("get account(%s) key from secret(%s, %s) failed with error: %v, use cluster identity to get account key instead",
 						accountName, secretNamespace, secretName, err)
-					accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, rgName)
+					accountKey, err = d.cloud.GetStorageAccesskey(ctx, subsID, accountName, rgName)
 					if err != nil {
 						return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
 					}
@@ -462,6 +466,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 // only for e2e testing
 func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID string, attrib, secrets map[string]string) (string, string, string, string, error) {
 	var (
+		subsID                string
 		accountName           string
 		accountKey            string
 		accountSasToken       string
@@ -474,6 +479,8 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
+		case subscriptionIDField:
+			subsID = v
 		case containerNameField:
 			containerName = v
 		case keyVaultURLField:
@@ -514,7 +521,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 				rgName = d.cloud.ResourceGroup
 			}
 
-			accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountName, rgName)
+			accountKey, err = d.cloud.GetStorageAccesskey(ctx, subsID, accountName, rgName)
 			if err != nil {
 				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
 			}
@@ -635,7 +642,7 @@ func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.
 	_, accountKey, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
 	if err != nil {
 		klog.V(2).Infof("could not get account(%s) key from secret(%s) namespace(%s), error: %v, use cluster identity to get account key instead", accountOptions.Name, secretName, secretNamespace, err)
-		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountOptions.Name, accountOptions.ResourceGroup)
+		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountOptions.SubscriptionID, accountOptions.Name, accountOptions.ResourceGroup)
 	}
 	return accountOptions.Name, accountKey, err
 }
