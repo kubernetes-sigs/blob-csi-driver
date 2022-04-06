@@ -101,6 +101,8 @@ const (
 
 	subnetTemplate = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s"
 
+	defaultNamespace = "default"
+
 	pvcNameKey      = "csi.storage.k8s.io/pvc/name"
 	pvcNamespaceKey = "csi.storage.k8s.io/pvc/namespace"
 	pvNameKey       = "csi.storage.k8s.io/pv/name"
@@ -368,7 +370,11 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	}
 
 	if secretNamespace == "" {
-		secretNamespace = pvcNamespace
+		if pvcNamespace == "" {
+			secretNamespace = defaultNamespace
+		} else {
+			secretNamespace = pvcNamespace
+		}
 	}
 
 	if rgName == "" {
