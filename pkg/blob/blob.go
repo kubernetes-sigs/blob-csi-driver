@@ -115,20 +115,21 @@ var (
 
 // DriverOptions defines driver parameters specified in driver deployment
 type DriverOptions struct {
-	NodeID                     string
-	DriverName                 string
-	CloudConfigSecretName      string
-	CloudConfigSecretNamespace string
-	CustomUserAgent            string
-	UserAgentSuffix            string
-	BlobfuseProxyEndpoint      string
-	EnableBlobfuseProxy        bool
-	BlobfuseProxyConnTimout    int
-	EnableBlobMockMount        bool
-	AllowEmptyCloudConfig      bool
-	EnableGetVolumeStats       bool
-	AppendTimeStampInCacheDir  bool
-	MountPermissions           uint64
+	NodeID                                 string
+	DriverName                             string
+	CloudConfigSecretName                  string
+	CloudConfigSecretNamespace             string
+	CustomUserAgent                        string
+	UserAgentSuffix                        string
+	BlobfuseProxyEndpoint                  string
+	EnableBlobfuseProxy                    bool
+	BlobfuseProxyConnTimout                int
+	EnableBlobMockMount                    bool
+	AllowEmptyCloudConfig                  bool
+	AllowInlineVolumeKeyAccessWithIdentity bool
+	EnableGetVolumeStats                   bool
+	AppendTimeStampInCacheDir              bool
+	MountPermissions                       uint64
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -142,15 +143,16 @@ type Driver struct {
 	userAgentSuffix            string
 	blobfuseProxyEndpoint      string
 	// enableBlobMockMount is only for testing, DO NOT set as true in non-testing scenario
-	enableBlobMockMount       bool
-	enableBlobfuseProxy       bool
-	allowEmptyCloudConfig     bool
-	enableGetVolumeStats      bool
-	appendTimeStampInCacheDir bool
-	blobfuseProxyConnTimout   int
-	mountPermissions          uint64
-	mounter                   *mount.SafeFormatAndMount
-	volLockMap                *util.LockMap
+	enableBlobMockMount                    bool
+	enableBlobfuseProxy                    bool
+	allowEmptyCloudConfig                  bool
+	enableGetVolumeStats                   bool
+	allowInlineVolumeKeyAccessWithIdentity bool
+	appendTimeStampInCacheDir              bool
+	blobfuseProxyConnTimout                int
+	mountPermissions                       uint64
+	mounter                                *mount.SafeFormatAndMount
+	volLockMap                             *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
 	// for that same volume (as defined by VolumeID) return an Aborted error
 	volumeLocks *volumeLocks
@@ -166,20 +168,21 @@ type Driver struct {
 // does not support optional driver plugin info manifest field. Refer to CSI spec for more details.
 func NewDriver(options *DriverOptions) *Driver {
 	d := Driver{
-		volLockMap:                 util.NewLockMap(),
-		subnetLockMap:              util.NewLockMap(),
-		volumeLocks:                newVolumeLocks(),
-		cloudConfigSecretName:      options.CloudConfigSecretName,
-		cloudConfigSecretNamespace: options.CloudConfigSecretNamespace,
-		customUserAgent:            options.CustomUserAgent,
-		userAgentSuffix:            options.UserAgentSuffix,
-		blobfuseProxyEndpoint:      options.BlobfuseProxyEndpoint,
-		enableBlobfuseProxy:        options.EnableBlobfuseProxy,
-		blobfuseProxyConnTimout:    options.BlobfuseProxyConnTimout,
-		enableBlobMockMount:        options.EnableBlobMockMount,
-		allowEmptyCloudConfig:      options.AllowEmptyCloudConfig,
-		enableGetVolumeStats:       options.EnableGetVolumeStats,
-		mountPermissions:           options.MountPermissions,
+		volLockMap:                             util.NewLockMap(),
+		subnetLockMap:                          util.NewLockMap(),
+		volumeLocks:                            newVolumeLocks(),
+		cloudConfigSecretName:                  options.CloudConfigSecretName,
+		cloudConfigSecretNamespace:             options.CloudConfigSecretNamespace,
+		customUserAgent:                        options.CustomUserAgent,
+		userAgentSuffix:                        options.UserAgentSuffix,
+		blobfuseProxyEndpoint:                  options.BlobfuseProxyEndpoint,
+		enableBlobfuseProxy:                    options.EnableBlobfuseProxy,
+		allowInlineVolumeKeyAccessWithIdentity: options.AllowInlineVolumeKeyAccessWithIdentity,
+		blobfuseProxyConnTimout:                options.BlobfuseProxyConnTimout,
+		enableBlobMockMount:                    options.EnableBlobMockMount,
+		allowEmptyCloudConfig:                  options.AllowEmptyCloudConfig,
+		enableGetVolumeStats:                   options.EnableGetVolumeStats,
+		mountPermissions:                       options.MountPermissions,
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion

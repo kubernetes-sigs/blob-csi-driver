@@ -36,24 +36,25 @@ func init() {
 }
 
 var (
-	endpoint                   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	blobfuseProxyEndpoint      = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
-	nodeID                     = flag.String("nodeid", "", "node id")
-	version                    = flag.Bool("version", false, "Print the version and exit.")
-	metricsAddress             = flag.String("metrics-address", "0.0.0.0:29634", "export the metrics")
-	kubeconfig                 = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
-	driverName                 = flag.String("drivername", blob.DefaultDriverName, "name of the driver")
-	enableBlobfuseProxy        = flag.Bool("enable-blobfuse-proxy", false, "using blobfuse proxy for mounts")
-	blobfuseProxyConnTimout    = flag.Int("blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
-	enableBlobMockMount        = flag.Bool("enable-blob-mock-mount", false, "enable mock mount(only for testing)")
-	cloudConfigSecretName      = flag.String("cloud-config-secret-name", "azure-cloud-provider", "secret name of cloud config")
-	cloudConfigSecretNamespace = flag.String("cloud-config-secret-namespace", "kube-system", "secret namespace of cloud config")
-	customUserAgent            = flag.String("custom-user-agent", "", "custom userAgent")
-	userAgentSuffix            = flag.String("user-agent-suffix", "", "userAgent suffix")
-	allowEmptyCloudConfig      = flag.Bool("allow-empty-cloud-config", true, "allow running driver without cloud config")
-	enableGetVolumeStats       = flag.Bool("enable-get-volume-stats", false, "allow GET_VOLUME_STATS on agent node")
-	appendTimeStampInCacheDir  = flag.Bool("append-timestamp-cache-dir", false, "append timestamp into cache directory on agent node")
-	mountPermissions           = flag.Uint64("mount-permissions", 0777, "mounted folder permissions")
+	endpoint                               = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	blobfuseProxyEndpoint                  = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
+	nodeID                                 = flag.String("nodeid", "", "node id")
+	version                                = flag.Bool("version", false, "Print the version and exit.")
+	metricsAddress                         = flag.String("metrics-address", "0.0.0.0:29634", "export the metrics")
+	kubeconfig                             = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
+	driverName                             = flag.String("drivername", blob.DefaultDriverName, "name of the driver")
+	enableBlobfuseProxy                    = flag.Bool("enable-blobfuse-proxy", false, "using blobfuse proxy for mounts")
+	blobfuseProxyConnTimout                = flag.Int("blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
+	enableBlobMockMount                    = flag.Bool("enable-blob-mock-mount", false, "enable mock mount(only for testing)")
+	cloudConfigSecretName                  = flag.String("cloud-config-secret-name", "azure-cloud-provider", "secret name of cloud config")
+	cloudConfigSecretNamespace             = flag.String("cloud-config-secret-namespace", "kube-system", "secret namespace of cloud config")
+	customUserAgent                        = flag.String("custom-user-agent", "", "custom userAgent")
+	userAgentSuffix                        = flag.String("user-agent-suffix", "", "userAgent suffix")
+	allowEmptyCloudConfig                  = flag.Bool("allow-empty-cloud-config", true, "allow running driver without cloud config")
+	enableGetVolumeStats                   = flag.Bool("enable-get-volume-stats", false, "allow GET_VOLUME_STATS on agent node")
+	appendTimeStampInCacheDir              = flag.Bool("append-timestamp-cache-dir", false, "append timestamp into cache directory on agent node")
+	mountPermissions                       = flag.Uint64("mount-permissions", 0777, "mounted folder permissions")
+	allowInlineVolumeKeyAccessWithIdentity = flag.Bool("allow-inline-volume-key-access-with-idenitity", false, "allow accessing storage account key using cluster identity for inline volume")
 )
 
 func main() {
@@ -75,20 +76,21 @@ func main() {
 
 func handle() {
 	driverOptions := blob.DriverOptions{
-		NodeID:                     *nodeID,
-		DriverName:                 *driverName,
-		CloudConfigSecretName:      *cloudConfigSecretName,
-		CloudConfigSecretNamespace: *cloudConfigSecretNamespace,
-		BlobfuseProxyEndpoint:      *blobfuseProxyEndpoint,
-		EnableBlobfuseProxy:        *enableBlobfuseProxy,
-		BlobfuseProxyConnTimout:    *blobfuseProxyConnTimout,
-		EnableBlobMockMount:        *enableBlobMockMount,
-		CustomUserAgent:            *customUserAgent,
-		UserAgentSuffix:            *userAgentSuffix,
-		AllowEmptyCloudConfig:      *allowEmptyCloudConfig,
-		EnableGetVolumeStats:       *enableGetVolumeStats,
-		AppendTimeStampInCacheDir:  *appendTimeStampInCacheDir,
-		MountPermissions:           *mountPermissions,
+		NodeID:                                 *nodeID,
+		DriverName:                             *driverName,
+		CloudConfigSecretName:                  *cloudConfigSecretName,
+		CloudConfigSecretNamespace:             *cloudConfigSecretNamespace,
+		BlobfuseProxyEndpoint:                  *blobfuseProxyEndpoint,
+		EnableBlobfuseProxy:                    *enableBlobfuseProxy,
+		BlobfuseProxyConnTimout:                *blobfuseProxyConnTimout,
+		EnableBlobMockMount:                    *enableBlobMockMount,
+		CustomUserAgent:                        *customUserAgent,
+		UserAgentSuffix:                        *userAgentSuffix,
+		AllowEmptyCloudConfig:                  *allowEmptyCloudConfig,
+		EnableGetVolumeStats:                   *enableGetVolumeStats,
+		AppendTimeStampInCacheDir:              *appendTimeStampInCacheDir,
+		MountPermissions:                       *mountPermissions,
+		AllowInlineVolumeKeyAccessWithIdentity: *allowInlineVolumeKeyAccessWithIdentity,
 	}
 	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {

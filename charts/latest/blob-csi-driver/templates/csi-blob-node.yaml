@@ -125,6 +125,7 @@ spec:
             - "--enable-get-volume-stats={{ .Values.feature.enableGetVolumeStats }}"
             - "--append-timestamp-cache-dir={{ .Values.node.appendTimeStampInCacheDir }}"
             - "--mount-permissions={{ .Values.node.mountPermissions }}"
+            - "--allow-inline-volume-key-access-with-idenitity={{ .Values.node.allowInlineVolumeKeyAccessWithIdentity }}"
           ports:
             - containerPort: {{ .Values.node.livenessProbe.healthPort }}
               name: healthz
