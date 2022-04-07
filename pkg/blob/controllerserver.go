@@ -46,13 +46,19 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, err
 	}
 
-	volumeCapabilities := req.GetVolumeCapabilities()
 	volName := req.GetName()
 	if len(volName) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "CreateVolume Name must be provided")
 	}
+
+	volumeCapabilities := req.GetVolumeCapabilities()
 	if len(volumeCapabilities) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "CreateVolume Volume capabilities must be provided")
+	}
+	for _, c := range volumeCapabilities {
+		if c.GetBlock() != nil {
+			return nil, status.Error(codes.InvalidArgument, "Block volume capability not supported")
+		}
 	}
 
 	if acquired := d.volumeLocks.TryAcquire(volName); !acquired {
@@ -402,8 +408,14 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
 	}
-	if req.GetVolumeCapabilities() == nil {
+	volumeCapabilities := req.GetVolumeCapabilities()
+	if len(volumeCapabilities) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume capabilities missing in request")
+	}
+	for _, c := range volumeCapabilities {
+		if c.GetBlock() != nil {
+			return nil, status.Error(codes.InvalidArgument, "Block volume capability not supported")
+		}
 	}
 
 	resourceGroupName, accountName, containerName, err := GetContainerInfo(volumeID)

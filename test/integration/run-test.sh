@@ -46,21 +46,21 @@ fi
 
 # Begin to run CSI functions one by one
 echo "Create volume test:"
-value="$(csc controller new --endpoint "$endpoint" --cap 1,block "$volname" --req-bytes "$volsize" --params skuname=Standard_LRS)"
+value="$(csc controller new --endpoint "$endpoint" --cap MULTI_NODE_MULTI_WRITER,mount,xfs "$volname" --req-bytes "$volsize" --params skuname=Standard_LRS)"
 sleep 15
 
 volumeid="$(echo "$value" | awk '{print $1}' | sed 's/"//g')"
 echo "Got volume id: $volumeid"
 storage_account_name="$(echo "$volumeid" | awk -F# '{print $2}')"
 
-csc controller validate-volume-capabilities --endpoint "$endpoint" --cap 1,block "$volumeid"
+csc controller validate-volume-capabilities --endpoint "$endpoint" --cap MULTI_NODE_MULTI_WRITER,mount,xfs "$volumeid"
 
 if [[ "$cloud" != "AzureChinaCloud" ]]; then
   echo "stage volume test:"
-  csc node stage --endpoint "$endpoint" --cap 1,block --staging-target-path "$staging_target_path" "$volumeid"
+  csc node stage --endpoint "$endpoint" --cap MULTI_NODE_MULTI_WRITER,mount,xfs --staging-target-path "$staging_target_path" "$volumeid"
 
   echo "publish volume test:"
-  csc node publish --endpoint "$endpoint" --cap 1,block --staging-target-path "$staging_target_path" --target-path "$target_path" "$volumeid"
+  csc node publish --endpoint "$endpoint" --cap MULTI_NODE_MULTI_WRITER,mount,xfs --staging-target-path "$staging_target_path" --target-path "$target_path" "$volumeid"
   sleep 2
 
   echo "node stats test:"
@@ -84,7 +84,7 @@ csc controller del --endpoint "$endpoint" "$volumeid"
 sleep 15
 
 echo "Create volume in storage account($storage_account_name) under resource group($resource_group):"
-value="$(csc controller new --endpoint "$endpoint" --cap 1,block "$volname" --req-bytes "$volsize" --params skuname=Standard_LRS,storageAccount=$storage_account_name,resourceGroup=$resource_group)"
+value="$(csc controller new --endpoint "$endpoint" --cap MULTI_NODE_MULTI_WRITER,mount,xfs "$volname" --req-bytes "$volsize" --params skuname=Standard_LRS,storageAccount=$storage_account_name,resourceGroup=$resource_group)"
 sleep 15
 
 volumeid="$(echo "$value" | awk '{print $1}' | sed 's/"//g')"

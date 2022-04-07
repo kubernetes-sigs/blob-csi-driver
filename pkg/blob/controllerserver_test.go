@@ -60,6 +60,14 @@ func TestCreateVolume(t *testing.T) {
 	stdVolumeCapabilities := []*csi.VolumeCapability{
 		stdVolumeCapability,
 	}
+	blockVolumeCapability := &csi.VolumeCapability{
+		AccessType: &csi.VolumeCapability_Block{
+			Block: &csi.VolumeCapability_BlockVolume{},
+		},
+	}
+	blockVolumeCapabilities := []*csi.VolumeCapability{
+		blockVolumeCapability,
+	}
 	controllerservicecapabilityRPC := &csi.ControllerServiceCapability_RPC{
 		Type: csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 	}
@@ -111,6 +119,24 @@ func TestCreateVolume(t *testing.T) {
 				}
 				_, err := d.CreateVolume(context.Background(), req)
 				expectedErr := status.Error(codes.InvalidArgument, "CreateVolume Volume capabilities must be provided")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "block volume capability not supported",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: blockVolumeCapabilities,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "Block volume capability not supported")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -393,6 +419,14 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 	stdVolumeCapabilities := []*csi.VolumeCapability{
 		stdVolumeCapability,
 	}
+	blockVolumeCapability := &csi.VolumeCapability{
+		AccessType: &csi.VolumeCapability_Block{
+			Block: &csi.VolumeCapability_BlockVolume{},
+		},
+	}
+	blockVolumeCapabilities := []*csi.VolumeCapability{
+		blockVolumeCapability,
+	}
 	controllerservicecapabilityRPC := &csi.ControllerServiceCapability_RPC{
 		Type: csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 	}
@@ -426,6 +460,21 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				}
 				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
 				expectedErr := status.Error(codes.InvalidArgument, "Volume capabilities missing in request")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "block volume capability not supported",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				req := &csi.ValidateVolumeCapabilitiesRequest{
+					VolumeId:           "unit-test",
+					VolumeCapabilities: blockVolumeCapabilities,
+				}
+				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "Block volume capability not supported")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
