@@ -118,7 +118,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 				_, err := d.CreateVolume(context.Background(), req)
-				expectedErr := status.Error(codes.InvalidArgument, "CreateVolume Volume capabilities must be provided")
+				expectedErr := status.Error(codes.InvalidArgument, "volume capabilities missing in request")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -136,7 +136,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 				_, err := d.CreateVolume(context.Background(), req)
-				expectedErr := status.Error(codes.InvalidArgument, "Block volume capability not supported")
+				expectedErr := status.Error(codes.InvalidArgument, "block volume capability not supported")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -459,7 +459,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 					VolumeId: "unit-test",
 				}
 				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				expectedErr := status.Error(codes.InvalidArgument, "Volume capabilities missing in request")
+				expectedErr := status.Error(codes.InvalidArgument, "volume capabilities missing in request")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -474,7 +474,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 					VolumeCapabilities: blockVolumeCapabilities,
 				}
 				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				expectedErr := status.Error(codes.InvalidArgument, "Block volume capability not supported")
+				expectedErr := status.Error(codes.InvalidArgument, "block volume capability not supported")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
