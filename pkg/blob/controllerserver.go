@@ -51,14 +51,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Error(codes.InvalidArgument, "CreateVolume Name must be provided")
 	}
 
-	volumeCapabilities := req.GetVolumeCapabilities()
-	if len(volumeCapabilities) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "CreateVolume Volume capabilities must be provided")
-	}
-	for _, c := range volumeCapabilities {
-		if c.GetBlock() != nil {
-			return nil, status.Error(codes.InvalidArgument, "Block volume capability not supported")
-		}
+	if err := isValidVolumeCapabilities(req.GetVolumeCapabilities()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	if acquired := d.volumeLocks.TryAcquire(volName); !acquired {
@@ -408,14 +402,8 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
 	}
-	volumeCapabilities := req.GetVolumeCapabilities()
-	if len(volumeCapabilities) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "Volume capabilities missing in request")
-	}
-	for _, c := range volumeCapabilities {
-		if c.GetBlock() != nil {
-			return nil, status.Error(codes.InvalidArgument, "Block volume capability not supported")
-		}
+	if err := isValidVolumeCapabilities(req.GetVolumeCapabilities()); err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
 	resourceGroupName, accountName, containerName, err := GetContainerInfo(volumeID)
@@ -534,4 +522,17 @@ func (d *Driver) ControllerExpandVolume(ctx context.Context, req *csi.Controller
 	klog.V(2).Infof("ControllerExpandVolume(%s) successfully, currentQuota: %d Gi", req.VolumeId, requestGiB)
 
 	return &csi.ControllerExpandVolumeResponse{CapacityBytes: req.GetCapacityRange().GetRequiredBytes()}, nil
+}
+
+// isValidVolumeCapabilities validates the given VolumeCapability array is valid
+func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) error {
+	if len(volCaps) == 0 {
+		return fmt.Errorf("volume capabilities missing in request")
+	}
+	for _, c := range volCaps {
+		if c.GetBlock() != nil {
+			return fmt.Errorf("block volume capability not supported")
+		}
+	}
+	return nil
 }
