@@ -61,7 +61,7 @@ if [ ! -z ${EXTERNAL_E2E_TEST_BLOBFUSE} ]; then
     # achieve close-to-open cache consistency like in NFSv3
     sed -i 's/file-cache-timeout-in-seconds=120/file-cache-timeout-in-seconds=0/g' /tmp/csi/storageclass.yaml
     ginkgo -p --progress --v -focus="External.Storage.*$DRIVER.csi.azure.com" \
-        -skip='\[Disruptive\]|allow exec of files on the volume|unmount after the subpath directory is deleted' kubernetes/test/bin/e2e.test  -- \
+        -skip='\[Disruptive\]|allow exec of files on the volume|unmount after the subpath directory is deleted|should concurrently access the single volume from pods on different node' kubernetes/test/bin/e2e.test  -- \
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-blobfuse.yaml \
         --kubeconfig=$KUBECONFIG
 fi
