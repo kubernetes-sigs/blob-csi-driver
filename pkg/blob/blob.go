@@ -64,6 +64,7 @@ const (
 	secretNameField              = "secretname"
 	secretNamespaceField         = "secretnamespace"
 	containerNameField           = "containername"
+	containerNamePrefixField     = "containernameprefix"
 	storeAccountKeyField         = "storeaccountkey"
 	isHnsEnabledField            = "ishnsenabled"
 	getAccountKeyFromSecretField = "getaccountkeyfromsecret"
@@ -278,11 +279,9 @@ func getValidContainerName(volumeName, protocol string) string {
 		// now we set as 63 for maximum container name length
 		// todo: get cluster name
 		containerName = k8sutil.GenerateVolumeName(fmt.Sprintf("pvc-%s", protocol), uuid.NewUUID().String(), 63)
-		klog.Warningf("the requested volume name (%q) is invalid, so it is regenerated as (%q)", volumeName, containerName)
+		klog.Warningf("requested volume name (%s) is invalid, regenerated as (%q)", volumeName, containerName)
 	}
-	containerName = strings.Replace(containerName, "--", "-", -1)
-
-	return containerName
+	return strings.Replace(containerName, "--", "-", -1)
 }
 
 func checkContainerNameBeginAndEnd(containerName string) bool {
@@ -561,6 +560,26 @@ func isSupportedProtocol(protocol string) bool {
 		}
 	}
 	return false
+}
+
+// container names can contain only lowercase letters, numbers, and hyphens,
+// and must begin and end with a letter or a number
+func isSupportedContainerNamePrefix(prefix string) bool {
+	if prefix == "" {
+		return true
+	}
+	if len(prefix) > 20 {
+		return false
+	}
+	if prefix[0] == '-' {
+		return false
+	}
+	for _, v := range prefix {
+		if v != '-' && (v < '0' || v > '9') && (v < 'a' || v > 'z') {
+			return false
+		}
+	}
+	return true
 }
 
 // get storage account from secrets map
