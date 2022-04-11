@@ -67,7 +67,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if parameters == nil {
 		parameters = make(map[string]string)
 	}
-	var storageAccountType, subsID, resourceGroup, location, account, containerName, protocol, customTags, secretName, secretNamespace, pvcNamespace string
+	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
 	var isHnsEnabled *bool
 	var vnetResourceGroup, vnetName, subnetName string
 	// set allowBlobPublicAccess as false by default
@@ -94,6 +94,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			resourceGroup = v
 		case containerNameField:
 			containerName = v
+		case containerNamePrefixField:
+			containerNamePrefix = v
 		case protocolField:
 			protocol = v
 		case tagsField:
@@ -168,6 +170,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	if !isSupportedProtocol(protocol) {
 		return nil, status.Errorf(codes.InvalidArgument, "protocol(%s) is not supported, supported protocol list: %v", protocol, supportedProtocolList)
+	}
+
+	if containerName != "" && containerNamePrefix != "" {
+		return nil, status.Errorf(codes.InvalidArgument, "containerName(%s) and containerNamePrefix(%s) could not be specified together", containerName, containerNamePrefix)
+	}
+	if !isSupportedContainerNamePrefix(containerNamePrefix) {
+		return nil, status.Errorf(codes.InvalidArgument, "containerNamePrefix(%s) can only contain lowercase letters, numbers, hyphens, and length should be less than 21", containerNamePrefix)
 	}
 
 	enableHTTPSTrafficOnly := true
@@ -268,7 +277,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	validContainerName := containerName
 	if validContainerName == "" {
-		validContainerName = getValidContainerName(volName, protocol)
+		validContainerName = volName
+		if containerNamePrefix != "" {
+			validContainerName = containerNamePrefix + "-" + volName
+		}
+		validContainerName = getValidContainerName(validContainerName, protocol)
 		parameters[containerNameField] = validContainerName
 	}
 

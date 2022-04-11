@@ -172,6 +172,51 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "containerName and containerNamePrefix could not be specified together",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				mp := make(map[string]string)
+				mp[containerNameField] = "containerName"
+				mp[containerNamePrefixField] = "containerNamePrefix"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				expectedErr := status.Errorf(codes.InvalidArgument, "containerName(containerName) and containerNamePrefix(containerNamePrefix) could not be specified together")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "invalid containerNamePrefix",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				mp := make(map[string]string)
+				mp[containerNamePrefixField] = "UpperCase"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				expectedErr := status.Errorf(codes.InvalidArgument, "containerNamePrefix(UpperCase) can only contain lowercase letters, numbers, hyphens, and length should be less than 21")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
 			name: "tags error",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
