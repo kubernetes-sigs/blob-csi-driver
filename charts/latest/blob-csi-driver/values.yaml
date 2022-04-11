@@ -151,7 +151,7 @@ node:
     healthPort: 29633
 
 feature:
-  enableFSGroupPolicy: false
+  enableFSGroupPolicy: true
   enableGetVolumeStats: false
 
 driver:

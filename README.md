@@ -46,7 +46,6 @@ This option does not depend on cloud provider config file, supports cross subscr
 ### Usage
  - [Basic usage](./deploy/example/e2e_usage.md)
  - [NFSv3](./deploy/example/nfs)
- - [fsGroupPolicy](./deploy/example/fsgroup)
 
 ### Troubleshooting
  - [CSI driver troubleshooting guide](./docs/csi-debug.md)

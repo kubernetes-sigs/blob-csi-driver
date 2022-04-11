@@ -6,8 +6,6 @@
 ### Tips
  - configure with [blobfuse-proxy](../deploy/blobfuse-proxy) to make blobfuse mount still available after driver restart
    - specify `node.enableBlobfuseProxy=true` together with [blobfuse-proxy](../deploy/blobfuse-proxy)
- - make controller only run on master node: `--set controller.runOnMaster=true`
- - enable `fsGroupPolicy` on a k8s 1.20+ cluster: `--set feature.enableFSGroupPolicy=true`
  - set replica of controller as `1`: `--set controller.replicas=1`
  - specify different cloud config secret for the driver:
    - `--set controller.cloudConfigSecretName`
@@ -59,7 +57,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `driver.customUserAgent`                              | custom userAgent                                      | `` |
 | `driver.userAgentSuffix`                              | userAgent suffix                                      | `OSS-helm` |
 | `driver.azureGoSDKLogLevel`                           | [Azure go sdk log level](https://github.com/Azure/azure-sdk-for-go/blob/main/documentation/previous-versions-quickstart.md#built-in-basic-requestresponse-logging)  | ``(no logs), `DEBUG`, `INFO`, `WARNING`, `ERROR`, [etc](https://github.com/Azure/go-autorest/blob/50e09bb39af124f28f29ba60efde3fa74a4fe93f/logger/logger.go#L65-L73) |
-| `feature.enableFSGroupPolicy`                         | enable `fsGroupPolicy` on a k8s 1.20+ cluster         | `false`                      |
+| `feature.enableFSGroupPolicy`                         | enable `fsGroupPolicy` on a k8s 1.20+ cluster         | `true`                      |
 | `feature.enableGetVolumeStats`                        | allow GET_VOLUME_STATS on agent node                  | `false`                      |
 | `image.baseRepo`                                      | base repository of driver images                      | `mcr.microsoft.com`                      |
 | `image.blob.repository`                               | blob-csi-driver docker image                          | `mcr.microsoft.com/k8s/csi/blob-csi`                             |

@@ -1,6 +1,6 @@
 # fsGroup Support on NFS protocol
 
-[fsGroupPolicy](https://kubernetes-csi.github.io/docs/support-fsgroup.html) feature is supported from Kubernetes 1.20, default CSI driver installation does not have this feature, follow below steps to enable this feature. Please note that blobfuse does not support fsGroupPolicy yet, only NFS protocol supports fsGroup.
+[fsGroupPolicy](https://kubernetes-csi.github.io/docs/support-fsgroup.html) feature is supported from Kubernetes 1.20, follow below steps to enable this feature. Please note that blobfuse does not support fsGroupPolicy yet, only NFS protocol supports fsGroup.
 
 ### Option#1: Enable fsGroupPolicy support in [driver helm installation](../../../charts)
 
