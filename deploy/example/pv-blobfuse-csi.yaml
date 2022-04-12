@@ -9,7 +9,7 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain  # If set as "Delete" container would be removed after pvc deletion
-  storageClassName: blob
+  storageClassName: blob-fuse
   mountOptions:
     - -o allow_other
     - --file-cache-timeout-in-seconds=120
