@@ -67,7 +67,7 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: blob
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v1.10.0
+          image: mcr.microsoft.com/k8s/csi/blob-csi:latest
           imagePullPolicy: IfNotPresent
           args:
             - "--v=5"
