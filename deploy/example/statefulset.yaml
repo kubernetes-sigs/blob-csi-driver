@@ -34,7 +34,7 @@ spec:
     - metadata:
         name: persistent-storage
         annotations:
-          volume.beta.kubernetes.io/storage-class: blob
+          volume.beta.kubernetes.io/storage-class: blob-fuse
       spec:
         accessModes: ["ReadWriteMany"]
         resources:

@@ -46,7 +46,7 @@ blobfuse         14G   41M   13G   1% /mnt/blob
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: blob
+  name: blob-fuse
 provisioner: blob.csi.azure.com
 parameters:
   resourceGroup: EXISTING_RESOURCE_GROUP_NAME
