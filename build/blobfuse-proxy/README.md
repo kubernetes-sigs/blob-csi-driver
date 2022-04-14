@@ -26,13 +26,13 @@ make blobfuse-proxy
 
  - Generate debian dpkg package
 ```console
-cp _output/blobfuse-proxy ./pkg/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy
-dpkg-deb --build pkg/blobfuse-proxy/debpackage
+cp _output/blobfuse-proxy ./build/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy
+dpkg-deb --build build/blobfuse-proxy/debpackage
 ```
 
  - Generate redhat/centos package
 ```console
-cp _output/blobfuse-proxy ./pkg/blobfuse-proxy/rpmbuild/SOURCES/blobfuse-proxy
+cp _output/blobfuse-proxy ./build/blobfuse-proxy/rpmbuild/SOURCES/blobfuse-proxy
 cd ~/rpmbuild/SPECS/
 rpmbuild --target noarch -bb utils.spec
 ```

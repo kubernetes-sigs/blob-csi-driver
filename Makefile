@@ -50,7 +50,7 @@ OUTPUT_TYPE ?= registry
 ALL_ARCH.linux = amd64 arm64
 ALL_OS_ARCH = $(foreach arch, ${ALL_ARCH.linux}, linux-$(arch))
 
-all: blob blobfuse-proxy
+all: blob blobfuse-proxy-debian
 
 .PHONY: verify
 verify: unit-test
@@ -94,7 +94,7 @@ e2e-teardown:
 	helm delete blob-csi-driver --namespace kube-system
 
 .PHONY: blob
-blob: blobfuse-proxy
+blob: blobfuse-proxy-debian
 	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/${ARCH}/blobplugin ./pkg/blobplugin
 
 .PHONY: blob-windows
@@ -107,12 +107,17 @@ blob-darwin:
 
 .PHONY: container
 container: blob
-	docker build -t $(IMAGE_TAG) --output=type=docker -f ./pkg/blobplugin/Dockerfile .
+	docker build -t $(IMAGE_TAG) --output=type=docker -f ./build/blobplugin/debian/Dockerfile .
 
-.PHONY: container-linux
-container-linux:
+.PHONY: container-debian
+container-debian:
 	docker buildx build --pull --output=type=$(OUTPUT_TYPE) --platform="linux/$(ARCH)" \
-		-t $(IMAGE_TAG)-linux-$(ARCH) --build-arg ARCH=$(ARCH) -f ./pkg/blobplugin/Dockerfile .
+		-t $(IMAGE_TAG)-linux-$(ARCH) --build-arg ARCH=$(ARCH) -f ./build/blobplugin/debian/Dockerfile .
+
+.PHONY: container-redhat
+container-redhat:
+	docker buildx build --pull --output=type=$(OUTPUT_TYPE) --platform="linux/$(ARCH)" \
+		-t $(IMAGE_TAG)-linux-$(ARCH) --build-arg ARCH=$(ARCH) -f ./build/blobplugin/debian/Dockerfile .
 
 .PHONY: blob-container
 blob-container:
@@ -128,7 +133,7 @@ endif
 	docker run --rm --privileged tonistiigi/binfmt --install all
 	for arch in $(ALL_ARCH.linux); do \
 		ARCH=$${arch} $(MAKE) blob; \
-		ARCH=$${arch} $(MAKE) container-linux; \
+		ARCH=$${arch} $(MAKE) container-debian; \
 	done
 
 .PHONY: push
@@ -169,8 +174,19 @@ create-metrics-svc:
 delete-metrics-svc:
 	kubectl delete -f deploy/example/metrics/csi-blob-controller-svc.yaml --ignore-not-found
 
+.PHONY: blobfuse-proxy-debian
+blobfuse-proxy-debian: blobfuse-proxy
+	mkdir -p ./build/blobfuse-proxy/debpackage/usr/bin/ 
+	cp _output/blobfuse-proxy ./build/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy
+	dpkg-deb --build build/blobfuse-proxy/debpackage ./_output/blobfuse-proxy.deb
+
+.PHONY: blobfuse-proxy-redhat
+blobfuse-proxy-redhat: blobfuse-proxy
+	mkdir -p ./build/blobfuse-proxy/rpmbuild/SOURCES/
+	cp _output/blobfuse-proxy ./build/blobfuse-proxy/rpmbuild/SOURCES/blobfuse-proxy
+	rpmbuild --target noarch -bb build/blobfuse-proxy/rpmbuild/SPECS/utils.spec
+
 .PHONY: blobfuse-proxy
 blobfuse-proxy:
-	mkdir -p ./pkg/blobfuse-proxy/debpackage/usr/bin/ ./_output
-	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o ./pkg/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy ./pkg/blobfuse-proxy
-	dpkg-deb --build pkg/blobfuse-proxy/debpackage ./_output/blobfuse-proxy.deb
+	mkdir -p ./_output
+	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o ./_output ./pkg/blobfuse-proxy

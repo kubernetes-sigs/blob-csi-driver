@@ -70,4 +70,4 @@ cscope.*
 *.pyc
 profile.cov
 
-pkg/blobfuse-proxy/debpackage/usr/
+build/blobfuse-proxy/debpackage/usr/
