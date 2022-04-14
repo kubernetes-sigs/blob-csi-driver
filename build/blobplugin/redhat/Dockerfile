@@ -12,10 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM redhat/ubi8
+FROM registry.redhat.io/rhel:7.8-394
+## TODO: make my own image which includes blobfuse based on rhel:7.8-394?
 
 ARG ARCH=amd64
 ARG binary=./_output/${ARCH}/blobplugin
 COPY ${binary} /blobplugin
 
 RUN mkdir /blobfuse-proxy/
+COPY ./_output/blobfuse-proxy.rpm /blobfuse-proxy/
+ARG ARCH=amd64
+RUN if [ "$ARCH" = "amd64" ] ; then \
+  # subscription-manager register && subscription-manager attach && \
+  rpm -Uvh https://packages.microsoft.com/config/rhel/7/packages-microsoft-prod.rpm && \
+  yum update && rpm -Uvh https://packages.microsoft.com/rhel/7.8/prod/blobfuse-1.4.3-RHEL-7.8-x86_64.rpm; fi
+LABEL maintainers="andyzhangx"
+LABEL description="Azure Blob Storage CSI driver"
+
+ENTRYPOINT ["/blobplugin"]

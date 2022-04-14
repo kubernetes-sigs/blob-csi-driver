@@ -182,9 +182,11 @@ blobfuse-proxy-debian: blobfuse-proxy
 
 .PHONY: blobfuse-proxy-redhat
 blobfuse-proxy-redhat: blobfuse-proxy
-	mkdir -p ./build/blobfuse-proxy/rpmbuild/SOURCES/
-	cp _output/blobfuse-proxy ./build/blobfuse-proxy/rpmbuild/SOURCES/blobfuse-proxy
-	rpmbuild --target noarch -bb build/blobfuse-proxy/rpmbuild/SPECS/utils.spec
+	mkdir -p ~/rpmbuild/SOURCES
+	cp _output/blobfuse-proxy ~/rpmbuild/SOURCES/blobfuse-proxy
+	rpmbuild -bb build/blobfuse-proxy/rpmbuild/SPECS/utils.spec
+	mv ~/rpmbuild/RPMS/x86_64/blobfuse-proxy*.rpm ./_output/blobfuse-proxy.rpm
+	rm -rf ~/rpmbuild
 
 .PHONY: blobfuse-proxy
 blobfuse-proxy:

@@ -13,13 +13,14 @@ Group: System
 Packager: David Both
 Requires: bash
 BuildRoot: ~/rpmbuild/
+Source0: blobfuse-proxy
 
 %description
 Utility scripts for creating RPM package for blobfuse-proxy
 
 %install
 mkdir -p %{buildroot}/usr/bin/
-cp blobfuse-proxy %{buildroot}/usr/bin/blobfuse-proxy
+cp %{SOURCE0} %{buildroot}/usr/bin/blobfuse-proxy
 
 %files
 /usr/bin/blobfuse-proxy
