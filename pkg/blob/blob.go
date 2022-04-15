@@ -52,6 +52,7 @@ const (
 	serverNameField              = "server"
 	storageEndpointSuffixField   = "storageendpointsuffix"
 	tagsField                    = "tags"
+	matchTagsField               = "matchtags"
 	protocolField                = "protocol"
 	accountNameField             = "accountname"
 	accountKeyField              = "accountkey"
