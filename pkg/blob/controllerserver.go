@@ -70,6 +70,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
 	var isHnsEnabled *bool
 	var vnetResourceGroup, vnetName, subnetName string
+	var matchTags bool
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := to.BoolPtr(false)
 
@@ -100,6 +101,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			protocol = v
 		case tagsField:
 			customTags = v
+		case matchTagsField:
+			matchTags = strings.EqualFold(v, trueValue)
 		case secretNameField:
 			secretName = v
 		case secretNamespaceField:
@@ -142,6 +145,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		default:
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", k))
 		}
+	}
+
+	if matchTags && account != "" {
+		return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("matchTags must set as false when storageAccount(%s) is provided", account))
 	}
 
 	if subsID != "" && subsID != d.cloud.SubscriptionID {
@@ -225,6 +232,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		EnableHTTPSTrafficOnly:    enableHTTPSTrafficOnly,
 		VirtualNetworkResourceIDs: vnetResourceIDs,
 		Tags:                      tags,
+		MatchTags:                 matchTags,
 		IsHnsEnabled:              isHnsEnabled,
 		EnableNfsV3:               enableNfsV3,
 		AllowBlobPublicAccess:     allowBlobPublicAccess,

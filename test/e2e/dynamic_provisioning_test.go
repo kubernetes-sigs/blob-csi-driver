@@ -426,9 +426,12 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		test := testsuites.DynamicallyProvisionedResizeVolumeTest{
-			CSIDriver:              testDriver,
-			Pods:                   pods,
-			StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
+			CSIDriver: testDriver,
+			Pods:      pods,
+			StorageClassParameters: map[string]string{
+				"skuName":   "Standard_LRS",
+				"matchTags": "true",
+			},
 		}
 		test.Run(cs, ns)
 	})

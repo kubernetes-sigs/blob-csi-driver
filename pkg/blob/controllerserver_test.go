@@ -172,6 +172,30 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "storageAccount and matchTags conflict",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				mp := map[string]string{
+					storageAccountField: "abc",
+					matchTagsField:      "true",
+				}
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				expectedErr := status.Errorf(codes.InvalidArgument, "matchTags must set as false when storageAccount(abc) is provided")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
 			name: "containerName and containerNamePrefix could not be specified together",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
