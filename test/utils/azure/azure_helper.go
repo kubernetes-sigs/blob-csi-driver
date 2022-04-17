@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -33,6 +34,7 @@ type Client struct {
 	environment    azure.Environment
 	subscriptionID string
 	groupsClient   resources.GroupsClient
+	accountsClient storage.AccountsClient
 }
 
 func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string) (*Client, error) {
@@ -100,6 +102,14 @@ func (az *Client) DeleteResourceGroup(ctx context.Context, groupName string) err
 	return nil
 }
 
+func (az *Client) GetAccountNumByResourceGroup(ctx context.Context, groupName string) (count int, err error) {
+	result, err := az.accountsClient.ListByResourceGroup(ctx, groupName)
+	if err != nil {
+		return -1, err
+	}
+	return len(result.Values()), nil
+}
+
 func getOAuthConfig(env azure.Environment, subscriptionID, tenantID string) (*adal.OAuthConfig, error) {
 	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
@@ -114,10 +124,12 @@ func getClient(env azure.Environment, subscriptionID, tenantID string, armSpt *a
 		environment:    env,
 		subscriptionID: subscriptionID,
 		groupsClient:   resources.NewGroupsClientWithBaseURI(env.ResourceManagerEndpoint, subscriptionID),
+		accountsClient: storage.NewAccountsClient(subscriptionID),
 	}
 
 	authorizer := autorest.NewBearerAuthorizer(armSpt)
 	c.groupsClient.Authorizer = authorizer
+	c.accountsClient.Authorizer = authorizer
 
 	return c
 }
