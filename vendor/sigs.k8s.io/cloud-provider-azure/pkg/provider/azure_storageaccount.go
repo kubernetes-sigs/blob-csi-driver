@@ -36,7 +36,7 @@ import (
 // SkipMatchingTag skip account matching tag
 const SkipMatchingTag = "skip-matching"
 const LocationGlobal = "global"
-const GroupIDFile = "file"
+const GroupIDFile = "blob"
 const PrivateDNSZoneName = "privatelink.file.core.windows.net"
 
 // AccountOptions contains the fields which are used to create storage account.
