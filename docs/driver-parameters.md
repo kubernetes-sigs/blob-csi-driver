@@ -27,6 +27,7 @@ secretName | specify secret name to store account key | | No |
 secretNamespace | specify the namespace of secret to store account key | `default`,`kube-system`, etc | No | pvc namespace
 isHnsEnabled | enable `Hierarchical namespace` for Azure DataLake storage account | `true`,`false` | No | `false`
 --- | **Following parameters are only for NFS protocol** | --- | --- |
+networkEndpointType | specify network endpoint type for the storage account created by driver. If `privateEndpoint` is specified, a private endpoint will be created for the storage account. For other cases, a service endpoint will be created by default. | "",`privateEndpoint` | No | ``
 mountPermissions | mounted folder permissions | `0777` | No |
 
  - `fsGroup` securityContext setting

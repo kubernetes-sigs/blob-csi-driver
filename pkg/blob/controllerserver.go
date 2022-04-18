@@ -69,7 +69,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
 	var isHnsEnabled *bool
-	var vnetResourceGroup, vnetName, subnetName string
+	var vnetResourceGroup, vnetName, subnetName, networkEndpointType, storageEndpointSuffix string
 	var matchTags bool
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := to.BoolPtr(false)
@@ -128,13 +128,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case serverNameField:
 			// no op, only used in NodeStageVolume
 		case storageEndpointSuffixField:
-			// no op, only used in NodeStageVolume
+			storageEndpointSuffix = v
 		case vnetResourceGroupField:
 			vnetResourceGroup = v
 		case vnetNameField:
 			vnetName = v
 		case subnetNameField:
 			subnetName = v
+		case networkEndpointTypeField:
+			networkEndpointType = v
 		case mountPermissionsField:
 			// only do validations here, used in NodeStageVolume, NodePublishVolume
 			if v != "" {
@@ -186,6 +188,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "containerNamePrefix(%s) can only contain lowercase letters, numbers, hyphens, and length should be less than 21", containerNamePrefix)
 	}
 
+	createPrivateEndpoint := false
+	if strings.EqualFold(networkEndpointType, privateEndpoint) {
+		createPrivateEndpoint = true
+	}
+
 	enableHTTPSTrafficOnly := true
 	accountKind := string(storage.KindStorageV2)
 	var (
@@ -196,15 +203,17 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		enableHTTPSTrafficOnly = false
 		isHnsEnabled = to.BoolPtr(true)
 		enableNfsV3 = to.BoolPtr(true)
-		// set VirtualNetworkResourceIDs for storage account firewall setting
-		vnetResourceID := d.getSubnetResourceID()
-		klog.V(2).Infof("set vnetResourceID(%s) for NFS protocol", vnetResourceID)
-		vnetResourceIDs = []string{vnetResourceID}
-		if err := d.updateSubnetServiceEndpoints(ctx, vnetResourceGroup, vnetName, subnetName); err != nil {
-			return nil, status.Errorf(codes.Internal, "update service endpoints failed with error: %v", err)
-		}
 		// NFS protocol does not need account key
 		storeAccountKey = false
+		if !createPrivateEndpoint {
+			// set VirtualNetworkResourceIDs for storage account firewall setting
+			vnetResourceID := d.getSubnetResourceID()
+			klog.V(2).Infof("set vnetResourceID(%s) for NFS protocol", vnetResourceID)
+			vnetResourceIDs = []string{vnetResourceID}
+			if err := d.updateSubnetServiceEndpoints(ctx, vnetResourceGroup, vnetName, subnetName); err != nil {
+				return nil, status.Errorf(codes.Internal, "update service endpoints failed with error: %v", err)
+			}
+		}
 	}
 
 	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
@@ -239,6 +248,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		VNetResourceGroup:         vnetResourceGroup,
 		VNetName:                  vnetName,
 		SubnetName:                subnetName,
+		CreatePrivateEndpoint:     createPrivateEndpoint,
 	}
 
 	var accountKey string
@@ -247,7 +257,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if v, ok := d.volMap.Load(volName); ok {
 			accountName = v.(string)
 		} else {
-			lockKey := fmt.Sprintf("%s%s%s%s%s", storageAccountType, accountKind, resourceGroup, location, protocol)
+			lockKey := fmt.Sprintf("%s%s%s%s%s%v", storageAccountType, accountKind, resourceGroup, location, protocol, createPrivateEndpoint)
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
@@ -291,6 +301,18 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 		validContainerName = getValidContainerName(validContainerName, protocol)
 		parameters[containerNameField] = validContainerName
+	}
+
+	if strings.TrimSpace(storageEndpointSuffix) == "" {
+		if d.cloud.Environment.StorageEndpointSuffix != "" {
+			storageEndpointSuffix = d.cloud.Environment.StorageEndpointSuffix
+		} else {
+			storageEndpointSuffix = defaultStorageEndPointSuffix
+		}
+	}
+
+	if createPrivateEndpoint {
+		parameters[serverNameField] = fmt.Sprintf("%s.privatelink.blob.%s", accountName, storageEndpointSuffix)
 	}
 
 	var volumeID string
