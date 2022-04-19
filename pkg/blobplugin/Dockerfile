@@ -21,7 +21,7 @@ COPY ${binary} /blobplugin
 RUN apt update && apt-mark unhold libcap2
 RUN clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase
 # install updated packages to fix CVE issues
-RUN clean-install libgmp10 bsdutils libssl1.1 openssl libc-bin libsystemd0 zlib1g
+RUN clean-install libgmp10 bsdutils libssl1.1 openssl libc-bin libsystemd0 zlib1g gzip liblzma5
 RUN mkdir /blobfuse-proxy/
 COPY ./_output/blobfuse-proxy.deb /blobfuse-proxy/
 ARG ARCH=amd64
