@@ -109,6 +109,8 @@ const (
 	pvcNameKey      = "csi.storage.k8s.io/pvc/name"
 	pvcNamespaceKey = "csi.storage.k8s.io/pvc/namespace"
 	pvNameKey       = "csi.storage.k8s.io/pv/name"
+
+	VolumeID = "volumeid"
 )
 
 var (
