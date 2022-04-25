@@ -47,7 +47,7 @@ const (
 	DefaultDriverName            = "blob.csi.azure.com"
 	blobCSIDriverName            = "blob_csi_driver"
 	separator                    = "#"
-	volumeIDTemplate             = "%s#%s#%s"
+	volumeIDTemplate             = "%s#%s#%s#%s#%s"
 	secretNameTemplate           = "azure-storage-account-%s-secret"
 	serverNameField              = "server"
 	storageEndpointSuffixField   = "storageendpointsuffix"
@@ -256,14 +256,20 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 }
 
 // GetContainerInfo get container info according to volume id, e.g.
-// input: "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41#uuid"
-// output: rg, f5713de20cde511e8ba4900, pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41
-func GetContainerInfo(id string) (string, string, string, error) {
+// input: "rg#f5713de20cde511e8ba4900#containerName#uuid"
+// output: rg, f5713de20cde511e8ba4900, containerName
+// input: "rg#f5713de20cde511e8ba4900#containerName#uuid#namespace"
+// output: rg, f5713de20cde511e8ba4900, containerName, namespace
+func GetContainerInfo(id string) (string, string, string, string, error) {
 	segments := strings.Split(id, separator)
 	if len(segments) < 3 {
-		return "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
+		return "", "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
 	}
-	return segments[0], segments[1], segments[2], nil
+	var secretNamespace string
+	if len(segments) > 4 {
+		secretNamespace = segments[4]
+	}
+	return segments[0], segments[1], segments[2], secretNamespace, nil
 }
 
 // A container name must be a valid DNS name, conforming to the following naming rules:
@@ -306,7 +312,7 @@ func isSASToken(key string) bool {
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
 func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, string, string, []string, error) {
-	rgName, accountName, containerName, err := GetContainerInfo(volumeID)
+	rgName, accountName, containerName, secretNamespace, err := GetContainerInfo(volumeID)
 	if err != nil {
 		// ignore volumeID parsing error
 		klog.V(2).Info("parsing volumeID(%s) return with error: %v", volumeID, err)
@@ -318,7 +324,6 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		accountKey              string
 		accountSasToken         string
 		secretName              string
-		secretNamespace         string
 		pvcNamespace            string
 		keyVaultURL             string
 		keyVaultSecretName      string
@@ -514,7 +519,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 	} else {
 		if len(secrets) == 0 {
 			var rgName string
-			rgName, accountName, containerName, err = GetContainerInfo(volumeID)
+			rgName, accountName, containerName, _, err = GetContainerInfo(volumeID)
 			if err != nil {
 				return "", "", "", "", err
 			}

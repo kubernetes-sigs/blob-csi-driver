@@ -322,12 +322,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	volumeID = fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, validContainerName)
+	var uuid string
 	if containerName != "" {
 		// add volume name as suffix to differentiate volumeID since "containerName" is specified
 		// not necessary for dynamic container name creation since volumeID already contains volume name
-		volumeID = volumeID + "#" + volName
+		uuid = volName
 	}
+	volumeID = fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, validContainerName, uuid, secretNamespace)
 	klog.V(2).Infof("create container %s on storage account %s successfully", validContainerName, accountName)
 
 	isOperationSucceeded = true
@@ -358,7 +359,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 	defer d.volumeLocks.Release(volumeID)
 
-	if _, _, _, err := GetContainerInfo(volumeID); err != nil {
+	if _, _, _, _, err := GetContainerInfo(volumeID); err != nil {
 		// According to CSI Driver Sanity Tester, should succeed when an invalid volume id is used
 		klog.Errorf("GetContainerInfo(%s) in DeleteVolume failed with error: %v", volumeID, err)
 		return &csi.DeleteVolumeResponse{}, nil
@@ -427,7 +428,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	resourceGroupName, accountName, containerName, err := GetContainerInfo(volumeID)
+	resourceGroupName, accountName, containerName, _, err := GetContainerInfo(volumeID)
 	if err != nil {
 		klog.Errorf("GetContainerInfo(%s) in ValidateVolumeCapabilities failed with error: %v", volumeID, err)
 		return nil, status.Error(codes.NotFound, err.Error())
