@@ -41,6 +41,13 @@ GOBIN ?= $(GOPATH)/bin
 DOCKER_CLI_EXPERIMENTAL = enabled
 export GOPATH GOBIN GO111MODULE DOCKER_CLI_EXPERIMENTAL
 
+# allow dpkg-deb to be run via docker
+ifneq ("$(shell which dpkg-deb)", "")
+DPKG_DEB := $(shell which dpkg-deb)
+else
+DPKG_DEB := docker run --rm -v $${PWD}:/src -w /src ubuntu dpkg-deb
+endif
+
 # The current context of image building
 # The architecture of the image
 ARCH ?= amd64
@@ -173,4 +180,4 @@ delete-metrics-svc:
 blobfuse-proxy:
 	mkdir -p ./pkg/blobfuse-proxy/debpackage/usr/bin/ ./_output
 	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o ./pkg/blobfuse-proxy/debpackage/usr/bin/blobfuse-proxy ./pkg/blobfuse-proxy
-	dpkg-deb --build pkg/blobfuse-proxy/debpackage ./_output/blobfuse-proxy.deb
+	$(DPKG_DEB) --build pkg/blobfuse-proxy/debpackage ./_output/blobfuse-proxy.deb
