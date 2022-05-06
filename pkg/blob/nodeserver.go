@@ -220,6 +220,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	var serverAddress, storageEndpointSuffix, protocol, ephemeralVolMountOptions string
 	var ephemeralVol, isHnsEnabled bool
 	mountPermissions := d.mountPermissions
+	performChmodOp := (mountPermissions > 0)
 	for k, v := range attrib {
 		switch strings.ToLower(k) {
 		case serverNameField:
@@ -237,8 +238,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		case mountPermissionsField:
 			if v != "" {
 				var err error
-				if mountPermissions, err = strconv.ParseUint(v, 8, 32); err != nil {
+				var perm uint64
+				if perm, err = strconv.ParseUint(v, 8, 32); err != nil {
 					return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s", v))
+				}
+				if perm == 0 {
+					performChmodOp = false
+				} else {
+					mountPermissions = perm
 				}
 			}
 		}
@@ -283,12 +290,17 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with %v", volumeID, source, targetPath, err))
 		}
 
-		// set permissions for NFSv3 root folder
-		if err := os.Chmod(targetPath, os.FileMode(mountPermissions)); err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("Chmod(%s) failed with %v", targetPath, err))
+		if performChmodOp {
+			klog.V(2).Infof("volumeID(%v): chmod targetPath(%s) with permissions(0%o)", volumeID, targetPath, mountPermissions)
+			// set permissions for NFSv3 root folder
+			if err := os.Chmod(targetPath, os.FileMode(mountPermissions)); err != nil {
+				return nil, status.Error(codes.Internal, fmt.Sprintf("Chmod(%s) failed with %v", targetPath, err))
+			}
+		} else {
+			klog.V(2).Infof("skip chmod on targetPath(%s) since mountPermissions is set as 0", targetPath)
 		}
-		klog.V(2).Infof("volume(%s) mount %q on %q with 0%o succeeded", volumeID, source, targetPath, mountPermissions)
 
+		klog.V(2).Infof("volume(%s) mount %s on %s succeeded", volumeID, source, targetPath)
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
