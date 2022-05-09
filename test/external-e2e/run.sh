@@ -26,7 +26,7 @@ install_ginkgo () {
 
 setup_e2e_binaries() {
     # download k8s external e2e binary
-    curl -sL https://storage.googleapis.com/kubernetes-release/release/v1.23.0/kubernetes-test-linux-amd64.tar.gz --output e2e-tests.tar.gz
+    curl -sL https://storage.googleapis.com/kubernetes-release/release/v1.24.0/kubernetes-test-linux-amd64.tar.gz --output e2e-tests.tar.gz
     tar -xvf e2e-tests.tar.gz && rm e2e-tests.tar.gz
 
     export EXTRA_HELM_OPTIONS="--set driver.name=$DRIVER.csi.azure.com --set controller.name=csi-$DRIVER-controller --set node.name=csi-$DRIVER-node --set driver.azureGoSDKLogLevel=INFO"
@@ -61,7 +61,7 @@ if [ ! -z ${EXTERNAL_E2E_TEST_BLOBFUSE} ]; then
     # achieve close-to-open cache consistency like in NFSv3
     sed -i 's/file-cache-timeout-in-seconds=120/file-cache-timeout-in-seconds=0/g' /tmp/csi/storageclass.yaml
     ginkgo -p --progress --v -focus="External.Storage.*$DRIVER.csi.azure.com" \
-        -skip='\[Disruptive\]|allow exec of files on the volume|unmount after the subpath directory is deleted|should concurrently access the single volume from pods on different node' kubernetes/test/bin/e2e.test  -- \
+        -skip='\[Disruptive\]|allow exec of files on the volume|unmount after the subpath directory is deleted|should concurrently access the single volume from pods on different node|pod created with an initial fsgroup, volume contents ownership changed via chgrp in first pod, new pod with same fsgroup skips ownership changes to the volume contents|should provision storage with any volume data source|should mount multiple PV pointing to the same storage on the same node' kubernetes/test/bin/e2e.test  -- \
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-blobfuse.yaml \
         --kubeconfig=$KUBECONFIG
 fi
@@ -70,7 +70,7 @@ if [ ! -z ${EXTERNAL_E2E_TEST_NFS} ]; then
     echo "begin to run NFSv3 tests ...."
     cp deploy/example/storageclass-blob-nfs.yaml /tmp/csi/storageclass.yaml
     ginkgo -p --progress --v -focus="External.Storage.*$DRIVER.csi.azure.com" \
-        -skip='\[Disruptive\]|pod created with an initial fsgroup, volume contents ownership changed in first pod, new pod with same fsgroup skips ownership changes to the volume contents' kubernetes/test/bin/e2e.test  -- \
+        -skip='\[Disruptive\]|should concurrently access the single volume from pods on different node|pod created with an initial fsgroup, volume contents ownership changed via chgrp in first pod, new pod with same fsgroup skips ownership changes to the volume contents|should provision storage with any volume data source|should mount multiple PV pointing to the same storage on the same node|should access to two volumes with the same volume mode and retain data across pod recreation on different node' kubernetes/test/bin/e2e.test  -- \
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-nfs.yaml \
         --kubeconfig=$KUBECONFIG
 fi
