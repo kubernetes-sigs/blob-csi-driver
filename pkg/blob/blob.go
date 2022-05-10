@@ -215,6 +215,7 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 	if err != nil {
 		klog.Fatalf("failed to get Azure Cloud Provider, error: %v", err)
 	}
+	klog.V(2).Infof("cloud: %s, location: %s, rg: %s, VnetName: %s, VnetResourceGroup: %s, SubnetName: %s", d.cloud.Cloud, d.cloud.Location, d.cloud.ResourceGroup, d.cloud.VnetName, d.cloud.VnetResourceGroup, d.cloud.SubnetName)
 
 	d.mounter = &mount.SafeFormatAndMount{
 		Interface: mount.New(""),
