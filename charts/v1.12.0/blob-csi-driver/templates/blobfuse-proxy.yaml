@@ -1,9 +1,11 @@
----
+{{- if .Values.node.enableBlobfuseProxy -}}
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: csi-blobfuse-proxy
-  namespace: kube-system
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "blob.labels" . | nindent 4 }}
 spec:
   selector:
     matchLabels:
@@ -24,7 +26,11 @@ spec:
                       - virtual-kubelet
       initContainers:
         - name: prepare-binaries
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v1.12.0
+{{- if hasPrefix "/" .Values.image.blob.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- else }}
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- end }}
           command: ['sh', '-c', "cp /blobfuse-proxy/*.deb /tmp/"]
           volumeMounts:
             - mountPath: /tmp
@@ -76,22 +82,26 @@ spec:
               sleep 3s
               # tail blobfuse proxy logs
               journalctl -u blobfuse-proxy -f
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v1.12.0
+{{- if hasPrefix "/" .Values.image.blob.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- else }}
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- end }}
           imagePullPolicy: IfNotPresent
           name: sysctl-install-blobfuse-proxy
           env:
             - name: DEBIAN_FRONTEND
               value: "noninteractive"
             - name: INSTALL_BLOBFUSE
-              value: "true"
+              value: "{{ .Values.node.blobfuseProxy.installBlobfuse }}"
             - name: BLOBFUSE_VERSION
-              value: 1.4.3
+              value: "{{ .Values.node.blobfuseProxy.blobfuseVersion }}"
             - name: SET_MAX_OPEN_FILE_NUM
-              value: "true"
+              value: "{{ .Values.node.blobfuseProxy.setMaxOpenFileNum }}"
             - name: MAX_FILE_NUM
-              value: "9000000"
+              value: "{{ .Values.node.blobfuseProxy.maxOpenFileNum }}"
             - name: DISABLE_UPDATEDB
-              value: "true"
+              value: "{{ .Values.node.blobfuseProxy.disableUpdateDB }}"
           resources:
             limits:
               memory: 200Mi
@@ -113,3 +123,4 @@ spec:
             path: /tmp
             type: DirectoryOrCreate
           name: tmp-dir
+{{ end }}
