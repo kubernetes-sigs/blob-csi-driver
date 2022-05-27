@@ -116,6 +116,7 @@ func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent
 		}
 	} else {
 		config.UserAgent = userAgent
+		config.CloudProviderBackoff = true
 		if err = az.InitializeCloudFromConfig(config, fromSecret, false); err != nil {
 			klog.Warningf("InitializeCloudFromConfig failed with error: %v", err)
 		}

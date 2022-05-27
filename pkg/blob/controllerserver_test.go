@@ -422,6 +422,10 @@ func TestDeleteVolume(t *testing.T) {
 				}
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "#test#test",
+					Secrets: map[string]string{
+						defaultSecretAccountName: "accountname",
+						defaultSecretAccountKey:  "b",
+					},
 				}
 				d.cloud = &azure.Cloud{}
 				d.cloud.ResourceGroup = "unit"
@@ -434,9 +438,9 @@ func TestDeleteVolume(t *testing.T) {
 				}
 				accountListKeysResult := storage.AccountListKeysResult{}
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
-				expectedErr := fmt.Errorf("no key for storage account(test) under resource group(unit), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				expectedErr := fmt.Errorf("base storage service url required")
 				_, err := d.DeleteVolume(context.Background(), req)
-				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
+				if !strings.EqualFold(err.Error(), expectedErr.Error()) && !strings.Contains(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
 			},
@@ -450,6 +454,10 @@ func TestDeleteVolume(t *testing.T) {
 				}
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "unit#test#test",
+					Secrets: map[string]string{
+						defaultSecretAccountName: "accountname",
+						defaultSecretAccountKey:  "b",
+					},
 				}
 				d.cloud = &azure.Cloud{}
 				ctrl := gomock.NewController(t)
@@ -468,7 +476,7 @@ func TestDeleteVolume(t *testing.T) {
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 				expectedErr := fmt.Errorf("azure: base storage service url required")
 				_, err := d.DeleteVolume(context.Background(), req)
-				if !reflect.DeepEqual(err, expectedErr) {
+				if !reflect.DeepEqual(err, expectedErr) && !strings.Contains(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
 			},
@@ -565,35 +573,6 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			},
 		},
 		{
-			name: "ListKeys error",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				d.Cap = []*csi.ControllerServiceCapability{
-					controllerServiceCapability,
-				}
-				req := &csi.ValidateVolumeCapabilitiesRequest{
-					VolumeId:           "#test#test",
-					VolumeCapabilities: stdVolumeCapabilities,
-				}
-				d.cloud = &azure.Cloud{}
-				d.cloud.ResourceGroup = "unit"
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
-				rerr := &retry.Error{
-					RawError: fmt.Errorf("test"),
-				}
-				accountListKeysResult := storage.AccountListKeysResult{}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
-				expectedErr := fmt.Errorf("no key for storage account(test) under resource group(unit), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
-				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
-		{
 			name: "base storage service url empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
@@ -603,6 +582,10 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				req := &csi.ValidateVolumeCapabilitiesRequest{
 					VolumeId:           "unit#test#test",
 					VolumeCapabilities: stdVolumeCapabilities,
+					Secrets: map[string]string{
+						defaultSecretAccountName: "accountname",
+						defaultSecretAccountKey:  "b",
+					},
 				}
 				d.cloud = &azure.Cloud{}
 				ctrl := gomock.NewController(t)
@@ -621,7 +604,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 				expectedErr := fmt.Errorf("azure: base storage service url required")
 				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				if !reflect.DeepEqual(err, expectedErr) {
+				if !reflect.DeepEqual(err, expectedErr) && !strings.Contains(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
 			},
@@ -751,5 +734,71 @@ func TestControllerExpandVolume(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestCreateBlobContainer(t *testing.T) {
+	tests := []struct {
+		desc          string
+		rg            string
+		accountName   string
+		containerName string
+		secrets       map[string]string
+		expectedErr   error
+	}{
+		{
+			expectedErr: fmt.Errorf("containerName is empty"),
+		},
+		{
+			containerName: "containerName",
+			secrets: map[string]string{
+				defaultSecretAccountName: "accountname",
+				defaultSecretAccountKey:  "key",
+			},
+			expectedErr: fmt.Errorf("azure: base storage service url required"),
+		},
+	}
+
+	d := NewFakeDriver()
+	d.cloud = &azure.Cloud{}
+
+	for _, test := range tests {
+		err := d.CreateBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
+		if !reflect.DeepEqual(err, test.expectedErr) {
+			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
+		}
+	}
+}
+
+func TestDeleteBlobContainer(t *testing.T) {
+	tests := []struct {
+		desc          string
+		rg            string
+		accountName   string
+		containerName string
+		secrets       map[string]string
+		expectedErr   error
+	}{
+		{
+			expectedErr: fmt.Errorf("containerName is empty"),
+		},
+		{
+			containerName: "containerName",
+			secrets: map[string]string{
+				defaultSecretAccountName: "accountname",
+				defaultSecretAccountKey:  "key",
+			},
+			expectedErr: fmt.Errorf("azure: base storage service url required"),
+		},
+	}
+
+	d := NewFakeDriver()
+	d.cloud = &azure.Cloud{}
+
+	for _, test := range tests {
+		err := d.DeleteBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
+		if !reflect.DeepEqual(err, test.expectedErr) {
+			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
+		}
 	}
 }
