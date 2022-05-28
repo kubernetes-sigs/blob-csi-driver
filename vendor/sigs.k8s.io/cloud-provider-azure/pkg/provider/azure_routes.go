@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -182,6 +182,9 @@ func (d *delayedRouteUpdater) updateRoutes() {
 				}
 				break
 			}
+		}
+		if rt.operation == routeOperationDelete && !dirty {
+			klog.Warningf("updateRoutes: route to be deleted %s does not match any of the existing route", to.String(rt.route.Name))
 		}
 
 		// Add missing routes if the operation is add.
@@ -380,10 +383,6 @@ func (az *Cloud) CreateRoute(ctx context.Context, clusterName string, nameHint s
 		return err
 	}
 	if unmanaged {
-		if az.ipv6DualStackEnabled {
-			//TODO (khenidak) add support for unmanaged nodes when the feature reaches beta
-			return fmt.Errorf("unmanaged nodes are not supported in dual stack mode")
-		}
 		klog.V(2).Infof("CreateRoute: omitting unmanaged node %q", kubeRoute.TargetNode)
 		az.routeCIDRsLock.Lock()
 		defer az.routeCIDRsLock.Unlock()
