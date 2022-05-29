@@ -38,7 +38,7 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
         {{- if .Values.controller.runOnMaster}}
-        kubernetes.io/role: master
+        node-role.kubernetes.io/master: ""
         {{- end}}
 {{- with .Values.controller.nodeSelector }}
 {{ toYaml . | indent 8 }}

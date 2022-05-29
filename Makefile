@@ -89,6 +89,7 @@ e2e-bootstrap: install-helm
 	docker pull $(IMAGE_TAG) || make blob-container push
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
 		--set controller.replicas=1 \
+		--set controller.runOnMaster=true \
 		--set cloud=$(CLOUD) \
 		$(E2E_HELM_OPTIONS)
 
