@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-08-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
@@ -36,6 +36,8 @@ import (
 )
 
 var _ Interface = &Client{}
+
+const routeTablesResourceType = "Microsoft.Network/routeTables"
 
 // Client implements Route client Interface.
 type Client struct {
@@ -119,7 +121,7 @@ func (c *Client) createOrUpdateRoute(ctx context.Context, resourceGroupName stri
 	resourceID := armclient.GetChildResourceID(
 		c.subscriptionID,
 		resourceGroupName,
-		"Microsoft.Network/routeTables",
+		routeTablesResourceType,
 		routeTableName,
 		"routes",
 		routeName,
@@ -196,7 +198,7 @@ func (c *Client) deleteRoute(ctx context.Context, resourceGroupName string, rout
 	resourceID := armclient.GetChildResourceID(
 		c.subscriptionID,
 		resourceGroupName,
-		"Microsoft.Network/routeTables",
+		routeTablesResourceType,
 		routeTableName,
 		"routes",
 		routeName,

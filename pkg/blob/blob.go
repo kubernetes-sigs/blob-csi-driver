@@ -23,10 +23,11 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
-
+	azstorage "github.com/Azure/azure-sdk-for-go/storage"
+	az "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pborman/uuid"
+	"golang.org/x/net/context"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -88,17 +89,19 @@ const (
 	vnetNameField                = "vnetname"
 	subnetNameField              = "subnetname"
 	mountPermissionsField        = "mountpermissions"
+	useDataPlaneAPIField         = "usedataplaneapi"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3
 	containerNameMaxLength = 63
 
-	accountNotProvisioned = "StorageAccountIsNotProvisioned"
-	tooManyRequests       = "TooManyRequests"
-	clientThrottled       = "client throttled"
-	containerBeingDeleted = "ContainerBeingDeleted"
-	statusCodeNotFound    = "StatusCode=404"
-	httpCodeNotFound      = "HTTPStatusCode: 404"
+	accountNotProvisioned                   = "StorageAccountIsNotProvisioned"
+	tooManyRequests                         = "TooManyRequests"
+	clientThrottled                         = "client throttled"
+	containerBeingDeletedDataplaneAPIError  = "ContainerBeingDeleted"
+	containerBeingDeletedManagementAPIError = "container is being deleted"
+	statusCodeNotFound                      = "StatusCode=404"
+	httpCodeNotFound                        = "HTTPStatusCode: 404"
 
 	// containerMaxSize is the max size of the blob container. See https://docs.microsoft.com/en-us/azure/storage/blobs/scalability-targets#scale-targets-for-blob-storage
 	containerMaxSize = 100 * util.TiB
@@ -116,7 +119,7 @@ const (
 
 var (
 	supportedProtocolList = []string{fuse, nfs}
-	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, statusCodeNotFound, containerBeingDeleted, clientThrottled}
+	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, statusCodeNotFound, containerBeingDeletedDataplaneAPIError, containerBeingDeletedManagementAPIError, clientThrottled}
 )
 
 // DriverOptions defines driver parameters specified in driver deployment
@@ -166,6 +169,8 @@ type Driver struct {
 	subnetLockMap *util.LockMap
 	// a map storing all volumes created by this driver <volumeName, accountName>
 	volMap sync.Map
+	// a map storing all volumes using data plane API <volumeID, "">, <accountName, "">
+	dataPlaneAPIVolMap sync.Map
 	// a timed cache storing account search history (solve account list throttling issue)
 	accountSearchCache *azcache.TimedCache
 }
@@ -625,6 +630,23 @@ func getStorageAccount(secrets map[string]string) (string, string, error) {
 	return accountName, accountKey, nil
 }
 
+func getContainerReference(containerName string, secrets map[string]string, env az.Environment) (*azstorage.Container, error) {
+	accountName, accountKey, rerr := getStorageAccount(secrets)
+	if rerr != nil {
+		return nil, rerr
+	}
+	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, env)
+	if err != nil {
+		return nil, err
+	}
+	blobClient := client.GetBlobService()
+	container := blobClient.GetContainerReference(containerName)
+	if container == nil {
+		return nil, fmt.Errorf("ContainerReference of %s is nil", containerName)
+	}
+	return container, nil
+}
+
 func setAzureCredentials(kubeClient kubernetes.Interface, accountName, accountKey, secretNamespace string) (string, error) {
 	if kubeClient == nil {
 		klog.Warningf("could not create secret: kubeClient is nil")
@@ -710,6 +732,14 @@ func (d *Driver) getSubnetResourceID() string {
 	return fmt.Sprintf(subnetTemplate, subsID, rg, d.cloud.VnetName, d.cloud.SubnetName)
 }
 
+func (d *Driver) useDataPlaneAPI(volumeID, accountName string) bool {
+	_, useDataPlaneAPI := d.dataPlaneAPIVolMap.Load(volumeID)
+	if !useDataPlaneAPI {
+		_, useDataPlaneAPI = d.dataPlaneAPIVolMap.Load(accountName)
+	}
+	return useDataPlaneAPI
+}
+
 // appendDefaultMountOptions return mount options combined with mountOptions and defaultMountOptions
 func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName string) []string {
 	var defaultMountOptions = map[string]string{
@@ -765,4 +795,11 @@ func chmodIfPermissionMismatch(targetPath string, mode os.FileMode) error {
 		klog.V(2).Infof("skip chmod on targetPath(%s) since mode is already 0%o)", targetPath, info.Mode())
 	}
 	return nil
+}
+
+func createStorageAccountSecret(account, key string) map[string]string {
+	secret := make(map[string]string)
+	secret[defaultSecretAccountName] = account
+	secret[defaultSecretAccountKey] = key
+	return secret
 }

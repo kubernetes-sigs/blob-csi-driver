@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/cloud-provider-azure/pkg/consts"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-07-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-02-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-08-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	v1 "k8s.io/api/core/v1"
@@ -335,7 +335,7 @@ func (az *Cloud) serviceOwnsRule(service *v1.Service, rule string) bool {
 // This means the name of the config can be tracked by the service UID.
 // 2. The secondary services must have their loadBalancer IP set if they want to share the same config as the primary
 // service. Hence, it can be tracked by the loadBalancer IP.
-func (az *Cloud) serviceOwnsFrontendIP(fip network.FrontendIPConfiguration, service *v1.Service) (bool, bool, error) {
+func (az *Cloud) serviceOwnsFrontendIP(fip network.FrontendIPConfiguration, service *v1.Service, pips *[]network.PublicIPAddress) (bool, bool, error) {
 	var isPrimaryService bool
 	baseName := az.GetLoadBalancerName(context.TODO(), "", service)
 	if strings.HasPrefix(to.String(fip.Name), baseName) {
@@ -353,7 +353,7 @@ func (az *Cloud) serviceOwnsFrontendIP(fip network.FrontendIPConfiguration, serv
 	// for external secondary service the public IP address should be checked
 	if !requiresInternalLoadBalancer(service) {
 		pipResourceGroup := az.getPublicIPAddressResourceGroup(service)
-		pip, err := az.findMatchedPIPByLoadBalancerIP(service, loadBalancerIP, pipResourceGroup)
+		pip, err := az.findMatchedPIPByLoadBalancerIP(service, loadBalancerIP, pipResourceGroup, pips)
 		if err != nil {
 			klog.Warningf("serviceOwnsFrontendIP: unexpected error when finding match public IP of the service %s with loadBalancerLP %s: %v", service.Name, loadBalancerIP, err)
 			return false, isPrimaryService, nil
@@ -653,7 +653,7 @@ func (as *availabilitySet) GetIPByNodeName(name string) (string, string, error) 
 		if err != nil {
 			return "", "", fmt.Errorf("failed to publicIP name for node %q with pipID %q", name, pipID)
 		}
-		pip, existsPip, err := as.getPublicIPAddress(as.ResourceGroup, pipName)
+		pip, existsPip, err := as.getPublicIPAddress(as.ResourceGroup, pipName, azcache.CacheReadTypeDefault)
 		if err != nil {
 			return "", "", err
 		}

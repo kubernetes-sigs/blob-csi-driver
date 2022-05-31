@@ -943,3 +943,10 @@ func getWorkDirPath(dir string) (string, error) {
 	}
 	return fmt.Sprintf("%s%c%s", path, os.PathSeparator, dir), nil
 }
+
+func TestCreateStorageAccountSecret(t *testing.T) {
+	result := createStorageAccountSecret("TestAccountName", "TestAccountKey")
+	if result[defaultSecretAccountName] != "TestAccountName" || result[defaultSecretAccountKey] != "TestAccountKey" {
+		t.Errorf("Expected account name(%s), Actual account name(%s); Expected account key(%s), Actual account key(%s)", "TestAccountName", result[defaultSecretAccountName], "TestAccountKey", result[defaultSecretAccountKey])
+	}
+}

@@ -70,7 +70,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
 	var isHnsEnabled *bool
 	var vnetResourceGroup, vnetName, subnetName string
-	var matchTags bool
+	var matchTags, useDataPlaneAPI bool
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := to.BoolPtr(false)
 
@@ -142,6 +142,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 					return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s in storage class", v))
 				}
 			}
+		case useDataPlaneAPIField:
+			useDataPlaneAPI = strings.EqualFold(v, trueValue)
 		default:
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", k))
 		}
@@ -243,7 +245,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	var accountKey string
 	accountName := account
-	if len(req.GetSecrets()) == 0 && accountName == "" {
+	secrets := req.GetSecrets()
+	if len(secrets) == 0 && accountName == "" {
 		if v, ok := d.volMap.Load(volName); ok {
 			accountName = v.(string)
 		} else {
@@ -275,12 +278,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			}
 		}
 	}
-	accountOptions.Name = accountName
 
-	if accountKey == "" {
-		if accountName, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, req.GetSecrets(), secretName, secretNamespace); err != nil {
-			return nil, fmt.Errorf("failed to GetStorageAccesskey on account(%s) rg(%s), error: %w", accountOptions.Name, accountOptions.ResourceGroup, err)
+	accountOptions.Name = accountName
+	if len(secrets) == 0 && useDataPlaneAPI {
+		if accountKey == "" {
+			if accountName, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, secrets, secretName, secretNamespace); err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
+			}
 		}
+		secrets = createStorageAccountSecret(accountName, accountKey)
 	}
 
 	validContainerName := containerName
@@ -301,18 +307,17 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}()
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
-	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
-	if err != nil {
-		return nil, err
-	}
-
-	blobClient := client.GetBlobService()
-	container := blobClient.GetContainerReference(validContainerName)
-	if _, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate}); err != nil {
-		return nil, fmt.Errorf("failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %w", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
+	if err := d.CreateBlobContainer(ctx, resourceGroup, accountName, validContainerName, secrets); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
 	}
 
 	if storeAccountKey && len(req.GetSecrets()) == 0 {
+		if accountKey == "" {
+			if accountName, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, secrets, secretName, secretNamespace); err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
+			}
+		}
+
 		secretName, err := setAzureCredentials(d.cloud.KubeClient, accountName, accountKey, secretNamespace)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to store storage account key: %v", err)
@@ -330,6 +335,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	volumeID = fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, validContainerName, uuid, secretNamespace)
 	klog.V(2).Infof("create container %s on storage account %s successfully", validContainerName, accountName)
+
+	if useDataPlaneAPI {
+		d.dataPlaneAPIVolMap.Store(volumeID, "")
+		d.dataPlaneAPIVolMap.Store(accountName, "")
+	}
 
 	isOperationSucceeded = true
 	// reset secretNamespace field in VolumeContext
@@ -359,27 +369,22 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 	defer d.volumeLocks.Release(volumeID)
 
-	if _, _, _, _, err := GetContainerInfo(volumeID); err != nil {
+	resourceGroupName, accountName, containerName, _, err := GetContainerInfo(volumeID)
+	if err != nil {
 		// According to CSI Driver Sanity Tester, should succeed when an invalid volume id is used
 		klog.Errorf("GetContainerInfo(%s) in DeleteVolume failed with error: %v", volumeID, err)
 		return &csi.DeleteVolumeResponse{}, nil
 	}
 
-	resourceGroupName, accountName, accountKey, containerName, _, err := d.GetAuthEnv(ctx, volumeID, "", nil, req.GetSecrets())
-	if err != nil {
-		return nil, err
-	}
-
-	if accountName == "" {
-		return nil, status.Error(codes.InvalidArgument, "accountName is empty")
-	}
-
-	if accountKey == "" {
-		return nil, status.Error(codes.InvalidArgument, "accountKey is empty")
-	}
-
-	if resourceGroupName == "" {
-		resourceGroupName = d.cloud.ResourceGroup
+	secrets := req.GetSecrets()
+	if len(secrets) == 0 && d.useDataPlaneAPI(volumeID, accountName) {
+		_, accountName, accountKey, _, _, err := d.GetAuthEnv(ctx, volumeID, "", nil, secrets)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "GetAuthEnv(%s) failed with %v", volumeID, err)
+		}
+		if accountName != "" && accountKey != "" {
+			secrets = createStorageAccountSecret(accountName, accountKey)
+		}
 	}
 
 	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_delete_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
@@ -388,29 +393,12 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
 	}()
 
-	klog.V(2).Infof("deleting container(%s) rg(%s) account(%s) volumeID(%s)", containerName, resourceGroupName, accountName, volumeID)
-	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
-	if err != nil {
-		return nil, err
+	if resourceGroupName == "" {
+		resourceGroupName = d.cloud.ResourceGroup
 	}
-	blobClient := client.GetBlobService()
-	container := blobClient.GetContainerReference(containerName)
-	// todo: check what value to add into DeleteContainerOptions
-	err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
-		_, err := container.DeleteIfExists(nil)
-		if err != nil {
-			if strings.Contains(err.Error(), containerBeingDeleted) ||
-				strings.Contains(err.Error(), statusCodeNotFound) ||
-				strings.Contains(err.Error(), httpCodeNotFound) {
-				klog.Warningf("delete container(%s) on account(%s) failed with error(%v), return as success", containerName, accountName, err)
-				return true, nil
-			}
-			return false, fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", containerName, accountName, err)
-		}
-		return true, nil
-	})
-	if err != nil {
-		return nil, err
+	klog.V(2).Infof("deleting container(%s) rg(%s) account(%s) volumeID(%s)", containerName, resourceGroupName, accountName, volumeID)
+	if err := d.DeleteBlobContainer(ctx, resourceGroupName, accountName, containerName, secrets); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to delete container(%s) under rg(%s) account(%s) volumeID(%s), error: %v", containerName, resourceGroupName, accountName, volumeID, err)
 	}
 
 	isOperationSucceeded = true
@@ -434,37 +422,34 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		return nil, status.Error(codes.NotFound, err.Error())
 	}
 
-	if resourceGroupName == "" {
-		resourceGroupName = d.cloud.ResourceGroup
-	}
-
-	var accountKey string
-	if len(req.GetSecrets()) == 0 { // check whether account is provided by secret
-		accountKey, err = d.cloud.GetStorageAccesskey(ctx, "", accountName, resourceGroupName)
+	var exist bool
+	secrets := req.GetSecrets()
+	if len(secrets) > 0 {
+		container, err := getContainerReference(containerName, secrets, d.cloud.Environment)
 		if err != nil {
-			return nil, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, resourceGroupName, err)
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		exist, err = container.Exists()
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
 		}
 	} else {
-		accountName, accountKey, err = getStorageAccount(req.GetSecrets())
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to get storage account from secrets: %v", err)
+		if resourceGroupName == "" {
+			resourceGroupName = d.cloud.ResourceGroup
 		}
-	}
-
-	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, d.cloud.Environment)
-	if err != nil {
-		return nil, err
-	}
-	blobClient := client.GetBlobService()
-	container := blobClient.GetContainerReference(containerName)
-
-	exist, err := container.Exists()
-	if err != nil {
-		return nil, err
+		blobContainer, err := d.cloud.BlobClient.GetContainer(ctx, resourceGroupName, accountName, containerName)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+		if blobContainer.ContainerProperties == nil {
+			return nil, status.Errorf(codes.Internal, "ContainerProperties of volume(%s) is nil", volumeID)
+		}
+		exist = blobContainer.ContainerProperties.Deleted != nil && !*blobContainer.ContainerProperties.Deleted
 	}
 	if !exist {
-		return nil, status.Error(codes.NotFound, "the requested volume does not exist")
+		return nil, status.Errorf(codes.NotFound, "requested volume(%s) does not exist", volumeID)
 	}
+	klog.V(2).Infof("ValidateVolumeCapabilities on volume(%s) succeeded", volumeID)
 
 	// blob driver supports all AccessModes, no need to check capabilities here
 	return &csi.ValidateVolumeCapabilitiesResponse{
@@ -544,6 +529,68 @@ func (d *Driver) ControllerExpandVolume(ctx context.Context, req *csi.Controller
 	klog.V(2).Infof("ControllerExpandVolume(%s) successfully, currentQuota: %d Gi", req.VolumeId, requestGiB)
 
 	return &csi.ControllerExpandVolumeResponse{CapacityBytes: req.GetCapacityRange().GetRequiredBytes()}, nil
+}
+
+// CreateBlobContainer creates a blob container
+func (d *Driver) CreateBlobContainer(ctx context.Context, resourceGroupName, accountName, containerName string, secrets map[string]string) error {
+	if containerName == "" {
+		return fmt.Errorf("containerName is empty")
+	}
+	return wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+		var err error
+		if len(secrets) > 0 {
+			container, getErr := getContainerReference(containerName, secrets, d.cloud.Environment)
+			if getErr != nil {
+				return true, getErr
+			}
+			_, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate})
+		} else {
+			blobContainer := storage.BlobContainer{
+				ContainerProperties: &storage.ContainerProperties{
+					PublicAccess: storage.PublicAccessNone,
+				},
+			}
+			err = d.cloud.BlobClient.CreateContainer(ctx, resourceGroupName, accountName, containerName, blobContainer)
+		}
+		if err != nil {
+			if strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) ||
+				strings.Contains(err.Error(), containerBeingDeletedManagementAPIError) {
+				klog.Warningf("CreateContainer(%s, %s, %s) failed with error(%v), retry", resourceGroupName, accountName, containerName, err)
+				return false, nil
+			}
+		}
+		return true, err
+	})
+}
+
+// DeleteBlobContainer deletes a blob container
+func (d *Driver) DeleteBlobContainer(ctx context.Context, resourceGroupName, accountName, containerName string, secrets map[string]string) error {
+	if containerName == "" {
+		return fmt.Errorf("containerName is empty")
+	}
+	return wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+		var err error
+		if len(secrets) > 0 {
+			container, getErr := getContainerReference(containerName, secrets, d.cloud.Environment)
+			if getErr != nil {
+				return true, getErr
+			}
+			_, err = container.DeleteIfExists(nil)
+		} else {
+			err = d.cloud.BlobClient.DeleteContainer(ctx, resourceGroupName, accountName, containerName)
+		}
+		if err != nil {
+			if strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) ||
+				strings.Contains(err.Error(), containerBeingDeletedManagementAPIError) ||
+				strings.Contains(err.Error(), statusCodeNotFound) ||
+				strings.Contains(err.Error(), httpCodeNotFound) {
+				klog.Warningf("delete container(%s) on account(%s) failed with error(%v), return as success", containerName, accountName, err)
+				return true, nil
+			}
+			return false, fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", containerName, accountName, err)
+		}
+		return true, err
+	})
 }
 
 // isValidVolumeCapabilities validates the given VolumeCapability array is valid

@@ -186,6 +186,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"skuName":               "Premium_LRS",
 				"isHnsEnabled":          "true",
 				"allowBlobPublicAccess": "false",
+				"useDataPlaneAPI":       "true",
 			},
 		}
 		test.Run(cs, ns)
