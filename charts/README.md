@@ -6,8 +6,7 @@
 ### Tips
  - configure with [blobfuse-proxy](../deploy/blobfuse-proxy) to make blobfuse mount still available after driver restart
    - specify `node.enableBlobfuseProxy=true` together with [blobfuse-proxy](../deploy/blobfuse-proxy)
- - make controller only run on master node: `--set controller.runOnMaster=true`
- - enable `fsGroupPolicy` on a k8s 1.20+ cluster: `--set feature.enableFSGroupPolicy=true`
+ - run controller on control plane node: `--set controller.runOnControlPlane=true`
  - set replica of controller as `1`: `--set controller.replicas=1`
  - specify different cloud config secret for the driver:
    - `--set controller.cloudConfigSecretName`
@@ -92,11 +91,12 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.cloudConfigSecretName`                    | cloud config secret name of controller driver               | `azure-cloud-provider`
 | `controller.cloudConfigSecretNamespace`               | cloud config secret namespace of controller driver          | `kube-system`
 | `controller.allowEmptyCloudConfig`                    | Whether allow running controller driver without cloud config          | `true`
-| `controller.replicas`                                 | the replicas of csi-blob-controller                   | `2`                                                              |
+| `controller.replicas`                                 | replica number of csi-blob-controller                   | `2`                                                              |
 | `controller.hostNetwork`                              | `hostNetwork` setting on controller driver(could be disabled if controller does not depend on MSI setting)                            | `true`                                                            | `true`, `false`
 | `controller.metricsPort`                              | metrics port of csi-blob-controller                   | `29634`                                                          |
 | `controller.livenessProbe.healthPort `                | health check port for liveness probe                   | `29632` |
-| `controller.runOnMaster`                              | run controller on master node                         | `true`                                                          |
+| `controller.runOnMaster`                              | run controller on master node                         | `false`                                                          |
+| `controller.runOnControlPlane`                        | run controller on control plane node                                                          |`false`                                                           |
 | `controller.logLevel`                                 | controller driver log level                           | `5`                                                            |
 | `controller.resources.csiProvisioner.limits.memory`   | csi-provisioner memory limits                         | 100Mi                                                          |
 | `controller.resources.csiProvisioner.requests.cpu`    | csi-provisioner cpu requests                   | 10m                                                            |

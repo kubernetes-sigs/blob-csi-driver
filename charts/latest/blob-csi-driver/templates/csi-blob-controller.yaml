@@ -40,6 +40,9 @@ spec:
         {{- if .Values.controller.runOnMaster}}
         node-role.kubernetes.io/master: ""
         {{- end}}
+        {{- if .Values.controller.runOnControlPlane}}
+        node-role.kubernetes.io/control-plane: ""
+        {{- end}}
 {{- with .Values.controller.nodeSelector }}
 {{ toYaml . | indent 8 }}
 {{- end }}
