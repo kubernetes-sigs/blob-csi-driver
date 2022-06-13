@@ -296,7 +296,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			validContainerName = containerNamePrefix + "-" + volName
 		}
 		validContainerName = getValidContainerName(validContainerName, protocol)
-		parameters[containerNameField] = validContainerName
+		setKeyValueInMap(parameters, containerNameField, validContainerName)
 	}
 
 	var volumeID string
@@ -343,7 +343,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	isOperationSucceeded = true
 	// reset secretNamespace field in VolumeContext
-	parameters[secretNamespaceField] = secretNamespace
+	setKeyValueInMap(parameters, secretNamespaceField, secretNamespace)
 	return &csi.CreateVolumeResponse{
 		Volume: &csi.Volume{
 			VolumeId:      volumeID,

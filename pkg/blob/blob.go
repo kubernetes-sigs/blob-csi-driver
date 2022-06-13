@@ -803,3 +803,18 @@ func createStorageAccountSecret(account, key string) map[string]string {
 	secret[defaultSecretAccountKey] = key
 	return secret
 }
+
+// setKeyValueInMap set key/value pair in map
+// key in the map is case insensitive, if key already exists, overwrite existing value
+func setKeyValueInMap(m map[string]string, key, value string) {
+	if m == nil {
+		return
+	}
+	for k := range m {
+		if strings.EqualFold(k, key) {
+			m[k] = value
+			return
+		}
+	}
+	m[key] = value
+}

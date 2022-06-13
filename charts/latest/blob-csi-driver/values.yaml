@@ -64,6 +64,7 @@ controller:
     healthPort: 29632
   replicas: 2
   runOnMaster: false
+  runOnControlPlane: false
   logLevel: 5
   resources:
     csiProvisioner:
