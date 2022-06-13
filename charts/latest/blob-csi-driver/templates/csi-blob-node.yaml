@@ -32,6 +32,9 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.imagePullSecrets | indent 8 }}
       {{- end }}
+{{- if .Values.node.enableBlobfuseProxy }}
+      hostPID: true
+{{- end }}
       hostNetwork: true
       dnsPolicy: Default
       serviceAccountName: {{ .Values.serviceAccount.node }}
@@ -56,6 +59,38 @@ spec:
 {{- with .Values.node.tolerations }}
       tolerations:
 {{ toYaml . | indent 8 }}
+{{- end }}
+{{- if .Values.node.enableBlobfuseProxy }}
+      initContainers:
+        - name: install-blobfuse-proxy
+{{- if hasPrefix "/" .Values.image.blob.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- else }}
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- end }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/blobfuse-proxy/init.sh"
+          securityContext:
+            privileged: true
+          env:
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: INSTALL_BLOBFUSE
+              value: "{{ .Values.node.blobfuseProxy.installBlobfuse }}"
+            - name: BLOBFUSE_VERSION
+              value: "{{ .Values.node.blobfuseProxy.blobfuseVersion }}"
+            - name: SET_MAX_OPEN_FILE_NUM
+              value: "{{ .Values.node.blobfuseProxy.setMaxOpenFileNum }}"
+            - name: MAX_FILE_NUM
+              value: "{{ .Values.node.blobfuseProxy.maxOpenFileNum }}"
+            - name: DISABLE_UPDATEDB
+              value: "{{ .Values.node.blobfuseProxy.disableUpdateDB }}"
+          volumeMounts:
+            - name: host-usr
+              mountPath: /host/usr
+            - name: host-etc
+              mountPath: /host/etc
 {{- end }}
       containers:
         - name: liveness-probe
@@ -188,6 +223,14 @@ spec:
             {{- end }}
           resources: {{- toYaml .Values.node.resources.blob | nindent 12 }}
       volumes:
+{{- if .Values.node.enableBlobfuseProxy }}
+        - name: host-usr
+          hostPath:
+            path: /usr
+        - name: host-etc
+          hostPath:
+            path: /etc
+{{- end }}
         - hostPath:
             path: {{ .Values.linux.kubelet }}/plugins/{{ .Values.driver.name }}
             type: DirectoryOrCreate

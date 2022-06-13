@@ -18,10 +18,18 @@ ARG ARCH=amd64
 ARG binary=./_output/${ARCH}/blobplugin
 COPY ${binary} /blobplugin
 
+RUN mkdir /blobfuse-proxy/
+
+COPY ./pkg/blobfuse-proxy/init.sh /blobfuse-proxy/
+COPY ./pkg/blobfuse-proxy/blobfuse-proxy.service /blobfuse-proxy/
+COPY ./_output/${ARCH}/blobfuse-proxy /blobfuse-proxy/
+
+RUN chmod +x /blobfuse-proxy/init.sh && \
+ chmod +x /blobfuse-proxy/blobfuse-proxy.service && \
+ chmod +x /blobfuse-proxy/blobfuse-proxy
+
 RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase
 
-RUN mkdir /blobfuse-proxy/
-COPY ./_output/blobfuse-proxy.deb /blobfuse-proxy/
 ARG ARCH=amd64
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \

@@ -35,7 +35,7 @@ csi-blob-node-dr4s4                        3/3     Running   0          35s     
 ### clean up Blob CSI driver
 - Option#1. remote uninstall
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/uninstall-driver.sh | bash -s master blobfuse-proxy --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/uninstall-driver.sh | bash -s master --
 ```
 
  - Option#2. local uninstall
@@ -43,5 +43,5 @@ curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/mas
 git clone https://github.com/kubernetes-sigs/blob-csi-driver.git
 cd blob-csi-driver
 git checkout master
-./deploy/install-driver.sh master local
+./deploy/uninstall-driver.sh master local
 ```
