@@ -42,7 +42,6 @@ kubectl apply -f $repo/csi-blob-controller.yaml
 if [[ "$#" -gt 1 ]]; then
   if [[ "$2" == *"blobfuse-proxy"* ]]; then
     echo "set enable-blobfuse-proxy as true ..."
-    kubectl apply -f $repo/blobfuse-proxy.yaml
     if [[ "$2" == *"local"* ]]; then
       cat $repo/csi-blob-node.yaml | sed 's/enable-blobfuse-proxy=false/enable-blobfuse-proxy=true/g' | kubectl apply -f -
     else

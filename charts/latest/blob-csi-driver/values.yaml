@@ -148,8 +148,6 @@ node:
   nodeSelector: {}
   tolerations:
     - operator: "Exists"
-  livenessProbe:
-    healthPort: 29633
 
 feature:
   enableFSGroupPolicy: false
