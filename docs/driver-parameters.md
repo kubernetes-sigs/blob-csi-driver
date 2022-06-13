@@ -22,13 +22,16 @@ tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/mana
 matchTags | whether matching tags when driver tries to find a suitable storage account | `true`,`false` | No | `false`
 useDataPlaneAPI | specify whether use data plane API for blob container create/delete, this could solve the SRP API throltting issue since data plane API has almost no limit, while it would fail when there is firewall or vnet setting on storage account | `true`,`false` | No | `false`
 --- | **Following parameters are only for blobfuse** | --- | --- |
-subscriptionID | specify Azure subscription ID in which blob storage directory will be created | Azure subscription ID | No | if not empty, `resourceGroup` must be provided
+subscriptionID | specify Azure subscription ID in which blob storage directory will be created(only works when `useDataPlaneAPI: "true"`) | Azure subscription ID | No | if not empty, `resourceGroup` must be provided
 storeAccountKey | whether store account key to k8s secret <br><br> Note:  <br> `false` means driver would leverage kubelet identity to get account key | `true`,`false` | No | `true`
 secretName | specify secret name to store account key | | No |
 secretNamespace | specify the namespace of secret to store account key | `default`,`kube-system`, etc | No | pvc namespace
 isHnsEnabled | enable `Hierarchical namespace` for Azure DataLake storage account | `true`,`false` | No | `false`
 --- | **Following parameters are only for NFS protocol** | --- | --- |
 mountPermissions | mounted folder permissions. The default is `0777`, if set as `0`, driver will not perform `chmod` after mount | `0777` | No |
+vnetResourceGroup | specify vnet resource group where virtual network is | existing resource group name | No | if empty, driver will use the `vnetResourceGroup` value in azure cloud config file
+vnetName | virtual network name | existing virtual network name | No | if empty, driver will use the `vnetName` value in azure cloud config file
+subnetName | subnet name | existing subnet name of the agent node | No | if empty, driver will use the `subnetName` value in azure cloud config file
 
  - `fsGroup` securityContext setting
 
@@ -70,10 +73,6 @@ nodeStageSecretRef.name | secret name that stores(check below examples):<br>`azu
 nodeStageSecretRef.namespace | secret namespace | k8s namespace  |  Yes  |
 --- | **Following parameters are only for NFS protocol** | --- | --- |
 volumeAttributes.mountPermissions | mounted folder permissions | `0777` | No |
---- | **Following parameters are only for NFS vnet setting** | --- | --- |
-vnetResourceGroup | specify vnet resource group where virtual network is | existing resource group name | No | if empty, driver will use the `vnetResourceGroup` value in azure cloud config file
-vnetName | virtual network name | existing virtual network name | No | if empty, driver will use the `vnetName` value in azure cloud config file
-subnetName | subnet name | existing subnet name of the agent node | No | if empty, driver will use the `subnetName` value in azure cloud config file
 --- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse#environment-variables)** | --- | --- |
 volumeAttributes.AzureStorageAuthType | Authentication Type | `Key`, `SAS`, `MSI`, `SPN` | No | `Key`
 volumeAttributes.AzureStorageIdentityClientID | Identity Client ID |  | No |
