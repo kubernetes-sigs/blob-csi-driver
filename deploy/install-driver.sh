@@ -21,29 +21,28 @@ if [[ "$#" -gt 0 ]]; then
   ver="$1"
 fi
 
-repo="https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/$ver/deploy"
-if [[ "$#" -gt 1 ]]; then
-  if [[ "$2" == *"local"* ]]; then
-    echo "use local deploy"
-    repo="./deploy"
-  fi
-fi
-
-if [ $ver != "master" ]; then
-  repo="$repo/$ver"
-fi
-
-echo "Installing Azure Blob Storage CSI driver, version: $ver ..."
-
+kustomize_path="blob-csi-driver"
 if [[ "$#" -gt 1 ]]; then
   if [[ "$2" == *"blobfuse-proxy"* ]]; then
     echo "enable blobfuse-proxy ..."
-    kubectl apply -k $repo/with-blobfuse-proxy/
-    echo 'Azure Blob Storage CSI driver installed successfully.'
-    exit 0
+    kustomize_path="with-blobfuse-proxy"
   fi
 fi
 
-kubectl apply -k $repo/blob-csi-driver
+repo="https://github.com/kubernetes-sigs/blob-csi-driver/deploy/${kustomize_path}?ref=$ver"
+if [[ "$#" -gt 1 ]]; then
+  if [[ "$2" == *"local"* ]]; then
+    echo "use local deploy"
+    repo="./deploy/${kustomize_path}"
+    if [ "$ver" != "master" ]; then
+       repo="./deploy/$ver/${kustomize_path}"
+    fi
+  fi
+fi
+
+
+echo "Installing Azure Blob Storage CSI driver, version: $ver ..."
+
+kubectl apply -k "$repo"
 
 echo 'Azure Blob Storage CSI driver installed successfully.'

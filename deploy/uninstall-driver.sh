@@ -21,19 +21,20 @@ if [[ "$#" -gt 0 ]]; then
   ver="$1"
 fi
 
-repo="https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/$ver/deploy"
+repo="https://github.com/kubernetes-sigs/blob-csi-driver/deploy/with-blobfuse-proxy?ref=$ver"
 if [[ "$#" -gt 1 ]]; then
   if [[ "$2" == *"local"* ]]; then
     echo "use local deploy"
-    repo="./deploy"
+    repo="./deploy/with-blobfuse-proxy"
+    if [ "$ver" != "master" ]; then
+      repo="./deploy/$ver/with-blobfuse-proxy"
+    fi
   fi
-fi
-
-if [ $ver != "master" ]; then
-  repo="$repo/$ver"
 fi
 
 
 echo "Uninstalling Azure Blob Storage CSI driver, version: $ver ..."
-kubectl delete -k $repo/with-blobfuse-proxy/ --ignore-not-found
+
+kubectl delete -k "$repo" --ignore-not-found
+
 echo 'Uninstalled Azure Blob Storage CSI driver successfully.'
