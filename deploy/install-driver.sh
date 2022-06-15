@@ -34,23 +34,16 @@ if [ $ver != "master" ]; then
 fi
 
 echo "Installing Azure Blob Storage CSI driver, version: $ver ..."
-kubectl apply -f $repo/rbac-csi-blob-controller.yaml
-kubectl apply -f $repo/rbac-csi-blob-node.yaml
-kubectl apply -f $repo/csi-blob-driver.yaml
-kubectl apply -f $repo/csi-blob-controller.yaml
 
 if [[ "$#" -gt 1 ]]; then
   if [[ "$2" == *"blobfuse-proxy"* ]]; then
-    echo "set enable-blobfuse-proxy as true ..."
-    if [[ "$2" == *"local"* ]]; then
-      cat $repo/csi-blob-node.yaml | sed 's/enable-blobfuse-proxy=false/enable-blobfuse-proxy=true/g' | kubectl apply -f -
-    else
-      curl -s $repo/csi-blob-node.yaml | sed 's/enable-blobfuse-proxy=false/enable-blobfuse-proxy=true/g' | kubectl apply -f -
-    fi
-  else
-    kubectl apply -f $repo/csi-blob-node.yaml
+    echo "enable blobfuse-proxy ..."
+    kubectl apply -k $repo/with-blobfuse-proxy/
+    echo 'Azure Blob Storage CSI driver installed successfully.'
+    exit 0
   fi
-else
-  kubectl apply -f $repo/csi-blob-node.yaml
 fi
+
+kubectl apply -k $repo/blob-csi-driver
+
 echo 'Azure Blob Storage CSI driver installed successfully.'

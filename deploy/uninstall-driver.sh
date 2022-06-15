@@ -35,9 +35,5 @@ fi
 
 
 echo "Uninstalling Azure Blob Storage CSI driver, version: $ver ..."
-kubectl delete -f $repo/csi-blob-controller.yaml --ignore-not-found
-kubectl delete -f $repo/csi-blob-node.yaml --ignore-not-found
-kubectl delete -f $repo/csi-blob-driver.yaml --ignore-not-found
-kubectl delete -f $repo/rbac-csi-blob-controller.yaml --ignore-not-found
-kubectl delete -f $repo/rbac-csi-blob-node.yaml --ignore-not-found
+kubectl delete -k $repo/with-blobfuse-proxy/ --ignore-not-found
 echo 'Uninstalled Azure Blob Storage CSI driver successfully.'

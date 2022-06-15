@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: csi-blob-node
+  namespace: kube-system
+spec:
+  template:
+    spec:
+      hostPID: true
+      initContainers:
+        - name: install-blobfuse-proxy
+          image: mcr.microsoft.com/k8s/csi/blob-csi:latest
+          imagePullPolicy: IfNotPresent
+          command:
+            - "/blobfuse-proxy/init.sh"
+          securityContext:
+            privileged: true
+          env:
+            - name: DEBIAN_FRONTEND
+              value: "noninteractive"
+            - name: INSTALL_BLOBFUSE
+              value: "true"
+            - name: BLOBFUSE_VERSION
+              value: 1.4.4
+            - name: SET_MAX_OPEN_FILE_NUM
+              value: "true"
+            - name: MAX_FILE_NUM
+              value: "9000000"
+            - name: DISABLE_UPDATEDB
+              value: "true"
+          volumeMounts:
+            - name: host-usr
+              mountPath: /host/usr
+            - name: host-etc
+              mountPath: /host/etc
+      containers:
+        - name: blob
+          env:
+            - name: "ENABLE_BLOBFUSE_PROXY"
+              value: "true"
+      volumes:
+        - name: host-usr
+          hostPath:
+            path: /usr
+        - name: host-etc
+          hostPath:
+            path: /etc

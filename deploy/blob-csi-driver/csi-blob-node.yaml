@@ -18,7 +18,6 @@ spec:
         app: csi-blob-node
     spec:
       hostNetwork: true
-      hostPID: true
       dnsPolicy: Default
       serviceAccountName: csi-blob-node-sa
       nodeSelector:
@@ -35,32 +34,6 @@ spec:
       priorityClassName: system-node-critical
       tolerations:
         - operator: "Exists"
-      initContainers:
-        - name: install-blobfuse-proxy
-          image: mcr.microsoft.com/k8s/csi/blob-csi:latest
-          imagePullPolicy: IfNotPresent
-          command:
-            - "/blobfuse-proxy/init.sh"
-          securityContext:
-            privileged: true
-          env:
-            - name: DEBIAN_FRONTEND
-              value: "noninteractive"
-            - name: INSTALL_BLOBFUSE
-              value: "true"
-            - name: BLOBFUSE_VERSION
-              value: 1.4.4
-            - name: SET_MAX_OPEN_FILE_NUM
-              value: "true"
-            - name: MAX_FILE_NUM
-              value: "9000000"
-            - name: DISABLE_UPDATEDB
-              value: "true"
-          volumeMounts:
-            - name: host-usr
-              mountPath: /host/usr
-            - name: host-etc
-              mountPath: /host/etc
       containers:
         - name: liveness-probe
           volumeMounts:
@@ -114,7 +87,7 @@ spec:
           args:
             - "--v=5"
             - "--endpoint=$(CSI_ENDPOINT)"
-            - "--enable-blobfuse-proxy=false"
+            - "--enable-blobfuse-proxy=$(ENABLE_BLOBFUSE_PROXY)"
             - "--blobfuse-proxy-endpoint=$(BLOBFUSE_PROXY_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
             - "--metrics-address=0.0.0.0:29635"
@@ -132,6 +105,8 @@ spec:
             timeoutSeconds: 10
             periodSeconds: 30
           env:
+            - name: ENABLE_BLOBFUSE_PROXY
+              value: "false"
             - name: AZURE_CREDENTIAL_FILE
               valueFrom:
                 configMapKeyRef:
@@ -166,12 +141,6 @@ spec:
               cpu: 10m
               memory: 20Mi
       volumes:
-        - name: host-usr
-          hostPath:
-            path: /usr
-        - name: host-etc
-          hostPath:
-            path: /etc
         - hostPath:
             path: /var/lib/kubelet/plugins/blob.csi.azure.com
             type: DirectoryOrCreate
@@ -192,4 +161,3 @@ spec:
             path: /mnt
             type: DirectoryOrCreate
           name: blob-cache
----
