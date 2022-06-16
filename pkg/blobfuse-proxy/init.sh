@@ -16,20 +16,21 @@
 
 set -xe
 
+INSTALL_BLOBFUSE_PROXY=${INSTALL_BLOBFUSE_PROXY:-true}
 INSTALL_BLOBFUSE=${INSTALL_BLOBFUSE:-true}
 DISABLE_UPDATEDB=${DISABLE_UPDATEDB:-true}
 SET_MAX_OPEN_FILE_NUM=${SET_MAX_OPEN_FILE_NUM:-true}
 
 HOST_CMD="nsenter --mount=/proc/1/ns/mnt"
 
-cp /blobfuse-proxy/packages-microsoft-prod.deb /host/etc/
-
 # install/update blobfuse
 if [ "${INSTALL_BLOBFUSE}" = "true" ]
 then
+  cp /blobfuse-proxy/packages-microsoft-prod.deb /host/etc/
   $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && \
   $HOST_CMD apt update && \
-  $HOST_CMD apt-get install -y blobfuse="${BLOBFUSE_VERSION}"
+  $HOST_CMD apt-get install -y blobfuse="${BLOBFUSE_VERSION}" && \
+  $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
 if [ ! -f "/host/usr/bin/blobfuse-proxy" ];then
@@ -44,11 +45,14 @@ if [ ! -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
   cp /blobfuse-proxy/blobfuse-proxy.service /host/usr/lib/systemd/system/blobfuse-proxy.service
 fi
 
-$HOST_CMD systemctl daemon-reload
-$HOST_CMD systemctl enable blobfuse-proxy.service
-# According to the issue https://github.com/kubernetes-sigs/blob-csi-driver/issues/693, 
-# do NOT RESTART blobfuse-proxy, just start it at first time.
-$HOST_CMD systemctl start blobfuse-proxy.service
+if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ]
+then
+  $HOST_CMD systemctl daemon-reload
+  $HOST_CMD systemctl enable blobfuse-proxy.service
+  # According to the issue https://github.com/kubernetes-sigs/blob-csi-driver/issues/693,
+  # do NOT RESTART blobfuse-proxy, just start it at first time.
+  $HOST_CMD systemctl start blobfuse-proxy.service
+fi
 
 if [ "${SET_MAX_OPEN_FILE_NUM}" = "true" ]
 then
