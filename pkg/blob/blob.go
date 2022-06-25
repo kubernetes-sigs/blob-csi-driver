@@ -110,9 +110,12 @@ const (
 
 	defaultNamespace = "default"
 
-	pvcNameKey      = "csi.storage.k8s.io/pvc/name"
-	pvcNamespaceKey = "csi.storage.k8s.io/pvc/namespace"
-	pvNameKey       = "csi.storage.k8s.io/pv/name"
+	pvcNameKey           = "csi.storage.k8s.io/pvc/name"
+	pvcNamespaceKey      = "csi.storage.k8s.io/pvc/namespace"
+	pvNameKey            = "csi.storage.k8s.io/pv/name"
+	pvcNameMetadata      = "${pvc.metadata.name}"
+	pvcNamespaceMetadata = "${pvc.metadata.namespace}"
+	pvNameMetadata       = "${pv.metadata.name}"
 
 	VolumeID = "volumeid"
 )
@@ -817,4 +820,14 @@ func setKeyValueInMap(m map[string]string, key, value string) {
 		}
 	}
 	m[key] = value
+}
+
+// replaceWithMap replace key with value for str
+func replaceWithMap(str string, m map[string]string) string {
+	for k, v := range m {
+		if k != "" {
+			str = strings.ReplaceAll(str, k, v)
+		}
+	}
+	return str
 }
