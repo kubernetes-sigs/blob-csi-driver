@@ -219,6 +219,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	var serverAddress, storageEndpointSuffix, protocol, ephemeralVolMountOptions string
 	var ephemeralVol, isHnsEnabled bool
+
+	containerNameReplaceMap := map[string]string{}
+
 	mountPermissions := d.mountPermissions
 	performChmodOp := (mountPermissions > 0)
 	for k, v := range attrib {
@@ -235,6 +238,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			ephemeralVolMountOptions = v
 		case isHnsEnabledField:
 			isHnsEnabled = strings.EqualFold(v, trueValue)
+		case pvcNamespaceKey:
+			containerNameReplaceMap[pvcNamespaceMetadata] = v
+		case pvcNameKey:
+			containerNameReplaceMap[pvcNameMetadata] = v
+		case pvNameKey:
+			containerNameReplaceMap[pvNameMetadata] = v
 		case mountPermissionsField:
 			if v != "" {
 				var err error
@@ -264,6 +273,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	if err != nil {
 		return nil, err
 	}
+
+	// replace pv/pvc name namespace metadata in subDir
+	containerName = replaceWithMap(containerName, containerNameReplaceMap)
 
 	if strings.TrimSpace(storageEndpointSuffix) == "" {
 		if d.cloud.Environment.StorageEndpointSuffix != "" {

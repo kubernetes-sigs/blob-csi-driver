@@ -74,6 +74,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := to.BoolPtr(false)
 
+	containerNameReplaceMap := map[string]string{}
+
 	// store account key to k8s secret by default
 	storeAccountKey := true
 
@@ -121,10 +123,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			}
 		case pvcNamespaceKey:
 			pvcNamespace = v
+			containerNameReplaceMap[pvcNamespaceMetadata] = v
 		case pvcNameKey:
-			// no op
+			containerNameReplaceMap[pvcNameMetadata] = v
 		case pvNameKey:
-			// no op
+			containerNameReplaceMap[pvNameMetadata] = v
 		case serverNameField:
 			// no op, only used in NodeStageVolume
 		case storageEndpointSuffixField:
@@ -289,6 +292,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		secrets = createStorageAccountSecret(accountName, accountKey)
 	}
 
+	// replace pv/pvc name namespace metadata in subDir
+	containerName = replaceWithMap(containerName, containerNameReplaceMap)
 	validContainerName := containerName
 	if validContainerName == "" {
 		validContainerName = volName

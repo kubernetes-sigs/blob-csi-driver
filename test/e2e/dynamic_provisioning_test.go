@@ -187,6 +187,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"isHnsEnabled":          "true",
 				"allowBlobPublicAccess": "false",
 				"useDataPlaneAPI":       "true",
+				"containerName":         "container-${pvc.metadata.name}",
 			},
 		}
 		test.Run(cs, ns)
@@ -257,6 +258,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			StorageClassParameters: map[string]string{
 				"skuName":               "Standard_RAGRS",
 				"allowBlobPublicAccess": "false",
+				"containerName":         "container-${pvc.metadata.namespace}",
 			},
 		}
 		if isAzureStackCloud {
