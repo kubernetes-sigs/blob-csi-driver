@@ -100,7 +100,7 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
  - mounting blob storage NFSv3 does not need account key, it requires storage account configured with same vnet with agent node.
  - blobfuse does not support private link well, check details [here](https://github.com/Azure/azure-storage-fuse/wiki/2.-Configuring-and-Running#private-link)
 
-#### `containerName` parameter supports following pv/pvc metadata transform
+#### `containerName` parameter supports following pv/pvc metadata conversion
 > if `containerName` value contains following strings, it would be converted into corresponding pv/pvc name or namespace
  - `${pvc.metadata.name}`
  - `${pvc.metadata.namespace}`
