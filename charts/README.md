@@ -61,11 +61,11 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `feature.enableFSGroupPolicy`                         | enable `fsGroupPolicy` on a k8s 1.20+ cluster         | `false`                      |
 | `feature.enableGetVolumeStats`                        | allow GET_VOLUME_STATS on agent node                  | `false`                      |
 | `image.baseRepo`                                      | base repository of driver images                      | `mcr.microsoft.com`                      |
-| `image.blob.repository`                               | blob-csi-driver docker image                          | `mcr.microsoft.com/k8s/csi/blob-csi`                             |
+| `image.blob.repository`                               | blob-csi-driver docker image                          | `mcr.microsoft.com/oss/kubernetes-csi/blob-csi`                             |
 | `image.blob.tag`                                      | blob-csi-driver docker image tag                      | `latest`                                                         |
 | `image.blob.pullPolicy`                               | blob-csi-driver image pull policy                     | `IfNotPresent`                                                   |
 | `image.csiProvisioner.repository`                     | csi-provisioner docker image                          | `mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner`           |
-| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | `v3.1.1`                                                         |
+| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | `v3.2.0`                                                         |
 | `image.csiProvisioner.pullPolicy`                     | csi-provisioner image pull policy                     | `IfNotPresent`                                                   |
 | `image.livenessProbe.repository`                      | liveness-probe docker image                           | `mcr.microsoft.com/oss/kubernetes-csi/livenessprobe`             |
 | `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | `v2.7.0`                                                         |
