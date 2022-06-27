@@ -24,7 +24,7 @@ spec:
                       - virtual-kubelet
       initContainers:
         - name: prepare-binaries
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v1.12.0
+          image: mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.12.0
           command: ['sh', '-c', "cp /blobfuse-proxy/*.deb /tmp/"]
           volumeMounts:
             - mountPath: /tmp
@@ -76,7 +76,7 @@ spec:
               sleep 3s
               # tail blobfuse proxy logs
               journalctl -u blobfuse-proxy -f
-          image: mcr.microsoft.com/k8s/csi/blob-csi:v1.12.0
+          image: mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.12.0
           imagePullPolicy: IfNotPresent
           name: sysctl-install-blobfuse-proxy
           env:
