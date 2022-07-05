@@ -806,6 +806,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 			name: "NetworkResourceSubscriptionID is Empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
 				d.cloud.SubscriptionID = "fakeSubID"
 				d.cloud.NetworkResourceSubscriptionID = ""
 				d.cloud.ResourceGroup = "foo"
@@ -819,6 +820,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 			name: "NetworkResourceSubscriptionID is not Empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
 				d.cloud.SubscriptionID = "fakeSubID"
 				d.cloud.NetworkResourceSubscriptionID = "fakeNetSubID"
 				d.cloud.ResourceGroup = "foo"
@@ -832,6 +834,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 			name: "VnetResourceGroup is Empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
 				d.cloud.SubscriptionID = "bar"
 				d.cloud.NetworkResourceSubscriptionID = "bar"
 				d.cloud.ResourceGroup = "fakeResourceGroup"
@@ -845,6 +848,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 			name: "VnetResourceGroup is not Empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
 				d.cloud.SubscriptionID = "bar"
 				d.cloud.NetworkResourceSubscriptionID = "bar"
 				d.cloud.ResourceGroup = "fakeResourceGroup"
