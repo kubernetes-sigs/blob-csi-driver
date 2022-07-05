@@ -797,6 +797,114 @@ func TestSetAzureCredentials(t *testing.T) {
 	}
 }
 
+func TestGetSubnetResourceID(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "NetworkResourceSubscriptionID is Empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud.SubscriptionID = "fakeSubID"
+				d.cloud.NetworkResourceSubscriptionID = ""
+				d.cloud.ResourceGroup = "foo"
+				d.cloud.VnetResourceGroup = "foo"
+				actualOutput := d.getSubnetResourceID()
+				expectedOutput := fmt.Sprintf(subnetTemplate, d.cloud.SubscriptionID, "foo", d.cloud.VnetName, d.cloud.SubnetName)
+				assert.Equal(t, actualOutput, expectedOutput, "cloud.SubscriptionID should be used as the SubID")
+			},
+		},
+		{
+			name: "NetworkResourceSubscriptionID is not Empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud.SubscriptionID = "fakeSubID"
+				d.cloud.NetworkResourceSubscriptionID = "fakeNetSubID"
+				d.cloud.ResourceGroup = "foo"
+				d.cloud.VnetResourceGroup = "foo"
+				actualOutput := d.getSubnetResourceID()
+				expectedOutput := fmt.Sprintf(subnetTemplate, d.cloud.NetworkResourceSubscriptionID, "foo", d.cloud.VnetName, d.cloud.SubnetName)
+				assert.Equal(t, actualOutput, expectedOutput, "cloud.NetworkResourceSubscriptionID should be used as the SubID")
+			},
+		},
+		{
+			name: "VnetResourceGroup is Empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud.SubscriptionID = "bar"
+				d.cloud.NetworkResourceSubscriptionID = "bar"
+				d.cloud.ResourceGroup = "fakeResourceGroup"
+				d.cloud.VnetResourceGroup = ""
+				actualOutput := d.getSubnetResourceID()
+				expectedOutput := fmt.Sprintf(subnetTemplate, "bar", d.cloud.ResourceGroup, d.cloud.VnetName, d.cloud.SubnetName)
+				assert.Equal(t, actualOutput, expectedOutput, "cloud.Resourcegroup should be used as the rg")
+			},
+		},
+		{
+			name: "VnetResourceGroup is not Empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud.SubscriptionID = "bar"
+				d.cloud.NetworkResourceSubscriptionID = "bar"
+				d.cloud.ResourceGroup = "fakeResourceGroup"
+				d.cloud.VnetResourceGroup = "fakeVnetResourceGroup"
+				actualOutput := d.getSubnetResourceID()
+				expectedOutput := fmt.Sprintf(subnetTemplate, "bar", d.cloud.VnetResourceGroup, d.cloud.VnetName, d.cloud.SubnetName)
+				assert.Equal(t, actualOutput, expectedOutput, "cloud.VnetResourceGroup should be used as the rg")
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestUseDataPlaneAPI(t *testing.T) {
+	fakeVolumeID := "unit-test-id"
+	fakeAccountName := "unit-test-account"
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "volumeID loads correctly",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.dataPlaneAPIVolMap.LoadOrStore(fakeVolumeID, "foo")
+				output := d.useDataPlaneAPI(fakeVolumeID, "")
+				if !output {
+					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)
+				}
+			},
+		},
+		{
+			name: "account loads correctly",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.dataPlaneAPIVolMap.LoadOrStore(fakeAccountName, "foo")
+				output := d.useDataPlaneAPI(fakeAccountName, "")
+				if !output {
+					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)
+				}
+			},
+		},
+		{
+			name: "invalid volumeID and account",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				output := d.useDataPlaneAPI("", "")
+				if output {
+					t.Errorf("Actual Output: %t, Expected Output: %t", output, false)
+				}
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
 func TestAppendDefaultMountOptions(t *testing.T) {
 	tests := []struct {
 		options       []string
