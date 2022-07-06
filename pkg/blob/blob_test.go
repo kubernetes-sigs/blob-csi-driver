@@ -31,6 +31,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	v1api "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -794,6 +796,154 @@ func TestSetAzureCredentials(t *testing.T) {
 			t.Errorf("desc: %s,\n input: kubeClient(%v), accountName(%v), accountKey(%v),\n setAzureCredentials result: %v, expectedName: %v err: %v, expectedErr: %v",
 				test.desc, test.kubeClient, test.accountName, test.accountKey, result, test.expectedName, err, test.expectedErr)
 		}
+	}
+}
+
+func TestGetStorageAccesskey(t *testing.T) {
+	options := &azure.AccountOptions{
+		Name:           "test-sa",
+		SubscriptionID: "test-subID",
+		ResourceGroup:  "test-rg",
+	}
+	fakeAccName := options.Name //fmt.Sprintf(secretNameTemplate, options.Name)
+	fakeAccKey := "test-key"
+	secretNamespace := "test-ns"
+	testCases := []struct {
+		name          string
+		secrets       map[string]string
+		secretName    string
+		expectedError error
+	}{
+		{
+			name: "Secrets is larger than 0",
+			secrets: map[string]string{
+				"accountName":              fakeAccName,
+				"accountNameField":         fakeAccName,
+				"defaultSecretAccountName": fakeAccName,
+				"accountKey":               fakeAccKey,
+				"accountKeyField":          fakeAccKey,
+				"defaultSecretAccountKey":  fakeAccKey,
+			},
+			expectedError: nil,
+		},
+		{
+			name:          "secretName is Empty",
+			secrets:       make(map[string]string),
+			secretName:    "",
+			expectedError: nil,
+		},
+		{
+			name:          "error is not nil",
+			secrets:       make(map[string]string),
+			secretName:    "foobar",
+			expectedError: errors.New(""),
+		},
+		{
+			name:          "successful input/error is nil",
+			secrets:       make(map[string]string),
+			secretName:    fmt.Sprintf(secretNameTemplate, options.Name),
+			expectedError: nil,
+		},
+	}
+	d := NewFakeDriver()
+	d.cloud = &azure.Cloud{}
+	d.cloud.KubeClient = fake.NewSimpleClientset()
+	secret := &v1api.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: secretNamespace,
+			Name:      fmt.Sprintf(secretNameTemplate, options.Name),
+		},
+		Data: map[string][]byte{
+			defaultSecretAccountName: []byte(fakeAccName),
+			defaultSecretAccountKey:  []byte(fakeAccKey),
+		},
+		Type: "Opaque",
+	}
+	secret.Namespace = secretNamespace
+	d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			accName, accKey, err := d.GetStorageAccesskey(context.TODO(), options, tc.secrets, tc.secretName, secretNamespace)
+			if tc.expectedError != nil {
+				assert.Error(t, err, "there should be an error")
+			} else {
+				assert.Equal(t, nil, err, "error should be nil")
+				assert.Equal(t, fakeAccName, accName, "account names must match")
+				assert.Equal(t, fakeAccKey, accKey, "account keys must match")
+			}
+		})
+	}
+}
+
+func TestGetStorageAccountFromSecret(t *testing.T) {
+	fakeClient := fake.NewSimpleClientset()
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "KubeClient is nil",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.KubeClient = nil
+				secretName := "foo"
+				secretNamespace := "bar"
+				_, _, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				expectedErr := fmt.Errorf("could not get account key from secret(%s): KubeClient is nil", secretName)
+				if assert.Error(t, err) {
+					assert.Equal(t, expectedErr, err)
+				}
+			},
+		},
+		{
+			name: "Could not get secret",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.KubeClient = fakeClient
+				secretName := ""
+				secretNamespace := ""
+				_, _, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				//expectedErr := fmt.Errorf("could not get secret(%v): %w", secretName, err)
+				assert.Error(t, err) //could not check what type of error, needs fix
+				/*if assert.Error(t, err) {
+					assert.Equal(t, expectedErr, err)
+				}*/
+			},
+		},
+		{
+			name: "Successful Input",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.KubeClient = fakeClient
+				secretName := "john smith"
+				secretNamespace := "namespace"
+				accountName := "bar"
+				accountKey := "foo"
+				secret := &v1api.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: secretNamespace,
+						Name:      secretName,
+					},
+					Data: map[string][]byte{
+						defaultSecretAccountName: []byte(accountName),
+						defaultSecretAccountKey:  []byte(accountKey),
+					},
+					Type: "Opaque",
+				}
+				d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+				an, ak, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				assert.Equal(t, accountName, an, "accountName's should match")
+				assert.Equal(t, accountKey, ak, "accountKey's should match")
+				assert.Equal(t, nil, err, "error should be nil")
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 
