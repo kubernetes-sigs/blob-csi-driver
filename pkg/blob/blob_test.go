@@ -743,6 +743,65 @@ func TestGetStorageAccount(t *testing.T) {
 	}
 }
 
+//needs editing, could only get past first error for testing, could not get a fake environment running
+func TestGetContainerReference(t *testing.T) {
+	fakeAccountName := "storageaccountname"
+	fakeAccountKey := "test-key"
+	fakeContainerName := "test-con"
+	testCases := []struct {
+		name          string
+		containerName string
+		secrets       map[string]string
+		expectedError error
+	}{
+		{
+			name:          "failed to retrieve accountName",
+			containerName: fakeContainerName,
+			secrets: map[string]string{
+				"accountKey": fakeAccountKey,
+			},
+			expectedError: fmt.Errorf("could not find %s or %s field secrets(%v)", accountNameField, defaultSecretAccountName, map[string]string{
+				"accountKey": fakeAccountKey,
+			}),
+		},
+		{
+			name:          "failed to retrieve accountKey",
+			containerName: fakeContainerName,
+			secrets: map[string]string{
+				"accountName": fakeAccountName,
+			},
+			expectedError: fmt.Errorf("could not find %s or %s field in secrets(%v)", accountKeyField, defaultSecretAccountKey, map[string]string{
+				"accountName": fakeAccountName,
+			}),
+		},
+		/*{
+			name:          "container reference is nil",
+			containerName: fakeContainerName,
+			secrets: map[string]string{
+				"accountName": fakeAccountName,
+				"accountKey":  fakeAccountKey,
+			},
+			expectedError: fmt.Errorf("ContainerReference of %s is nil", fakeContainerName),
+		},*/
+	}
+
+	d := NewFakeDriver()
+	d.cloud = &azure.Cloud{}
+	d.cloud.KubeClient = fake.NewSimpleClientset()
+	//d.cloud.Environment.StorageEndpointSuffix =
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			container, err := getContainerReference(tc.containerName, tc.secrets, d.cloud.Environment)
+			if tc.expectedError != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.expectedError, err)
+			} else {
+				container.Name = ""
+			}
+		})
+	}
+}
+
 func TestSetAzureCredentials(t *testing.T) {
 	fakeClient := fake.NewSimpleClientset()
 
