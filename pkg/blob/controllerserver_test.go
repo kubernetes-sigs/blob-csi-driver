@@ -730,6 +730,42 @@ func TestControllerExpandVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "Volume Size exceeds Max Container Size",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.AddControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{csi.ControllerServiceCapability_RPC_EXPAND_VOLUME})
+				req := &csi.ControllerExpandVolumeRequest{
+					VolumeId: "unit-test",
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: containerMaxSize + 1,
+					},
+				}
+				_, err := d.ControllerExpandVolume(context.Background(), req)
+				expectedErr := status.Errorf(codes.OutOfRange, "required bytes (%d) exceeds the maximum supported bytes (%d)", req.CapacityRange.RequiredBytes, containerMaxSize)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "Error = nil",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.AddControllerServiceCapabilities([]csi.ControllerServiceCapability_RPC_Type{csi.ControllerServiceCapability_RPC_EXPAND_VOLUME})
+				req := &csi.ControllerExpandVolumeRequest{
+					VolumeId: "unit-test",
+					CapacityRange: &csi.CapacityRange{
+						RequiredBytes: containerMaxSize,
+					},
+				}
+				_, err := d.ControllerExpandVolume(context.Background(), req)
+				var expectedErr error = nil
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {
