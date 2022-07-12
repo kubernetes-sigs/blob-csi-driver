@@ -774,6 +774,15 @@ func TestGetContainerReference(t *testing.T) {
 				"accountName": fakeAccountName,
 			}),
 		},
+		{
+			name:          "failed to obtain client",
+			containerName: fakeContainerName,
+			secrets: map[string]string{
+				"accountName": fakeAccountName,
+				"accountKey":  fakeAccountKey,
+			},
+			expectedError: fmt.Errorf("azure: base storage service url required"),
+		},
 		/*{
 			name:          "container reference is nil",
 			containerName: fakeContainerName,

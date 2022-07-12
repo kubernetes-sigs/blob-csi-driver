@@ -17,6 +17,7 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -165,4 +166,38 @@ func TestMakeDir(t *testing.T) {
 	// Remove the directory created
 	err = os.RemoveAll(targetTest)
 	assert.NoError(t, err)
+}
+
+func TestConvertTagsToMap(t *testing.T) {
+	tests := []struct {
+		desc        string
+		tags        string
+		expectedOut map[string]string
+		expectedErr error
+	}{
+		{
+			desc:        "Improper KeyValuePair",
+			tags:        "foo=bar=gar,lorem=ipsum",
+			expectedOut: nil,
+			expectedErr: fmt.Errorf("Tags '%s' are invalid, the format should like: 'key1=value1,key2=value2'", "foo=bar=gar,lorem=ipsum"),
+		},
+		{
+			desc:        "Missing Key",
+			tags:        "=bar,lorem=ipsum",
+			expectedOut: nil,
+			expectedErr: fmt.Errorf("Tags '%s' are invalid, the format should like: 'key1=value1,key2=value2'", "=bar,lorem=ipsum"),
+		},
+		{
+			desc:        "Successful Input/Output",
+			tags:        "foo=bar,lorem=ipsum",
+			expectedOut: map[string]string{"foo": "bar", "lorem": "ipsum"},
+			expectedErr: nil,
+		},
+	}
+
+	for _, test := range tests {
+		output, err := ConvertTagsToMap(test.tags)
+		assert.Equal(t, test.expectedOut, output, test.desc)
+		assert.Equal(t, test.expectedErr, err, test.desc)
+	}
 }
