@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
@@ -99,8 +98,6 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 			defer tpod.Cleanup()
 			ginkgo.By("checking that the pods command exits with no error")
 			tpod.WaitForSuccess()
-			ginkgo.By("sleep........")
-			time.Sleep(5 * time.Minute)
 		}
 	}
 }
