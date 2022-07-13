@@ -80,7 +80,7 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 			accountKeySecret, err := createSecret(context.TODO(), azureCred, accountName+"-key", accountKey)
 			framework.ExpectNoError(err)
 
-			// TODO: test SAS token
+			// SAS token
 			// accountSASSecret, err := createSecret(context.TODO(), azureCred, accountName+"-sas", accountSasToken)
 			// framework.ExpectNoError(err)
 
