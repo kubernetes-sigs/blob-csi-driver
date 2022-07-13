@@ -36,6 +36,57 @@ import (
 	"sigs.k8s.io/cloud-provider-azure/pkg/retry"
 )
 
+type errType int32
+
+const (
+	DATAPLANE errType = iota
+	MANAGEMENT
+	CUSTOM
+	NULL
+)
+
+//mock blobclient that returns the errortype for create/delete/get operations (default value nil)
+type mockBlobClient struct {
+	//type of error returned
+	errorType errType
+	//custom string for error type CUSTOM
+	custom string
+}
+
+func (c *mockBlobClient) CreateContainer(ctx context.Context, resourceGroupName, accountName, containerName string, blobContainer storage.BlobContainer) error {
+	switch c.errorType {
+	case DATAPLANE:
+		return fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+	case MANAGEMENT:
+		return fmt.Errorf(containerBeingDeletedManagementAPIError)
+	case CUSTOM:
+		return fmt.Errorf(c.custom)
+	}
+	return nil
+}
+func (c *mockBlobClient) DeleteContainer(ctx context.Context, resourceGroupName, accountName, containerName string) error {
+	switch c.errorType {
+	case DATAPLANE:
+		return fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+	case MANAGEMENT:
+		return fmt.Errorf(containerBeingDeletedManagementAPIError)
+	case CUSTOM:
+		return fmt.Errorf(c.custom)
+	}
+	return nil
+}
+func (c *mockBlobClient) GetContainer(ctx context.Context, resourceGroupName, accountName, containerName string) (storage.BlobContainer, error) {
+	switch c.errorType {
+	case DATAPLANE:
+		return storage.BlobContainer{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+	case MANAGEMENT:
+		return storage.BlobContainer{}, fmt.Errorf(containerBeingDeletedManagementAPIError)
+	case CUSTOM:
+		return storage.BlobContainer{}, fmt.Errorf(c.custom)
+	}
+	return storage.BlobContainer{}, nil
+}
+
 func TestControllerGetCapabilities(t *testing.T) {
 	d := NewFakeDriver()
 	controlCap := []*csi.ControllerServiceCapability{
@@ -783,6 +834,7 @@ func TestControllerExpandVolume(t *testing.T) {
 	}
 }
 
+//management error returning timed out error instead of nil, but working properly for deleteblobcontainer
 func TestCreateBlobContainer(t *testing.T) {
 	tests := []struct {
 		desc          string
@@ -790,9 +842,11 @@ func TestCreateBlobContainer(t *testing.T) {
 		accountName   string
 		containerName string
 		secrets       map[string]string
+		clientErr     errType
 		expectedErr   error
 	}{
 		{
+			clientErr:   NULL,
 			expectedErr: fmt.Errorf("containerName is empty"),
 		},
 		{
@@ -801,15 +855,34 @@ func TestCreateBlobContainer(t *testing.T) {
 				defaultSecretAccountName: "accountname",
 				defaultSecretAccountKey:  "key",
 			},
+			clientErr:   NULL,
 			expectedErr: fmt.Errorf("azure: base storage service url required"),
 		},
+		{
+			containerName: "Secrets is Empty",
+			secrets:       map[string]string{},
+			clientErr:     NULL,
+			expectedErr:   nil,
+		},
+		{
+			containerName: "Dataplane API Error",
+			secrets:       map[string]string{},
+			clientErr:     DATAPLANE,
+			expectedErr:   nil,
+		},
+		/*{
+			containerName: "Management API Error",
+			secrets:       map[string]string{},
+			clientErr:     MANAGEMENT,
+			expectedErr:   nil,
+		},*/
 	}
 
 	d := NewFakeDriver()
 	d.cloud = &azure.Cloud{}
-
 	for _, test := range tests {
 		err := d.CreateBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
+		d.cloud.BlobClient = &mockBlobClient{errorType: test.clientErr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
@@ -823,9 +896,11 @@ func TestDeleteBlobContainer(t *testing.T) {
 		accountName   string
 		containerName string
 		secrets       map[string]string
+		clientErr     errType
 		expectedErr   error
 	}{
 		{
+			clientErr:   NULL,
 			expectedErr: fmt.Errorf("containerName is empty"),
 		},
 		{
@@ -834,7 +909,26 @@ func TestDeleteBlobContainer(t *testing.T) {
 				defaultSecretAccountName: "accountname",
 				defaultSecretAccountKey:  "key",
 			},
+			clientErr:   NULL,
 			expectedErr: fmt.Errorf("azure: base storage service url required"),
+		},
+		{
+			containerName: "Secrets is Empty",
+			secrets:       map[string]string{},
+			clientErr:     NULL,
+			expectedErr:   nil,
+		},
+		{
+			containerName: "Dataplane API Error",
+			secrets:       map[string]string{},
+			clientErr:     DATAPLANE,
+			expectedErr:   nil,
+		},
+		{
+			containerName: "Management API Error",
+			secrets:       map[string]string{},
+			clientErr:     MANAGEMENT,
+			expectedErr:   nil,
 		},
 	}
 
@@ -843,6 +937,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 
 	for _, test := range tests {
 		err := d.DeleteBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
+		d.cloud.BlobClient = &mockBlobClient{errorType: test.clientErr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
