@@ -145,6 +145,10 @@ func withEnvironmentVariables(t *testing.T) {
 	}()
 	assert.NoError(t, err)
 
+	parsedCreds, err := ParseAzureCredentialFile()
+	assert.NoError(t, err)
+	assert.Equal(t, creds, parsedCreds)
+
 	var cloud string
 	cloud = os.Getenv(cloudNameEnvVar)
 	if cloud == "" {
