@@ -615,6 +615,16 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 	}
 }
 
+func TestControllerGetVolume(t *testing.T) {
+	d := NewFakeDriver()
+	req := csi.ControllerGetVolumeRequest{}
+	resp, err := d.ControllerGetVolume(context.Background(), &req)
+	assert.Nil(t, resp)
+	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "ControllerGetVolume is not yet implemented")) {
+		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
 func TestGetCapacity(t *testing.T) {
 	d := NewFakeDriver()
 	req := csi.GetCapacityRequest{}
