@@ -94,6 +94,7 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 			ginkgo.By("test storage account key...")
 			run(pod, client, namespace, t.CSIDriver)
 
+			ginkgo.By("generate SAS token...")
 			sasToken := generateSASToken(accountName, accountKey)
 
 			ginkgo.By("creating secret for SAS token...")
