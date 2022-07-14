@@ -124,7 +124,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		klog.Warningf("NodePublishVolume: mock mount on volumeID(%s), this is only for TESTING!!!", volumeID)
 		if err := volumehelper.MakeDir(target, os.FileMode(mountPermissions)); err != nil {
 			klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
-			return nil, err
+			return nil, status.Errorf(codes.Internal, err.Error())
 		}
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
@@ -271,7 +271,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	_, accountName, _, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, protocol, attrib, secrets)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.Internal, err.Error())
 	}
 
 	// replace pv/pvc name namespace metadata in subDir
@@ -341,7 +341,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		klog.Warningf("NodeStageVolume: mock mount on volumeID(%s), this is only for TESTING!!!", volumeID)
 		if err := volumehelper.MakeDir(targetPath, os.FileMode(mountPermissions)); err != nil {
 			klog.Errorf("MakeDir failed on target: %s (%v)", targetPath, err)
-			return nil, err
+			return nil, status.Errorf(codes.Internal, err.Error())
 		}
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
@@ -354,7 +354,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	if err != nil {
-		err = fmt.Errorf("Mount failed with error: %w, output: %v", err, output)
+		err = status.Errorf(codes.Internal, "Mount failed with error: %v, output: %v", err, output)
 		klog.Errorf("%v", err)
 		notMnt, mntErr := d.mounter.IsLikelyNotMountPoint(targetPath)
 		if mntErr != nil {
