@@ -48,43 +48,44 @@ const (
 //mock blobclient that returns the errortype for create/delete/get operations (default value nil)
 type mockBlobClient struct {
 	//type of error returned
-	errorType errType
+	errorType *errType
 	//custom string for error type CUSTOM
-	custom string
+	custom  *string
+	conProp *storage.ContainerProperties
 }
 
 func (c *mockBlobClient) CreateContainer(ctx context.Context, resourceGroupName, accountName, containerName string, blobContainer storage.BlobContainer) error {
-	switch c.errorType {
+	switch *c.errorType {
 	case DATAPLANE:
 		return fmt.Errorf(containerBeingDeletedDataplaneAPIError)
 	case MANAGEMENT:
 		return fmt.Errorf(containerBeingDeletedManagementAPIError)
 	case CUSTOM:
-		return fmt.Errorf(c.custom)
+		return fmt.Errorf(*c.custom)
 	}
 	return nil
 }
 func (c *mockBlobClient) DeleteContainer(ctx context.Context, resourceGroupName, accountName, containerName string) error {
-	switch c.errorType {
+	switch *c.errorType {
 	case DATAPLANE:
 		return fmt.Errorf(containerBeingDeletedDataplaneAPIError)
 	case MANAGEMENT:
 		return fmt.Errorf(containerBeingDeletedManagementAPIError)
 	case CUSTOM:
-		return fmt.Errorf(c.custom)
+		return fmt.Errorf(*c.custom)
 	}
 	return nil
 }
 func (c *mockBlobClient) GetContainer(ctx context.Context, resourceGroupName, accountName, containerName string) (storage.BlobContainer, error) {
-	switch c.errorType {
+	switch *c.errorType {
 	case DATAPLANE:
-		return storage.BlobContainer{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+		return storage.BlobContainer{ContainerProperties: c.conProp}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)
 	case MANAGEMENT:
-		return storage.BlobContainer{}, fmt.Errorf(containerBeingDeletedManagementAPIError)
+		return storage.BlobContainer{ContainerProperties: c.conProp}, fmt.Errorf(containerBeingDeletedManagementAPIError)
 	case CUSTOM:
-		return storage.BlobContainer{}, fmt.Errorf(c.custom)
+		return storage.BlobContainer{ContainerProperties: c.conProp}, fmt.Errorf(*c.custom)
 	}
-	return storage.BlobContainer{}, nil
+	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
 
 func TestControllerGetCapabilities(t *testing.T) {
@@ -564,105 +565,142 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 		},
 	}
 	testCases := []struct {
-		name     string
-		testFunc func(t *testing.T)
+		name          string
+		req           *csi.ValidateVolumeCapabilitiesRequest
+		clientErr     errType
+		containerProp *storage.ContainerProperties
+		expectedRes   *csi.ValidateVolumeCapabilitiesResponse
+		expectedErr   error
 	}{
 		{
-			name: "volume ID missing",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.ValidateVolumeCapabilitiesRequest{}
-				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				expectedErr := status.Error(codes.InvalidArgument, "Volume ID missing in request")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
+			name:          "volume ID missing",
+			req:           &csi.ValidateVolumeCapabilitiesRequest{},
+			containerProp: nil,
+			expectedRes:   nil,
+			expectedErr:   status.Error(codes.InvalidArgument, "Volume ID missing in request"),
 		},
 		{
 			name: "volume capability missing",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.ValidateVolumeCapabilitiesRequest{
-					VolumeId: "unit-test",
-				}
-				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				expectedErr := status.Error(codes.InvalidArgument, "volume capabilities missing in request")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
+			req: &csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId: "unit-test",
 			},
+			containerProp: nil,
+			expectedRes:   nil,
+			expectedErr:   status.Error(codes.InvalidArgument, "volume capabilities missing in request"),
 		},
 		{
 			name: "block volume capability not supported",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.ValidateVolumeCapabilitiesRequest{
-					VolumeId:           "unit-test",
-					VolumeCapabilities: blockVolumeCapabilities,
-				}
-				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				expectedErr := status.Error(codes.InvalidArgument, "block volume capability not supported")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
+			req: &csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId:           "unit-test",
+				VolumeCapabilities: blockVolumeCapabilities,
 			},
+			containerProp: nil,
+			expectedRes:   nil,
+			expectedErr:   status.Error(codes.InvalidArgument, "block volume capability not supported"),
 		},
 		{
-			name: "invalid volume Id",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.ValidateVolumeCapabilitiesRequest{
-					VolumeId:           "unit-test",
-					VolumeCapabilities: stdVolumeCapabilities,
-				}
-				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				expectedErr := status.Error(codes.NotFound, "error parsing volume id: \"unit-test\", should at least contain two #")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
+			name: "invalid volume id",
+			req: &csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId:           "unit-test",
+				VolumeCapabilities: stdVolumeCapabilities,
 			},
+			containerProp: nil,
+			expectedRes:   nil,
+			expectedErr:   status.Error(codes.NotFound, "error parsing volume id: \"unit-test\", should at least contain two #"),
 		},
 		{
 			name: "base storage service url empty",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				d.Cap = []*csi.ControllerServiceCapability{
-					controllerServiceCapability,
-				}
-				req := &csi.ValidateVolumeCapabilitiesRequest{
-					VolumeId:           "unit#test#test",
-					VolumeCapabilities: stdVolumeCapabilities,
-					Secrets: map[string]string{
-						defaultSecretAccountName: "accountname",
-						defaultSecretAccountKey:  "b",
-					},
-				}
-				d.cloud = &azure.Cloud{}
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
-				s := "unit-test"
-				accountkey := storage.AccountKey{
-					Value: &s,
-				}
-				accountkeylist := []storage.AccountKey{}
-				accountkeylist = append(accountkeylist, accountkey)
-				list := storage.AccountListKeysResult{
-					Keys: &accountkeylist,
-				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
-				expectedErr := fmt.Errorf("azure: base storage service url required")
-				_, err := d.ValidateVolumeCapabilities(context.Background(), req)
-				if !reflect.DeepEqual(err, expectedErr) && !strings.Contains(err.Error(), expectedErr.Error()) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
+			req: &csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId:           "unit#test#test",
+				VolumeCapabilities: stdVolumeCapabilities,
+				Secrets: map[string]string{
+					defaultSecretAccountName: "accountname",
+					defaultSecretAccountKey:  "b",
+				},
 			},
+			containerProp: nil,
+			expectedRes:   nil,
+			expectedErr:   status.Error(codes.Internal, "azure: base storage service url required"),
 		},
+		{
+			name: "ContainerProperties of volume is nil",
+			req: &csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId:           "unit#test#test",
+				VolumeCapabilities: stdVolumeCapabilities,
+				Secrets:            map[string]string{},
+			},
+			clientErr:     NULL,
+			containerProp: nil,
+			expectedRes:   nil,
+			expectedErr:   status.Errorf(codes.Internal, "ContainerProperties of volume(%s) is nil", "unit#test#test"),
+		},
+		{
+			name: "Client Error",
+			req: &csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId:           "unit#test#test",
+				VolumeCapabilities: stdVolumeCapabilities,
+				Secrets:            map[string]string{},
+			},
+			clientErr:     DATAPLANE,
+			containerProp: &storage.ContainerProperties{},
+			expectedRes:   nil,
+			expectedErr:   status.Errorf(codes.Internal, containerBeingDeletedDataplaneAPIError),
+		},
+		{
+			name: "Requested Volume does not exist",
+			req: &csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId:           "unit#test#test",
+				VolumeCapabilities: stdVolumeCapabilities,
+				Secrets:            map[string]string{},
+			},
+			clientErr:     NULL,
+			containerProp: &storage.ContainerProperties{},
+			expectedRes:   nil,
+			expectedErr:   status.Errorf(codes.NotFound, "requested volume(%s) does not exist", "unit#test#test"),
+		},
+		/*{//Volume being shown as not existing. ContainerProperties.Deleted not setting correctly??
+			name: "Successful I/O",
+			req: &csi.ValidateVolumeCapabilitiesRequest{
+				VolumeId:           "unit#test#test",
+				VolumeCapabilities: stdVolumeCapabilities,
+				Secrets:            map[string]string{},
+			},
+			clientErr:     NULL,
+			containerProp: &storage.ContainerProperties{Deleted: &[]bool{false}[0]},
+			expectedRes: &csi.ValidateVolumeCapabilitiesResponse{
+				Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
+					VolumeCapabilities: stdVolumeCapabilities,
+				},
+				Message: "",
+			},
+			expectedErr: nil,
+		},*/
 	}
-	for _, tc := range testCases {
-		t.Run(tc.name, tc.testFunc)
+	d := NewFakeDriver()
+	d.cloud = &azure.Cloud{}
+	d.Cap = []*csi.ControllerServiceCapability{
+		controllerServiceCapability,
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+	d.cloud.StorageAccountClient = mockStorageAccountsClient
+	s := "unit-test"
+	accountkey := storage.AccountKey{
+		Value: &s,
+	}
+	accountkeylist := []storage.AccountKey{}
+	accountkeylist = append(accountkeylist, accountkey)
+	list := storage.AccountListKeysResult{
+		Keys: &accountkeylist,
+	}
+	mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+
+	for _, test := range testCases {
+		res, err := d.ValidateVolumeCapabilities(context.Background(), test.req)
+		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr, conProp: test.containerProp}
+		assert.Equal(t, test.expectedErr, err, "Errors must match "+err.Error())
+		assert.Equal(t, test.expectedRes, res, "Response must match")
 	}
 }
 
@@ -882,7 +920,7 @@ func TestCreateBlobContainer(t *testing.T) {
 	d.cloud = &azure.Cloud{}
 	for _, test := range tests {
 		err := d.CreateBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
-		d.cloud.BlobClient = &mockBlobClient{errorType: test.clientErr}
+		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
@@ -937,7 +975,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 
 	for _, test := range tests {
 		err := d.DeleteBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
-		d.cloud.BlobClient = &mockBlobClient{errorType: test.clientErr}
+		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
