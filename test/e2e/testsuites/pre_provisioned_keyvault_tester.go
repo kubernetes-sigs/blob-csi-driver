@@ -19,12 +19,15 @@ package testsuites
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/onsi/ginkgo"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -62,44 +65,82 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 	TenantID = e2eCred.TenantID
 	ObjectID = os.Getenv("AZURE_OBJECT_ID")
 	framework.ExpectNotEqual(len(ObjectID), 0, "env AZURE_OBJECT_ID must be set")
-	vaultName = "blobcsidriver-kv-test"
+	vaultName = "blob-csi-keyvault-test4"
 
 	for _, pod := range t.Pods {
 		for n, volume := range pod.Volumes {
+			// In the method GetStorageAccountAndContainer, we can get an account key of the blob volume
+			// by calling azure API, but not the sas token...
 			accountName, accountKey, _, containerName, err := t.Driver.GetStorageAccountAndContainer(context.TODO(), volume.VolumeID, nil, nil)
 			framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volume.VolumeID, err))
 
 			azureCred, err := azidentity.NewDefaultAzureCredential(nil)
 			framework.ExpectNoError(err)
 
+			ginkgo.By("creating KeyVault...")
 			vault, err := createVault(context.TODO(), azureCred)
 			framework.ExpectNoError(err)
 			defer cleanVault(context.TODO(), azureCred)
 
+			ginkgo.By("creating secret for storage account key...")
 			accountKeySecret, err := createSecret(context.TODO(), azureCred, accountName+"-key", accountKey)
 			framework.ExpectNoError(err)
-
-			// SAS token
-			// accountSASSecret, err := createSecret(context.TODO(), azureCred, accountName+"-sas", accountSasToken)
-			// framework.ExpectNoError(err)
 
 			pod.Volumes[n].ContainerName = containerName
 			pod.Volumes[n].StorageAccountname = accountName
 			pod.Volumes[n].KeyVaultURL = *vault.Properties.VaultURI
 			pod.Volumes[n].KeyVaultSecretName = *accountKeySecret.Name
-			tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
-			// defer must be called here for resources not get removed before using them
-			for i := range cleanup {
-				defer cleanup[i]()
-			}
+			// test for Account key
+			ginkgo.By("test storage account key...")
+			run(pod, client, namespace, t.CSIDriver)
 
-			ginkgo.By("deploying the pod")
-			tpod.Create()
-			defer tpod.Cleanup()
-			ginkgo.By("checking that the pods command exits with no error")
-			tpod.WaitForSuccess()
+			sasToken := generateSASToken(accountName, accountKey)
+
+			ginkgo.By("creating secret for SAS token...")
+			accountSASSecret, err := createSecret(context.TODO(), azureCred, accountName+"-sas", sasToken)
+			framework.ExpectNoError(err)
+
+			pod.Volumes[n].KeyVaultSecretName = *accountSASSecret.Name
+			// TODO: test for SAS token
+			// ginkgo.By("test SAS token...")
+			// run(pod, client, namespace, t.CSIDriver)
 		}
 	}
+}
+
+func run(pod PodDetails, client clientset.Interface, namespace *v1.Namespace, csidriver driver.PreProvisionedVolumeTestDriver) {
+	tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, csidriver)
+	// defer must be called here for resources not get removed before using them
+	for i := range cleanup {
+		defer cleanup[i]()
+	}
+
+	ginkgo.By("deploying the pod")
+	tpod.Create()
+	defer tpod.Cleanup()
+
+	ginkgo.By("checking that the pods command exits with no error")
+	tpod.WaitForSuccess()
+}
+
+func generateSASToken(accountName, accountKey string) string {
+	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+	framework.ExpectNoError(err)
+	serviceClient, err := azblob.NewServiceClientWithSharedKey(fmt.Sprintf("https://%s.blob.core.windows.net/", accountName), credential, nil)
+	framework.ExpectNoError(err)
+	sasURL, err := serviceClient.GetSASURL(
+		azblob.AccountSASResourceTypes{Object: true, Service: true, Container: true},
+		azblob.AccountSASPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true},
+		time.Now(), time.Now().Add(12*time.Hour))
+	framework.ExpectNoError(err)
+	ginkgo.By("sas URL: " + sasURL)
+	u, err := url.Parse(sasURL)
+	framework.ExpectNoError(err)
+	queryUnescape, err := url.QueryUnescape(u.RawQuery)
+	framework.ExpectNoError(err)
+	sasToken := "?" + queryUnescape
+	ginkgo.By("sas Token: " + sasToken)
+	return sasToken
 }
 
 func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault.Vault, error) {
@@ -127,6 +168,16 @@ func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault
 						Permissions: &armkeyvault.Permissions{
 							Secrets: []*armkeyvault.SecretPermissions{
 								to.Ptr(armkeyvault.SecretPermissionsGet),
+								to.Ptr(armkeyvault.SecretPermissionsList),
+							},
+						},
+					},
+					{
+						TenantID: to.Ptr(TenantID),
+						ObjectID: to.Ptr("e3440dd1-b7f3-4275-82bd-65482ba5b26a"),
+						Permissions: &armkeyvault.Permissions{
+							Secrets: []*armkeyvault.SecretPermissions{
+								to.Ptr(armkeyvault.SecretPermissionsAll),
 							},
 						},
 					},
