@@ -658,7 +658,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			expectedRes:   nil,
 			expectedErr:   status.Errorf(codes.NotFound, "requested volume(%s) does not exist", "unit#test#test"),
 		},
-		/*{//Volume being shown as not existing. ContainerProperties.Deleted not setting correctly??
+		/*{ //Volume being shown as not existing. ContainerProperties.Deleted not setting correctly??
 			name: "Successful I/O",
 			req: &csi.ValidateVolumeCapabilitiesRequest{
 				VolumeId:           "unit#test#test",
@@ -872,7 +872,6 @@ func TestControllerExpandVolume(t *testing.T) {
 	}
 }
 
-//management error returning timed out error instead of nil, but working properly for deleteblobcontainer
 func TestCreateBlobContainer(t *testing.T) {
 	tests := []struct {
 		desc          string
@@ -880,14 +879,17 @@ func TestCreateBlobContainer(t *testing.T) {
 		accountName   string
 		containerName string
 		secrets       map[string]string
+		customErrStr  string
 		clientErr     errType
 		expectedErr   error
 	}{
 		{
+			desc:        "containerName is empty",
 			clientErr:   NULL,
 			expectedErr: fmt.Errorf("containerName is empty"),
 		},
 		{
+			desc:          "Base storage service url required",
 			containerName: "containerName",
 			secrets: map[string]string{
 				defaultSecretAccountName: "accountname",
@@ -897,30 +899,41 @@ func TestCreateBlobContainer(t *testing.T) {
 			expectedErr: fmt.Errorf("azure: base storage service url required"),
 		},
 		{
-			containerName: "Secrets is Empty",
+			desc:          "Secrets is Empty",
+			containerName: "containerName",
 			secrets:       map[string]string{},
 			clientErr:     NULL,
 			expectedErr:   nil,
 		},
 		{
-			containerName: "Dataplane API Error",
+			desc:          "Dataplane API Error",
+			containerName: "containerName",
 			secrets:       map[string]string{},
 			clientErr:     DATAPLANE,
-			expectedErr:   nil,
+			expectedErr:   fmt.Errorf("timed out waiting for the condition"),
 		},
-		/*{
-			containerName: "Management API Error",
+		{
+			desc:          "Management API Error",
+			containerName: "containerName",
 			secrets:       map[string]string{},
 			clientErr:     MANAGEMENT,
-			expectedErr:   nil,
-		},*/
+			expectedErr:   fmt.Errorf("timed out waiting for the condition"),
+		},
+		{
+			desc:          "Random Client Error",
+			containerName: "containerName",
+			secrets:       map[string]string{},
+			clientErr:     CUSTOM,
+			customErrStr:  "foobar",
+			expectedErr:   fmt.Errorf("foobar"),
+		},
 	}
 
 	d := NewFakeDriver()
 	d.cloud = &azure.Cloud{}
 	for _, test := range tests {
 		err := d.CreateBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
-		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr}
+		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr, custom: &test.customErrStr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
@@ -935,13 +948,16 @@ func TestDeleteBlobContainer(t *testing.T) {
 		containerName string
 		secrets       map[string]string
 		clientErr     errType
+		customErrStr  string
 		expectedErr   error
 	}{
 		{
+			desc:        "containerName is empty",
 			clientErr:   NULL,
 			expectedErr: fmt.Errorf("containerName is empty"),
 		},
 		{
+			desc:          "Base storage service url required",
 			containerName: "containerName",
 			secrets: map[string]string{
 				defaultSecretAccountName: "accountname",
@@ -951,22 +967,33 @@ func TestDeleteBlobContainer(t *testing.T) {
 			expectedErr: fmt.Errorf("azure: base storage service url required"),
 		},
 		{
-			containerName: "Secrets is Empty",
+			desc:          "Secrets is Empty",
+			containerName: "containerName",
 			secrets:       map[string]string{},
 			clientErr:     NULL,
 			expectedErr:   nil,
 		},
 		{
-			containerName: "Dataplane API Error",
+			desc:          "Dataplane API Error",
+			containerName: "containerName",
 			secrets:       map[string]string{},
 			clientErr:     DATAPLANE,
 			expectedErr:   nil,
 		},
 		{
-			containerName: "Management API Error",
+			desc:          "Management API Error",
+			containerName: "containerName",
 			secrets:       map[string]string{},
 			clientErr:     MANAGEMENT,
 			expectedErr:   nil,
+		},
+		{
+			desc:          "Random Client Error",
+			containerName: "containerName",
+			secrets:       map[string]string{},
+			clientErr:     CUSTOM,
+			customErrStr:  "foobar",
+			expectedErr:   fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", "containerName", "", fmt.Errorf("foobar")),
 		},
 	}
 
@@ -975,7 +1002,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 
 	for _, test := range tests {
 		err := d.DeleteBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
-		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr}
+		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr, custom: &test.customErrStr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
