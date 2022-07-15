@@ -33,6 +33,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/onsi/ginkgo"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apiserver/pkg/storage/names"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
@@ -71,7 +72,7 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 	cloud = e2eCred.Cloud
 	clientID = e2eCred.AADClientID
 	clientSecret = e2eCred.AADClientSecret
-	vaultName = "blob-csi-keyvault-test4"
+	vaultName = names.SimpleNameGenerator.GenerateName("blob-csi-test-kv-")
 
 	for _, pod := range t.Pods {
 		for n, volume := range pod.Volumes {
