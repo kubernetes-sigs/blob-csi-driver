@@ -402,6 +402,202 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "NFS not supported by cross subscription",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "bar"
+				mp := make(map[string]string)
+				mp[subscriptionIDField] = "foo"
+				mp[protocolField] = "nfs"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unit-test"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("NFS protocol is not supported in cross subscription(%s)", "foo"))
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "storeAccountKey must be set as true in cross subscription",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "bar"
+				mp := make(map[string]string)
+				mp[subscriptionIDField] = "foo"
+				mp[storeAccountKeyField] = falseValue
+				mp[protocolField] = "unit-test"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unit-test"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("storeAccountKey must set as true in cross subscription(%s)", "foo"))
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "storeAccountKey must be set as true in cross subscription",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "bar"
+				mp := make(map[string]string)
+				mp[subscriptionIDField] = "foo"
+				mp[storeAccountKeyField] = falseValue
+				mp[protocolField] = "unit-test"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unit-test"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("storeAccountKey must set as true in cross subscription(%s)", "foo"))
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "Update service endpoints failed (protocol = nfs)",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "subID"
+				mp := make(map[string]string)
+				mp[storeAccountKeyField] = falseValue
+				mp[protocolField] = "nfs"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unit-test"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.Internal, "update service endpoints failed with error: %v", fmt.Errorf("SubnetsClient is nil"))
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "Azure Stack only supports Storage Account types : (Premium_LRS) and (Standard_LRS)",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.Config.DisableAzureStackCloud = false
+				d.cloud.Config.Cloud = "AZURESTACKCLOUD"
+				d.cloud.SubscriptionID = "subID"
+				mp := make(map[string]string)
+				mp[storeAccountKeyField] = falseValue
+				mp[protocolField] = "fuse"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unit-test"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", "unit-test", storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS))
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		/*{
+			name: "Failed to get storage access key",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "subID"
+				mp := make(map[string]string)
+				mp[useDataPlaneAPIField] = trueValue
+				mp[protocolField] = "fuse"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unit-test"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.Internal, "failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", "unit-test", "unit-test", fmt.Errorf("could not get account key from secret(%s): KubeClient is nil", "unit-test"))
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},*/
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
@@ -699,8 +895,8 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 	for _, test := range testCases {
 		res, err := d.ValidateVolumeCapabilities(context.Background(), test.req)
 		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr, conProp: test.containerProp}
-		assert.Equal(t, test.expectedErr, err, "Errors must match "+err.Error())
-		assert.Equal(t, test.expectedRes, res, "Response must match")
+		assert.Equal(t, test.expectedErr, err, "Error in testcase (%s): Errors must match", test.name)
+		assert.Equal(t, test.expectedRes, res, "Error in testcase (%s): Response must match", test.name)
 	}
 }
 
