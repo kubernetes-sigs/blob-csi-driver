@@ -16,12 +16,10 @@ export set AZURE_CLIENT_SECRET=
 # If the the test is not for the public Azure, e.g. Azure China Cloud, then you need to set AZURE_CLOUD_NAME and AZURE_LOCATION.
 # For Azure Stack Clound, you need to set AZURE_ENVIRONMENT_FILEPATH for your cloud environment.
 # If you have an existing resource group created for the test, then you need to set variable AZURE_RESOURCE_GROUP.
-# If you are going to test reading storage account key(or sastoken) from Azure Key Vault, then you need to set variable AZURE_OBJECT_ID as the objectId of agentpool Managed Identity 
 export set AZURE_CLOUD_NAME=
 export set AZURE_LOCATION=
 export set AZURE_ENVIRONMENT_FILEPATH=
 export set AZURE_RESOURCE_GROUP=
-export set AZURE_OBJECT_ID=
 ```
 
 ### Run test

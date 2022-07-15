@@ -27,6 +27,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/onsi/ginkgo"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -42,7 +46,9 @@ var (
 	location          string
 	vaultName         string
 	TenantID          string
-	// ObjectID          string
+	cloud             string
+	clientID          string
+	clientSecret      string
 )
 
 // PreProvisionedKeyVaultTest will provision required PV(s), PVC(s) and Pod(s)
@@ -62,8 +68,9 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 	resourceGroupName = e2eCred.ResourceGroup
 	location = e2eCred.Location
 	TenantID = e2eCred.TenantID
-	// ObjectID = os.Getenv("AZURE_OBJECT_ID")
-	// framework.ExpectNotEqual(len(ObjectID), 0, "env AZURE_OBJECT_ID must be set")
+	cloud = e2eCred.Cloud
+	clientID = e2eCred.AADClientID
+	clientSecret = e2eCred.AADClientSecret
 	vaultName = "blob-csi-keyvault-test4"
 
 	for _, pod := range t.Pods {
@@ -149,6 +156,12 @@ func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault
 		return nil, err
 	}
 
+	objectID, err := getServicePrincipalObjectID(ctx, clientID)
+	if err != nil {
+		return nil, err
+	}
+	ginkgo.By("object ID: " + objectID)
+
 	pollerResp, err := vaultsClient.BeginCreateOrUpdate(
 		ctx,
 		resourceGroupName,
@@ -162,22 +175,12 @@ func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault
 				},
 				TenantID: to.Ptr(TenantID),
 				AccessPolicies: []*armkeyvault.AccessPolicyEntry{
-					// {
-					// 	TenantID: to.Ptr(TenantID),
-					// 	ObjectID: to.Ptr(ObjectID),
-					// 	Permissions: &armkeyvault.Permissions{
-					// 		Secrets: []*armkeyvault.SecretPermissions{
-					// 			to.Ptr(armkeyvault.SecretPermissionsGet),
-					// 			to.Ptr(armkeyvault.SecretPermissionsList),
-					// 		},
-					// 	},
-					// },
 					{
 						TenantID: to.Ptr(TenantID),
-						ObjectID: to.Ptr("e3440dd1-b7f3-4275-82bd-65482ba5b26a"),
+						ObjectID: to.Ptr(objectID),
 						Permissions: &armkeyvault.Permissions{
 							Secrets: []*armkeyvault.SecretPermissions{
-								to.Ptr(armkeyvault.SecretPermissionsAll),
+								to.Ptr(armkeyvault.SecretPermissionsGet),
 							},
 						},
 					},
@@ -263,4 +266,55 @@ func createSecret(ctx context.Context, cred azcore.TokenCredential, secretName, 
 	}
 
 	return &secretResp.Secret, nil
+}
+
+func getServicePrincipalObjectID(ctx context.Context, clientID string) (string, error) {
+	spClient, err := getServicePrincipalsClient()
+	if err != nil {
+		return "", err
+	}
+
+	page, err := spClient.List(ctx, fmt.Sprintf("servicePrincipalNames/any(c:c eq '%s')", clientID))
+	if err != nil {
+		return "", err
+	}
+	servicePrincipals := page.Values()
+	if len(servicePrincipals) == 0 {
+		return "", fmt.Errorf("didn't find any service principals for client ID %s", clientID)
+	}
+	return *servicePrincipals[0].ObjectID, nil
+}
+
+func getServicePrincipalsClient() (*graphrbac.ServicePrincipalsClient, error) {
+	spClient := graphrbac.NewServicePrincipalsClient(TenantID)
+
+	env, err := azure.EnvironmentFromName(cloud)
+	if err != nil {
+		return nil, err
+	}
+
+	oauthConfig, err := getOAuthConfig(env, subscriptionID, TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	armSpt, err := adal.NewServicePrincipalToken(*oauthConfig, clientID, clientSecret, env.ServiceManagementEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	authorizer := autorest.NewBearerAuthorizer(armSpt)
+
+	spClient.Authorizer = authorizer
+
+	return &spClient, nil
+}
+
+func getOAuthConfig(env azure.Environment, subscriptionID, tenantID string) (*adal.OAuthConfig, error) {
+	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	return oauthConfig, nil
 }
