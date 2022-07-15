@@ -151,16 +151,16 @@ func generateSASToken(accountName, accountKey string) string {
 }
 
 func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault.Vault, error) {
-	vaultsClient, err := armkeyvault.NewVaultsClient(subscriptionID, cred, nil)
-	if err != nil {
-		return nil, err
-	}
-
 	objectID, err := getServicePrincipalObjectID(ctx, clientID)
 	if err != nil {
 		return nil, err
 	}
 	ginkgo.By("object ID: " + objectID)
+
+	vaultsClient, err := armkeyvault.NewVaultsClient(subscriptionID, cred, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	pollerResp, err := vaultsClient.BeginCreateOrUpdate(
 		ctx,
@@ -293,28 +293,19 @@ func getServicePrincipalsClient() (*graphrbac.ServicePrincipalsClient, error) {
 		return nil, err
 	}
 
-	oauthConfig, err := getOAuthConfig(env, subscriptionID, TenantID)
+	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, TenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	armSpt, err := adal.NewServicePrincipalToken(*oauthConfig, clientID, clientSecret, env.ServiceManagementEndpoint)
+	token, err := adal.NewServicePrincipalToken(*oauthConfig, clientID, clientSecret, env.GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	authorizer := autorest.NewBearerAuthorizer(armSpt)
+	authorizer := autorest.NewBearerAuthorizer(token)
 
 	spClient.Authorizer = authorizer
 
 	return &spClient, nil
-}
-
-func getOAuthConfig(env azure.Environment, subscriptionID, tenantID string) (*adal.OAuthConfig, error) {
-	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, tenantID)
-	if err != nil {
-		return nil, err
-	}
-
-	return oauthConfig, nil
 }
