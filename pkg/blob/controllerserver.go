@@ -224,7 +224,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	tags, err := util.ConvertTagsToMap(customTags)
 	if err != nil {
-		return nil, err
+		return nil, status.Errorf(codes.InvalidArgument, err.Error())
 	}
 
 	accountOptions := &azure.AccountOptions{
@@ -257,7 +257,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
-				return nil, err
+				return nil, status.Errorf(codes.Internal, err.Error())
 			}
 			if cache != nil {
 				accountName = cache.(string)
@@ -366,7 +366,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 
 	if err := d.ValidateControllerServiceRequest(csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME); err != nil {
-		return nil, fmt.Errorf("invalid delete volume req: %v", req)
+		return nil, status.Errorf(codes.Internal, "invalid delete volume req: %v", req)
 	}
 
 	if acquired := d.volumeLocks.TryAcquire(volumeID); !acquired {
@@ -521,7 +521,7 @@ func (d *Driver) ControllerExpandVolume(ctx context.Context, req *csi.Controller
 	}
 
 	if err := d.ValidateControllerServiceRequest(csi.ControllerServiceCapability_RPC_EXPAND_VOLUME); err != nil {
-		return nil, fmt.Errorf("invalid expand volume req: %v", req)
+		return nil, status.Errorf(codes.Internal, "invalid expand volume req: %v", req)
 	}
 
 	volSizeBytes := int64(req.GetCapacityRange().GetRequiredBytes())
