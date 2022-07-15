@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -43,7 +42,7 @@ var (
 	location          string
 	vaultName         string
 	TenantID          string
-	ObjectID          string
+	// ObjectID          string
 )
 
 // PreProvisionedKeyVaultTest will provision required PV(s), PVC(s) and Pod(s)
@@ -63,8 +62,8 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 	resourceGroupName = e2eCred.ResourceGroup
 	location = e2eCred.Location
 	TenantID = e2eCred.TenantID
-	ObjectID = os.Getenv("AZURE_OBJECT_ID")
-	framework.ExpectNotEqual(len(ObjectID), 0, "env AZURE_OBJECT_ID must be set")
+	// ObjectID = os.Getenv("AZURE_OBJECT_ID")
+	// framework.ExpectNotEqual(len(ObjectID), 0, "env AZURE_OBJECT_ID must be set")
 	vaultName = "blob-csi-keyvault-test4"
 
 	for _, pod := range t.Pods {
@@ -163,16 +162,16 @@ func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault
 				},
 				TenantID: to.Ptr(TenantID),
 				AccessPolicies: []*armkeyvault.AccessPolicyEntry{
-					{
-						TenantID: to.Ptr(TenantID),
-						ObjectID: to.Ptr(ObjectID),
-						Permissions: &armkeyvault.Permissions{
-							Secrets: []*armkeyvault.SecretPermissions{
-								to.Ptr(armkeyvault.SecretPermissionsGet),
-								to.Ptr(armkeyvault.SecretPermissionsList),
-							},
-						},
-					},
+					// {
+					// 	TenantID: to.Ptr(TenantID),
+					// 	ObjectID: to.Ptr(ObjectID),
+					// 	Permissions: &armkeyvault.Permissions{
+					// 		Secrets: []*armkeyvault.SecretPermissions{
+					// 			to.Ptr(armkeyvault.SecretPermissionsGet),
+					// 			to.Ptr(armkeyvault.SecretPermissionsList),
+					// 		},
+					// 	},
+					// },
 					{
 						TenantID: to.Ptr(TenantID),
 						ObjectID: to.Ptr("e3440dd1-b7f3-4275-82bd-65482ba5b26a"),
