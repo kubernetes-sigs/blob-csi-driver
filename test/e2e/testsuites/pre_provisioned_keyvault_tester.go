@@ -364,6 +364,9 @@ func getMSIObjectID(ctx context.Context, identityName string) (string, error) {
 	}
 
 	id, err := msiClient.Get(ctx, resourceGroupName, identityName)
+	if err != nil {
+		return "", err
+	}
 
 	return id.UserAssignedIdentityProperties.PrincipalID.String(), err
 }
