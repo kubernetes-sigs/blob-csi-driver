@@ -153,18 +153,6 @@ func generateSASToken(accountName, accountKey string) string {
 }
 
 func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault.Vault, error) {
-	clientObjectID, err := getServicePrincipalObjectID(ctx, clientID)
-	if err != nil {
-		return nil, err
-	}
-	ginkgo.By("client object ID: " + clientObjectID)
-
-	msiObjectID, err := getMSIObjectID(ctx, "blobfuse-csi-driver-e2e-test-id")
-	if err != nil {
-		return nil, err
-	}
-	ginkgo.By("MSI object ID: " + msiObjectID)
-
 	vaultsClient, err := armkeyvault.NewVaultsClient(subscriptionID, cred, nil)
 	if err != nil {
 		return nil, err
@@ -181,29 +169,8 @@ func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault
 					Family: to.Ptr(armkeyvault.SKUFamilyA),
 					Name:   to.Ptr(armkeyvault.SKUNameStandard),
 				},
-				TenantID: to.Ptr(TenantID),
-				AccessPolicies: []*armkeyvault.AccessPolicyEntry{
-					// permission for upstream e2e test
-					{
-						TenantID: to.Ptr(TenantID),
-						ObjectID: to.Ptr(clientObjectID),
-						Permissions: &armkeyvault.Permissions{
-							Secrets: []*armkeyvault.SecretPermissions{
-								to.Ptr(armkeyvault.SecretPermissionsGet),
-							},
-						},
-					},
-					// permission for upstream e2e-vmss test
-					{
-						TenantID: to.Ptr(TenantID),
-						ObjectID: to.Ptr(msiObjectID),
-						Permissions: &armkeyvault.Permissions{
-							Secrets: []*armkeyvault.SecretPermissions{
-								to.Ptr(armkeyvault.SecretPermissionsGet),
-							},
-						},
-					},
-				},
+				TenantID:       to.Ptr(TenantID),
+				AccessPolicies: getAccessPolicy(ctx),
 			},
 		},
 		nil,
@@ -217,6 +184,42 @@ func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault
 		return nil, err
 	}
 	return &resp.Vault, nil
+}
+
+func getAccessPolicy(ctx context.Context) []*armkeyvault.AccessPolicyEntry {
+	accessPolicyEntry := []*armkeyvault.AccessPolicyEntry{}
+
+	// vault secret permission for upstream e2e test, which uses application service principal
+	clientObjectID, err := getServicePrincipalObjectID(ctx, clientID)
+	if err == nil {
+		ginkgo.By("client object ID: " + clientObjectID)
+		accessPolicyEntry = append(accessPolicyEntry, &armkeyvault.AccessPolicyEntry{
+			TenantID: to.Ptr(TenantID),
+			ObjectID: to.Ptr(clientObjectID),
+			Permissions: &armkeyvault.Permissions{
+				Secrets: []*armkeyvault.SecretPermissions{
+					to.Ptr(armkeyvault.SecretPermissionsGet),
+				},
+			},
+		})
+	}
+
+	// vault secret permission for upstream e2e-vmss test, which uses msi blobfuse-csi-driver-e2e-test-id
+	msiObjectID, err := getMSIObjectID(ctx, "blobfuse-csi-driver-e2e-test-id")
+	if err == nil {
+		ginkgo.By("MSI object ID: " + msiObjectID)
+		accessPolicyEntry = append(accessPolicyEntry, &armkeyvault.AccessPolicyEntry{
+			TenantID: to.Ptr(TenantID),
+			ObjectID: to.Ptr(msiObjectID),
+			Permissions: &armkeyvault.Permissions{
+				Secrets: []*armkeyvault.SecretPermissions{
+					to.Ptr(armkeyvault.SecretPermissionsGet),
+				},
+			},
+		})
+	}
+
+	return accessPolicyEntry
 }
 
 func cleanVault(ctx context.Context, cred azcore.TokenCredential) {
