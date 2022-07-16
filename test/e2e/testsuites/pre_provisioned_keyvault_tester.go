@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -152,11 +153,17 @@ func generateSASToken(accountName, accountKey string) string {
 }
 
 func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault.Vault, error) {
-	objectID, err := getServicePrincipalObjectID(ctx, clientID)
+	clientObjectID, err := getServicePrincipalObjectID(ctx, clientID)
 	if err != nil {
 		return nil, err
 	}
-	ginkgo.By("object ID: " + objectID)
+	ginkgo.By("client object ID: " + clientObjectID)
+
+	msiObjectID, err := getMSIObjectID(ctx, "blobfuse-csi-driver-e2e-test-id")
+	if err != nil {
+		return nil, err
+	}
+	ginkgo.By("MSI object ID: " + msiObjectID)
 
 	vaultsClient, err := armkeyvault.NewVaultsClient(subscriptionID, cred, nil)
 	if err != nil {
@@ -176,9 +183,20 @@ func createVault(ctx context.Context, cred azcore.TokenCredential) (*armkeyvault
 				},
 				TenantID: to.Ptr(TenantID),
 				AccessPolicies: []*armkeyvault.AccessPolicyEntry{
+					// permission for upstream e2e test
 					{
 						TenantID: to.Ptr(TenantID),
-						ObjectID: to.Ptr(objectID),
+						ObjectID: to.Ptr(clientObjectID),
+						Permissions: &armkeyvault.Permissions{
+							Secrets: []*armkeyvault.SecretPermissions{
+								to.Ptr(armkeyvault.SecretPermissionsGet),
+							},
+						},
+					},
+					// permission for upstream e2e-vmss test
+					{
+						TenantID: to.Ptr(TenantID),
+						ObjectID: to.Ptr(msiObjectID),
 						Permissions: &armkeyvault.Permissions{
 							Secrets: []*armkeyvault.SecretPermissions{
 								to.Ptr(armkeyvault.SecretPermissionsGet),
@@ -309,4 +327,40 @@ func getServicePrincipalsClient() (*graphrbac.ServicePrincipalsClient, error) {
 	spClient.Authorizer = authorizer
 
 	return &spClient, nil
+}
+
+func getMSIUserAssignedIDClient() (*msi.UserAssignedIdentitiesClient, error) {
+	msiClient := msi.NewUserAssignedIdentitiesClient(subscriptionID)
+
+	env, err := azure.EnvironmentFromName(cloud)
+	if err != nil {
+		return nil, err
+	}
+
+	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := adal.NewServicePrincipalToken(*oauthConfig, clientID, clientSecret, env.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	authorizer := autorest.NewBearerAuthorizer(token)
+
+	msiClient.Authorizer = authorizer
+
+	return &msiClient, nil
+}
+
+func getMSIObjectID(ctx context.Context, identityName string) (string, error) {
+	msiClient, err := getMSIUserAssignedIDClient()
+	if err != nil {
+		return "", err
+	}
+
+	id, err := msiClient.Get(ctx, resourceGroupName, identityName)
+
+	return id.UserAssignedIdentityProperties.PrincipalID.String(), err
 }
