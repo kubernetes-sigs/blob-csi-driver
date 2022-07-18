@@ -52,6 +52,9 @@ type VolumeDetails struct {
 	DataSource         *DataSource
 	ContainerName      string
 	NodeStageSecretRef string
+	StorageAccountname string
+	KeyVaultURL        string
+	KeyVaultSecretName string
 }
 
 type VolumeMode int
@@ -203,6 +206,15 @@ func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(client cli
 	attrib := make(map[string]string)
 	if volume.ContainerName != "" {
 		attrib["containerName"] = volume.ContainerName
+	}
+	if volume.StorageAccountname != "" {
+		attrib["storageAccountName"] = volume.StorageAccountname
+	}
+	if volume.KeyVaultURL != "" {
+		attrib["keyVaultURL"] = volume.KeyVaultURL
+	}
+	if volume.KeyVaultSecretName != "" {
+		attrib["keyVaultSecretName"] = volume.KeyVaultSecretName
 	}
 	nodeStageSecretRef := volume.NodeStageSecretRef
 	pv := csiDriver.GetPersistentVolume(volume.VolumeID, volume.FSType, volume.ClaimSize, volume.ReclaimPolicy, namespace.Name, attrib, nodeStageSecretRef)

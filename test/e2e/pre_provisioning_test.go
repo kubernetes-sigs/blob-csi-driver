@@ -250,6 +250,46 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 		}
 		test.Run(cs, ns)
 	})
+
+	ginkgo.It("should use Key Vault", func() {
+		req := makeCreateVolumeReq("pre-provisioned-key-vault", ns.Name)
+		resp, err := blobDriver.CreateVolume(context.Background(), req)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
+		}
+		volumeID = resp.Volume.VolumeId
+		ginkgo.By(fmt.Sprintf("Successfully provisioned blob volume: %q\n", volumeID))
+
+		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
+		reclaimPolicy := v1.PersistentVolumeReclaimRetain
+		volumeBindingMode := storagev1.VolumeBindingImmediate
+
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeID:          volumeID,
+						FSType:            "ext4",
+						ClaimSize:         volumeSize,
+						ReclaimPolicy:     &reclaimPolicy,
+						VolumeBindingMode: &volumeBindingMode,
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+
+		test := testsuites.PreProvisionedKeyVaultTest{
+			CSIDriver: testDriver,
+			Pods:      pods,
+			Driver:    blobDriver,
+		}
+		test.Run(cs, ns)
+	})
 })
 
 func makeCreateVolumeReq(volumeName, secretNamespace string) *csi.CreateVolumeRequest {
