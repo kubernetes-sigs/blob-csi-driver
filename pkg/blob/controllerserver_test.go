@@ -88,6 +88,20 @@ func (c *mockBlobClient) GetContainer(ctx context.Context, resourceGroupName, ac
 	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
 
+//creates and returns mock storage account client
+func NewMockSAClient(ctrl *gomock.Controller, ctx context.Context, subsID, rg, accName string, keyList *[]storage.AccountKey) *mockstorageaccountclient.MockInterface {
+	cl := mockstorageaccountclient.NewMockInterface(ctrl)
+
+	cl.EXPECT().
+		ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(storage.AccountListKeysResult{
+			Keys: keyList,
+		}, nil).
+		AnyTimes()
+
+	return cl
+}
+
 func TestControllerGetCapabilities(t *testing.T) {
 	d := NewFakeDriver()
 	controlCap := []*csi.ControllerServiceCapability{
@@ -566,8 +580,8 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
-		/*{
-			name: "Failed to get storage access key",
+		{
+			name: "Failed to get storage access key (Dataplane API)",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
@@ -582,6 +596,10 @@ func TestCreateVolume(t *testing.T) {
 				mp[resourceGroupField] = "unit-test"
 				mp[containerNameField] = "unit-test"
 				mp[mountPermissionsField] = "0750"
+
+				keyList := make([]storage.AccountKey, 0)
+				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subID", "unit-test", "unit-test", &keyList)
+
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
@@ -591,13 +609,141 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.Internal, "failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", "unit-test", "unit-test", fmt.Errorf("could not get account key from secret(%s): KubeClient is nil", "unit-test"))
+				expectedErr := status.Errorf(codes.Internal, "failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", "unit-test", "unit-test", fmt.Errorf("no valid keys"))
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
 			},
-		},*/
+		},
+		{
+			name: "Failed to Create Blob Container",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "subID"
+
+				keyList := make([]storage.AccountKey, 1)
+				fakeKey := "fakeKey"
+				fakeValue := "fakeValue"
+				keyList[0] = (storage.AccountKey{
+					KeyName: &fakeKey,
+					Value:   &fakeValue,
+				})
+				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subID", "unit-test", "unit-test", &keyList)
+
+				errorType := DATAPLANE
+				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
+
+				mp := make(map[string]string)
+				mp[protocolField] = "fuse"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unittest"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				e := fmt.Errorf("timed out waiting for the condition")
+				expectedErr := status.Errorf(codes.Internal, "failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", "unit-test", mp[storageAccountField], "unit-test", "unit-test", "unit-test", 0, e)
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "Failed to get storage access key",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "subID"
+
+				keyList := make([]storage.AccountKey, 0)
+				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subID", "unit-test", "unit-test", &keyList)
+
+				errorType := NULL
+				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
+
+				mp := make(map[string]string)
+				mp[storeAccountKeyField] = trueValue
+				mp[protocolField] = "fuse"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unittest"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.Internal, "failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", mp[storageAccountField], mp[resourceGroupField], fmt.Errorf("no valid keys"))
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
+			name: "Successful I/O",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "subID"
+
+				keyList := make([]storage.AccountKey, 1)
+				fakeKey := "fakeKey"
+				fakeValue := "fakeValue"
+				keyList[0] = (storage.AccountKey{
+					KeyName: &fakeKey,
+					Value:   &fakeValue,
+				})
+				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subID", "unit-test", "unit-test", &keyList)
+
+				errorType := NULL
+				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
+
+				mp := make(map[string]string)
+				mp[protocolField] = "fuse"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unittest"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				var expectedErr error = nil
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
@@ -658,6 +804,25 @@ func TestDeleteVolume(t *testing.T) {
 				expectedErr := error(nil)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: %v, expectedErr:(%v", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "GetAuthEnv() Failed (useDataPlaneAPI)",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				req := &csi.DeleteVolumeRequest{
+					VolumeId: "rg#accountName#containerName",
+				}
+				d.dataPlaneAPIVolMap.Store("rg#accountName#containerName", "accountName")
+				_, err := d.DeleteVolume(context.Background(), req)
+				expectedErr := status.Errorf(codes.Internal, "GetAuthEnv(%s) failed with %v", "rg#accountName#containerName", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", "accountName", "rg", fmt.Errorf("StorageAccountClient is nil")))
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("\nactualErr: %v, \nexpectedErr:(%v", err, expectedErr)
 				}
 			},
 		},
@@ -729,6 +894,41 @@ func TestDeleteVolume(t *testing.T) {
 				}
 			},
 		},
+		/*{//fake environment needed
+			name: "Successful I/O",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				req := &csi.DeleteVolumeRequest{
+					VolumeId: "rg#accountname#containerName",
+					Secrets: map[string]string{
+						defaultSecretAccountName: "accountname",
+						defaultSecretAccountKey:  "b",
+					},
+				}
+				d.dataPlaneAPIVolMap.Store("rg#accountname#containerName", "accountname")
+
+				s := "accountname"
+				accountkey := storage.AccountKey{
+					Value: &s,
+				}
+				accountkeylist := []storage.AccountKey{}
+				accountkeylist = append(accountkeylist, accountkey)
+				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subsID", "rg", "accountname", &accountkeylist)
+
+				errorType := NULL
+				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
+
+				_, err := d.DeleteVolume(context.Background(), req)
+				var expectedErr error = nil
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("\nactualErr: %v, \nexpectedErr:(%v", err, expectedErr)
+				}
+			},
+		},*/
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
