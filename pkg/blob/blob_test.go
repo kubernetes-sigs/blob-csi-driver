@@ -36,6 +36,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
+	//fakecloud "k8s.io/cloud-provider/fake"
+
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
@@ -749,10 +751,11 @@ func TestGetContainerReference(t *testing.T) {
 	fakeAccountKey := "test-key"
 	fakeContainerName := "test-con"
 	testCases := []struct {
-		name          string
-		containerName string
-		secrets       map[string]string
-		expectedError error
+		name           string
+		containerName  string
+		endpointSuffix string
+		secrets        map[string]string
+		expectedError  error
 	}{
 		{
 			name:          "failed to retrieve accountName",
@@ -783,23 +786,26 @@ func TestGetContainerReference(t *testing.T) {
 			},
 			expectedError: fmt.Errorf("azure: base storage service url required"),
 		},
-		/*{
-			name:          "container reference is nil",
-			containerName: fakeContainerName,
+		{
+			name:           "Successful I/O",
+			containerName:  fakeContainerName,
+			endpointSuffix: "endpointSuffix",
 			secrets: map[string]string{
-				"accountName": fakeAccountName,
+				"accountName": "devstoreaccount1",
 				"accountKey":  fakeAccountKey,
 			},
-			expectedError: fmt.Errorf("ContainerReference of %s is nil", fakeContainerName),
-		},*/
+			expectedError: nil,
+		},
 	}
 
 	d := NewFakeDriver()
-	d.cloud = &azure.Cloud{}
+	d.cloud = azure.GetTestCloud(gomock.NewController(t))
+	//encodedStr := base64.StdEncoding.EncodeToString([]byte{12, 34, 56})
 	d.cloud.KubeClient = fake.NewSimpleClientset()
-	//d.cloud.Environment.StorageEndpointSuffix =
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			d.cloud.Environment.StorageEndpointSuffix = tc.endpointSuffix
 			container, err := getContainerReference(tc.containerName, tc.secrets, d.cloud.Environment)
 			if tc.expectedError != nil {
 				assert.Error(t, err)
