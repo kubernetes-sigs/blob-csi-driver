@@ -894,41 +894,6 @@ func TestDeleteVolume(t *testing.T) {
 				}
 			},
 		},
-		/*{//fake environment needed
-			name: "Successful I/O",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
-				d.Cap = []*csi.ControllerServiceCapability{
-					controllerServiceCapability,
-				}
-				req := &csi.DeleteVolumeRequest{
-					VolumeId: "rg#accountname#containerName",
-					Secrets: map[string]string{
-						defaultSecretAccountName: "accountname",
-						defaultSecretAccountKey:  "b",
-					},
-				}
-				d.dataPlaneAPIVolMap.Store("rg#accountname#containerName", "accountname")
-
-				s := "accountname"
-				accountkey := storage.AccountKey{
-					Value: &s,
-				}
-				accountkeylist := []storage.AccountKey{}
-				accountkeylist = append(accountkeylist, accountkey)
-				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subsID", "rg", "accountname", &accountkeylist)
-
-				errorType := NULL
-				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
-
-				_, err := d.DeleteVolume(context.Background(), req)
-				var expectedErr error = nil
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("\nactualErr: %v, \nexpectedErr:(%v", err, expectedErr)
-				}
-			},
-		},*/
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
