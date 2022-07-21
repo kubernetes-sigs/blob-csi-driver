@@ -24,6 +24,43 @@ import (
 	mount "k8s.io/mount-utils"
 )
 
+func TestMount(t *testing.T) {
+	tests := []struct {
+		desc        string
+		source      string
+		target      string
+		fstype      string
+		options     []string
+		expectedErr error
+	}{
+		{
+			desc:        "source error",
+			source:      "error_mount",
+			expectedErr: fmt.Errorf("fake Mount: source error"),
+		},
+		{
+			desc:        "target error",
+			target:      "error_mount",
+			expectedErr: fmt.Errorf("fake Mount: target error"),
+		},
+		{
+			desc:        "Success",
+			expectedErr: nil,
+		},
+	}
+	for _, test := range tests {
+		d := NewFakeDriver()
+		fakeMounter := &fakeMounter{}
+		d.mounter = &mount.SafeFormatAndMount{
+			Interface: fakeMounter,
+		}
+		err := d.mounter.Mount(test.source, test.target, test.fstype, test.options)
+		if !reflect.DeepEqual(err, test.expectedErr) {
+			t.Errorf("actualErr: (%v), expectedErr: (%v)", err, test.expectedErr)
+		}
+	}
+}
+
 func TestMountSensitive(t *testing.T) {
 	tests := []struct {
 		desc        string
