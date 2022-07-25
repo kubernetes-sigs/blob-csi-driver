@@ -45,10 +45,6 @@ github.com/Azure/azure-sdk-for-go/sdk/internal/uuid
 # github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault v1.0.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault
-# github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.4.1
-## explicit; go 1.18
-github.com/Azure/azure-sdk-for-go/sdk/storage/azblob
-github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/internal
 # github.com/Azure/go-autorest v14.2.0+incompatible
 ## explicit
 github.com/Azure/go-autorest

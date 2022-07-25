@@ -37,7 +37,6 @@ require (
 require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.1.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault v1.0.0
-	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.4.1
 	k8s.io/apiserver v0.24.0
 )
 
