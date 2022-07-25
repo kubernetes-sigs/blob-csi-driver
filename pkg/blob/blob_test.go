@@ -545,10 +545,10 @@ func TestGetAuthEnv(t *testing.T) {
 				if err != nil {
 					t.Errorf("actualErr: (%v), expectedErr: nil", err)
 				}
-				assert.Equal(t, rg, "rg")
-				assert.Equal(t, accountName, "accountname")
-				assert.Equal(t, accountkey, "unit-test")
-				assert.Equal(t, containerName, "containername")
+				assert.Equal(t, "rg", rg)
+				assert.Equal(t, "accountname", accountName)
+				assert.Equal(t, "unit-test", accountkey)
+				assert.Equal(t, "containername", containerName)
 			},
 		},
 		{
@@ -565,11 +565,67 @@ func TestGetAuthEnv(t *testing.T) {
 					t.Errorf("actualErr: (%v), expect no error", err)
 				}
 
-				assert.Equal(t, rg, "")
-				assert.Equal(t, accountName, "accountname")
-				assert.Equal(t, accountkey, "")
-				assert.Equal(t, containerName, "containername")
+				assert.Equal(t, "", rg)
+				assert.Equal(t, "accountname", accountName)
+				assert.Equal(t, "", accountkey)
+				assert.Equal(t, "containername", containerName)
 				assert.Equal(t, len(authEnv), 0)
+			},
+		},
+		{
+			name: "failed to get keyvaultClient",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.ResourceGroup = "rg"
+				attrib := make(map[string]string)
+				secret := make(map[string]string)
+				volumeID := "unique-volumeid"
+				attrib[keyVaultURLField] = "kvURL"
+				attrib[storageAccountField] = "accountname"
+				attrib[containerNameField] = "containername"
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				expectedErrStr := "failed to get keyvaultClient:"
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), expectedErrStr)
+			},
+		},
+		{
+			name: "valid request with all other attr",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				attrib := make(map[string]string)
+				attrib[subscriptionIDField] = "subID"
+				attrib[secretNameField] = "secretName"
+				attrib[secretNamespaceField] = "sNS"
+				attrib[pvcNamespaceKey] = "pvcNSKey"
+				attrib[getAccountKeyFromSecretField] = "akFromSecret"
+
+				secret := make(map[string]string)
+				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+				d.cloud = &azure.Cloud{}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				s := "unit-test"
+				accountkey := storage.AccountKey{
+					Value: &s,
+				}
+				accountkeylist := []storage.AccountKey{}
+				accountkeylist = append(accountkeylist, accountkey)
+				list := storage.AccountListKeysResult{
+					Keys: &accountkeylist,
+				}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				rg, accountName, _, containerName, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				expectedErr := error(nil)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+				assert.Equal(t, rg, "rg")
+				assert.Equal(t, "f5713de20cde511e8ba4900", accountName)
+				assert.Equal(t, "pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41", containerName)
 			},
 		},
 	}
