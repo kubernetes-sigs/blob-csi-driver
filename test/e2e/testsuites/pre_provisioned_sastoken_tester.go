@@ -96,14 +96,12 @@ func generateSASToken(accountName, accountKey string) string {
 	sasURL, err := serviceClient.GetSASURL(
 		azblob.AccountSASResourceTypes{Object: true, Service: true, Container: true},
 		azblob.AccountSASPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true},
-		time.Now().Add(-12*time.Hour), time.Now().Add(12*time.Hour))
+		time.Now(), time.Now().Add(10*time.Hour))
 	framework.ExpectNoError(err)
 	ginkgo.By("SAS URL: " + sasURL)
 	u, err := url.Parse(sasURL)
 	framework.ExpectNoError(err)
-	queryUnescape, err := url.QueryUnescape(u.RawQuery)
-	framework.ExpectNoError(err)
-	sasToken := "?" + queryUnescape
+	sasToken := "?" + u.RawQuery
 	ginkgo.By("SAS Token: " + sasToken)
 	return sasToken
 }
