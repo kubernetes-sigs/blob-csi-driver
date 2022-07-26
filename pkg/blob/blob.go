@@ -317,7 +317,7 @@ func checkContainerNameBeginAndEnd(containerName string) bool {
 
 // isSASToken checks if the key contains the patterns. Because a SAS Token must have these strings, use them to judge.
 func isSASToken(key string) bool {
-	return strings.Contains(key, "?sv=")
+	return strings.HasPrefix(key, "?")
 }
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
