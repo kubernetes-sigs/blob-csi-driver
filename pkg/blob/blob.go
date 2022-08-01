@@ -315,7 +315,8 @@ func checkContainerNameBeginAndEnd(containerName string) bool {
 	return false
 }
 
-// isSASToken checks if the key contains the patterns. Because a SAS Token must have these strings, use them to judge.
+// isSASToken checks if the key contains the patterns.
+// SAS token format could refer to https://docs.microsoft.com/en-us/rest/api/eventhub/generate-sas-token
 func isSASToken(key string) bool {
 	return strings.HasPrefix(key, "?")
 }
