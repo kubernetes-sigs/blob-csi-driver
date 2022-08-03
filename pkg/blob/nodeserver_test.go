@@ -487,35 +487,6 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "[Error] GetAuthEnv Error (could not find container name)",
-			testFunc: func(t *testing.T) {
-				req := &csi.NodeStageVolumeRequest{
-					VolumeId:          "unit-test",
-					StagingTargetPath: targetTest,
-					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
-					VolumeContext: map[string]string{
-						mountPermissionsField: "0755",
-						protocolField:         "protocol",
-					},
-					Secrets: map[string]string{},
-				}
-				d := NewFakeDriver()
-				d.cloud = provider.GetTestCloud(gomock.NewController(t))
-				d.cloud.ResourceGroup = "rg"
-				fakeMounter := &fakeMounter{}
-				fakeExec := &testingexec.FakeExec{}
-				d.mounter = &mount.SafeFormatAndMount{
-					Interface: fakeMounter,
-					Exec:      fakeExec,
-				}
-				_, err := d.NodeStageVolume(context.TODO(), req)
-				expectedErr := fmt.Errorf("could not find containerName from attributes(%v) or volumeID(%v)", req.GetVolumeContext(), req.VolumeId)
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
-		{
 			name: "protocol = nfs",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
