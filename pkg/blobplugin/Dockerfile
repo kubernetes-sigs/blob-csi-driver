@@ -34,9 +34,7 @@ ARG ARCH=amd64
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \
   wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb && \
-  wget -O /blobfuse-proxy/blobfuse2.deb https://github.com/Azure/azure-storage-fuse/releases/download/blobfuse2-2.0.0-preview2/blobfuse2-2.0.0-preview.2-ubuntu-18.04-x86-64.deb && \
-  dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse fuse -y && apt remove wget -y && \
-  dpkg -i /blobfuse-proxy/blobfuse2.deb; fi
+  dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse blobfuse2 fuse -y && apt remove wget -y; fi
 
 COPY ./deploy/blobfuse2/config.yaml /usr/share/blobfuse2/config.yaml
 LABEL maintainers="andyzhangx"
