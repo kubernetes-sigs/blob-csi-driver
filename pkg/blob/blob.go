@@ -283,10 +283,10 @@ func GetContainerInfo(id string) (string, string, string, string, error) {
 }
 
 // A container name must be a valid DNS name, conforming to the following naming rules:
-//	1. Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
-//	2. Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.
-//	3. All letters in a container name must be lowercase.
-//	4. Container names must be from 3 through 63 characters long.
+//  1. Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
+//  2. Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.
+//  3. All letters in a container name must be lowercase.
+//  4. Container names must be from 3 through 63 characters long.
 //
 // See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 func getValidContainerName(volumeName, protocol string) string {
@@ -315,9 +315,10 @@ func checkContainerNameBeginAndEnd(containerName string) bool {
 	return false
 }
 
-// isSASToken checks if the key contains the patterns. Because a SAS Token must have these strings, use them to judge.
+// isSASToken checks if the key contains the patterns.
+// SAS token format could refer to https://docs.microsoft.com/en-us/rest/api/eventhub/generate-sas-token
 func isSASToken(key string) bool {
-	return strings.Contains(key, "?sv=")
+	return strings.HasPrefix(key, "?")
 }
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
@@ -681,9 +682,9 @@ func setAzureCredentials(kubeClient kubernetes.Interface, accountName, accountKe
 }
 
 // GetStorageAccesskey get Azure storage account key from
-// 	1. secrets (if not empty)
-// 	2. use k8s client identity to read from k8s secret
-// 	3. use cluster identity to get from storage account directly
+//  1. secrets (if not empty)
+//  2. use k8s client identity to read from k8s secret
+//  3. use cluster identity to get from storage account directly
 func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, string, error) {
 	if len(secrets) > 0 {
 		return getStorageAccount(secrets)

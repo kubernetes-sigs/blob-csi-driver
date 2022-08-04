@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
 	"sigs.k8s.io/blob-csi-driver/test/e2e/testsuites"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/onsi/ginkgo"
 	v1 "k8s.io/api/core/v1"
@@ -284,6 +285,42 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 		}
 
 		test := testsuites.PreProvisionedKeyVaultTest{
+			CSIDriver: testDriver,
+			Pods:      pods,
+			Driver:    blobDriver,
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("should use SAS token", func() {
+		req := makeCreateVolumeReq("pre-provisioned-sas-token", ns.Name)
+		resp, err := blobDriver.CreateVolume(context.Background(), req)
+		if err != nil {
+			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
+		}
+		volumeID = resp.Volume.VolumeId
+		ginkgo.By(fmt.Sprintf("Successfully provisioned blob volume: %q\n", volumeID))
+
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						VolumeID:          volumeID,
+						FSType:            "ext4",
+						ClaimSize:         fmt.Sprintf("%dGi", defaultVolumeSize),
+						ReclaimPolicy:     to.Ptr(v1.PersistentVolumeReclaimRetain),
+						VolumeBindingMode: to.Ptr(storagev1.VolumeBindingImmediate),
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+
+		test := testsuites.PreProvisionedSASTokenTest{
 			CSIDriver: testDriver,
 			Pods:      pods,
 			Driver:    blobDriver,

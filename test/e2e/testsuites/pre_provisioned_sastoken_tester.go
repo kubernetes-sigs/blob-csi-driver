@@ -19,7 +19,10 @@ package testsuites
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/onsi/ginkgo"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -29,16 +32,16 @@ import (
 	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
 )
 
-// PreProvisionedKeyVaultTest will provision required PV(s), PVC(s) and Pod(s)
+// PreProvisionedSASTokenTest will provision required PV(s), PVC(s) and Pod(s)
 // Testing that the Pod(s) can be created successfully with provided Key Vault
-// which is used to store storage account name and key
-type PreProvisionedKeyVaultTest struct {
+// which is used to store storage SAS token
+type PreProvisionedSASTokenTest struct {
 	CSIDriver driver.PreProvisionedVolumeTestDriver
 	Pods      []PodDetails
 	Driver    *blob.Driver
 }
 
-func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+func (t *PreProvisionedSASTokenTest) Run(client clientset.Interface, namespace *v1.Namespace) {
 	keyVaultClient, err := azure.NewKeyVaultClient()
 	framework.ExpectNoError(err)
 
@@ -57,16 +60,18 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 				framework.ExpectNoError(err)
 			}()
 
-			ginkgo.By("creating secret for storage account key...")
-			accountKeySecret, err := keyVaultClient.CreateSecret(context.TODO(), accountName+"-key", accountKey)
+			ginkgo.By("generating SAS token...")
+			sasToken := generateSASToken(accountName, accountKey)
+
+			ginkgo.By("creating secret for SAS token...")
+			accountSASSecret, err := keyVaultClient.CreateSecret(context.TODO(), accountName+"-sas", sasToken)
 			framework.ExpectNoError(err)
 
 			pod.Volumes[n].ContainerName = containerName
 			pod.Volumes[n].StorageAccountname = accountName
 			pod.Volumes[n].KeyVaultURL = *vault.Properties.VaultURI
-			pod.Volumes[n].KeyVaultSecretName = *accountKeySecret.Name
+			pod.Volumes[n].KeyVaultSecretName = *accountSASSecret.Name
 
-			ginkgo.By("test storage account key...")
 			tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
 			// defer must be called here for resources not get removed before using them
 			for i := range cleanup {
@@ -81,4 +86,20 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 			tpod.WaitForSuccess()
 		}
 	}
+}
+
+func generateSASToken(accountName, accountKey string) string {
+	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+	framework.ExpectNoError(err)
+	serviceClient, err := azblob.NewServiceClientWithSharedKey(fmt.Sprintf("https://%s.blob.core.windows.net/", accountName), credential, nil)
+	framework.ExpectNoError(err)
+	sasURL, err := serviceClient.GetSASURL(
+		azblob.AccountSASResourceTypes{Object: true, Service: true, Container: true},
+		azblob.AccountSASPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true},
+		time.Now(), time.Now().Add(10*time.Hour))
+	framework.ExpectNoError(err)
+	u, err := url.Parse(sasURL)
+	framework.ExpectNoError(err)
+	sasToken := "?" + u.RawQuery
+	return sasToken
 }
