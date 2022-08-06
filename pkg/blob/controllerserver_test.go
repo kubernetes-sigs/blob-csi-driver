@@ -26,7 +26,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -740,6 +740,7 @@ func TestControllerExpandVolume(t *testing.T) {
 func TestCreateBlobContainer(t *testing.T) {
 	tests := []struct {
 		desc          string
+		subsID        string
 		rg            string
 		accountName   string
 		containerName string
@@ -763,7 +764,7 @@ func TestCreateBlobContainer(t *testing.T) {
 	d.cloud = &azure.Cloud{}
 
 	for _, test := range tests {
-		err := d.CreateBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
+		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
@@ -773,6 +774,7 @@ func TestCreateBlobContainer(t *testing.T) {
 func TestDeleteBlobContainer(t *testing.T) {
 	tests := []struct {
 		desc          string
+		subsID        string
 		rg            string
 		accountName   string
 		containerName string
@@ -796,7 +798,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 	d.cloud = &azure.Cloud{}
 
 	for _, test := range tests {
-		err := d.DeleteBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
+		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}

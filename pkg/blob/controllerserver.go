@@ -25,7 +25,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -312,7 +312,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}()
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d)", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB)
-	if err := d.CreateBlobContainer(ctx, resourceGroup, accountName, validContainerName, secrets); err != nil {
+	if err := d.CreateBlobContainer(ctx, subsID, resourceGroup, accountName, validContainerName, secrets); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
 	}
 
@@ -402,7 +402,8 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		resourceGroupName = d.cloud.ResourceGroup
 	}
 	klog.V(2).Infof("deleting container(%s) rg(%s) account(%s) volumeID(%s)", containerName, resourceGroupName, accountName, volumeID)
-	if err := d.DeleteBlobContainer(ctx, resourceGroupName, accountName, containerName, secrets); err != nil {
+	// TODO: get subscriptionID from volumeID OR request parameter
+	if err := d.DeleteBlobContainer(ctx, "", resourceGroupName, accountName, containerName, secrets); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to delete container(%s) under rg(%s) account(%s) volumeID(%s), error: %v", containerName, resourceGroupName, accountName, volumeID, err)
 	}
 
@@ -442,7 +443,9 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		if resourceGroupName == "" {
 			resourceGroupName = d.cloud.ResourceGroup
 		}
-		blobContainer, err := d.cloud.BlobClient.GetContainer(ctx, resourceGroupName, accountName, containerName)
+		// TODO: get subscriptionID from volumeID OR request parameter
+		blobContainer, retryErr := d.cloud.BlobClient.GetContainer(ctx, "", resourceGroupName, accountName, containerName)
+		err = retryErr.Error()
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -537,7 +540,7 @@ func (d *Driver) ControllerExpandVolume(ctx context.Context, req *csi.Controller
 }
 
 // CreateBlobContainer creates a blob container
-func (d *Driver) CreateBlobContainer(ctx context.Context, resourceGroupName, accountName, containerName string, secrets map[string]string) error {
+func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string, secrets map[string]string) error {
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
 	}
@@ -555,7 +558,7 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, resourceGroupName, acc
 					PublicAccess: storage.PublicAccessNone,
 				},
 			}
-			err = d.cloud.BlobClient.CreateContainer(ctx, resourceGroupName, accountName, containerName, blobContainer)
+			err = d.cloud.BlobClient.CreateContainer(ctx, subsID, resourceGroupName, accountName, containerName, blobContainer).Error()
 		}
 		if err != nil {
 			if strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) ||
@@ -569,7 +572,7 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, resourceGroupName, acc
 }
 
 // DeleteBlobContainer deletes a blob container
-func (d *Driver) DeleteBlobContainer(ctx context.Context, resourceGroupName, accountName, containerName string, secrets map[string]string) error {
+func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string, secrets map[string]string) error {
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
 	}
@@ -582,7 +585,7 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, resourceGroupName, acc
 			}
 			_, err = container.DeleteIfExists(nil)
 		} else {
-			err = d.cloud.BlobClient.DeleteContainer(ctx, resourceGroupName, accountName, containerName)
+			err = d.cloud.BlobClient.DeleteContainer(ctx, subsID, resourceGroupName, accountName, containerName).Error()
 		}
 		if err != nil {
 			if strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) ||
