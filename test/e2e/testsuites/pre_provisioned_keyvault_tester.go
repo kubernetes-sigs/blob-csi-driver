@@ -61,10 +61,10 @@ func (t *PreProvisionedKeyVaultTest) Run(client clientset.Interface, namespace *
 			accountKeySecret, err := keyVaultClient.CreateSecret(context.TODO(), accountName+"-key", accountKey)
 			framework.ExpectNoError(err)
 
-			pod.Volumes[n].ContainerName = containerName
-			pod.Volumes[n].StorageAccountname = accountName
-			pod.Volumes[n].KeyVaultURL = *vault.Properties.VaultURI
-			pod.Volumes[n].KeyVaultSecretName = *accountKeySecret.Name
+			pod.Volumes[n].Attrib["containerName"] = containerName
+			pod.Volumes[n].Attrib["storageAccountName"] = accountName
+			pod.Volumes[n].Attrib["keyVaultURL"] = *vault.Properties.VaultURI
+			pod.Volumes[n].Attrib["keyVaultSecretName"] = *accountKeySecret.Name
 
 			ginkgo.By("test storage account key...")
 			tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
