@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"k8s.io/client-go/util/flowcontrol"
 	"k8s.io/klog/v2"
+
 	azclients "sigs.k8s.io/cloud-provider-azure/pkg/azureclients"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/armclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/metrics"
@@ -48,6 +49,9 @@ type Client struct {
 	// ARM throttling configures.
 	RetryAfterReader time.Time
 	RetryAfterWriter time.Time
+
+	// now allows for injecting fake or real now time into code
+	now func() time.Time
 }
 
 // New creates a blobContainersClient
@@ -79,6 +83,7 @@ func New(config *azclients.ClientConfig) *Client {
 		rateLimiterWriter: rateLimiterWriter,
 		subscriptionID:    config.SubscriptionID,
 		cloudName:         config.CloudName,
+		now:               time.Now,
 	}
 
 	return client
@@ -99,7 +104,7 @@ func (c *Client) CreateContainer(ctx context.Context, subsID, resourceGroupName,
 	}
 
 	// Report errors if the client is throttled.
-	if c.RetryAfterWriter.After(time.Now()) {
+	if c.RetryAfterWriter.After(c.now()) {
 		mc.ThrottledCount()
 		rerr := retry.GetThrottlingError("CreateBlobContainer", "client throttled", c.RetryAfterWriter)
 		return rerr
@@ -162,7 +167,7 @@ func (c *Client) DeleteContainer(ctx context.Context, subsID, resourceGroupName,
 	}
 
 	// Report errors if the client is throttled.
-	if c.RetryAfterWriter.After(time.Now()) {
+	if c.RetryAfterWriter.After(c.now()) {
 		mc.ThrottledCount()
 		rerr := retry.GetThrottlingError("BlobContainerDelete", "client throttled", c.RetryAfterWriter)
 		return rerr
@@ -211,7 +216,7 @@ func (c *Client) GetContainer(ctx context.Context, subsID, resourceGroupName, ac
 	}
 
 	// Report errors if the client is throttled.
-	if c.RetryAfterReader.After(time.Now()) {
+	if c.RetryAfterReader.After(c.now()) {
 		mc.ThrottledCount()
 		rerr := retry.GetThrottlingError("GetBlobContainer", "client throttled", c.RetryAfterReader)
 		return storage.BlobContainer{}, rerr

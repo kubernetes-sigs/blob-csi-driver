@@ -27,7 +27,7 @@ const (
 	// APIVersion is the API version for storage.
 	APIVersion = "2021-09-01"
 	// AzureStackCloudAPIVersion is the API version for Azure Stack
-	AzureStackCloudAPIVersion = "2019-03-01"
+	AzureStackCloudAPIVersion = "2019-06-01"
 	// AzureStackCloudName is the cloud name of Azure Stack
 	AzureStackCloudName = "AZURESTACKCLOUD"
 )
