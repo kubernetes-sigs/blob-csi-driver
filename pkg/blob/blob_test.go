@@ -27,7 +27,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
@@ -173,6 +173,7 @@ func TestGetContainerInfo(t *testing.T) {
 		account       string
 		container     string
 		namespace     string
+		subsID        string
 		expectedError error
 	}{
 		{
@@ -241,13 +242,38 @@ func TestGetContainerInfo(t *testing.T) {
 			container:     "",
 			expectedError: fmt.Errorf("error parsing volume id: \"\", should at least contain two #"),
 		},
+		{
+			volumeID:      "rg#f5713de20cde511e8ba4900#container#uuid#namespace#subsID",
+			rg:            "rg",
+			account:       "f5713de20cde511e8ba4900",
+			container:     "container",
+			namespace:     "namespace",
+			subsID:        "subsID",
+			expectedError: nil,
+		},
+		{
+			volumeID:      "rg#f5713de20cde511e8ba4900#container###subsID",
+			rg:            "rg",
+			account:       "f5713de20cde511e8ba4900",
+			container:     "container",
+			subsID:        "subsID",
+			expectedError: nil,
+		},
+		{
+			volumeID:      "rg#f5713de20cde511e8ba4900#container#uuid#namespace#",
+			rg:            "rg",
+			account:       "f5713de20cde511e8ba4900",
+			container:     "container",
+			namespace:     "namespace",
+			expectedError: nil,
+		},
 	}
 
 	for _, test := range tests {
-		rg, account, container, ns, err := GetContainerInfo(test.volumeID)
+		rg, account, container, ns, subsID, err := GetContainerInfo(test.volumeID)
 		if !reflect.DeepEqual(rg, test.rg) || !reflect.DeepEqual(account, test.account) ||
 			!reflect.DeepEqual(container, test.container) || !reflect.DeepEqual(err, test.expectedError) ||
-			!reflect.DeepEqual(ns, test.namespace) {
+			!reflect.DeepEqual(ns, test.namespace) || !reflect.DeepEqual(subsID, test.subsID) {
 			t.Errorf("input: %q, GetContainerInfo rg: %q, rg: %q, account: %q, account: %q, container: %q, container: %q, namespace: %q, namespace: %q, err: %q, expectedError: %q", test.volumeID, rg, test.rg, account, test.account,
 				container, test.container, ns, test.namespace, err, test.expectedError)
 		}

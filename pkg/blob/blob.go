@@ -49,7 +49,7 @@ const (
 	DefaultDriverName            = "blob.csi.azure.com"
 	blobCSIDriverName            = "blob_csi_driver"
 	separator                    = "#"
-	volumeIDTemplate             = "%s#%s#%s#%s#%s"
+	volumeIDTemplate             = "%s#%s#%s#%s#%s#%s"
 	secretNameTemplate           = "azure-storage-account-%s-secret"
 	serverNameField              = "server"
 	storageEndpointSuffixField   = "storageendpointsuffix"
@@ -265,21 +265,29 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 	s.Wait()
 }
 
-// GetContainerInfo get container info according to volume id, e.g.
-// input: "rg#f5713de20cde511e8ba4900#containerName#uuid"
-// output: rg, f5713de20cde511e8ba4900, containerName
-// input: "rg#f5713de20cde511e8ba4900#containerName#uuid#namespace"
-// output: rg, f5713de20cde511e8ba4900, containerName, namespace
-func GetContainerInfo(id string) (string, string, string, string, error) {
+// GetContainerInfo get container info according to volume id
+// the format of VolumeId is: rg#accountName#containerName#uuid#secretNamespace#subsID
+//
+// e.g.
+// input: "rg#f5713de20cde511e8ba4900#containerName#uuid#"
+// output: rg, f5713de20cde511e8ba4900, containerName, "" , ""
+// input: "rg#f5713de20cde511e8ba4900#containerName#uuid#namespace#"
+// output: rg, f5713de20cde511e8ba4900, containerName, namespace, ""
+// input: "rg#f5713de20cde511e8ba4900#containerName#uuid#namespace#subsID"
+// output: rg, f5713de20cde511e8ba4900, containerName, namespace, subsID
+func GetContainerInfo(id string) (string, string, string, string, string, error) {
 	segments := strings.Split(id, separator)
 	if len(segments) < 3 {
-		return "", "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
+		return "", "", "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
 	}
-	var secretNamespace string
+	var secretNamespace, subsID string
 	if len(segments) > 4 {
 		secretNamespace = segments[4]
 	}
-	return segments[0], segments[1], segments[2], secretNamespace, nil
+	if len(segments) > 5 {
+		subsID = segments[5]
+	}
+	return segments[0], segments[1], segments[2], secretNamespace, subsID, nil
 }
 
 // A container name must be a valid DNS name, conforming to the following naming rules:
@@ -323,7 +331,7 @@ func isSASToken(key string) bool {
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
 func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, string, string, []string, error) {
-	rgName, accountName, containerName, secretNamespace, err := GetContainerInfo(volumeID)
+	rgName, accountName, containerName, secretNamespace, _, err := GetContainerInfo(volumeID)
 	if err != nil {
 		// ignore volumeID parsing error
 		klog.V(2).Infof("parsing volumeID(%s) return with error: %v", volumeID, err)
@@ -530,7 +538,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 	} else {
 		if len(secrets) == 0 {
 			var rgName string
-			rgName, accountName, containerName, _, err = GetContainerInfo(volumeID)
+			rgName, accountName, containerName, _, _, err = GetContainerInfo(volumeID)
 			if err != nil {
 				return "", "", "", "", err
 			}

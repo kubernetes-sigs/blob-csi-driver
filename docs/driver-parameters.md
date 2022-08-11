@@ -22,7 +22,7 @@ tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/mana
 matchTags | whether matching tags when driver tries to find a suitable storage account | `true`,`false` | No | `false`
 useDataPlaneAPI | specify whether use data plane API for blob container create/delete, this could solve the SRP API throltting issue since data plane API has almost no limit, while it would fail when there is firewall or vnet setting on storage account | `true`,`false` | No | `false`
 --- | **Following parameters are only for blobfuse** | --- | --- |
-subscriptionID | specify Azure subscription ID in which blob storage directory will be created, cross subscription is only supported when `useDataPlaneAPI` is set as `true` | Azure subscription ID | No | if not empty, `resourceGroup` must be provided
+subscriptionID | specify Azure subscription ID in which blob storage directory will be created | Azure subscription ID | No | if not empty, `resourceGroup` must be provided
 storeAccountKey | whether store account key to k8s secret <br><br> Note:  <br> `false` means driver would leverage kubelet identity to get account key | `true`,`false` | No | `true`
 secretName | specify secret name to store account key | | No |
 secretNamespace | specify the namespace of secret to store account key | `default`,`kube-system`, etc | No | pvc namespace
@@ -50,6 +50,8 @@ k8s-azure-created-by: azure
 ```
 pvc-92a4d7f2-f23b-4904-bad4-2cbfcff6e388
 ```
+
+ - VolumeId is identifier for the volume generated after volume is created by plugin successfully, the format of VolumeId is: `rg#accountName#containerName#uuid#secretNamespace#subsID`, and if current account is in the same subs as the driver, `subsID` would be empty.
 
 ### Static Provisioning(bring your own storage container)
   > [blobfuse example](../deploy/example/pv-blobfuse-csi.yaml)
