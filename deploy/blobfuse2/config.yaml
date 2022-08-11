@@ -16,7 +16,6 @@ libfuse:
   negative-entry-expiration-sec: 240
 
 file_cache:
-  path: /tmp/blobfuse/
   timeout-sec: 120
   max-size-mb: 4096
 
