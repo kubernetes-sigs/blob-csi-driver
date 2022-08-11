@@ -338,7 +338,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		// not necessary for dynamic container name creation since volumeID already contains volume name
 		uuid = volName
 	}
-	volumeID = fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, validContainerName, uuid, secretNamespace)
+	volumeID = fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, validContainerName, uuid, secretNamespace, subsID)
 	klog.V(2).Infof("create container %s on storage account %s successfully", validContainerName, accountName)
 
 	if useDataPlaneAPI {
@@ -374,7 +374,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 	}
 	defer d.volumeLocks.Release(volumeID)
 
-	resourceGroupName, accountName, containerName, _, err := GetContainerInfo(volumeID)
+	resourceGroupName, accountName, containerName, _, subsID, err := GetContainerInfo(volumeID)
 	if err != nil {
 		// According to CSI Driver Sanity Tester, should succeed when an invalid volume id is used
 		klog.Errorf("GetContainerInfo(%s) in DeleteVolume failed with error: %v", volumeID, err)
@@ -402,8 +402,7 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		resourceGroupName = d.cloud.ResourceGroup
 	}
 	klog.V(2).Infof("deleting container(%s) rg(%s) account(%s) volumeID(%s)", containerName, resourceGroupName, accountName, volumeID)
-	// TODO: get subscriptionID from volumeID OR request parameter
-	if err := d.DeleteBlobContainer(ctx, "", resourceGroupName, accountName, containerName, secrets); err != nil {
+	if err := d.DeleteBlobContainer(ctx, subsID, resourceGroupName, accountName, containerName, secrets); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to delete container(%s) under rg(%s) account(%s) volumeID(%s), error: %v", containerName, resourceGroupName, accountName, volumeID, err)
 	}
 
@@ -422,7 +421,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	resourceGroupName, accountName, containerName, _, err := GetContainerInfo(volumeID)
+	resourceGroupName, accountName, containerName, _, subsID, err := GetContainerInfo(volumeID)
 	if err != nil {
 		klog.Errorf("GetContainerInfo(%s) in ValidateVolumeCapabilities failed with error: %v", volumeID, err)
 		return nil, status.Error(codes.NotFound, err.Error())
@@ -443,8 +442,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		if resourceGroupName == "" {
 			resourceGroupName = d.cloud.ResourceGroup
 		}
-		// TODO: get subscriptionID from volumeID OR request parameter
-		blobContainer, retryErr := d.cloud.BlobClient.GetContainer(ctx, "", resourceGroupName, accountName, containerName)
+		blobContainer, retryErr := d.cloud.BlobClient.GetContainer(ctx, subsID, resourceGroupName, accountName, containerName)
 		err = retryErr.Error()
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
