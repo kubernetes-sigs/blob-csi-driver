@@ -265,7 +265,10 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 	s.Wait()
 }
 
-// GetContainerInfo get container info according to volume id, e.g.
+// GetContainerInfo get container info according to volume id
+// the format of VolumeId is: rg#accountName#containerName#uuid#secretNamespace#subsID
+//
+// e.g.
 // input: "rg#f5713de20cde511e8ba4900#containerName#uuid#"
 // output: rg, f5713de20cde511e8ba4900, containerName, "" , ""
 // input: "rg#f5713de20cde511e8ba4900#containerName#uuid#namespace#"
