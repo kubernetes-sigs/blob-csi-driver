@@ -91,7 +91,6 @@ const (
 	subnetNameField              = "subnetname"
 	mountPermissionsField        = "mountpermissions"
 	useDataPlaneAPIField         = "usedataplaneapi"
-	fuse2ConfigFilePath          = "/usr/share/blobfuse2/config.yaml"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3
@@ -760,9 +759,7 @@ func appendDefaultMountOptions(protocol string, mountOptions []string, tmpPath, 
 		"--tmp-path":       tmpPath,
 		"--container-name": containerName,
 	}
-	if protocol == fuse2 {
-		defaultMountOptions["--config-file"] = fuse2ConfigFilePath
-	} else {
+	if protocol != fuse2 {
 		defaultMountOptions["--pre-mount-validate"] = "true"
 		defaultMountOptions["--use-https"] = "true"
 		// prevent billing charges on mounting
