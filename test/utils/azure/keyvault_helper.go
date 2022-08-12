@@ -35,7 +35,7 @@ import (
 )
 
 type KeyVaultClient struct {
-	cred      *credentials.Credentials
+	Cred      *credentials.Credentials
 	vaultName string
 }
 
@@ -46,7 +46,7 @@ func NewKeyVaultClient() (*KeyVaultClient, error) {
 	}
 
 	return &KeyVaultClient{
-		cred: &credentials.Credentials{
+		Cred: &credentials.Credentials{
 			SubscriptionID:  e2eCred.SubscriptionID,
 			ResourceGroup:   e2eCred.ResourceGroup,
 			Location:        e2eCred.Location,
@@ -65,23 +65,23 @@ func (kvc *KeyVaultClient) CreateVault(ctx context.Context) (*armkeyvault.Vault,
 		return nil, err
 	}
 
-	vaultsClient, err := armkeyvault.NewVaultsClient(kvc.cred.SubscriptionID, azureCred, nil)
+	vaultsClient, err := armkeyvault.NewVaultsClient(kvc.Cred.SubscriptionID, azureCred, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	pollerResp, err := vaultsClient.BeginCreateOrUpdate(
 		ctx,
-		kvc.cred.ResourceGroup,
+		kvc.Cred.ResourceGroup,
 		kvc.vaultName,
 		armkeyvault.VaultCreateOrUpdateParameters{
-			Location: to.Ptr(kvc.cred.Location),
+			Location: to.Ptr(kvc.Cred.Location),
 			Properties: &armkeyvault.VaultProperties{
 				SKU: &armkeyvault.SKU{
 					Family: to.Ptr(armkeyvault.SKUFamilyA),
 					Name:   to.Ptr(armkeyvault.SKUNameStandard),
 				},
-				TenantID:       to.Ptr(kvc.cred.TenantID),
+				TenantID:       to.Ptr(kvc.Cred.TenantID),
 				AccessPolicies: kvc.getAccessPolicy(ctx),
 			},
 		},
@@ -123,14 +123,14 @@ func (kvc *KeyVaultClient) CreateSecret(ctx context.Context, secretName, secretV
 		return nil, err
 	}
 
-	secretsClient, err := armkeyvault.NewSecretsClient(kvc.cred.SubscriptionID, azureCred, nil)
+	secretsClient, err := armkeyvault.NewSecretsClient(kvc.Cred.SubscriptionID, azureCred, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	secretResp, err := secretsClient.CreateOrUpdate(
 		ctx,
-		kvc.cred.ResourceGroup,
+		kvc.Cred.ResourceGroup,
 		kvc.vaultName,
 		secretName,
 		armkeyvault.SecretCreateOrUpdateParameters{
@@ -154,11 +154,11 @@ func (kvc *KeyVaultClient) getAccessPolicy(ctx context.Context) []*armkeyvault.A
 	accessPolicyEntry := []*armkeyvault.AccessPolicyEntry{}
 
 	// vault secret permission for upstream e2e test, which uses application service principal
-	clientObjectID, err := kvc.getServicePrincipalObjectID(ctx, kvc.cred.AADClientID)
+	clientObjectID, err := kvc.GetServicePrincipalObjectID(ctx, kvc.Cred.AADClientID)
 	if err == nil {
 		ginkgo.By("client object ID: " + clientObjectID)
 		accessPolicyEntry = append(accessPolicyEntry, &armkeyvault.AccessPolicyEntry{
-			TenantID: to.Ptr(kvc.cred.TenantID),
+			TenantID: to.Ptr(kvc.Cred.TenantID),
 			ObjectID: to.Ptr(clientObjectID),
 			Permissions: &armkeyvault.Permissions{
 				Secrets: []*armkeyvault.SecretPermissions{
@@ -169,11 +169,11 @@ func (kvc *KeyVaultClient) getAccessPolicy(ctx context.Context) []*armkeyvault.A
 	}
 
 	// vault secret permission for upstream e2e-vmss test, which uses msi blobfuse-csi-driver-e2e-test-id
-	msiObjectID, err := kvc.getMSIObjectID(ctx, "blobfuse-csi-driver-e2e-test-id")
+	msiObjectID, err := kvc.GetMSIObjectID(ctx, "blobfuse-csi-driver-e2e-test-id")
 	if err == nil {
 		ginkgo.By("MSI object ID: " + msiObjectID)
 		accessPolicyEntry = append(accessPolicyEntry, &armkeyvault.AccessPolicyEntry{
-			TenantID: to.Ptr(kvc.cred.TenantID),
+			TenantID: to.Ptr(kvc.Cred.TenantID),
 			ObjectID: to.Ptr(msiObjectID),
 			Permissions: &armkeyvault.Permissions{
 				Secrets: []*armkeyvault.SecretPermissions{
@@ -187,12 +187,12 @@ func (kvc *KeyVaultClient) getAccessPolicy(ctx context.Context) []*armkeyvault.A
 }
 
 func (kvc *KeyVaultClient) deleteVault(ctx context.Context, cred azcore.TokenCredential) error {
-	vaultsClient, err := armkeyvault.NewVaultsClient(kvc.cred.SubscriptionID, cred, nil)
+	vaultsClient, err := armkeyvault.NewVaultsClient(kvc.Cred.SubscriptionID, cred, nil)
 	if err != nil {
 		return err
 	}
 
-	_, err = vaultsClient.Delete(ctx, kvc.cred.ResourceGroup, kvc.vaultName, nil)
+	_, err = vaultsClient.Delete(ctx, kvc.Cred.ResourceGroup, kvc.vaultName, nil)
 	if err != nil {
 		return err
 	}
@@ -200,12 +200,12 @@ func (kvc *KeyVaultClient) deleteVault(ctx context.Context, cred azcore.TokenCre
 }
 
 func (kvc *KeyVaultClient) purgeDeleted(ctx context.Context, cred azcore.TokenCredential) error {
-	vaultsClient, err := armkeyvault.NewVaultsClient(kvc.cred.SubscriptionID, cred, nil)
+	vaultsClient, err := armkeyvault.NewVaultsClient(kvc.Cred.SubscriptionID, cred, nil)
 	if err != nil {
 		return err
 	}
 
-	pollerResp, err := vaultsClient.BeginPurgeDeleted(ctx, kvc.vaultName, kvc.cred.Location, nil)
+	pollerResp, err := vaultsClient.BeginPurgeDeleted(ctx, kvc.vaultName, kvc.Cred.Location, nil)
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (kvc *KeyVaultClient) purgeDeleted(ctx context.Context, cred azcore.TokenCr
 	return nil
 }
 
-func (kvc *KeyVaultClient) getServicePrincipalObjectID(ctx context.Context, clientID string) (string, error) {
+func (kvc *KeyVaultClient) GetServicePrincipalObjectID(ctx context.Context, clientID string) (string, error) {
 	spClient, err := kvc.getServicePrincipalsClient()
 	if err != nil {
 		return "", err
@@ -236,19 +236,19 @@ func (kvc *KeyVaultClient) getServicePrincipalObjectID(ctx context.Context, clie
 }
 
 func (kvc *KeyVaultClient) getServicePrincipalsClient() (*graphrbac.ServicePrincipalsClient, error) {
-	spClient := graphrbac.NewServicePrincipalsClient(kvc.cred.TenantID)
+	spClient := graphrbac.NewServicePrincipalsClient(kvc.Cred.TenantID)
 
-	env, err := azure.EnvironmentFromName(kvc.cred.Cloud)
+	env, err := azure.EnvironmentFromName(kvc.Cred.Cloud)
 	if err != nil {
 		return nil, err
 	}
 
-	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, kvc.cred.TenantID)
+	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, kvc.Cred.TenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := adal.NewServicePrincipalToken(*oauthConfig, kvc.cred.AADClientID, kvc.cred.AADClientSecret, env.GraphEndpoint)
+	token, err := adal.NewServicePrincipalToken(*oauthConfig, kvc.Cred.AADClientID, kvc.Cred.AADClientSecret, env.GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -261,19 +261,19 @@ func (kvc *KeyVaultClient) getServicePrincipalsClient() (*graphrbac.ServicePrinc
 }
 
 func (kvc *KeyVaultClient) getMSIUserAssignedIDClient() (*msi.UserAssignedIdentitiesClient, error) {
-	msiClient := msi.NewUserAssignedIdentitiesClient(kvc.cred.SubscriptionID)
+	msiClient := msi.NewUserAssignedIdentitiesClient(kvc.Cred.SubscriptionID)
 
-	env, err := azure.EnvironmentFromName(kvc.cred.Cloud)
+	env, err := azure.EnvironmentFromName(kvc.Cred.Cloud)
 	if err != nil {
 		return nil, err
 	}
 
-	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, kvc.cred.TenantID)
+	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, kvc.Cred.TenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	token, err := adal.NewServicePrincipalToken(*oauthConfig, kvc.cred.AADClientID, kvc.cred.AADClientSecret, env.ResourceManagerEndpoint)
+	token, err := adal.NewServicePrincipalToken(*oauthConfig, kvc.Cred.AADClientID, kvc.Cred.AADClientSecret, env.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -285,13 +285,13 @@ func (kvc *KeyVaultClient) getMSIUserAssignedIDClient() (*msi.UserAssignedIdenti
 	return &msiClient, nil
 }
 
-func (kvc *KeyVaultClient) getMSIObjectID(ctx context.Context, identityName string) (string, error) {
+func (kvc *KeyVaultClient) GetMSIObjectID(ctx context.Context, identityName string) (string, error) {
 	msiClient, err := kvc.getMSIUserAssignedIDClient()
 	if err != nil {
 		return "", err
 	}
 
-	id, err := msiClient.Get(ctx, kvc.cred.ResourceGroup, identityName)
+	id, err := msiClient.Get(ctx, kvc.Cred.ResourceGroup, identityName)
 	if err != nil {
 		return "", err
 	}

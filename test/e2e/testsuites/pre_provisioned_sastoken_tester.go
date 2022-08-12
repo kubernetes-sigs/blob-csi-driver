@@ -61,16 +61,16 @@ func (t *PreProvisionedSASTokenTest) Run(client clientset.Interface, namespace *
 			}()
 
 			ginkgo.By("generating SAS token...")
-			sasToken := generateSASToken(accountName, accountKey)
+			sasToken := GenerateSASToken(accountName, accountKey)
 
 			ginkgo.By("creating secret for SAS token...")
 			accountSASSecret, err := keyVaultClient.CreateSecret(context.TODO(), accountName+"-sas", sasToken)
 			framework.ExpectNoError(err)
 
-			pod.Volumes[n].ContainerName = containerName
-			pod.Volumes[n].StorageAccountname = accountName
-			pod.Volumes[n].KeyVaultURL = *vault.Properties.VaultURI
-			pod.Volumes[n].KeyVaultSecretName = *accountSASSecret.Name
+			pod.Volumes[n].Attrib["containerName"] = containerName
+			pod.Volumes[n].Attrib["storageAccountName"] = accountName
+			pod.Volumes[n].Attrib["keyVaultURL"] = *vault.Properties.VaultURI
+			pod.Volumes[n].Attrib["keyVaultSecretName"] = *accountSASSecret.Name
 
 			tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
 			// defer must be called here for resources not get removed before using them
@@ -88,7 +88,7 @@ func (t *PreProvisionedSASTokenTest) Run(client clientset.Interface, namespace *
 	}
 }
 
-func generateSASToken(accountName, accountKey string) string {
+func GenerateSASToken(accountName, accountKey string) string {
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	framework.ExpectNoError(err)
 	serviceClient, err := azblob.NewServiceClientWithSharedKey(fmt.Sprintf("https://%s.blob.core.windows.net/", accountName), credential, nil)

@@ -52,8 +52,7 @@
             }
         },
         "servicePrincipalProfile": {
-            "clientID": "{clientID}",
-            "secret": "{secret}"
+            "clientID": "msi"
         }
     }
 }
