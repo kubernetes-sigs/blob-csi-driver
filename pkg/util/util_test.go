@@ -146,6 +146,10 @@ func TestGetMountOptions(t *testing.T) {
 			options:  []string{""},
 			expected: "",
 		},
+		{
+			options:  []string{},
+			expected: "",
+		},
 	}
 
 	for _, test := range tests {
