@@ -17,6 +17,7 @@ limitations under the License.
 package credentials
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -120,6 +121,10 @@ func CreateAzureCredentialFile() (*Credentials, error) {
 		if err != nil {
 			return nil, err
 		}
+		// set env for azidentity.EnvironmentCredential
+		os.Setenv("AZURE_TENANT_ID", c.TenantID)
+		os.Setenv("AZURE_CLIENT_ID", c.ClientID)
+		os.Setenv("AZURE_CLIENT_SECRET", c.ClientSecret)
 		return parseAndExecuteTemplate(cloud, c.TenantID, c.SubscriptionID, c.ClientID, c.ClientSecret, resourceGroup, location)
 	}
 
@@ -134,6 +139,22 @@ func DeleteAzureCredentialFile() error {
 	}
 
 	return nil
+}
+
+// ParseAzureCredentialFile parses the temporary Azure credential file and returns the credentials
+func ParseAzureCredentialFile() (*Credentials, error) {
+	cred := &Credentials{}
+	data, err := ioutil.ReadFile(TempAzureCredentialFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(data, cred)
+	if err != nil {
+		return nil, err
+	}
+
+	return cred, nil
 }
 
 // getCredentialsFromAzureCredentials parses the azure credentials toml (AZURE_CREDENTIALS)

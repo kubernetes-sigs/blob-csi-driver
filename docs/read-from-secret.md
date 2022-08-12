@@ -34,7 +34,7 @@ kubectl create -f azure-cloud-provider.yaml
 
 ### specify different cloud config secret in driver deployment
 - available driver version: `v1.4.0` or above
-- set `cloudConfigSecretName`, `cloudConfigSecretNamesapce` in driver deployment, follow [helm chart guide](../charts/README.md#tips)
+- set `cloudConfigSecretName`, `cloudConfigSecretNamespace` in driver deployment, follow [helm chart guide](../charts/README.md#tips)
 ```yaml
         - name: blob
           ...
