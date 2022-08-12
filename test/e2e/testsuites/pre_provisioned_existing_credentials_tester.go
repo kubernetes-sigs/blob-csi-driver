@@ -39,7 +39,7 @@ type PreProvisionedExistingCredentialsTest struct {
 func (t *PreProvisionedExistingCredentialsTest) Run(client clientset.Interface, namespace *v1.Namespace) {
 	for _, pod := range t.Pods {
 		for n, volume := range pod.Volumes {
-			resourceGroupName, accountName, containerName, _, err := blob.GetContainerInfo(volume.VolumeID)
+			resourceGroupName, accountName, containerName, _, _, err := blob.GetContainerInfo(volume.VolumeID)
 			if err != nil {
 				framework.ExpectNoError(err, fmt.Sprintf("Error GetContainerInfo from volumeID(%s): %v", volume.VolumeID, err))
 				return
