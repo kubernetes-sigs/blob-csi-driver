@@ -32,7 +32,7 @@ import (
 	"google.golang.org/grpc/status"
 	"sigs.k8s.io/cloud-provider-azure/pkg/provider"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"

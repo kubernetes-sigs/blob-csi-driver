@@ -1,9 +1,9 @@
-// Deprecated: Please note, this package has been deprecated. A replacement package is available [github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi). We strongly encourage you to upgrade to continue receiving updates. See [Migration Guide](https://aka.ms/azsdk/golang/t2/migration) for guidance on upgrading. Refer to our [deprecation policy](https://azure.github.io/azure-sdk/policies_support.html) for more details.
+// Deprecated: Please note, this package has been deprecated. A replacement package is available [github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage](https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage). We strongly encourage you to upgrade to continue receiving updates. See [Migration Guide](https://aka.ms/azsdk/golang/t2/migration) for guidance on upgrading. Refer to our [deprecation policy](https://azure.github.io/azure-sdk/policies_support.html) for more details.
 //
-// Package msi implements the Azure ARM Msi service API version 2018-11-30.
+// Package storage implements the Azure ARM Storage service API version 2021-02-01.
 //
-// The Managed Service Identity Client.
-package msi
+// The Azure Storage Management API.
+package storage
 
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	// DefaultBaseURI is the default URI used for the service Msi
+	// DefaultBaseURI is the default URI used for the service Storage
 	DefaultBaseURI = "https://management.azure.com"
 )
 
-// BaseClient is the base client for Msi.
+// BaseClient is the base client for Storage.
 type BaseClient struct {
 	autorest.Client
 	BaseURI        string

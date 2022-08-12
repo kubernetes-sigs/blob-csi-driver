@@ -19,6 +19,7 @@ package blob
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -54,36 +55,36 @@ type mockBlobClient struct {
 	conProp *storage.ContainerProperties
 }
 
-func (c *mockBlobClient) CreateContainer(ctx context.Context, resourceGroupName, accountName, containerName string, blobContainer storage.BlobContainer) error {
+func (c *mockBlobClient) CreateContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string, parameters storage.BlobContainer) *retry.Error {
 	switch *c.errorType {
 	case DATAPLANE:
-		return fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError))
 	case MANAGEMENT:
-		return fmt.Errorf(containerBeingDeletedManagementAPIError)
+		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
 	case CUSTOM:
-		return fmt.Errorf(*c.custom)
+		return retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
 	}
 	return nil
 }
-func (c *mockBlobClient) DeleteContainer(ctx context.Context, resourceGroupName, accountName, containerName string) error {
+func (c *mockBlobClient) DeleteContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string) *retry.Error {
 	switch *c.errorType {
 	case DATAPLANE:
-		return fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError))
 	case MANAGEMENT:
-		return fmt.Errorf(containerBeingDeletedManagementAPIError)
+		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
 	case CUSTOM:
-		return fmt.Errorf(*c.custom)
+		return retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
 	}
 	return nil
 }
-func (c *mockBlobClient) GetContainer(ctx context.Context, resourceGroupName, accountName, containerName string) (storage.BlobContainer, error) {
+func (c *mockBlobClient) GetContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string) (storage.BlobContainer, *retry.Error) {
 	switch *c.errorType {
 	case DATAPLANE:
-		return storage.BlobContainer{ContainerProperties: c.conProp}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError))
 	case MANAGEMENT:
-		return storage.BlobContainer{ContainerProperties: c.conProp}, fmt.Errorf(containerBeingDeletedManagementAPIError)
+		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
 	case CUSTOM:
-		return storage.BlobContainer{ContainerProperties: c.conProp}, fmt.Errorf(*c.custom)
+		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
 	}
 	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
@@ -660,10 +661,11 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.Internal, "failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", mp[storageAccountField], mp[resourceGroupField], fmt.Errorf("no valid keys"))
+				expectedErr := status.Errorf(
+					codes.Internal, "failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", mp[storageAccountField], mp[resourceGroupField], fmt.Errorf("no valid keys"))
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("Unexpected error: %v", err)
+					t.Errorf("Unexpected error: %v\nExpected error: %v", err, expectedErr)
 				}
 			},
 		},
@@ -960,7 +962,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     NULL,
 			containerProp: nil,
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.Internal, "ContainerProperties of volume(%s) is nil", "unit#test#test"),
+			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf("empty HTTP response")).Error().Error()),
 		},
 		{
 			name: "Client Error",
@@ -972,7 +974,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     DATAPLANE,
 			containerProp: &storage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.Internal, containerBeingDeletedDataplaneAPIError),
+			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)).Error().Error()),
 		},
 		{
 			name: "Requested Volume does not exist",
@@ -984,7 +986,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     NULL,
 			containerProp: &storage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.NotFound, "requested volume(%s) does not exist", "unit#test#test"),
+			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf("empty HTTP response")).Error().Error()),
 		},
 		/*{ //Volume being shown as not existing. ContainerProperties.Deleted not setting correctly??
 			name: "Successful I/O",
@@ -1254,14 +1256,14 @@ func TestCreateBlobContainer(t *testing.T) {
 			secrets:       map[string]string{},
 			clientErr:     CUSTOM,
 			customErrStr:  "foobar",
-			expectedErr:   fmt.Errorf("foobar"),
+			expectedErr:   retry.GetError(&http.Response{}, fmt.Errorf("foobar")).Error(),
 		},
 	}
 
 	d := NewFakeDriver()
 	d.cloud = &azure.Cloud{}
 	for _, test := range tests {
-		err := d.CreateBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
+		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr, custom: &test.customErrStr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
@@ -1323,7 +1325,8 @@ func TestDeleteBlobContainer(t *testing.T) {
 			secrets:       map[string]string{},
 			clientErr:     CUSTOM,
 			customErrStr:  "foobar",
-			expectedErr:   fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", "containerName", "", fmt.Errorf("foobar")),
+			expectedErr: fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", "containerName", "",
+				retry.GetError(&http.Response{}, fmt.Errorf("foobar")).Error()),
 		},
 	}
 
@@ -1331,7 +1334,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 	d.cloud = &azure.Cloud{}
 
 	for _, test := range tests {
-		err := d.DeleteBlobContainer(context.Background(), test.rg, test.accountName, test.containerName, test.secrets)
+		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr, custom: &test.customErrStr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
