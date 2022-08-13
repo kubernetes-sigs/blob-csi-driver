@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"context"
 	"flag"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -83,21 +85,9 @@ func TestParseEndpoint(t *testing.T) {
 }
 
 func TestLogGRPC(t *testing.T) {
-	// SET UP
-	klog.InitFlags(nil)
-	if e := flag.Set("logtostderr", "false"); e != nil {
-		t.Error(e)
-	}
-	if e := flag.Set("alsologtostderr", "false"); e != nil {
-		t.Error(e)
-	}
-	if e := flag.Set("v", "100"); e != nil {
-		t.Error(e)
-	}
-	flag.Parse()
-
 	buf := new(bytes.Buffer)
 	klog.SetOutput(buf)
+	defer klog.SetOutput(io.Discard)
 
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) { return nil, nil }
 	info := grpc.UnaryServerInfo{
@@ -231,4 +221,13 @@ func TestGetLogLevel(t *testing.T) {
 			t.Errorf("returned level: (%v), expected level: (%v)", level, test.level)
 		}
 	}
+}
+
+func TestMain(m *testing.M) {
+	klog.InitFlags(nil)
+	_ = flag.Set("logtostderr", "false")
+	_ = flag.Set("alsologtostderr", "false")
+	_ = flag.Set("v", "100")
+	klog.SetOutput(io.Discard)
+	os.Exit(m.Run())
 }
