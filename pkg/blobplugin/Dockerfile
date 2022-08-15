@@ -36,7 +36,6 @@ RUN if [ "$ARCH" = "amd64" ] ; then \
   wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb && \
   dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse blobfuse2 fuse -y && apt remove wget -y; fi
 
-COPY ./deploy/blobfuse2/config.yaml /usr/share/blobfuse2/config.yaml
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
