@@ -51,7 +51,8 @@ k8s-azure-created-by: azure
 pvc-92a4d7f2-f23b-4904-bad4-2cbfcff6e388
 ```
 
- - VolumeId is identifier for the volume generated after volume is created by plugin successfully, the format of VolumeId is: `rg#accountName#containerName#uuid#secretNamespace#subsID`, and if current account is in the same subs as the driver, `subsID` would be empty.
+ - VolumeID(`volumeHandle`) is the identifier for the volume handled by the driver, format of VolumeID: `rg#accountName#containerName#uuid#secretNamespace#subscriptionID`
+ > `uuid`, `secretNamespace`, `subscriptionID` are optional
 
 ### Static Provisioning(bring your own storage container)
   > [blobfuse example](../deploy/example/pv-blobfuse-csi.yaml)
