@@ -203,5 +203,46 @@ func TestConvertTagsToMap(t *testing.T) {
 		output, err := ConvertTagsToMap(test.tags)
 		assert.Equal(t, test.expectedOut, output, test.desc)
 		assert.Equal(t, test.expectedErr, err, test.desc)
+=======
+	type StringMap map[string]string
+	tests := []struct {
+		tags     string
+		expected map[string]string
+		err      bool
+	}{
+		{
+			tags:     "",
+			expected: StringMap{},
+			err:      false,
+		},
+		{
+			tags:     "key1=value1, key2=value2,key3= value3",
+			expected: StringMap{"key1": "value1", "key2": "value2", "key3": "value3"},
+			err:      false,
+		},
+		{
+			tags:     " key = value ",
+			expected: StringMap{"key": "value"},
+			err:      false,
+		},
+		{
+			tags:     "keyvalue",
+			expected: nil,
+			err:      true,
+		},
+		{
+			tags:     " = value,=",
+			expected: nil,
+			err:      true,
+		},
+	}
+	for _, test := range tests {
+		result, err := ConvertTagsToMap(test.tags)
+		if test.err {
+			assert.NotNil(t, err)
+		} else {
+			assert.Nil(t, err)
+		}
+		assert.Equal(t, result, test.expected)
 	}
 }
