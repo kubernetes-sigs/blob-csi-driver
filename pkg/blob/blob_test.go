@@ -1016,7 +1016,10 @@ func TestGetStorageAccesskey(t *testing.T) {
 		Type: "Opaque",
 	}
 	secret.Namespace = secretNamespace
-	d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, secretCreateErr := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	if secretCreateErr != nil {
+		t.Error("failed to create secret")
+	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 
@@ -1090,7 +1093,10 @@ func TestGetStorageAccountFromSecret(t *testing.T) {
 					},
 					Type: "Opaque",
 				}
-				d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+				_, secretCreateErr := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+				if secretCreateErr != nil {
+					t.Error("failed to create secret")
+				}
 				an, ak, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
 				assert.Equal(t, accountName, an, "accountName's should match")
 				assert.Equal(t, accountKey, ak, "accountKey's should match")

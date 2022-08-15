@@ -89,8 +89,12 @@ func (c *mockBlobClient) GetContainer(ctx context.Context, subsID, resourceGroup
 	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
 
+func NewMockBlobClient(errorType errType, custom string, conProp storage.ContainerProperties) *mockBlobClient {
+	return &mockBlobClient{errorType: &errorType, custom: &custom, conProp: &conProp}
+}
+
 //creates and returns mock storage account client
-func NewMockSAClient(ctrl *gomock.Controller, ctx context.Context, subsID, rg, accName string, keyList *[]storage.AccountKey) *mockstorageaccountclient.MockInterface {
+func NewMockSAClient(ctx context.Context, ctrl *gomock.Controller, subsID, rg, accName string, keyList *[]storage.AccountKey) *mockstorageaccountclient.MockInterface {
 	cl := mockstorageaccountclient.NewMockInterface(ctrl)
 
 	cl.EXPECT().
@@ -566,7 +570,7 @@ func TestCreateVolume(t *testing.T) {
 				mp[mountPermissionsField] = "0750"
 
 				keyList := make([]storage.AccountKey, 0)
-				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subID", "unit-test", "unit-test", &keyList)
+				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
 
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
@@ -598,7 +602,7 @@ func TestCreateVolume(t *testing.T) {
 					KeyName: &fakeKey,
 					Value:   &fakeValue,
 				})
-				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subID", "unit-test", "unit-test", &keyList)
+				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
 
 				errorType := DATAPLANE
 				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
@@ -637,7 +641,7 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud.SubscriptionID = "subID"
 
 				keyList := make([]storage.AccountKey, 0)
-				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subID", "unit-test", "unit-test", &keyList)
+				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
 
 				errorType := NULL
 				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
@@ -683,7 +687,7 @@ func TestCreateVolume(t *testing.T) {
 					KeyName: &fakeKey,
 					Value:   &fakeValue,
 				})
-				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subID", "unit-test", "unit-test", &keyList)
+				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
 
 				errorType := NULL
 				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
@@ -706,7 +710,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				var expectedErr error = nil
+				var expectedErr error
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -962,7 +966,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     NULL,
 			containerProp: nil,
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf("empty HTTP response")).Error().Error()),
+			expectedErr:   status.Error(codes.Internal, fmt.Sprintf("ContainerProperties of volume(%s) is nil", "unit#test#test")),
 		},
 		{
 			name: "Client Error",
@@ -986,7 +990,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     NULL,
 			containerProp: &storage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf("empty HTTP response")).Error().Error()),
+			expectedErr:   status.Errorf(codes.NotFound, fmt.Sprintf("requested volume(%s) does not exist", "unit#test#test")),
 		},
 		/*{ //Volume being shown as not existing. ContainerProperties.Deleted not setting correctly??
 			name: "Successful I/O",
@@ -1189,9 +1193,8 @@ func TestControllerExpandVolume(t *testing.T) {
 					},
 				}
 				_, err := d.ControllerExpandVolume(context.Background(), req)
-				var expectedErr error = nil
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, nil)
 				}
 			},
 		},
@@ -1263,8 +1266,8 @@ func TestCreateBlobContainer(t *testing.T) {
 	d := NewFakeDriver()
 	d.cloud = &azure.Cloud{}
 	for _, test := range tests {
+		d.cloud.BlobClient = NewMockBlobClient(test.clientErr, test.customErrStr, storage.ContainerProperties{})
 		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
-		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr, custom: &test.customErrStr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
@@ -1334,8 +1337,8 @@ func TestDeleteBlobContainer(t *testing.T) {
 	d.cloud = &azure.Cloud{}
 
 	for _, test := range tests {
+		d.cloud.BlobClient = NewMockBlobClient(test.clientErr, test.customErrStr, storage.ContainerProperties{})
 		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
-		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr, custom: &test.customErrStr}
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}

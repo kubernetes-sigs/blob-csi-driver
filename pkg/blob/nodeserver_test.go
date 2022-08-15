@@ -548,7 +548,7 @@ func TestNodeStageVolume(t *testing.T) {
 					KeyName: &fakeKey,
 					Value:   &fakeValue,
 				})
-				d.cloud.StorageAccountClient = NewMockSAClient(gomock.NewController(t), context.Background(), "subID", "unit-test", "unit-test", &keyList)
+				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
 
 				_, err := d.NodeStageVolume(context.TODO(), req)
 				//expectedErr := nil
