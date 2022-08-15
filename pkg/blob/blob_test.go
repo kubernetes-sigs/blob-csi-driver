@@ -863,7 +863,6 @@ func TestAppendDefaultMountOptions(t *testing.T) {
 			tmpPath:       "/tmp",
 			containerName: "containerName",
 			expected: []string{
-				"--config-file=/usr/share/blobfuse2/config.yaml",
 				"--container-name=containerName",
 				"--tmp-path=/tmp",
 				"targetPath",
