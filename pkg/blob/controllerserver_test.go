@@ -28,6 +28,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
@@ -89,8 +90,8 @@ func (c *mockBlobClient) GetContainer(ctx context.Context, subsID, resourceGroup
 	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
 
-func NewMockBlobClient(errorType errType, custom string, conProp storage.ContainerProperties) *mockBlobClient {
-	return &mockBlobClient{errorType: &errorType, custom: &custom, conProp: &conProp}
+func NewMockBlobClient(errorType *errType, custom *string, conProp *storage.ContainerProperties) *mockBlobClient {
+	return &mockBlobClient{errorType: errorType, custom: custom, conProp: conProp}
 }
 
 //creates and returns mock storage account client
@@ -909,6 +910,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 		{
 			name:          "volume ID missing",
 			req:           &csi.ValidateVolumeCapabilitiesRequest{},
+			clientErr:     NULL,
 			containerProp: nil,
 			expectedRes:   nil,
 			expectedErr:   status.Error(codes.InvalidArgument, "Volume ID missing in request"),
@@ -918,6 +920,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			req: &csi.ValidateVolumeCapabilitiesRequest{
 				VolumeId: "unit-test",
 			},
+			clientErr:     NULL,
 			containerProp: nil,
 			expectedRes:   nil,
 			expectedErr:   status.Error(codes.InvalidArgument, "volume capabilities missing in request"),
@@ -928,6 +931,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				VolumeId:           "unit-test",
 				VolumeCapabilities: blockVolumeCapabilities,
 			},
+			clientErr:     NULL,
 			containerProp: nil,
 			expectedRes:   nil,
 			expectedErr:   status.Error(codes.InvalidArgument, "block volume capability not supported"),
@@ -938,6 +942,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				VolumeId:           "unit-test",
 				VolumeCapabilities: stdVolumeCapabilities,
 			},
+			clientErr:     NULL,
 			containerProp: nil,
 			expectedRes:   nil,
 			expectedErr:   status.Error(codes.NotFound, "error parsing volume id: \"unit-test\", should at least contain two #"),
@@ -952,6 +957,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 					defaultSecretAccountKey:  "b",
 				},
 			},
+			clientErr:     NULL,
 			containerProp: nil,
 			expectedRes:   nil,
 			expectedErr:   status.Error(codes.Internal, "azure: base storage service url required"),
@@ -1032,7 +1038,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 
 	for _, test := range testCases {
 		res, err := d.ValidateVolumeCapabilities(context.Background(), test.req)
-		d.cloud.BlobClient = &mockBlobClient{errorType: &test.clientErr, conProp: test.containerProp}
+		d.cloud.BlobClient = NewMockBlobClient(&test.clientErr, to.StringPtr(""), test.containerProp)
 		assert.Equal(t, test.expectedErr, err, "Error in testcase (%s): Errors must match", test.name)
 		assert.Equal(t, test.expectedRes, res, "Error in testcase (%s): Response must match", test.name)
 	}
@@ -1265,8 +1271,9 @@ func TestCreateBlobContainer(t *testing.T) {
 
 	d := NewFakeDriver()
 	d.cloud = &azure.Cloud{}
+	conProp := &storage.ContainerProperties{}
 	for _, test := range tests {
-		d.cloud.BlobClient = NewMockBlobClient(test.clientErr, test.customErrStr, storage.ContainerProperties{})
+		d.cloud.BlobClient = NewMockBlobClient(&test.clientErr, &test.customErrStr, conProp)
 		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
@@ -1336,8 +1343,9 @@ func TestDeleteBlobContainer(t *testing.T) {
 	d := NewFakeDriver()
 	d.cloud = &azure.Cloud{}
 
+	connProp := &storage.ContainerProperties{}
 	for _, test := range tests {
-		d.cloud.BlobClient = NewMockBlobClient(test.clientErr, test.customErrStr, storage.ContainerProperties{})
+		d.cloud.BlobClient = NewMockBlobClient(&test.clientErr, &test.customErrStr, connProp)
 		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)

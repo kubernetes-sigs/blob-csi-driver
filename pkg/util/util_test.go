@@ -203,7 +203,9 @@ func TestConvertTagsToMap(t *testing.T) {
 		output, err := ConvertTagsToMap(test.tags)
 		assert.Equal(t, test.expectedOut, output, test.desc)
 		assert.Equal(t, test.expectedErr, err, test.desc)
-=======
+	}
+}
+func TestConvertTagsToMap2(t *testing.T) {
 	type StringMap map[string]string
 	tests := []struct {
 		tags     string
