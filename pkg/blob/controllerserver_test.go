@@ -90,7 +90,7 @@ func (c *mockBlobClient) GetContainer(ctx context.Context, subsID, resourceGroup
 	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
 
-func NewMockBlobClient(errorType *errType, custom *string, conProp *storage.ContainerProperties) *mockBlobClient {
+func newMockBlobClient(errorType *errType, custom *string, conProp *storage.ContainerProperties) *mockBlobClient {
 	return &mockBlobClient{errorType: errorType, custom: custom, conProp: conProp}
 }
 
@@ -1038,7 +1038,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 
 	for _, test := range testCases {
 		res, err := d.ValidateVolumeCapabilities(context.Background(), test.req)
-		d.cloud.BlobClient = NewMockBlobClient(&test.clientErr, to.StringPtr(""), test.containerProp)
+		d.cloud.BlobClient = newMockBlobClient(&test.clientErr, to.StringPtr(""), test.containerProp)
 		assert.Equal(t, test.expectedErr, err, "Error in testcase (%s): Errors must match", test.name)
 		assert.Equal(t, test.expectedRes, res, "Error in testcase (%s): Response must match", test.name)
 	}
@@ -1273,7 +1273,7 @@ func TestCreateBlobContainer(t *testing.T) {
 	d.cloud = &azure.Cloud{}
 	conProp := &storage.ContainerProperties{}
 	for _, test := range tests {
-		d.cloud.BlobClient = NewMockBlobClient(&test.clientErr, &test.customErrStr, conProp)
+		d.cloud.BlobClient = newMockBlobClient(&test.clientErr, &test.customErrStr, conProp)
 		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
@@ -1345,7 +1345,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 
 	connProp := &storage.ContainerProperties{}
 	for _, test := range tests {
-		d.cloud.BlobClient = NewMockBlobClient(&test.clientErr, &test.customErrStr, connProp)
+		d.cloud.BlobClient = newMockBlobClient(&test.clientErr, &test.customErrStr, connProp)
 		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
