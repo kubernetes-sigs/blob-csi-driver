@@ -1,12 +1,9 @@
 /*
 Copyright 2019 The Kubernetes Authors.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +14,7 @@ limitations under the License.
 package credentials
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -120,6 +118,10 @@ func CreateAzureCredentialFile() (*Credentials, error) {
 		if err != nil {
 			return nil, err
 		}
+		// set env for azidentity.EnvironmentCredential
+		os.Setenv("AZURE_TENANT_ID", c.TenantID)
+		os.Setenv("AZURE_CLIENT_ID", c.ClientID)
+		os.Setenv("AZURE_CLIENT_SECRET", c.ClientSecret)
 		return parseAndExecuteTemplate(cloud, c.TenantID, c.SubscriptionID, c.ClientID, c.ClientSecret, resourceGroup, location)
 	}
 
@@ -134,6 +136,22 @@ func DeleteAzureCredentialFile() error {
 	}
 
 	return nil
+}
+
+// ParseAzureCredentialFile parses the temporary Azure credential file and returns the credentials
+func ParseAzureCredentialFile() (*Credentials, error) {
+	cred := &Credentials{}
+	data, err := ioutil.ReadFile(TempAzureCredentialFilePath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(data, cred)
+	if err != nil {
+		return nil, err
+	}
+
+	return cred, nil
 }
 
 // getCredentialsFromAzureCredentials parses the azure credentials toml (AZURE_CREDENTIALS)

@@ -27,12 +27,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
+	v1api "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+
+	//fakecloud "k8s.io/cloud-provider/fake"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
@@ -173,6 +177,7 @@ func TestGetContainerInfo(t *testing.T) {
 		account       string
 		container     string
 		namespace     string
+		subsID        string
 		expectedError error
 	}{
 		{
@@ -241,13 +246,38 @@ func TestGetContainerInfo(t *testing.T) {
 			container:     "",
 			expectedError: fmt.Errorf("error parsing volume id: \"\", should at least contain two #"),
 		},
+		{
+			volumeID:      "rg#f5713de20cde511e8ba4900#container#uuid#namespace#subsID",
+			rg:            "rg",
+			account:       "f5713de20cde511e8ba4900",
+			container:     "container",
+			namespace:     "namespace",
+			subsID:        "subsID",
+			expectedError: nil,
+		},
+		{
+			volumeID:      "rg#f5713de20cde511e8ba4900#container###subsID",
+			rg:            "rg",
+			account:       "f5713de20cde511e8ba4900",
+			container:     "container",
+			subsID:        "subsID",
+			expectedError: nil,
+		},
+		{
+			volumeID:      "rg#f5713de20cde511e8ba4900#container#uuid#namespace#",
+			rg:            "rg",
+			account:       "f5713de20cde511e8ba4900",
+			container:     "container",
+			namespace:     "namespace",
+			expectedError: nil,
+		},
 	}
 
 	for _, test := range tests {
-		rg, account, container, ns, err := GetContainerInfo(test.volumeID)
+		rg, account, container, ns, subsID, err := GetContainerInfo(test.volumeID)
 		if !reflect.DeepEqual(rg, test.rg) || !reflect.DeepEqual(account, test.account) ||
 			!reflect.DeepEqual(container, test.container) || !reflect.DeepEqual(err, test.expectedError) ||
-			!reflect.DeepEqual(ns, test.namespace) {
+			!reflect.DeepEqual(ns, test.namespace) || !reflect.DeepEqual(subsID, test.subsID) {
 			t.Errorf("input: %q, GetContainerInfo rg: %q, rg: %q, account: %q, account: %q, container: %q, container: %q, namespace: %q, namespace: %q, err: %q, expectedError: %q", test.volumeID, rg, test.rg, account, test.account,
 				container, test.container, ns, test.namespace, err, test.expectedError)
 		}
@@ -541,10 +571,10 @@ func TestGetAuthEnv(t *testing.T) {
 				if err != nil {
 					t.Errorf("actualErr: (%v), expectedErr: nil", err)
 				}
-				assert.Equal(t, rg, "rg")
-				assert.Equal(t, accountName, "accountname")
-				assert.Equal(t, accountkey, "unit-test")
-				assert.Equal(t, containerName, "containername")
+				assert.Equal(t, "rg", rg)
+				assert.Equal(t, "accountname", accountName)
+				assert.Equal(t, "unit-test", accountkey)
+				assert.Equal(t, "containername", containerName)
 			},
 		},
 		{
@@ -561,11 +591,67 @@ func TestGetAuthEnv(t *testing.T) {
 					t.Errorf("actualErr: (%v), expect no error", err)
 				}
 
-				assert.Equal(t, rg, "")
-				assert.Equal(t, accountName, "accountname")
-				assert.Equal(t, accountkey, "")
-				assert.Equal(t, containerName, "containername")
+				assert.Equal(t, "", rg)
+				assert.Equal(t, "accountname", accountName)
+				assert.Equal(t, "", accountkey)
+				assert.Equal(t, "containername", containerName)
 				assert.Equal(t, len(authEnv), 0)
+			},
+		},
+		{
+			name: "failed to get keyvaultClient",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.ResourceGroup = "rg"
+				attrib := make(map[string]string)
+				secret := make(map[string]string)
+				volumeID := "unique-volumeid"
+				attrib[keyVaultURLField] = "kvURL"
+				attrib[storageAccountField] = "accountname"
+				attrib[containerNameField] = "containername"
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				expectedErrStr := "failed to get keyvaultClient:"
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), expectedErrStr)
+			},
+		},
+		{
+			name: "valid request with all other attr",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				attrib := make(map[string]string)
+				attrib[subscriptionIDField] = "subID"
+				attrib[secretNameField] = "secretName"
+				attrib[secretNamespaceField] = "sNS"
+				attrib[pvcNamespaceKey] = "pvcNSKey"
+				attrib[getAccountKeyFromSecretField] = "akFromSecret"
+
+				secret := make(map[string]string)
+				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+				d.cloud = &azure.Cloud{}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				s := "unit-test"
+				accountkey := storage.AccountKey{
+					Value: &s,
+				}
+				accountkeylist := []storage.AccountKey{}
+				accountkeylist = append(accountkeylist, accountkey)
+				list := storage.AccountListKeysResult{
+					Keys: &accountkeylist,
+				}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				rg, accountName, _, containerName, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				expectedErr := error(nil)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+				assert.Equal(t, rg, "rg")
+				assert.Equal(t, "f5713de20cde511e8ba4900", accountName)
+				assert.Equal(t, "pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41", containerName)
 			},
 		},
 	}
@@ -741,6 +827,78 @@ func TestGetStorageAccount(t *testing.T) {
 	}
 }
 
+//needs editing, could only get past first error for testing, could not get a fake environment running
+func TestGetContainerReference(t *testing.T) {
+	fakeAccountName := "storageaccountname"
+	fakeAccountKey := "test-key"
+	fakeContainerName := "test-con"
+	testCases := []struct {
+		name           string
+		containerName  string
+		endpointSuffix string
+		secrets        map[string]string
+		expectedError  error
+	}{
+		{
+			name:          "failed to retrieve accountName",
+			containerName: fakeContainerName,
+			secrets: map[string]string{
+				"accountKey": fakeAccountKey,
+			},
+			expectedError: fmt.Errorf("could not find %s or %s field secrets(%v)", accountNameField, defaultSecretAccountName, map[string]string{
+				"accountKey": fakeAccountKey,
+			}),
+		},
+		{
+			name:          "failed to retrieve accountKey",
+			containerName: fakeContainerName,
+			secrets: map[string]string{
+				"accountName": fakeAccountName,
+			},
+			expectedError: fmt.Errorf("could not find %s or %s field in secrets(%v)", accountKeyField, defaultSecretAccountKey, map[string]string{
+				"accountName": fakeAccountName,
+			}),
+		},
+		{
+			name:          "failed to obtain client",
+			containerName: fakeContainerName,
+			secrets: map[string]string{
+				"accountName": fakeAccountName,
+				"accountKey":  fakeAccountKey,
+			},
+			expectedError: fmt.Errorf("azure: base storage service url required"),
+		},
+		{
+			name:           "Successful I/O",
+			containerName:  fakeContainerName,
+			endpointSuffix: "endpointSuffix",
+			secrets: map[string]string{
+				"accountName": "devstoreaccount1",
+				"accountKey":  fakeAccountKey,
+			},
+			expectedError: nil,
+		},
+	}
+
+	d := NewFakeDriver()
+	d.cloud = azure.GetTestCloud(gomock.NewController(t))
+	//encodedStr := base64.StdEncoding.EncodeToString([]byte{12, 34, 56})
+	d.cloud.KubeClient = fake.NewSimpleClientset()
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d.cloud.Environment.StorageEndpointSuffix = tc.endpointSuffix
+			container, err := getContainerReference(tc.containerName, tc.secrets, d.cloud.Environment)
+			if tc.expectedError != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.expectedError, err)
+			} else {
+				container.Name = ""
+			}
+		})
+	}
+}
+
 func TestSetAzureCredentials(t *testing.T) {
 	fakeClient := fake.NewSimpleClientset()
 
@@ -794,6 +952,272 @@ func TestSetAzureCredentials(t *testing.T) {
 			t.Errorf("desc: %s,\n input: kubeClient(%v), accountName(%v), accountKey(%v),\n setAzureCredentials result: %v, expectedName: %v err: %v, expectedErr: %v",
 				test.desc, test.kubeClient, test.accountName, test.accountKey, result, test.expectedName, err, test.expectedErr)
 		}
+	}
+}
+
+func TestGetStorageAccesskey(t *testing.T) {
+	options := &azure.AccountOptions{
+		Name:           "test-sa",
+		SubscriptionID: "test-subID",
+		ResourceGroup:  "test-rg",
+	}
+	fakeAccName := options.Name //fmt.Sprintf(secretNameTemplate, options.Name)
+	fakeAccKey := "test-key"
+	secretNamespace := "test-ns"
+	testCases := []struct {
+		name          string
+		secrets       map[string]string
+		secretName    string
+		expectedError error
+	}{
+		{
+			name: "Secrets is larger than 0",
+			secrets: map[string]string{
+				"accountName":              fakeAccName,
+				"accountNameField":         fakeAccName,
+				"defaultSecretAccountName": fakeAccName,
+				"accountKey":               fakeAccKey,
+				"accountKeyField":          fakeAccKey,
+				"defaultSecretAccountKey":  fakeAccKey,
+			},
+			expectedError: nil,
+		},
+		{
+			name:          "secretName is Empty",
+			secrets:       make(map[string]string),
+			secretName:    "",
+			expectedError: nil,
+		},
+		{
+			name:          "error is not nil",
+			secrets:       make(map[string]string),
+			secretName:    "foobar",
+			expectedError: errors.New(""),
+		},
+		{
+			name:          "successful input/error is nil",
+			secrets:       make(map[string]string),
+			secretName:    fmt.Sprintf(secretNameTemplate, options.Name),
+			expectedError: nil,
+		},
+	}
+	d := NewFakeDriver()
+	d.cloud = &azure.Cloud{}
+	d.cloud.KubeClient = fake.NewSimpleClientset()
+	secret := &v1api.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: secretNamespace,
+			Name:      fmt.Sprintf(secretNameTemplate, options.Name),
+		},
+		Data: map[string][]byte{
+			defaultSecretAccountName: []byte(fakeAccName),
+			defaultSecretAccountKey:  []byte(fakeAccKey),
+		},
+		Type: "Opaque",
+	}
+	secret.Namespace = secretNamespace
+	_, secretCreateErr := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	if secretCreateErr != nil {
+		t.Error("failed to create secret")
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			accName, accKey, err := d.GetStorageAccesskey(context.TODO(), options, tc.secrets, tc.secretName, secretNamespace)
+			if tc.expectedError != nil {
+				assert.Error(t, err, "there should be an error")
+			} else {
+				assert.Equal(t, nil, err, "error should be nil")
+				assert.Equal(t, fakeAccName, accName, "account names must match")
+				assert.Equal(t, fakeAccKey, accKey, "account keys must match")
+			}
+		})
+	}
+}
+
+func TestGetStorageAccountFromSecret(t *testing.T) {
+	fakeClient := fake.NewSimpleClientset()
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "KubeClient is nil",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.KubeClient = nil
+				secretName := "foo"
+				secretNamespace := "bar"
+				_, _, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				expectedErr := fmt.Errorf("could not get account key from secret(%s): KubeClient is nil", secretName)
+				if assert.Error(t, err) {
+					assert.Equal(t, expectedErr, err)
+				}
+			},
+		},
+		{
+			name: "Could not get secret",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.KubeClient = fakeClient
+				secretName := ""
+				secretNamespace := ""
+				_, _, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				//expectedErr := fmt.Errorf("could not get secret(%v): %w", secretName, err)
+				assert.Error(t, err) //could not check what type of error, needs fix
+				/*if assert.Error(t, err) {
+					assert.Equal(t, expectedErr, err)
+				}*/
+			},
+		},
+		{
+			name: "Successful Input",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.KubeClient = fakeClient
+				secretName := "john smith"
+				secretNamespace := "namespace"
+				accountName := "bar"
+				accountKey := "foo"
+				secret := &v1api.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: secretNamespace,
+						Name:      secretName,
+					},
+					Data: map[string][]byte{
+						defaultSecretAccountName: []byte(accountName),
+						defaultSecretAccountKey:  []byte(accountKey),
+					},
+					Type: "Opaque",
+				}
+				_, secretCreateErr := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+				if secretCreateErr != nil {
+					t.Error("failed to create secret")
+				}
+				an, ak, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				assert.Equal(t, accountName, an, "accountName's should match")
+				assert.Equal(t, accountKey, ak, "accountKey's should match")
+				assert.Equal(t, nil, err, "error should be nil")
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestGetSubnetResourceID(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "NetworkResourceSubscriptionID is Empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "fakeSubID"
+				d.cloud.NetworkResourceSubscriptionID = ""
+				d.cloud.ResourceGroup = "foo"
+				d.cloud.VnetResourceGroup = "foo"
+				actualOutput := d.getSubnetResourceID()
+				expectedOutput := fmt.Sprintf(subnetTemplate, d.cloud.SubscriptionID, "foo", d.cloud.VnetName, d.cloud.SubnetName)
+				assert.Equal(t, actualOutput, expectedOutput, "cloud.SubscriptionID should be used as the SubID")
+			},
+		},
+		{
+			name: "NetworkResourceSubscriptionID is not Empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "fakeSubID"
+				d.cloud.NetworkResourceSubscriptionID = "fakeNetSubID"
+				d.cloud.ResourceGroup = "foo"
+				d.cloud.VnetResourceGroup = "foo"
+				actualOutput := d.getSubnetResourceID()
+				expectedOutput := fmt.Sprintf(subnetTemplate, d.cloud.NetworkResourceSubscriptionID, "foo", d.cloud.VnetName, d.cloud.SubnetName)
+				assert.Equal(t, actualOutput, expectedOutput, "cloud.NetworkResourceSubscriptionID should be used as the SubID")
+			},
+		},
+		{
+			name: "VnetResourceGroup is Empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "bar"
+				d.cloud.NetworkResourceSubscriptionID = "bar"
+				d.cloud.ResourceGroup = "fakeResourceGroup"
+				d.cloud.VnetResourceGroup = ""
+				actualOutput := d.getSubnetResourceID()
+				expectedOutput := fmt.Sprintf(subnetTemplate, "bar", d.cloud.ResourceGroup, d.cloud.VnetName, d.cloud.SubnetName)
+				assert.Equal(t, actualOutput, expectedOutput, "cloud.Resourcegroup should be used as the rg")
+			},
+		},
+		{
+			name: "VnetResourceGroup is not Empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "bar"
+				d.cloud.NetworkResourceSubscriptionID = "bar"
+				d.cloud.ResourceGroup = "fakeResourceGroup"
+				d.cloud.VnetResourceGroup = "fakeVnetResourceGroup"
+				actualOutput := d.getSubnetResourceID()
+				expectedOutput := fmt.Sprintf(subnetTemplate, "bar", d.cloud.VnetResourceGroup, d.cloud.VnetName, d.cloud.SubnetName)
+				assert.Equal(t, actualOutput, expectedOutput, "cloud.VnetResourceGroup should be used as the rg")
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestUseDataPlaneAPI(t *testing.T) {
+	fakeVolumeID := "unit-test-id"
+	fakeAccountName := "unit-test-account"
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "volumeID loads correctly",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.dataPlaneAPIVolMap.LoadOrStore(fakeVolumeID, "foo")
+				output := d.useDataPlaneAPI(fakeVolumeID, "")
+				if !output {
+					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)
+				}
+			},
+		},
+		{
+			name: "account loads correctly",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.dataPlaneAPIVolMap.LoadOrStore(fakeAccountName, "foo")
+				output := d.useDataPlaneAPI(fakeAccountName, "")
+				if !output {
+					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)
+				}
+			},
+		},
+		{
+			name: "invalid volumeID and account",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				output := d.useDataPlaneAPI("", "")
+				if output {
+					t.Errorf("Actual Output: %t, Expected Output: %t", output, false)
+				}
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
 	}
 }
 
@@ -989,7 +1413,7 @@ func TestSetKeyValueInMap(t *testing.T) {
 			expected: map[string]string{"subDir": "value"},
 		},
 		{
-			desc:     "case insentive key already exists",
+			desc:     "case insensitive key already exists",
 			m:        map[string]string{"subDir": "value2"},
 			key:      "subdir",
 			value:    "value",

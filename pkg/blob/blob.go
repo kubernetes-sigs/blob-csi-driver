@@ -49,7 +49,7 @@ const (
 	DefaultDriverName            = "blob.csi.azure.com"
 	blobCSIDriverName            = "blob_csi_driver"
 	separator                    = "#"
-	volumeIDTemplate             = "%s#%s#%s#%s#%s"
+	volumeIDTemplate             = "%s#%s#%s#%s#%s#%s"
 	secretNameTemplate           = "azure-storage-account-%s-secret"
 	serverNameField              = "server"
 	storageEndpointSuffixField   = "storageendpointsuffix"
@@ -265,28 +265,36 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 	s.Wait()
 }
 
-// GetContainerInfo get container info according to volume id, e.g.
-// input: "rg#f5713de20cde511e8ba4900#containerName#uuid"
-// output: rg, f5713de20cde511e8ba4900, containerName
-// input: "rg#f5713de20cde511e8ba4900#containerName#uuid#namespace"
-// output: rg, f5713de20cde511e8ba4900, containerName, namespace
-func GetContainerInfo(id string) (string, string, string, string, error) {
+// GetContainerInfo get container info according to volume id
+// the format of VolumeId is: rg#accountName#containerName#uuid#secretNamespace#subsID
+//
+// e.g.
+// input: "rg#f5713de20cde511e8ba4900#containerName#uuid#"
+// output: rg, f5713de20cde511e8ba4900, containerName, "" , ""
+// input: "rg#f5713de20cde511e8ba4900#containerName#uuid#namespace#"
+// output: rg, f5713de20cde511e8ba4900, containerName, namespace, ""
+// input: "rg#f5713de20cde511e8ba4900#containerName#uuid#namespace#subsID"
+// output: rg, f5713de20cde511e8ba4900, containerName, namespace, subsID
+func GetContainerInfo(id string) (string, string, string, string, string, error) {
 	segments := strings.Split(id, separator)
 	if len(segments) < 3 {
-		return "", "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
+		return "", "", "", "", "", fmt.Errorf("error parsing volume id: %q, should at least contain two #", id)
 	}
-	var secretNamespace string
+	var secretNamespace, subsID string
 	if len(segments) > 4 {
 		secretNamespace = segments[4]
 	}
-	return segments[0], segments[1], segments[2], secretNamespace, nil
+	if len(segments) > 5 {
+		subsID = segments[5]
+	}
+	return segments[0], segments[1], segments[2], secretNamespace, subsID, nil
 }
 
 // A container name must be a valid DNS name, conforming to the following naming rules:
-//	1. Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
-//	2. Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.
-//	3. All letters in a container name must be lowercase.
-//	4. Container names must be from 3 through 63 characters long.
+//  1. Container names must start with a letter or number, and can contain only letters, numbers, and the dash (-) character.
+//  2. Every dash (-) character must be immediately preceded and followed by a letter or number; consecutive dashes are not permitted in container names.
+//  3. All letters in a container name must be lowercase.
+//  4. Container names must be from 3 through 63 characters long.
 //
 // See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 func getValidContainerName(volumeName, protocol string) string {
@@ -315,17 +323,18 @@ func checkContainerNameBeginAndEnd(containerName string) bool {
 	return false
 }
 
-// isSASToken checks if the key contains the patterns. Because a SAS Token must have these strings, use them to judge.
+// isSASToken checks if the key contains the patterns.
+// SAS token format could refer to https://docs.microsoft.com/en-us/rest/api/eventhub/generate-sas-token
 func isSASToken(key string) bool {
-	return strings.Contains(key, "?sv=")
+	return strings.HasPrefix(key, "?")
 }
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
 func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, string, string, []string, error) {
-	rgName, accountName, containerName, secretNamespace, err := GetContainerInfo(volumeID)
+	rgName, accountName, containerName, secretNamespace, _, err := GetContainerInfo(volumeID)
 	if err != nil {
 		// ignore volumeID parsing error
-		klog.V(2).Info("parsing volumeID(%s) return with error: %v", volumeID, err)
+		klog.V(2).Infof("parsing volumeID(%s) return with error: %v", volumeID, err)
 		err = nil
 	}
 
@@ -529,7 +538,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 	} else {
 		if len(secrets) == 0 {
 			var rgName string
-			rgName, accountName, containerName, _, err = GetContainerInfo(volumeID)
+			rgName, accountName, containerName, _, _, err = GetContainerInfo(volumeID)
 			if err != nil {
 				return "", "", "", "", err
 			}
@@ -681,9 +690,9 @@ func setAzureCredentials(kubeClient kubernetes.Interface, accountName, accountKe
 }
 
 // GetStorageAccesskey get Azure storage account key from
-// 	1. secrets (if not empty)
-// 	2. use k8s client identity to read from k8s secret
-// 	3. use cluster identity to get from storage account directly
+//  1. secrets (if not empty)
+//  2. use k8s client identity to read from k8s secret
+//  3. use cluster identity to get from storage account directly
 func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, string, error) {
 	if len(secrets) > 0 {
 		return getStorageAccount(secrets)

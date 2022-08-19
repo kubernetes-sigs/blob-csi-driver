@@ -124,3 +124,11 @@ func TestValidateControllerServiceRequest(t *testing.T) {
 	assert.NoError(t, err)
 
 }
+
+func TestAddNodeServiceCapabilities(t *testing.T) {
+	d := NewFakeDriver()
+	nl := []csi.NodeServiceCapability_RPC_Type{csi.NodeServiceCapability_RPC_UNKNOWN, csi.NodeServiceCapability_RPC_EXPAND_VOLUME}
+	d.AddNodeServiceCapabilities(nl)
+	expectedOutput := []*csi.NodeServiceCapability{NewNodeServiceCapability(nl[0]), NewNodeServiceCapability(nl[1])}
+	assert.Equal(t, expectedOutput, d.NSCap, "NS Capabilities must Match")
+}

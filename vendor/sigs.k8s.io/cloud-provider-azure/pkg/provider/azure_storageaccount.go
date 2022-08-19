@@ -24,7 +24,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-07-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2021-08-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage"
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"k8s.io/klog/v2"
@@ -52,6 +52,10 @@ type AccountOptions struct {
 	IsHnsEnabled                            *bool
 	EnableNfsV3                             *bool
 	AllowBlobPublicAccess                   *bool
+	RequireInfrastructureEncryption         *bool
+	KeyName                                 *string
+	KeyVersion                              *string
+	KeyVaultURI                             *string
 	Tags                                    map[string]string
 	VirtualNetworkResourceIDs               []string
 	VNetResourceGroup                       string
@@ -273,6 +277,23 @@ func (az *Cloud) EnsureStorageAccount(ctx context.Context, accountOptions *Accou
 			klog.V(2).Infof("set AllowBlobPublicAccess(%v) for storage account(%s)", *accountOptions.AllowBlobPublicAccess, accountName)
 			cp.AccountPropertiesCreateParameters.AllowBlobPublicAccess = accountOptions.AllowBlobPublicAccess
 		}
+		if accountOptions.RequireInfrastructureEncryption != nil {
+			klog.V(2).Infof("set RequireInfrastructureEncryption(%v) for storage account(%s)", *accountOptions.RequireInfrastructureEncryption, accountName)
+			cp.AccountPropertiesCreateParameters.Encryption = &storage.Encryption{
+				RequireInfrastructureEncryption: accountOptions.RequireInfrastructureEncryption,
+			}
+		}
+		if accountOptions.KeyVaultURI != nil {
+			klog.V(2).Infof("set KeyVault(%v) for storage account(%s)", accountOptions.KeyVaultURI, accountName)
+			if cp.AccountPropertiesCreateParameters.Encryption == nil {
+				cp.AccountPropertiesCreateParameters.Encryption = &storage.Encryption{}
+			}
+			cp.AccountPropertiesCreateParameters.Encryption.KeyVaultProperties = &storage.KeyVaultProperties{
+				KeyName:     accountOptions.KeyName,
+				KeyVersion:  accountOptions.KeyVersion,
+				KeyVaultURI: accountOptions.KeyVaultURI,
+			}
+		}
 		if az.StorageAccountClient == nil {
 			return "", "", fmt.Errorf("StorageAccountClient is nil")
 		}
@@ -333,8 +354,12 @@ func (az *Cloud) createPrivateEndpoint(ctx context.Context, accountName string, 
 	if err != nil {
 		return err
 	}
-	// Disable the private endpoint network policies before creating private endpoint
-	subnet.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = network.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled
+	if subnet.SubnetPropertiesFormat == nil {
+		klog.Errorf("SubnetPropertiesFormat of (%s, %s) is nil", vnetName, subnetName)
+	} else {
+		// Disable the private endpoint network policies before creating private endpoint
+		subnet.SubnetPropertiesFormat.PrivateEndpointNetworkPolicies = network.VirtualNetworkPrivateEndpointNetworkPoliciesDisabled
+	}
 	if rerr := az.SubnetsClient.CreateOrUpdate(ctx, vnetResourceGroup, vnetName, subnetName, subnet); rerr != nil {
 		return rerr.Error()
 	}

@@ -30,8 +30,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"sigs.k8s.io/cloud-provider-azure/pkg/provider"
 
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 
 	mount "k8s.io/mount-utils"
@@ -235,6 +238,7 @@ func TestNodePublishVolume(t *testing.T) {
 	_ = makeDir(sourceTest)
 	_ = makeDir(targetTest)
 	d := NewFakeDriver()
+	d.cloud = provider.GetTestCloud(gomock.NewController(t))
 	fakeMounter := &fakeMounter{}
 	fakeExec := &testingexec.FakeExec{ExactOrder: true}
 	d.mounter = &mount.SafeFormatAndMount{
@@ -243,6 +247,7 @@ func TestNodePublishVolume(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		d.cloud.ResourceGroup = "rg"
 		if test.setup != nil {
 			test.setup(d)
 		}
@@ -456,6 +461,102 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "[Error] Could not mount to target",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "error_is_likely",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						mountPermissionsField: "0755",
+					},
+				}
+				d := NewFakeDriver()
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.Internal, fmt.Sprintf("Could not mount target %q: %v", req.StagingTargetPath, fmt.Errorf("fake IsLikelyNotMountPoint: fake error")))
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "protocol = nfs",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						mountPermissionsField: "0755",
+						protocolField:         "nfs",
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud = provider.GetTestCloud(gomock.NewController(t))
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				//expectedErr := nil
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, nil)
+				}
+			},
+		},
+		{
+			name: "BlobMockMount Enabled",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						mountPermissionsField: "0755",
+						protocolField:         "protocol",
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud = provider.GetTestCloud(gomock.NewController(t))
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				keyList := make([]storage.AccountKey, 1)
+				fakeKey := "fakeKey"
+				fakeValue := "fakeValue"
+				keyList[0] = (storage.AccountKey{
+					KeyName: &fakeKey,
+					Value:   &fakeValue,
+				})
+				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				//expectedErr := nil
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, nil)
+				}
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
@@ -520,6 +621,12 @@ func TestNodeUnstageVolume(t *testing.T) {
 					StagingTargetPath: "./unit-test",
 				}
 				d := NewFakeDriver()
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
 				_, err := d.NodeUnstageVolume(context.TODO(), req)
 				expectedErr := error(nil)
 				if !reflect.DeepEqual(err, expectedErr) {
