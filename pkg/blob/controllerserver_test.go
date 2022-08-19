@@ -47,11 +47,11 @@ const (
 	NULL
 )
 
-//mock blobclient that returns the errortype for create/delete/get operations (default value nil)
+// mock blobclient that returns the errortype for create/delete/get operations (default value nil)
 type mockBlobClient struct {
-	//type of error returned
+	// type of error returned
 	errorType *errType
-	//custom string for error type CUSTOM
+	// custom string for error type CUSTOM
 	custom  *string
 	conProp *storage.ContainerProperties
 }
@@ -94,7 +94,7 @@ func newMockBlobClient(errorType *errType, custom *string, conProp *storage.Cont
 	return &mockBlobClient{errorType: errorType, custom: custom, conProp: conProp}
 }
 
-//creates and returns mock storage account client
+// creates and returns mock storage account client
 func NewMockSAClient(ctx context.Context, ctrl *gomock.Controller, subsID, rg, accName string, keyList *[]storage.AccountKey) *mockstorageaccountclient.MockInterface {
 	cl := mockstorageaccountclient.NewMockInterface(ctrl)
 
