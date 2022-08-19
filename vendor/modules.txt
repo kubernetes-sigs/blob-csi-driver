@@ -1,4 +1,4 @@
-# github.com/Azure/azure-sdk-for-go v66.0.0+incompatible
+# github.com/Azure/azure-sdk-for-go v65.0.0+incompatible
 ## explicit
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-07-01/compute
 github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice
@@ -10,10 +10,6 @@ github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01
 github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2017-05-10/resources
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources
-<<<<<<< HEAD
-github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-02-01/storage
-=======
->>>>>>> 6e711cd44d77951267e0a8a3627aeebcdedf7630
 github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage
 github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/version
@@ -149,8 +145,6 @@ github.com/cyphar/filepath-securejoin
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/dnaeon/go-vcr v1.1.0
-## explicit; go 1.15
 # github.com/docker/distribution v2.7.1+incompatible
 ## explicit
 github.com/docker/distribution/digestset
@@ -340,12 +334,9 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-<<<<<<< HEAD
-=======
 # github.com/satori/go.uuid v1.2.0
 ## explicit
 github.com/satori/go.uuid
->>>>>>> 6e711cd44d77951267e0a8a3627aeebcdedf7630
 # github.com/spf13/cobra v1.5.0
 ## explicit; go 1.15
 github.com/spf13/cobra
