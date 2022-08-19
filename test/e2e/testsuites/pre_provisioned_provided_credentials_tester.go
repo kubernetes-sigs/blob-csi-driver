@@ -24,6 +24,7 @@ import (
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
+	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
 
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -39,34 +40,101 @@ type PreProvisionedProvidedCredentiasTest struct {
 }
 
 func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+	kvClient, err := azure.NewKeyVaultClient()
+	framework.ExpectNoError(err)
+
+	authClient, err := azure.NewAuthorizationClient()
+	framework.ExpectNoError(err)
+
 	for _, pod := range t.Pods {
 		for n, volume := range pod.Volumes {
-			accountName, accountKey, accountSasToken, containerName, err := t.Driver.GetStorageAccountAndContainer(context.Background(), volume.VolumeID, nil, nil)
+			accountName, accountKey, _, _, err := t.Driver.GetStorageAccountAndContainer(context.Background(), volume.VolumeID, nil, nil)
 			framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volume.VolumeID, err))
+			var secretData map[string]string
 
-			ginkgo.By("creating the secret")
-			secreteData := map[string]string{"azurestorageaccountname": accountName}
-			if accountKey != "" {
-				secreteData["azurestorageaccountkey"] = accountKey
-			} else {
-				secreteData["azurestorageaccountsastoken"] = accountSasToken
+			var run = func() {
+				tsecret := NewTestSecret(client, namespace, volume.NodeStageSecretRef, secretData)
+				tsecret.Create()
+				defer tsecret.Cleanup()
+
+				tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
+				// defer must be called here for resources not get removed before using them
+				for i := range cleanup {
+					defer cleanup[i]()
+				}
+
+				ginkgo.By("deploying the pod")
+				tpod.Create()
+				defer tpod.Cleanup()
+				ginkgo.By("checking that the pods command exits with no error")
+				tpod.WaitForSuccess()
 			}
-			tsecret := NewTestSecret(client, namespace, volume.NodeStageSecretRef, secreteData)
-			tsecret.Create()
-			defer tsecret.Cleanup()
 
-			pod.Volumes[n].ContainerName = containerName
-			tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
-			// defer must be called here for resources not get removed before using them
-			for i := range cleanup {
-				defer cleanup[i]()
+			// test for storage account key
+			ginkgo.By("Run for storage account key")
+			secretData = map[string]string{
+				"azurestorageaccountname": accountName,
+				"azurestorageaccountkey":  accountKey,
+			}
+			run()
+
+			// test for storage account SAS token
+			ginkgo.By("Run for storage account SAS token")
+			sasToken := GenerateSASToken(accountName, accountKey)
+			secretData = map[string]string{
+				"azurestorageaccountname":     accountName,
+				"azurestorageaccountsastoken": sasToken,
+			}
+			run()
+
+			// test for service principal
+			ginkgo.By("Run for service principal")
+			pod.Volumes[n].Attrib = map[string]string{
+				"azurestorageauthtype":    "SPN",
+				"azurestoragespnclientid": kvClient.Cred.AADClientID,
+				"azurestoragespntenantid": kvClient.Cred.TenantID,
+			}
+			secretData = map[string]string{
+				"azurestorageaccountname":     accountName,
+				"azurestoragespnclientsecret": kvClient.Cred.AADClientSecret,
 			}
 
-			ginkgo.By("deploying the pod")
-			tpod.Create()
-			defer tpod.Cleanup()
-			ginkgo.By("checking that the pods command exits with no error")
-			tpod.WaitForSuccess()
+			objectID, err := kvClient.GetServicePrincipalObjectID(context.TODO(), kvClient.Cred.AADClientID)
+			framework.ExpectNoError(err, fmt.Sprintf("Error GetServicePrincipalObjectID from clientID(%s): %v", kvClient.Cred.AADClientID, err))
+
+			resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Storage/storageAccounts/%s", kvClient.Cred.SubscriptionID, kvClient.Cred.ResourceGroup, accountName)
+
+			ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the service principal, objectID:%s", objectID))
+			roleDef, err := authClient.GetRoleDefinition(context.TODO(), resourceID, "Storage Blob Data Contributor")
+			framework.ExpectNoError(err, fmt.Sprintf("Error GetRoleDefinition from resourceID(%s): %v", resourceID, err))
+
+			roleDefID := *roleDef.ID
+			_, err = authClient.AssignRole(context.TODO(), resourceID, objectID, roleDefID)
+			framework.ExpectNoError(err, fmt.Sprintf("Error AssignRole (roleDefID(%s)) to objectID(%s) to access resource (resourceID(%s)), error: %v", roleDefID, objectID, resourceID, err))
+
+			run()
+
+			// test for managed identity
+			// e2e-vmss test job uses msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal
+			objectID, err = kvClient.GetMSIObjectID(context.TODO(), "blobfuse-csi-driver-e2e-test-id")
+			if err != nil {
+				return
+			}
+
+			ginkgo.By("Run for managed identity")
+			pod.Volumes[n].Attrib = map[string]string{
+				"azurestorageauthtype":         "MSI",
+				"azurestorageidentityobjectid": objectID,
+			}
+
+			secretData = map[string]string{
+				"azurestorageaccountname": accountName,
+			}
+			ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the managed identity, objectID:%s", objectID))
+			_, err = authClient.AssignRole(context.TODO(), resourceID, objectID, roleDefID)
+			framework.ExpectNoError(err, fmt.Sprintf("Error AssignRole (roleDefID(%s)) to objectID(%s) to access resource (resourceID(%s)), error: %v", roleDefID, objectID, resourceID, err))
+
+			run()
 		}
 	}
 }
