@@ -36,8 +36,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 
-	//fakecloud "k8s.io/cloud-provider/fake"
-
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
@@ -827,7 +825,7 @@ func TestGetStorageAccount(t *testing.T) {
 	}
 }
 
-//needs editing, could only get past first error for testing, could not get a fake environment running
+// needs editing, could only get past first error for testing, could not get a fake environment running
 func TestGetContainerReference(t *testing.T) {
 	fakeAccountName := "storageaccountname"
 	fakeAccountKey := "test-key"
@@ -882,7 +880,6 @@ func TestGetContainerReference(t *testing.T) {
 
 	d := NewFakeDriver()
 	d.cloud = azure.GetTestCloud(gomock.NewController(t))
-	//encodedStr := base64.StdEncoding.EncodeToString([]byte{12, 34, 56})
 	d.cloud.KubeClient = fake.NewSimpleClientset()
 
 	for _, tc := range testCases {
@@ -961,7 +958,7 @@ func TestGetStorageAccesskey(t *testing.T) {
 		SubscriptionID: "test-subID",
 		ResourceGroup:  "test-rg",
 	}
-	fakeAccName := options.Name //fmt.Sprintf(secretNameTemplate, options.Name)
+	fakeAccName := options.Name
 	fakeAccKey := "test-key"
 	secretNamespace := "test-ns"
 	testCases := []struct {
@@ -1065,8 +1062,8 @@ func TestGetStorageAccountFromSecret(t *testing.T) {
 				secretName := ""
 				secretNamespace := ""
 				_, _, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
-				//expectedErr := fmt.Errorf("could not get secret(%v): %w", secretName, err)
-				assert.Error(t, err) //could not check what type of error, needs fix
+				// expectedErr := fmt.Errorf("could not get secret(%v): %w", secretName, err)
+				assert.Error(t, err) // could not check what type of error, needs fix
 				/*if assert.Error(t, err) {
 					assert.Equal(t, expectedErr, err)
 				}*/
