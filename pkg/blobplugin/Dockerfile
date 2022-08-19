@@ -39,4 +39,3 @@ LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
 ENTRYPOINT ["/blobplugin"]
-
