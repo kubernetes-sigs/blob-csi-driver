@@ -955,7 +955,6 @@ func TestSetAzureCredentials(t *testing.T) {
 	}
 }
 
-<<<<<<< HEAD
 func TestGetStorageAccesskey(t *testing.T) {
 	options := &azure.AccountOptions{
 		Name:           "test-sa",
@@ -1222,8 +1221,6 @@ func TestUseDataPlaneAPI(t *testing.T) {
 	}
 }
 
-=======
->>>>>>> parent of f7a4076e... added unit tests for getSubnetResourceID() and useDataPlaneAPI()
 func TestAppendDefaultMountOptions(t *testing.T) {
 	tests := []struct {
 		options       []string
