@@ -1,6 +1,8 @@
 ## CSI driver troubleshooting guide
 ### Case#1: volume create/delete issue
- - locate csi driver pod
+> This step is not available if you are using [managed CSI driver on AKS](https://docs.microsoft.com/en-us/azure/aks/azure-csi-blob-storage-dynamic).
+ - find csi driver controller pod
+> There could be multiple controller pods (only one pod is the leader), if there are no helpful logs, try to get logs from the leader controller pod.
 ```console
 kubectl get po -o wide -n kube-system | grep csi-blob-controller
 ```
@@ -9,12 +11,12 @@ NAME                                       READY   STATUS    RESTARTS   AGE     
 csi-blob-controller-56bfddd689-dh5tk       4/4     Running   0          35s     10.240.0.19    k8s-agentpool-22533604-0
 csi-blob-controller-56bfddd689-sl4ll       4/4     Running   0          35s     10.240.0.23    k8s-agentpool-22533604-1
 </pre>
- - get csi driver logs
+
+ - get pod description and logs
 ```console
+kubectl describe pod csi-blob-controller-56bfddd689-dh5tk -n kube-system > csi-blob-controller-description.log
 kubectl logs csi-blob-controller-56bfddd689-dh5tk -c blob -n kube-system > csi-blob-controller.log
 ```
-> note: there could be multiple controller pods, logs can be taken from all of them simultaneously, also with `follow` (realtime) mode
-> `kubectl logs deploy/csi-blob-controller -c blob -f -n kube-system`
 
 ### Case#2: volume mount/unmount failed
  - locate csi driver pod and make sure which pod does the actual volume mount/unmount
