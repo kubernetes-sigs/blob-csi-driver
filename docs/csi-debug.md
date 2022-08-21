@@ -1,6 +1,6 @@
 ## CSI driver troubleshooting guide
 ### Case#1: volume create/delete issue
-> This step is not available if you are using [managed CSI driver on AKS](https://docs.microsoft.com/en-us/azure/aks/azure-csi-blob-storage-dynamic).
+> This step is not applicable if you are using [managed CSI driver on AKS](https://docs.microsoft.com/en-us/azure/aks/azure-csi-blob-storage-dynamic).
  - find csi driver controller pod
 > There could be multiple controller pods (only one pod is the leader), if there are no helpful logs, try to get logs from the leader controller pod.
 ```console
@@ -29,8 +29,9 @@ csi-blob-node-cvgbs                        3/3     Running   0          7m4s    
 csi-blob-node-dr4s4                        3/3     Running   0          7m4s    10.240.0.4     k8s-agentpool-22533604-0
 </pre>
 
- - get csi driver logs
+ - get pod description and logs
 ```console
+kubectl describe pod csi-blob-node-cvgbs -n kube-system > csi-blob-node-description.log
 kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 ```
 > note: to watch logs in realtime from multiple `csi-blob-node` DaemonSet pods simultaneously, run the command:
