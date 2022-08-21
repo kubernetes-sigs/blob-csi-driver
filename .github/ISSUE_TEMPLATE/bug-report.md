@@ -18,6 +18,10 @@ about: Create a report to help us improve this project
 
 **Environment**:
 - CSI Driver version:
+<!-- 
+*Run following command to get CSI driver version:
+`kubectl get po -n kube-system -o yaml | grep mcr | grep blob`
+-->
 - Kubernetes version (use `kubectl version`):
 - OS (e.g. from /etc/os-release):
 - Kernel (e.g. `uname -a`):
