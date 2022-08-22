@@ -17,11 +17,11 @@ about: Create a report to help us improve this project
 **Anything else we need to know?**:
 
 **Environment**:
-- CSI Driver version:
 <!-- 
 *Run following command to get CSI driver version:
-`kubectl get po -n kube-system -o yaml | grep mcr | grep blob`
+kubectl get po -n kube-system -o yaml | grep mcr | grep blob
 -->
+- CSI Driver version:
 - Kubernetes version (use `kubectl version`):
 - OS (e.g. from /etc/os-release):
 - Kernel (e.g. `uname -a`):
