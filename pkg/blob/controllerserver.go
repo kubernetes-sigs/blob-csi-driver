@@ -68,7 +68,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		parameters = make(map[string]string)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
-	var isHnsEnabled *bool
+	var isHnsEnabled, requireInfraEncryption *bool
 	var vnetResourceGroup, vnetName, subnetName string
 	var matchTags, useDataPlaneAPI bool
 	// set allowBlobPublicAccess as false by default
@@ -120,6 +120,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case allowBlobPublicAccessField:
 			if strings.EqualFold(v, trueValue) {
 				allowBlobPublicAccess = to.BoolPtr(true)
+			}
+		case requireInfraEncryptionField:
+			if strings.EqualFold(v, trueValue) {
+				requireInfraEncryption = to.BoolPtr(true)
 			}
 		case pvcNamespaceKey:
 			pvcNamespace = v
@@ -228,22 +232,23 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	accountOptions := &azure.AccountOptions{
-		Name:                      account,
-		Type:                      storageAccountType,
-		Kind:                      accountKind,
-		SubscriptionID:            subsID,
-		ResourceGroup:             resourceGroup,
-		Location:                  location,
-		EnableHTTPSTrafficOnly:    enableHTTPSTrafficOnly,
-		VirtualNetworkResourceIDs: vnetResourceIDs,
-		Tags:                      tags,
-		MatchTags:                 matchTags,
-		IsHnsEnabled:              isHnsEnabled,
-		EnableNfsV3:               enableNfsV3,
-		AllowBlobPublicAccess:     allowBlobPublicAccess,
-		VNetResourceGroup:         vnetResourceGroup,
-		VNetName:                  vnetName,
-		SubnetName:                subnetName,
+		Name:                            account,
+		Type:                            storageAccountType,
+		Kind:                            accountKind,
+		SubscriptionID:                  subsID,
+		ResourceGroup:                   resourceGroup,
+		Location:                        location,
+		EnableHTTPSTrafficOnly:          enableHTTPSTrafficOnly,
+		VirtualNetworkResourceIDs:       vnetResourceIDs,
+		Tags:                            tags,
+		MatchTags:                       matchTags,
+		IsHnsEnabled:                    isHnsEnabled,
+		EnableNfsV3:                     enableNfsV3,
+		AllowBlobPublicAccess:           allowBlobPublicAccess,
+		RequireInfrastructureEncryption: requireInfraEncryption,
+		VNetResourceGroup:               vnetResourceGroup,
+		VNetName:                        vnetName,
+		SubnetName:                      subnetName,
 	}
 
 	var accountKey string
