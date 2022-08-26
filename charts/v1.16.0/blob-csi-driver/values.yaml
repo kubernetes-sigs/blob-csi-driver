@@ -1,0 +1,164 @@
+image:
+  baseRepo: mcr.microsoft.com
+  blob:
+    repository: /oss/kubernetes-csi/blob-csi
+    tag: v1.16.0
+    pullPolicy: IfNotPresent
+  csiProvisioner:
+    repository: /oss/kubernetes-csi/csi-provisioner
+    tag: v3.2.0
+    pullPolicy: IfNotPresent
+  livenessProbe:
+    repository: /oss/kubernetes-csi/livenessprobe
+    tag: v2.7.0
+    pullPolicy: IfNotPresent
+  nodeDriverRegistrar:
+    repository: /oss/kubernetes-csi/csi-node-driver-registrar
+    tag: v2.5.1
+    pullPolicy: IfNotPresent
+  csiResizer:
+    repository: /oss/kubernetes-csi/csi-resizer
+    tag: v1.5.0
+    pullPolicy: IfNotPresent
+
+cloud: AzurePublicCloud
+
+## Reference to one or more secrets to be used when pulling images
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/
+imagePullSecrets: []
+# - name: myRegistryKeySecretName
+
+serviceAccount:
+  create: true # When true, service accounts will be created for you. Set to false if you want to use your own.
+  controller: csi-blob-controller-sa # Name of Service Account to be created or used
+  node: csi-blob-node-sa # Name of Service Account to be created or used
+
+rbac:
+  create: true
+  name: blob
+
+## Collection of annotations to add to all the pods
+podAnnotations: {}
+## Collection of labels to add to all the pods
+podLabels: {}
+# -- Custom labels to add into metadata
+customLabels: {}
+  # k8s-app: blob-csi-driver
+
+## Leverage a PriorityClass to ensure your pods survive resource shortages
+## ref: https://kubernetes.io/docs/concepts/configuration/pod-priority-preemption/
+priorityClassName: system-cluster-critical
+## Security context give the opportunity to run container as nonroot by setting a securityContext
+## by example :
+## securityContext: { runAsUser: 1001 }
+securityContext: {}
+
+controller:
+  name: csi-blob-controller
+  cloudConfigSecretName: azure-cloud-provider
+  cloudConfigSecretNamespace: kube-system
+  allowEmptyCloudConfig: true
+  hostNetwork: true # this setting could be disabled if controller does not depend on MSI setting
+  metricsPort: 29634
+  livenessProbe:
+    healthPort: 29632
+  replicas: 2
+  runOnMaster: false
+  runOnControlPlane: false
+  logLevel: 5
+  resources:
+    csiProvisioner:
+      limits:
+        memory: 500Mi
+      requests:
+        cpu: 10m
+        memory: 20Mi
+    livenessProbe:
+      limits:
+        memory: 100Mi
+      requests:
+        cpu: 10m
+        memory: 20Mi
+    blob:
+      limits:
+        memory: 200Mi
+      requests:
+        cpu: 10m
+        memory: 20Mi
+    csiResizer:
+      limits:
+        memory: 500Mi
+      requests:
+        cpu: 10m
+        memory: 20Mi
+  affinity: {}
+  nodeSelector: {}
+  tolerations:
+    - key: "node-role.kubernetes.io/master"
+      operator: "Exists"
+      effect: "NoSchedule"
+    - key: "node-role.kubernetes.io/controlplane"
+      operator: "Exists"
+      effect: "NoSchedule"
+    - key: "node-role.kubernetes.io/control-plane"
+      operator: "Exists"
+      effect: "NoSchedule"
+
+node:
+  name: csi-blob-node
+  cloudConfigSecretName: azure-cloud-provider
+  cloudConfigSecretNamespace: kube-system
+  allowEmptyCloudConfig: true
+  allowInlineVolumeKeyAccessWithIdentity: false
+  maxUnavailable: 1
+  metricsPort: 29635
+  livenessProbe:
+    healthPort: 29633
+  logLevel: 5
+  enableBlobfuseProxy: false
+  blobfuseProxy:
+    installBlobfuse: true
+    blobfuseVersion: 1.4.5
+    setMaxOpenFileNum: true
+    maxOpenFileNum: "9000000"
+    disableUpdateDB: true
+  blobfuseCachePath: /mnt
+  appendTimeStampInCacheDir: false
+  mountPermissions: 0777
+  resources:
+    livenessProbe:
+      limits:
+        memory: 100Mi
+      requests:
+        cpu: 10m
+        memory: 20Mi
+    nodeDriverRegistrar:
+      limits:
+        memory: 100Mi
+      requests:
+        cpu: 10m
+        memory: 20Mi
+    blob:
+      limits:
+        memory: 2100Mi
+      requests:
+        cpu: 10m
+        memory: 20Mi
+  affinity: {}
+  nodeSelector: {}
+  tolerations:
+    - operator: "Exists"
+
+feature:
+  enableFSGroupPolicy: false
+  enableGetVolumeStats: false
+
+driver:
+  name: blob.csi.azure.com
+  customUserAgent: ""
+  userAgentSuffix: "OSS-helm"
+  azureGoSDKLogLevel: "" # available values: ""(no logs), DEBUG, INFO, WARNING, ERROR
+
+linux:
+  kubelet: /var/lib/kubelet
+  distro: debian
