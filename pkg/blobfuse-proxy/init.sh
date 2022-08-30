@@ -33,24 +33,23 @@ then
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
-if [ ! -f "/host/usr/bin/blobfuse-proxy" ];then
-  echo "copy blobfuse-proxy...."
-  cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy
-  chmod 755 /host/usr/bin/blobfuse-proxy
-fi
-
-if [ ! -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
-  echo "copy blobfuse-proxy.service...."
-  mkdir -p /host/usr/lib/systemd/system
-  cp /blobfuse-proxy/blobfuse-proxy.service /host/usr/lib/systemd/system/blobfuse-proxy.service
-fi
-
 if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ]
 then
+  if [ -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
+    echo "stop blobfuse-proxy.service ..."
+    $HOST_CMD systemctl stop blobfuse-proxy.service
+  fi
+
+  echo "copy blobfuse-proxy ..."
+  cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy
+  chmod 755 /host/usr/bin/blobfuse-proxy
+
+  echo "copy blobfuse-proxy.service ..."
+  mkdir -p /host/usr/lib/systemd/system
+  cp /blobfuse-proxy/blobfuse-proxy.service /host/usr/lib/systemd/system/blobfuse-proxy.service
+
   $HOST_CMD systemctl daemon-reload
   $HOST_CMD systemctl enable blobfuse-proxy.service
-  # According to the issue https://github.com/kubernetes-sigs/blob-csi-driver/issues/693,
-  # do NOT RESTART blobfuse-proxy, just start it at first time.
   $HOST_CMD systemctl start blobfuse-proxy.service
 fi
 
