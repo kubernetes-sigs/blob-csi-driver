@@ -166,7 +166,7 @@ func (d *Driver) mountBlobfuseWithProxy(args string, authEnv []string) (string, 
 
 func (d *Driver) mountBlobfuseInsideDriver(args string, authEnv []string) (string, error) {
 	klog.V(2).Infof("mounting blobfuse inside driver")
-	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
+	cmd := exec.Command("blobfuse2", strings.Split(args, " ")...)
 	cmd.Env = append(os.Environ(), authEnv...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err
@@ -328,7 +328,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 	mountOptions = appendDefaultMountOptions(mountOptions, tmpPath, containerName)
 
-	args := targetPath
+	args := "mountv1 " + targetPath
 	for _, opt := range mountOptions {
 		args = args + " " + opt
 	}

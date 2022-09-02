@@ -54,7 +54,7 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 	klog.V(2).Infof("received mount request: Mounting with args %v \n", args)
 
 	var result mount_azure_blob.MountAzureBlobResponse
-	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
+	cmd := exec.Command("blobfuse2", strings.Split(args, " ")...)
 
 	cmd.Env = append(cmd.Env, authEnv...)
 	output, err := cmd.CombinedOutput()
