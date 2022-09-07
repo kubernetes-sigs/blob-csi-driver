@@ -328,7 +328,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 	mountOptions = appendDefaultMountOptions(mountOptions, tmpPath, containerName)
 
-	args := "mountv1 " + targetPath
+	args := "mount " + targetPath
 	for _, opt := range mountOptions {
 		args = args + " " + opt
 	}
