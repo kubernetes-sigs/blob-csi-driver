@@ -71,6 +71,7 @@ func (t *PreProvisionedSASTokenTest) Run(client clientset.Interface, namespace *
 			pod.Volumes[n].Attrib["storageAccountName"] = accountName
 			pod.Volumes[n].Attrib["keyVaultURL"] = *vault.Properties.VaultURI
 			pod.Volumes[n].Attrib["keyVaultSecretName"] = *accountSASSecret.Name
+			pod.Volumes[n].Attrib["azurestorageauthtype"] = "SAS"
 
 			tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
 			// defer must be called here for resources not get removed before using them
