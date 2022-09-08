@@ -168,7 +168,10 @@ func (d *Driver) mountBlobfuseInsideDriver(args string, authEnv []string) (strin
 	klog.V(2).Infof("mounting blobfuse inside driver")
 	cmd := exec.Command("blobfuse2", strings.Split(args, " ")...)
 	cmd.Env = append(os.Environ(), authEnv...)
+	klog.Infof("zzzzzzzzzzzzzzz args %v", args)
+	klog.Infof("zzzzzzzzzzzzzzz authEnv %v", authEnv)
 	output, err := cmd.CombinedOutput()
+	klog.Infof("zzzzzzzzzzzzzzz output %v", string(output))
 	return string(output), err
 }
 
