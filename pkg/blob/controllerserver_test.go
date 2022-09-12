@@ -792,7 +792,7 @@ func TestDeleteVolume(t *testing.T) {
 				req := &csi.DeleteVolumeRequest{
 					VolumeId: "rg#accountName#containerName",
 				}
-				d.dataPlaneAPIVolMap.Store("rg#accountName#containerName", "accountName")
+				d.dataPlaneAPIVolCache.Set("rg#accountName#containerName", "accountName")
 				_, err := d.DeleteVolume(context.Background(), req)
 				expectedErr := status.Errorf(codes.Internal, "GetAuthEnv(%s) failed with %v", "rg#accountName#containerName", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", "accountName", "rg", fmt.Errorf("StorageAccountClient is nil")))
 				if !reflect.DeepEqual(err, expectedErr) {
