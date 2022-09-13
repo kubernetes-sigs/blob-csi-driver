@@ -81,7 +81,7 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 			// test for storage account SAS token
 			ginkgo.By("Run for storage account SAS token")
 			pod.Volumes[n].Attrib = map[string]string{
-				"azurestorageauthtype":         "SAS",
+				"azurestorageauthtype": "SAS",
 			}
 			sasToken := GenerateSASToken(accountName, accountKey)
 			secretData = map[string]string{
