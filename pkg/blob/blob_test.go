@@ -91,6 +91,7 @@ func TestNewDriver(t *testing.T) {
 	fakedriver.Name = DefaultDriverName
 	fakedriver.Version = driverVersion
 	fakedriver.accountSearchCache = driver.accountSearchCache
+	fakedriver.dataPlaneAPIVolCache = driver.dataPlaneAPIVolCache
 	assert.Equal(t, driver, fakedriver)
 }
 
@@ -1184,7 +1185,7 @@ func TestUseDataPlaneAPI(t *testing.T) {
 			name: "volumeID loads correctly",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.dataPlaneAPIVolMap.LoadOrStore(fakeVolumeID, "foo")
+				d.dataPlaneAPIVolCache.Set(fakeVolumeID, "foo")
 				output := d.useDataPlaneAPI(fakeVolumeID, "")
 				if !output {
 					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)
@@ -1195,7 +1196,7 @@ func TestUseDataPlaneAPI(t *testing.T) {
 			name: "account loads correctly",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.dataPlaneAPIVolMap.LoadOrStore(fakeAccountName, "foo")
+				d.dataPlaneAPIVolCache.Set(fakeAccountName, "foo")
 				output := d.useDataPlaneAPI(fakeAccountName, "")
 				if !output {
 					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)

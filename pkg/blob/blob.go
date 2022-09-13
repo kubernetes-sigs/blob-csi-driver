@@ -173,8 +173,8 @@ type Driver struct {
 	subnetLockMap *util.LockMap
 	// a map storing all volumes created by this driver <volumeName, accountName>
 	volMap sync.Map
-	// a map storing all volumes using data plane API <volumeID, "">, <accountName, "">
-	dataPlaneAPIVolMap sync.Map
+	// a timed cache storing all volumeIDs and storage accounts that are using data plane API
+	dataPlaneAPIVolCache *azcache.TimedCache
 	// a timed cache storing account search history (solve account list throttling issue)
 	accountSearchCache *azcache.TimedCache
 }
@@ -206,6 +206,9 @@ func NewDriver(options *DriverOptions) *Driver {
 	var err error
 	getter := func(key string) (interface{}, error) { return nil, nil }
 	if d.accountSearchCache, err = azcache.NewTimedcache(time.Minute, getter); err != nil {
+		klog.Fatalf("%v", err)
+	}
+	if d.dataPlaneAPIVolCache, err = azcache.NewTimedcache(10*time.Minute, getter); err != nil {
 		klog.Fatalf("%v", err)
 	}
 	return &d
@@ -746,11 +749,21 @@ func (d *Driver) getSubnetResourceID() string {
 }
 
 func (d *Driver) useDataPlaneAPI(volumeID, accountName string) bool {
-	_, useDataPlaneAPI := d.dataPlaneAPIVolMap.Load(volumeID)
-	if !useDataPlaneAPI {
-		_, useDataPlaneAPI = d.dataPlaneAPIVolMap.Load(accountName)
+	cache, err := d.dataPlaneAPIVolCache.Get(volumeID, azcache.CacheReadTypeDefault)
+	if err != nil {
+		klog.Errorf("get(%s) from dataPlaneAPIVolCache failed with error: %v", volumeID, err)
 	}
-	return useDataPlaneAPI
+	if cache != nil {
+		return true
+	}
+	cache, err = d.dataPlaneAPIVolCache.Get(accountName, azcache.CacheReadTypeDefault)
+	if err != nil {
+		klog.Errorf("get(%s) from dataPlaneAPIVolCache failed with error: %v", accountName, err)
+	}
+	if cache != nil {
+		return true
+	}
+	return false
 }
 
 // appendDefaultMountOptions return mount options combined with mountOptions and defaultMountOptions

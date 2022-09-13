@@ -347,8 +347,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	klog.V(2).Infof("create container %s on storage account %s successfully", validContainerName, accountName)
 
 	if useDataPlaneAPI {
-		d.dataPlaneAPIVolMap.Store(volumeID, "")
-		d.dataPlaneAPIVolMap.Store(accountName, "")
+		d.dataPlaneAPIVolCache.Set(volumeID, "")
+		d.dataPlaneAPIVolCache.Set(accountName, "")
 	}
 
 	isOperationSucceeded = true
