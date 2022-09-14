@@ -103,7 +103,7 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
  - only mounting blobfuse requires account key, and if secret is not provided in PV config, driver would try to get `azure-storage-account-{accountname}-secret` in the pod namespace, if not found, driver would try using kubelet identity to get account key directly using Azure API.
  - mounting blob storage NFSv3 does not need account key, it requires storage account configured with same vnet with agent node.
  - blobfuse does not support private link well, check details [here](https://github.com/Azure/azure-storage-fuse/wiki/2.-Configuring-and-Running#private-link)
- - [Mount an azure blob storage with a dedicated user-assigned managed indentity](https://github.com/qxsch/Azure-Aks/tree/master/aks-blobfuse-mi)
+ - [Mount an azure blob storage with a dedicated user-assigned managed identity](https://github.com/qxsch/Azure-Aks/tree/master/aks-blobfuse-mi)
 
 #### `containerName` parameter supports following pv/pvc metadata conversion
 > if `containerName` value contains following strings, it would be converted into corresponding pv/pvc name or namespace
