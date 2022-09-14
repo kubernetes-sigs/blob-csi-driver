@@ -38,7 +38,7 @@ subnetName | subnet name | existing subnet name of the agent node | No | if empt
 
 Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check [here](https://github.com/Azure/Azure-storage-fuse#mount-options) for more mountoptions.
 
- - Azure DataLake storage account support
+ - [Azure DataLake storage account](https://docs.microsoft.com/en-us/azure/storage/blobs/upgrade-to-data-lake-storage-gen2-how-to) support
    - set `isHnsEnabled: "true"` in storage class parameter to create ADLS account by driver in dynamic provisioning.
    - mount option `--use-adls=true` must be specified to enable blobfuse access ADLS account in static provisioning.
 
