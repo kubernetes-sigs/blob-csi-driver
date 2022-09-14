@@ -298,3 +298,17 @@ func (kvc *KeyVaultClient) GetMSIObjectID(ctx context.Context, identityName stri
 
 	return id.UserAssignedIdentityProperties.PrincipalID.String(), err
 }
+
+func (kvc *KeyVaultClient) GetMSIResourceID(ctx context.Context, identityName string) (string, error) {
+	msiClient, err := kvc.getMSIUserAssignedIDClient()
+	if err != nil {
+		return "", err
+	}
+
+	id, err := msiClient.Get(ctx, kvc.Cred.ResourceGroup, identityName)
+	if err != nil {
+		return "", err
+	}
+
+	return *id.ID, err
+}
