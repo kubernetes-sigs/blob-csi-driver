@@ -114,14 +114,14 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 
 			run()
 
-			// test for managed identity
+			// test for managed identity(objectID)
 			// e2e-vmss test job uses msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal
 			objectID, err = kvClient.GetMSIObjectID(context.TODO(), "blobfuse-csi-driver-e2e-test-id")
 			if err != nil {
 				return
 			}
 
-			ginkgo.By("Run for managed identity")
+			ginkgo.By(fmt.Sprintf("Run for managed identity (objectID %s)", objectID))
 			pod.Volumes[n].Attrib = map[string]string{
 				"azurestorageauthtype":         "MSI",
 				"azurestorageidentityobjectid": objectID,
@@ -133,6 +133,22 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 			ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the managed identity, objectID:%s", objectID))
 			_, err = authClient.AssignRole(context.TODO(), resourceID, objectID, roleDefID)
 			framework.ExpectNoError(err, fmt.Sprintf("Error AssignRole (roleDefID(%s)) to objectID(%s) to access resource (resourceID(%s)), error: %v", roleDefID, objectID, resourceID, err))
+
+			run()
+
+			// test for managed identity(resourceID)
+			resourceID, err = kvClient.GetMSIResourceID(context.TODO(), "blobfuse-csi-driver-e2e-test-id")
+			if err != nil {
+				return
+			}
+			ginkgo.By(fmt.Sprintf("Run for managed identity (resourceID %s)", resourceID))
+			pod.Volumes[n].Attrib = map[string]string{
+				"azurestorageauthtype":           "MSI",
+				"azurestorageidentityresourceid": resourceID,
+			}
+			secretData = map[string]string{
+				"azurestorageaccountname": accountName,
+			}
 
 			run()
 		}
