@@ -1,5 +1,0 @@
-apiVersion: v1
-appVersion: 0.2.0
-description: Blobfuse Container Storage Interface (CSI) Storage Plugin
-name: blobfuse-csi-driver
-version: 0.2.0
