@@ -20,6 +20,8 @@ INSTALL_BLOBFUSE_PROXY=${INSTALL_BLOBFUSE_PROXY:-true}
 INSTALL_BLOBFUSE=${INSTALL_BLOBFUSE:-true}
 DISABLE_UPDATEDB=${DISABLE_UPDATEDB:-true}
 SET_MAX_OPEN_FILE_NUM=${SET_MAX_OPEN_FILE_NUM:-true}
+SET_READ_AHEAD_SIZE=${SET_READ_AHEAD_SIZE:-true}
+READ_AHEAD_KB=${READ_AHEAD_KB:-15380}
 
 HOST_CMD="nsenter --mount=/proc/1/ns/mnt"
 
@@ -89,4 +91,14 @@ then
   sed -i 's/PRUNEFS="NFS/PRUNEFS="fuse blobfuse NFS/g' ${updateDBConfigPath}
   echo "after change:"
   cat ${updateDBConfigPath}
+fi
+
+if [ "${SET_READ_AHEAD_SIZE}" = "true" ]
+then
+  echo "set read ahead size to ${READ_AHEAD_KB}KB"
+  AWK_PATH=$(which awk)
+  cat > /host/etc/udev/rules.d/99-nfs.rules <<EOF
+SUBSYSTEM=="bdi", ACTION=="add", PROGRAM="$AWK_PATH -v bdi=\$kernel 'BEGIN{ret=1} {if (\$4 == bdi){ret=0}} END{exit ret}' /proc/fs/nfsfs/volumes", ATTR{read_ahead_kb}="$READ_AHEAD_KB"
+EOF
+  $HOST_CMD udevadm control --reload
 fi
