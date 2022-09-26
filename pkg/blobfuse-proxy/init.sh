@@ -33,25 +33,50 @@ then
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
-if [ ! -f "/host/usr/bin/blobfuse-proxy" ];then
+updateBlobfuseProxy="true"
+if [ -f "/host/usr/bin/blobfuse-proxy" ];then
+  old=$(sha256sum /host/usr/bin/blobfuse-proxy | awk '{print $1}')
+  new=$(sha256sum /blobfuse-proxy/blobfuse-proxy | awk '{print $1}')
+  if [ "$old" = "$new" ];then
+    updateBlobfuseProxy="false"
+    echo "no need to update blobfuse-proxy"
+  else
+    rm -rf /host/usr/bin/blobfuse-proxy
+    rm -rf /host/var/lib/kubelet/plugins/blob.csi.azure.com/blobfuse-proxy.sock
+  fi
+fi
+
+if [ "$updateBlobfuseProxy" = "true" ];then
   echo "copy blobfuse-proxy...."
   cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy
   chmod 755 /host/usr/bin/blobfuse-proxy
 fi
 
-if [ ! -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
+updateService="true"
+if [ -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
+  old=$(sha256sum /host/usr/lib/systemd/system/blobfuse-proxy.service | awk '{print $1}')
+  new=$(sha256sum /blobfuse-proxy/blobfuse-proxy.service | awk '{print $1}')
+  if [ "$old" = "$new" ];then
+    updateService="false"
+    echo "no need to update blobfuse-proxy.service"
+  else
+    rm -rf /host/usr/lib/systemd/system/blobfuse-proxy.service
+  fi
+fi
+
+if [ "$updateService" = "true" ];then
   echo "copy blobfuse-proxy.service...."
   mkdir -p /host/usr/lib/systemd/system
   cp /blobfuse-proxy/blobfuse-proxy.service /host/usr/lib/systemd/system/blobfuse-proxy.service
 fi
 
-if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ]
-then
-  $HOST_CMD systemctl daemon-reload
-  $HOST_CMD systemctl enable blobfuse-proxy.service
-  # According to the issue https://github.com/kubernetes-sigs/blob-csi-driver/issues/693,
-  # do NOT RESTART blobfuse-proxy, just start it at first time.
-  $HOST_CMD systemctl start blobfuse-proxy.service
+if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
+  if [ "$updateBlobfuseProxy" = "true" ] || [ "$updateService" = "true" ];then
+    echo "start blobfuse-proxy...."
+    $HOST_CMD systemctl daemon-reload
+    $HOST_CMD systemctl enable blobfuse-proxy.service
+    $HOST_CMD systemctl restart blobfuse-proxy.service
+  fi
 fi
 
 if [ "${SET_MAX_OPEN_FILE_NUM}" = "true" ]

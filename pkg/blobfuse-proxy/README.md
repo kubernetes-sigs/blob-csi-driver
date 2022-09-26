@@ -8,7 +8,7 @@ mkdir -p /var/lib/kubelet/plugins/blob.csi.azure.com
 systemctl enable blobfuse-proxy
 systemctl start blobfuse-proxy
 ```
-> blobfuse-proxy start unix socket under `/var/lib/kubelet/blobfuse-proxy.sock` by default
+> blobfuse-proxy start unix socket under `/var/lib/kubelet/plugins/blob.csi.azure.com/blobfuse-proxy.sock` by default
 
  - make sure all required [Protocol Buffers](https://github.com/protocolbuffers/protobuf) binaries are installed
 ```console
