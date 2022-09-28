@@ -40,14 +40,12 @@ if [ -f "/host/usr/bin/blobfuse-proxy" ];then
   if [ "$old" = "$new" ];then
     updateBlobfuseProxy="false"
     echo "no need to update blobfuse-proxy"
-  else
-    rm -rf /host/usr/bin/blobfuse-proxy
-    rm -rf /host/var/lib/kubelet/plugins/blob.csi.azure.com/blobfuse-proxy.sock
   fi
 fi
 
 if [ "$updateBlobfuseProxy" = "true" ];then
   echo "copy blobfuse-proxy...."
+  rm -rf /host/var/lib/kubelet/plugins/blob.csi.azure.com/blobfuse-proxy.sock
   cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy
   chmod 755 /host/usr/bin/blobfuse-proxy
 fi
@@ -59,8 +57,6 @@ if [ -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
   if [ "$old" = "$new" ];then
     updateService="false"
     echo "no need to update blobfuse-proxy.service"
-  else
-    rm -rf /host/usr/lib/systemd/system/blobfuse-proxy.service
   fi
 fi
 
