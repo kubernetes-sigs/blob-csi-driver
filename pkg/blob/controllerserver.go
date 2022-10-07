@@ -202,7 +202,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		enableNfsV3     *bool
 	)
 	if protocol == nfs {
-		enableHTTPSTrafficOnly = false
 		isHnsEnabled = to.BoolPtr(true)
 		enableNfsV3 = to.BoolPtr(true)
 		// set VirtualNetworkResourceIDs for storage account firewall setting
