@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
@@ -35,6 +36,8 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/test/e2e/framework"
@@ -54,8 +57,9 @@ const (
 	// Description that will printed during tests
 	failedConditionDescription = "Error status code"
 
-	poll            = 2 * time.Second
-	pollLongTimeout = 5 * time.Minute
+	poll                 = 2 * time.Second
+	pollLongTimeout      = 5 * time.Minute
+	pollForStringTimeout = 1 * time.Minute
 )
 
 type TestStorageClass struct {
@@ -379,6 +383,10 @@ func (t *TestDeployment) Exec(command []string, expectedString string) {
 	framework.ExpectNoError(err)
 }
 
+func (t *TestDeployment) PollForStringInPodsExec(command []string, expectedString string) {
+	pollForStringInPodsExec(t.namespace.Name, []string{t.podName}, command, expectedString)
+}
+
 func (t *TestDeployment) DeletePodAndWait() {
 	e2elog.Logf("Deleting pod %q in namespace %q", t.podName, t.namespace.Name)
 	err := t.client.CoreV1().Pods(t.namespace.Name).Delete(context.TODO(), t.podName, metav1.DeleteOptions{})
@@ -628,4 +636,34 @@ func waitForPersistentVolumeClaimDeleted(c clientset.Interface, ns string, pvcNa
 		}
 	}
 	return fmt.Errorf("PersistentVolumeClaim %s is not removed from the system within %v", pvcName, timeout)
+}
+
+func pollForStringWorker(namespace string, pod string, command []string, expectedString string, ch chan<- error) {
+	args := append([]string{"exec", pod, "--"}, command...)
+	err := wait.PollImmediate(poll, pollForStringTimeout, func() (bool, error) {
+		stdout, err := framework.RunKubectl(namespace, args...)
+		if err != nil {
+			framework.Logf("Error waiting for output %q in pod %q: %v.", expectedString, pod, err)
+			return false, nil
+		}
+		if !strings.Contains(stdout, expectedString) {
+			framework.Logf("The stdout did not contain output %q in pod %q, found: %q.", expectedString, pod, stdout)
+			return false, nil
+		}
+		return true, nil
+	})
+	ch <- err
+}
+
+// Execute the command for all pods in the namespace, looking for expectedString in stdout
+func pollForStringInPodsExec(namespace string, pods []string, command []string, expectedString string) {
+	ch := make(chan error, len(pods))
+	for _, pod := range pods {
+		go pollForStringWorker(namespace, pod, command, expectedString, ch)
+	}
+	errs := make([]error, 0, len(pods))
+	for range pods {
+		errs = append(errs, <-ch)
+	}
+	framework.ExpectNoError(errors.NewAggregate(errs), "Failed to find %q in at least one pod's output.", expectedString)
 }
