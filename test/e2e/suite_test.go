@@ -133,19 +133,13 @@ var _ = ginkgo.AfterSuite(func() {
 	}
 	execTestCmd([]testCmd{createExampleDeployment})
 
-	blobLog := testCmd{
-		command:  "bash",
-		args:     []string{"test/utils/blob_log.sh"},
-		startLog: "===================blob log===================",
-		endLog:   "==================================================",
-	}
 	e2eTeardown := testCmd{
 		command:  "make",
 		args:     []string{"e2e-teardown"},
 		startLog: "Uninstalling Azure Blob Storage CSI driver...",
 		endLog:   "Azure Blob Storage CSI driver uninstalled",
 	}
-	execTestCmd([]testCmd{blobLog, e2eTeardown})
+	execTestCmd([]testCmd{e2eTeardown})
 
 	// install/uninstall CSI Driver deployment scripts test
 	installDriver := testCmd{
