@@ -19,6 +19,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
@@ -327,6 +328,94 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 			Driver:    blobDriver,
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("nfs volume mount is still valid after driver restart [blob.csi.azure.com]", func() {
+		// print driver logs before driver restart
+		blobLog := testCmd{
+			command:  "bash",
+			args:     []string{"test/utils/blob_log.sh"},
+			startLog: "===================blob log (before restart)===================",
+			endLog:   "====================================================================",
+		}
+		execTestCmd([]testCmd{blobLog})
+
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 3600; done",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "10Gi",
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+
+		podCheckCmd := []string{"cat", "/mnt/test-1/data"}
+		expectedString := "hello world\n"
+		test := testsuites.DynamicallyProvisionedRestartDriverTest{
+			CSIDriver: testDriver,
+			Pod:       pod,
+			PodCheck: &testsuites.PodExecCheck{
+				Cmd:            podCheckCmd,
+				ExpectedString: expectedString,
+			},
+			StorageClassParameters: map[string]string{"protocol": "nfs"},
+			RestartDriverFunc: func() {
+				restartDriver := testCmd{
+					command:  "bash",
+					args:     []string{"test/utils/restart_driver_daemonset.sh"},
+					startLog: "Restart driver node daemonset ...",
+					endLog:   "Restart driver node daemonset done successfully",
+				}
+				execTestCmd([]testCmd{restartDriver})
+			},
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("blobfuse volume mount is still valid after driver restart [blob.csi.azure.com]", func() {
+		_, useBlobfuseProxy := os.LookupEnv("ENABLE_BLOBFUSE_PROXY")
+		if !useBlobfuseProxy {
+			ginkgo.Skip("skip this test since blobfuse-proxy is not enabled")
+		}
+
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 3600; done",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "10Gi",
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+
+		podCheckCmd := []string{"cat", "/mnt/test-1/data"}
+		expectedString := "hello world\n"
+		test := testsuites.DynamicallyProvisionedRestartDriverTest{
+			CSIDriver: testDriver,
+			Pod:       pod,
+			PodCheck: &testsuites.PodExecCheck{
+				Cmd:            podCheckCmd,
+				ExpectedString: expectedString,
+			},
+			StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
+			RestartDriverFunc: func() {
+				restartDriver := testCmd{
+					command:  "bash",
+					args:     []string{"test/utils/restart_driver_daemonset.sh"},
+					startLog: "Restart driver node daemonset ...",
+					endLog:   "Restart driver node daemonset done successfully",
+				}
+				execTestCmd([]testCmd{restartDriver})
+			},
 		}
 		test.Run(cs, ns)
 	})
