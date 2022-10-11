@@ -16,10 +16,7 @@
 
 set -euo pipefail
 
-echo "Deleting the Driver node daemonset ..."
-kubectl delete -f ./deploy/csi-blob-node.yaml --ignore-not-found
+echo "restart driver node daemonset ..."
+kubectl rollout restart ds csi-blob-node -n kube-system
 
-sleep 15
-
-echo "Installing the Driver node daemonset ..."
-kubectl apply -f ./deploy/csi-blob-node.yaml
+sleep 10
