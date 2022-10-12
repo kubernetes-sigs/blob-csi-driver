@@ -39,9 +39,9 @@ func InitBlobCSIDriver() PVTestDriver {
 	}
 }
 
-func (d *blobCSIDriver) GetDynamicProvisionStorageClass(parameters map[string]string, mountOptions []string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, bindingMode *storagev1.VolumeBindingMode, allowedTopologyValues []string, namespace string) *storagev1.StorageClass {
+func (d *blobCSIDriver) GetProvisionStorageClass(parameters map[string]string, mountOptions []string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, bindingMode *storagev1.VolumeBindingMode, allowedTopologyValues []string, namespace string) *storagev1.StorageClass {
 	provisioner := d.driverName
-	generateName := fmt.Sprintf("%s-%s-dynamic-sc-", namespace, provisioner)
+	generateName := fmt.Sprintf("%s-%s-sc-", namespace, provisioner)
 	return getStorageClass(generateName, provisioner, parameters, mountOptions, reclaimPolicy, bindingMode, nil)
 }
 
@@ -86,10 +86,4 @@ func (d *blobCSIDriver) GetPersistentVolume(volumeID string, fsType string, size
 			},
 		},
 	}
-}
-
-func (d *blobCSIDriver) GetPreProvisionStorageClass(parameters map[string]string, mountOptions []string, reclaimPolicy *v1.PersistentVolumeReclaimPolicy, bindingMode *storagev1.VolumeBindingMode, allowedTopologyValues []string, namespace string) *storagev1.StorageClass {
-	provisioner := d.driverName
-	generateName := fmt.Sprintf("%s-%s-pre-provisioned-sc-", namespace, provisioner)
-	return getStorageClass(generateName, provisioner, parameters, mountOptions, reclaimPolicy, bindingMode, nil)
 }
