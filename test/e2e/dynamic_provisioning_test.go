@@ -87,6 +87,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				// make sure this is the first test case due to storeAccountKey is set as false
 				"storeAccountKey":        "false",
 				"requireInfraEncryption": "true",
+				"accessTier":             "Hot",
 			},
 		}
 		test.Run(cs, ns)
@@ -119,6 +120,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"skuName":             "Standard_LRS",
 				"secretNamespace":     "default",
 				"containerNamePrefix": "nameprefix",
+				"accessTier":          "Cool",
 			},
 		}
 		test.Run(cs, ns)
@@ -187,6 +189,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"skuName":               "Premium_LRS",
 				"isHnsEnabled":          "true",
 				"allowBlobPublicAccess": "false",
+				"accessTier":            "Premium",
 				"useDataPlaneAPI":       "true",
 				"containerName":         "container-${pvc.metadata.name}",
 			},

@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	az "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -89,6 +90,7 @@ const (
 	vnetResourceGroupField       = "vnetresourcegroup"
 	vnetNameField                = "vnetname"
 	subnetNameField              = "subnetname"
+	accessTierField              = "accesstier"
 	mountPermissionsField        = "mountpermissions"
 	useDataPlaneAPIField         = "usedataplaneapi"
 
@@ -587,6 +589,18 @@ func isSupportedProtocol(protocol string) bool {
 	}
 	for _, v := range supportedProtocolList {
 		if protocol == v {
+			return true
+		}
+	}
+	return false
+}
+
+func isSupportedAccessTier(accessTier string) bool {
+	if accessTier == "" {
+		return true
+	}
+	for _, tier := range storage.PossibleAccessTierValues() {
+		if accessTier == string(tier) {
 			return true
 		}
 	}
