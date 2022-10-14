@@ -69,7 +69,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
 	var isHnsEnabled, requireInfraEncryption *bool
-	var vnetResourceGroup, vnetName, subnetName string
+	var vnetResourceGroup, vnetName, subnetName, accessTier string
 	var matchTags, useDataPlaneAPI bool
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := to.BoolPtr(false)
@@ -142,6 +142,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			vnetName = v
 		case subnetNameField:
 			subnetName = v
+		case accessTierField:
+			accessTier = v
 		case mountPermissionsField:
 			// only do validations here, used in NodeStageVolume, NodePublishVolume
 			if v != "" {
@@ -186,6 +188,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	if !isSupportedProtocol(protocol) {
 		return nil, status.Errorf(codes.InvalidArgument, "protocol(%s) is not supported, supported protocol list: %v", protocol, supportedProtocolList)
+	}
+	if !isSupportedAccessTier(accessTier) {
+		return nil, status.Errorf(codes.InvalidArgument, "accessTier(%s) is not supported, supported AccessTier list: %v", accessTier, storage.PossibleAccessTierValues())
 	}
 
 	if containerName != "" && containerNamePrefix != "" {
@@ -248,6 +253,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		VNetResourceGroup:               vnetResourceGroup,
 		VNetName:                        vnetName,
 		SubnetName:                      subnetName,
+		AccessTier:                      accessTier,
 	}
 
 	var accountKey string
