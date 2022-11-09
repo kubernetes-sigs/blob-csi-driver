@@ -30,7 +30,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
-	"k8s.io/client-go/kubernetes"
+	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
@@ -52,6 +52,12 @@ func IsAzureStackCloud(cloud *azure.Cloud) bool {
 
 // getCloudProvider get Azure Cloud Provider
 func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent string, allowEmptyCloudConfig bool) (*azure.Cloud, error) {
+	var (
+		config     *azure.Config
+		kubeClient *clientset.Clientset
+		fromSecret bool
+	)
+
 	az := &azure.Cloud{
 		InitSecretConfig: azure.InitSecretConfig{
 			SecretName:      secretName,
@@ -61,18 +67,21 @@ func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent
 	}
 	az.Environment.StorageEndpointSuffix = storage.DefaultBaseURL
 
-	kubeClient, err := getKubeClient(kubeconfig)
-	if err != nil {
+	kubeCfg, err := getKubeConfig(kubeconfig)
+	if err == nil && kubeCfg != nil {
+		// set QPS and QPS Burst as higher values
+		kubeCfg.QPS = 25
+		kubeCfg.Burst = 50
+		kubeClient, err = clientset.NewForConfig(kubeCfg)
+		if err != nil {
+			klog.Warningf("NewForConfig failed with error: %v", err)
+		}
+	} else {
 		klog.Warningf("get kubeconfig(%s) failed with error: %v", kubeconfig, err)
 		if !os.IsNotExist(err) && !errors.Is(err, rest.ErrNotInCluster) {
 			return az, fmt.Errorf("failed to get KubeClient: %w", err)
 		}
 	}
-
-	var (
-		config     *azure.Config
-		fromSecret bool
-	)
 
 	if kubeClient != nil {
 		klog.V(2).Infof("reading cloud config from secret %s/%s", az.SecretNamespace, az.SecretName)
@@ -251,11 +260,7 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context, vnetResourceG
 	return nil
 }
 
-func getKubeClient(kubeconfig string) (*kubernetes.Clientset, error) {
-	var (
-		config *rest.Config
-		err    error
-	)
+func getKubeConfig(kubeconfig string) (config *rest.Config, err error) {
 	if kubeconfig != "" {
 		if config, err = clientcmd.BuildConfigFromFlags("", kubeconfig); err != nil {
 			return nil, err
@@ -265,6 +270,5 @@ func getKubeClient(kubeconfig string) (*kubernetes.Clientset, error) {
 			return nil, err
 		}
 	}
-
-	return kubernetes.NewForConfig(config)
+	return config, err
 }
