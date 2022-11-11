@@ -29,15 +29,8 @@ then
   cp /blobfuse-proxy/packages-microsoft-prod.deb /host/etc/
   $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && \
   $HOST_CMD apt update && \
-  $HOST_CMD apt-get install -y fuse blobfuse="${BLOBFUSE_VERSION}" && \
+  $HOST_CMD apt-get install -y fuse blobfuse2 blobfuse="${BLOBFUSE_VERSION}" && \
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
-
-  cp /blobfuse-proxy/blobfuse2-2.0.0-preview.4-Ubuntu-18.04-x86-64.deb /host/etc/
-  $HOST_CMD dpkg -i /etc/blobfuse2-2.0.0-preview.4-Ubuntu-18.04-x86-64.deb && \
-  $HOST_CMD apt update && \
-  $HOST_CMD apt-get install -y blobfuse2 && \
-  $HOST_CMD rm -f /etc/blobfuse2-2.0.0-preview.4-Ubuntu-18.04-x86-64.deb
-  blobfuse2 version
 fi
 
 if [ ! -f "/host/usr/bin/blobfuse-proxy" ];then

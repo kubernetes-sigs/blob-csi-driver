@@ -34,9 +34,7 @@ ARG ARCH=amd64
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \
   wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb && \
-  dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse fuse -y && \
-  wget -O /blobfuse-proxy/blobfuse2-2.0.0-preview.4-Ubuntu-18.04-x86-64.deb https://blobfuse2.blob.core.windows.net/release/blobfuse2-2.0.0-preview.4-Ubuntu-18.04-x86-64.deb && \
-  dpkg -i /blobfuse-proxy/blobfuse2-2.0.0-preview.4-Ubuntu-18.04-x86-64.deb && apt update && apt install blobfuse2 -y; fi
+  dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse blobfuse2 fuse -y && apt remove wget -y; fi
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
