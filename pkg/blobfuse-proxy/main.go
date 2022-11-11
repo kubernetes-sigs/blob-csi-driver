@@ -23,7 +23,8 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"github.com/zcalusic/sysinfo"
+	"github.com/go-ini/ini"
+	"github.com/pkg/errors"
 	server "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server"
 	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 )
@@ -64,11 +65,29 @@ func main() {
 	}
 }
 
+func getOSInfo() (map[string]string, error) {
+	f := "/etc/lsb-release"
+	cfg, err := ini.Load(f)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read %q", f)
+	}
+
+	OSInfo := make(map[string]string)
+	OSInfo["DISTRIB_ID"] = cfg.Section("").Key("DISTRIB_ID").String()
+	OSInfo["DISTRIB_RELEASE"] = cfg.Section("").Key("DISTRIB_RELEASE").String()
+
+	return OSInfo, nil
+}
+
 func getBlobfuseVersion() server.BlobfuseVersion {
-	var si sysinfo.SysInfo
-	si.GetSysInfo()
-	klog.V(2).Infof("OS info: %+v", si.OS)
-	if si.OS.Vendor == "ubuntu" && si.OS.Release >= "22.04" {
+	OSInfo, err := getOSInfo()
+	if err != nil {
+		klog.Errorf("failed to get OS info: %v, default using blobfuse v1", err)
+		return server.BlobfuseV1
+	}
+	klog.V(2).Infof("OS info: %v", OSInfo)
+
+	if OSInfo["DISTRIB_ID"] == "Ubuntu" && OSInfo["DISTRIB_RELEASE"] >= "22.04" {
 		return server.BlobfuseV2
 	}
 	return server.BlobfuseV1
