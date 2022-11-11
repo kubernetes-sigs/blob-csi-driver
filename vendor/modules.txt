@@ -347,6 +347,10 @@ github.com/spf13/pflag
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
+# github.com/zcalusic/sysinfo v0.9.5
+## explicit; go 1.17
+github.com/zcalusic/sysinfo
+github.com/zcalusic/sysinfo/cpuid
 # go.opentelemetry.io/contrib v0.20.0
 ## explicit; go 1.14
 go.opentelemetry.io/contrib

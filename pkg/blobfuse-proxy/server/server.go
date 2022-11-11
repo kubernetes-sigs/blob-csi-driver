@@ -33,13 +33,23 @@ var (
 	mutex sync.Mutex
 )
 
+type BlobfuseVersion int
+
+const (
+	BlobfuseV1 BlobfuseVersion = iota
+	BlobfuseV2
+)
+
 type MountServer struct {
+	blobfuseVersion BlobfuseVersion
 	mount_azure_blob.UnimplementedMountServiceServer
 }
 
 // NewMountServer returns a new Mountserver
-func NewMountServiceServer() *MountServer {
-	return &MountServer{}
+func NewMountServiceServer(ver BlobfuseVersion) *MountServer {
+	return &MountServer{
+		blobfuseVersion: ver,
+	}
 }
 
 // MountAzureBlob mounts an azure blob container to given location
@@ -53,11 +63,21 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 	authEnv := req.GetAuthEnv()
 	klog.V(2).Infof("received mount request: Mounting with args %v \n", args)
 
+	var cmd *exec.Cmd
 	var result mount_azure_blob.MountAzureBlobResponse
-	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
+	switch server.blobfuseVersion {
+	case BlobfuseV1:
+		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
+	case BlobfuseV2:
+		args = "mount " + args
+		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
+	}
 
 	cmd.Env = append(cmd.Env, authEnv...)
+	klog.Infof("zzzzzzzzzzzzzzz args %v", args)
+	klog.Infof("zzzzzzzzzzzzzzz authEnv %v", authEnv)
 	output, err := cmd.CombinedOutput()
+	klog.Infof("zzzzzzzzzzzzzzz output %v", string(output))
 	if err != nil {
 		klog.Error("blobfuse mount failed: with error:", err.Error())
 	} else {

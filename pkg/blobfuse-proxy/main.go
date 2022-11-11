@@ -23,6 +23,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	"github.com/zcalusic/sysinfo"
 	server "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server"
 	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 )
@@ -55,10 +56,20 @@ func main() {
 		klog.Fatal("cannot start server:", err)
 	}
 
-	mountServer := server.NewMountServiceServer()
+	mountServer := server.NewMountServiceServer(getBlobfuseVersion())
 
 	klog.V(2).Info("Listening for connections on address: %v\n", listener.Addr())
 	if err = server.RunGRPCServer(mountServer, false, listener); err != nil {
 		klog.Fatalf("Error running grpc server. Error: %v", listener.Addr(), err)
 	}
+}
+
+func getBlobfuseVersion() server.BlobfuseVersion {
+	var si sysinfo.SysInfo
+	si.GetSysInfo()
+	klog.V(2).Infof("OS info: %+v", si.OS)
+	if si.OS.Vendor == "ubuntu" && si.OS.Release >= "22.04" {
+		return server.BlobfuseV2
+	}
+	return server.BlobfuseV1
 }
