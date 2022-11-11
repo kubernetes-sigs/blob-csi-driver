@@ -55,6 +55,8 @@ var (
 	appendTimeStampInCacheDir              = flag.Bool("append-timestamp-cache-dir", false, "append timestamp into cache directory on agent node")
 	mountPermissions                       = flag.Uint64("mount-permissions", 0777, "mounted folder permissions")
 	allowInlineVolumeKeyAccessWithIdentity = flag.Bool("allow-inline-volume-key-access-with-idenitity", false, "allow accessing storage account key using cluster identity for inline volume")
+	kubeAPIQPS                             = flag.Float64("kube-api-qps", 25.0, "QPS to use while communicating with the kubernetes apiserver.")
+	kubeAPIBurst                           = flag.Int("kube-api-burst", 50, "Burst to use while communicating with the kubernetes apiserver.")
 )
 
 func main() {
@@ -91,6 +93,8 @@ func handle() {
 		AppendTimeStampInCacheDir:              *appendTimeStampInCacheDir,
 		MountPermissions:                       *mountPermissions,
 		AllowInlineVolumeKeyAccessWithIdentity: *allowInlineVolumeKeyAccessWithIdentity,
+		KubeAPIQPS:                             *kubeAPIQPS,
+		KubeAPIBurst:                           *kubeAPIBurst,
 	}
 	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {
