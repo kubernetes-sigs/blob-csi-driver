@@ -85,7 +85,7 @@ func getBlobfuseVersion() server.BlobfuseVersion {
 		klog.Errorf("failed to get OS info: %v, default using blobfuse v1", err)
 		return server.BlobfuseV1
 	}
-	klog.V(2).Infof("OS info: %v", OSInfo)
+	klog.Infof("OS info: %v", OSInfo)
 
 	if OSInfo["DISTRIB_ID"] == "Ubuntu" && OSInfo["DISTRIB_RELEASE"] >= "22.04" {
 		return server.BlobfuseV2
