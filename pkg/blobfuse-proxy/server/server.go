@@ -65,13 +65,15 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 
 	var cmd *exec.Cmd
 	var result mount_azure_blob.MountAzureBlobResponse
-	switch server.blobfuseVersion {
-	case BlobfuseV1:
-		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
-	case BlobfuseV2:
-		args = "mount " + args
-		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
-	}
+	// switch server.blobfuseVersion {
+	// case BlobfuseV1:
+	// 	cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
+	// case BlobfuseV2:
+	// 	args = "mount " + args
+	// 	cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
+	// }
+	args = "mount " + args
+	cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
 
 	cmd.Env = append(cmd.Env, authEnv...)
 	klog.Infof("zzzzzzzzzzzzzzz args %v", args)
