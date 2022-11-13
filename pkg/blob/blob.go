@@ -145,6 +145,8 @@ type DriverOptions struct {
 	EnableGetVolumeStats                   bool
 	AppendTimeStampInCacheDir              bool
 	MountPermissions                       uint64
+	KubeAPIQPS                             float64
+	KubeAPIBurst                           int
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -166,6 +168,8 @@ type Driver struct {
 	appendTimeStampInCacheDir              bool
 	blobfuseProxyConnTimout                int
 	mountPermissions                       uint64
+	kubeAPIQPS                             float64
+	kubeAPIBurst                           int
 	mounter                                *mount.SafeFormatAndMount
 	volLockMap                             *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
@@ -200,6 +204,8 @@ func NewDriver(options *DriverOptions) *Driver {
 		allowEmptyCloudConfig:                  options.AllowEmptyCloudConfig,
 		enableGetVolumeStats:                   options.EnableGetVolumeStats,
 		mountPermissions:                       options.MountPermissions,
+		kubeAPIQPS:                             options.KubeAPIQPS,
+		kubeAPIBurst:                           options.KubeAPIBurst,
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion
@@ -226,7 +232,7 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 
 	userAgent := GetUserAgent(d.Name, d.customUserAgent, d.userAgentSuffix)
 	klog.V(2).Infof("driver userAgent: %s", userAgent)
-	d.cloud, err = getCloudProvider(kubeconfig, d.NodeID, d.cloudConfigSecretName, d.cloudConfigSecretNamespace, userAgent, d.allowEmptyCloudConfig)
+	d.cloud, err = getCloudProvider(kubeconfig, d.NodeID, d.cloudConfigSecretName, d.cloudConfigSecretNamespace, userAgent, d.allowEmptyCloudConfig, d.kubeAPIQPS, d.kubeAPIBurst)
 	if err != nil {
 		klog.Fatalf("failed to get Azure Cloud Provider, error: %v", err)
 	}

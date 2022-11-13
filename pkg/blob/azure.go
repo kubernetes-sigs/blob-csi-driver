@@ -51,7 +51,7 @@ func IsAzureStackCloud(cloud *azure.Cloud) bool {
 }
 
 // getCloudProvider get Azure Cloud Provider
-func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent string, allowEmptyCloudConfig bool) (*azure.Cloud, error) {
+func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent string, allowEmptyCloudConfig bool, kubeAPIQPS float64, kubeAPIBurst int) (*azure.Cloud, error) {
 	var (
 		config     *azure.Config
 		kubeClient *clientset.Clientset
@@ -70,10 +70,10 @@ func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent
 	kubeCfg, err := getKubeConfig(kubeconfig)
 	if err == nil && kubeCfg != nil {
 		// set QPS and QPS Burst as higher values
-		kubeCfg.QPS = 25
-		kubeCfg.Burst = 50
-		kubeClient, err = clientset.NewForConfig(kubeCfg)
-		if err != nil {
+		klog.V(2).Infof("set QPS(%f) and QPS Burst(%d) for driver kubeClient", float32(kubeAPIQPS), kubeAPIBurst)
+		kubeCfg.QPS = float32(kubeAPIQPS)
+		kubeCfg.Burst = kubeAPIBurst
+		if kubeClient, err = clientset.NewForConfig(kubeCfg); err != nil {
 			klog.Warningf("NewForConfig failed with error: %v", err)
 		}
 	} else {
