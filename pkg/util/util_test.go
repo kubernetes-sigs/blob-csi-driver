@@ -19,6 +19,7 @@ package util
 import (
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -246,5 +247,49 @@ func TestConvertTagsToMap2(t *testing.T) {
 			assert.Nil(t, err)
 		}
 		assert.Equal(t, result, test.expected)
+	}
+}
+
+func TestGetOSInfo(t *testing.T) {
+	type args struct {
+		f interface{}
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *OsInfo
+		wantErr bool
+	}{
+		{
+			name: "file not exist",
+			args: args{
+				f: "/not-exist/not-exist",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "parse os info correctly",
+			args: args{
+				f: []byte("DISTRIB_ID=Ubuntu\nDISTRIB_RELEASE=22.04"),
+			},
+			want: &OsInfo{
+				Distro:  "Ubuntu",
+				Version: "22.04",
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetOSInfo(tt.args.f)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetOSInfo() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetOSInfo() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

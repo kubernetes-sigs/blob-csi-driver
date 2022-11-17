@@ -38,6 +38,8 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.1.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault v1.0.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v0.4.1
+	github.com/go-ini/ini v1.67.0
+	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
 	k8s.io/apiserver v0.25.2
 )
@@ -85,7 +87,6 @@ require (
 	github.com/opencontainers/runc v1.0.2 // indirect
 	github.com/opencontainers/selinux v1.8.2 // indirect
 	github.com/pkg/browser v0.0.0-20210115035449-ce105d075bb4 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect

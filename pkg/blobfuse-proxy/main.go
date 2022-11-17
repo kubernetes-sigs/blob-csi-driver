@@ -23,7 +23,7 @@ import (
 
 	"k8s.io/klog/v2"
 
-	server "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server"
+	"sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server"
 	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 )
 

@@ -27,19 +27,30 @@ import (
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
+	"sigs.k8s.io/blob-csi-driver/pkg/util"
 )
 
 var (
 	mutex sync.Mutex
 )
 
+type BlobfuseVersion int
+
+const (
+	BlobfuseV1 BlobfuseVersion = iota
+	BlobfuseV2
+)
+
 type MountServer struct {
+	blobfuseVersion BlobfuseVersion
 	mount_azure_blob.UnimplementedMountServiceServer
 }
 
 // NewMountServer returns a new Mountserver
 func NewMountServiceServer() *MountServer {
-	return &MountServer{}
+	mountServer := &MountServer{}
+	mountServer.blobfuseVersion = getBlobfuseVersion()
+	return mountServer
 }
 
 // MountAzureBlob mounts an azure blob container to given location
@@ -53,8 +64,15 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 	authEnv := req.GetAuthEnv()
 	klog.V(2).Infof("received mount request: Mounting with args %v \n", args)
 
+	var cmd *exec.Cmd
 	var result mount_azure_blob.MountAzureBlobResponse
-	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
+	switch server.blobfuseVersion {
+	case BlobfuseV1:
+		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
+	case BlobfuseV2:
+		args = "mount " + args
+		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
+	}
 
 	cmd.Env = append(cmd.Env, authEnv...)
 	output, err := cmd.CombinedOutput()
@@ -83,4 +101,18 @@ func RunGRPCServer(
 
 	klog.V(2).Infof("Start GRPC server at %s, TLS = %t", listener.Addr().String(), enableTLS)
 	return grpcServer.Serve(listener)
+}
+
+func getBlobfuseVersion() BlobfuseVersion {
+	osinfo, err := util.GetOSInfo("/etc/lsb-release")
+	if err != nil {
+		klog.Warningf("failed to get OS info: %v, default using blobfuse v1", err)
+		return BlobfuseV1
+	}
+
+	if osinfo.Distro == "Ubuntu" && osinfo.Version >= "22.04" {
+		return BlobfuseV2
+	}
+
+	return BlobfuseV1
 }
