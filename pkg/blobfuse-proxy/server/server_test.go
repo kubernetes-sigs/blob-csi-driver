@@ -48,7 +48,7 @@ func TestServerMountAzureBlob(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			mountServer := NewMountServiceServer(BlobfuseV1)
+			mountServer := NewMountServiceServer()
 			req := mount_azure_blob.MountAzureBlobRequest{
 				MountArgs: tc.args,
 				AuthEnv:   tc.authEnv,
