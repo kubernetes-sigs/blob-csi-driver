@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
+	"sigs.k8s.io/blob-csi-driver/pkg/util"
 )
 
 var (
@@ -46,10 +47,10 @@ type MountServer struct {
 }
 
 // NewMountServer returns a new Mountserver
-func NewMountServiceServer(ver BlobfuseVersion) *MountServer {
-	return &MountServer{
-		blobfuseVersion: ver,
-	}
+func NewMountServiceServer() *MountServer {
+	mountServer := &MountServer{}
+	mountServer.blobfuseVersion = getBlobfuseVersion()
+	return mountServer
 }
 
 // MountAzureBlob mounts an azure blob container to given location
@@ -100,4 +101,18 @@ func RunGRPCServer(
 
 	klog.V(2).Infof("Start GRPC server at %s, TLS = %t", listener.Addr().String(), enableTLS)
 	return grpcServer.Serve(listener)
+}
+
+func getBlobfuseVersion() BlobfuseVersion {
+	osinfo, err := util.GetOSInfo("/etc/lsb-release")
+	if err != nil {
+		klog.Warningf("failed to get OS info: %v, default using blobfuse v1", err)
+		return BlobfuseV1
+	}
+
+	if osinfo.Distro == "Ubuntu" && osinfo.Version >= "22.04" {
+		return BlobfuseV2
+	}
+
+	return BlobfuseV1
 }

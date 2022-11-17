@@ -21,6 +21,10 @@ import (
 	"os"
 	"strings"
 	"sync"
+
+	"github.com/go-ini/ini"
+	"github.com/pkg/errors"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -154,4 +158,28 @@ func ConvertTagsToMap(tags string) (map[string]string, error) {
 		m[key] = value
 	}
 	return m, nil
+}
+
+type OsInfo struct {
+	Distro  string
+	Version string
+}
+
+const (
+	keyDistribID      = "DISTRIB_ID"
+	keyDistribRelease = "DISTRIB_RELEASE"
+)
+
+func GetOSInfo(f interface{}) (*OsInfo, error) {
+	cfg, err := ini.Load(f)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read %q", f)
+	}
+
+	oi := &OsInfo{}
+	oi.Distro = cfg.Section("").Key(keyDistribID).String()
+	oi.Version = cfg.Section("").Key(keyDistribRelease).String()
+
+	klog.V(2).Infof("get OS info: %v", oi)
+	return oi, nil
 }
