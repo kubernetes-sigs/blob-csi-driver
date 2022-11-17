@@ -111,6 +111,7 @@ func getBlobfuseVersion() BlobfuseVersion {
 	}
 
 	if osinfo.Distro == "Ubuntu" && osinfo.Version >= "22.04" {
+		klog.Info("proxy using blobfuse V2 for mounting")
 		return BlobfuseV2
 	}
 
