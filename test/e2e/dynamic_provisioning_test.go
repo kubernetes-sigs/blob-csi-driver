@@ -571,4 +571,34 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		}
 		test.Run(cs, ns)
 	})
+
+	ginkgo.It("should create a blobfuse2 volume on demand with mount options [fuse2]", func() {
+		if isAzureStackCloud {
+			ginkgo.Skip("test case is not available for Azure Stack")
+		}
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize:    "10Gi",
+						MountOptions: []string{},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver: testDriver,
+			Pods:      pods,
+			StorageClassParameters: map[string]string{
+				"skuName":  "Standard_LRS",
+				"protocol": "fuse2",
+			},
+		}
+		test.Run(cs, ns)
+	})
 })

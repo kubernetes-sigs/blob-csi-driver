@@ -26,6 +26,7 @@ import (
 
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 )
@@ -62,16 +63,18 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 
 	args := req.GetMountArgs()
 	authEnv := req.GetAuthEnv()
-	klog.V(2).Infof("received mount request: Mounting with args %v \n", args)
+	protocol := req.GetProtocol()
+	klog.V(2).Infof("received mount request: Protocol: %s, server default blobfuseVersion: %v, Mounting with args %v \n", protocol, server.blobfuseVersion, args)
 
 	var cmd *exec.Cmd
 	var result mount_azure_blob.MountAzureBlobResponse
-	switch server.blobfuseVersion {
-	case BlobfuseV1:
-		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
-	case BlobfuseV2:
+	if protocol == blob.Fuse2 || server.blobfuseVersion == BlobfuseV2 {
+		klog.V(2).Infof("using blobfuse V2 to mount")
 		args = "mount " + args
 		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
+	} else {
+		klog.V(2).Infof("using blobfuse V1 to mount")
+		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
 	}
 
 	cmd.Env = append(cmd.Env, authEnv...)
@@ -111,9 +114,10 @@ func getBlobfuseVersion() BlobfuseVersion {
 	}
 
 	if osinfo.Distro == "Ubuntu" && osinfo.Version >= "22.04" {
-		klog.V(2).Info("proxy using blobfuse V2 for mounting")
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting")
 		return BlobfuseV2
 	}
 
+	klog.V(2).Info("proxy default using blobfuse V1 for mounting")
 	return BlobfuseV1
 }

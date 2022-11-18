@@ -163,7 +163,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if subsID != "" && subsID != d.cloud.SubscriptionID {
-		if protocol == nfs {
+		if protocol == NFS {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("NFS protocol is not supported in cross subscription(%s)", subsID))
 		}
 		if !storeAccountKey {
@@ -184,7 +184,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if protocol == "" {
-		protocol = fuse
+		protocol = Fuse
 	}
 	if !isSupportedProtocol(protocol) {
 		return nil, status.Errorf(codes.InvalidArgument, "protocol(%s) is not supported, supported protocol list: %v", protocol, supportedProtocolList)
@@ -206,7 +206,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		vnetResourceIDs []string
 		enableNfsV3     *bool
 	)
-	if protocol == nfs {
+	if protocol == NFS {
 		isHnsEnabled = to.BoolPtr(true)
 		enableNfsV3 = to.BoolPtr(true)
 		// set VirtualNetworkResourceIDs for storage account firewall setting

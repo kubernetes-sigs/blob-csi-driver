@@ -140,7 +140,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
-func (d *Driver) mountBlobfuseWithProxy(args string, authEnv []string) (string, error) {
+func (d *Driver) mountBlobfuseWithProxy(args string, protocol string, authEnv []string) (string, error) {
 	klog.V(2).Infof("mouting using blobfuse proxy")
 	var resp *mount_azure_blob.MountAzureBlobResponse
 	var output string
@@ -152,6 +152,7 @@ func (d *Driver) mountBlobfuseWithProxy(args string, authEnv []string) (string, 
 		mountClient := NewMountClient(conn)
 		mountreq := mount_azure_blob.MountAzureBlobRequest{
 			MountArgs: args,
+			Protocol:  protocol,
 			AuthEnv:   authEnv,
 		}
 		klog.V(2).Infof("calling BlobfuseProxy: MountAzureBlob function")
@@ -164,11 +165,23 @@ func (d *Driver) mountBlobfuseWithProxy(args string, authEnv []string) (string, 
 	return output, err
 }
 
-func (d *Driver) mountBlobfuseInsideDriver(args string, authEnv []string) (string, error) {
+func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv []string) (string, error) {
+	var cmd *exec.Cmd
+
 	klog.V(2).Infof("mounting blobfuse inside driver")
-	cmd := exec.Command("blobfuse", strings.Split(args, " ")...)
+	if protocol == Fuse2 {
+		klog.V(2).Infof("using blobfuse V2 to mount")
+		args = "mount " + args
+		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
+	} else {
+		klog.V(2).Infof("using blobfuse V1 to mount")
+		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
+	}
+
 	cmd.Env = append(os.Environ(), authEnv...)
 	output, err := cmd.CombinedOutput()
+	klog.V(2).Infof("mount output: %s\n", string(output))
+
 	return string(output), err
 }
 
@@ -290,14 +303,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		serverAddress = fmt.Sprintf("%s.blob.%s", accountName, storageEndpointSuffix)
 	}
 
-	if protocol == nfs {
+	if protocol == NFS {
 		klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nserverAddress %v",
 			targetPath, protocol, volumeID, attrib, mountFlags, serverAddress)
 
 		source := fmt.Sprintf("%s:/%s/%s", serverAddress, accountName, containerName)
 		mountOptions := util.JoinMountOptions(mountFlags, []string{"sec=sys,vers=3,nolock"})
 		if err := wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
-			return true, d.mounter.MountSensitive(source, targetPath, nfs, mountOptions, []string{})
+			return true, d.mounter.MountSensitive(source, targetPath, NFS, mountOptions, []string{})
 		}); err != nil {
 			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with %v", volumeID, source, targetPath, err))
 		}
@@ -348,9 +361,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	var output string
 	if d.enableBlobfuseProxy {
-		output, err = d.mountBlobfuseWithProxy(args, authEnv)
+		output, err = d.mountBlobfuseWithProxy(args, protocol, authEnv)
 	} else {
-		output, err = d.mountBlobfuseInsideDriver(args, authEnv)
+		output, err = d.mountBlobfuseInsideDriver(args, protocol, authEnv)
 	}
 
 	if err != nil {

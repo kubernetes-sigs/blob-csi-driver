@@ -85,8 +85,9 @@ const (
 	trueValue                    = "true"
 	defaultSecretAccountName     = "azurestorageaccountname"
 	defaultSecretAccountKey      = "azurestorageaccountkey"
-	fuse                         = "fuse"
-	nfs                          = "nfs"
+	Fuse                         = "fuse"
+	Fuse2                        = "fuse2"
+	NFS                          = "nfs"
 	vnetResourceGroupField       = "vnetresourcegroup"
 	vnetNameField                = "vnetname"
 	subnetNameField              = "subnetname"
@@ -124,7 +125,7 @@ const (
 )
 
 var (
-	supportedProtocolList = []string{fuse, nfs}
+	supportedProtocolList = []string{Fuse, Fuse2, NFS}
 	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, statusCodeNotFound, containerBeingDeletedDataplaneAPIError, containerBeingDeletedManagementAPIError, clientThrottled}
 )
 
@@ -409,7 +410,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	}
 	klog.V(2).Infof("volumeID(%s) authEnv: %s", volumeID, authEnv)
 
-	if protocol == nfs {
+	if protocol == NFS {
 		// nfs protocol does not need account key, return directly
 		return rgName, accountName, accountKey, containerName, authEnv, err
 	}

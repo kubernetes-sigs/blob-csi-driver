@@ -585,7 +585,7 @@ func TestGetAuthEnv(t *testing.T) {
 				volumeID := "unique-volumeid"
 				attrib[storageAccountField] = "accountname"
 				attrib[containerNameField] = "containername"
-				rg, accountName, accountkey, containerName, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, nfs, attrib, secret)
+				rg, accountName, accountkey, containerName, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, NFS, attrib, secret)
 				if err != nil {
 					t.Errorf("actualErr: (%v), expect no error", err)
 				}
