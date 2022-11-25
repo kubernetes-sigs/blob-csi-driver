@@ -16,9 +16,9 @@ This driver allows Kubernetes to access Azure Storage through one of following m
 |driver version  |Image                                                 | supported k8s version | built-in blobfuse version |
 |----------------|------------------------------------------------------|-----------------------|---------------------------|
 |master branch   |mcr.microsoft.com/k8s/csi/blob-csi:latest             | 1.21+                 | 1.4.5                     |
+|v1.18.0         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.18.0 | 1.21+                 | 1.4.5                     |
 |v1.17.0         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.17.0 | 1.21+                 | 1.4.5                     |
 |v1.16.0         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.16.0 | 1.20+                 | 1.4.5                     |
-|v1.15.0         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.15.0 | 1.20+                 | 1.4.4                     |
 
 ### Driver parameters
 Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
