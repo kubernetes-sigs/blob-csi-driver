@@ -741,7 +741,7 @@ func TestMountBlobfuseWithProxy(t *testing.T) {
 	args := "--tmp-path /tmp"
 	authEnv := []string{"username=blob", "authkey=blob"}
 	d := NewFakeDriver()
-	_, err := d.mountBlobfuseWithProxy(args, authEnv)
+	_, err := d.mountBlobfuseWithProxy(args, "fuse", authEnv)
 	// should be context.deadlineExceededError{} error
 	assert.NotNil(t, err)
 }
@@ -750,7 +750,7 @@ func TestMountBlobfuseInsideDriver(t *testing.T) {
 	args := "--tmp-path /tmp"
 	authEnv := []string{"username=blob", "authkey=blob"}
 	d := NewFakeDriver()
-	_, err := d.mountBlobfuseInsideDriver(args, authEnv)
+	_, err := d.mountBlobfuseInsideDriver(args, Fuse, authEnv)
 	// the error should be of type exec.ExitError
 	assert.NotNil(t, err)
 }

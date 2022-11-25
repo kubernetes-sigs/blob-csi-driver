@@ -5,6 +5,7 @@ option go_package = ".;pb";
 message MountAzureBlobRequest {
 	string mountArgs = 1;
 	repeated string authEnv = 2;
+	string protocol = 3;
 }
 
 message MountAzureBlobResponse {
