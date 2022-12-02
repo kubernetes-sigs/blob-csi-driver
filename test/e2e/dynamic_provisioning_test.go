@@ -581,8 +581,11 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						ClaimSize:    "10Gi",
-						MountOptions: []string{},
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"-o allow_other",
+							"--virtual-directory=true", // blobfuse2 mount options
+						},
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
 							MountPathGenerate: "/mnt/test-",
