@@ -37,7 +37,7 @@ subnetName | subnet name | existing subnet name of the agent node | No | if empt
 
  - `fsGroup` securityContext setting
 
-Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check [here](https://github.com/Azure/Azure-storage-fuse#mount-options) for more mountoptions.
+Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check [here](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#mount-options) for more mountoptions.
 
  - [Azure DataLake storage account](https://docs.microsoft.com/en-us/azure/storage/blobs/upgrade-to-data-lake-storage-gen2-how-to) support
    - set `isHnsEnabled: "true"` in storage class parameter to create ADLS account by driver in dynamic provisioning.
@@ -78,7 +78,7 @@ nodeStageSecretRef.name | secret name that stores(check below examples):<br>`azu
 nodeStageSecretRef.namespace | secret namespace | k8s namespace  |  Yes  |
 --- | **Following parameters are only for NFS protocol** | --- | --- |
 volumeAttributes.mountPermissions | mounted folder permissions | `0777` | No |
---- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse#environment-variables)** | --- | --- |
+--- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#environment-variables)** | --- | --- |
 volumeAttributes.AzureStorageAuthType | Authentication Type | `Key`, `SAS`, `MSI`, `SPN` | No | `Key`
 volumeAttributes.AzureStorageIdentityClientID | Identity Client ID |  | No |
 volumeAttributes.AzureStorageIdentityObjectID | Identity Object ID |  | No |
