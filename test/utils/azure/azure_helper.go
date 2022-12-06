@@ -21,13 +21,16 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/jongio/azidext/go/azidext"
 )
 
 type Client struct {
@@ -43,17 +46,17 @@ func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string) (
 		return nil, err
 	}
 
-	oauthConfig, err := getOAuthConfig(env, subscriptionID, tenantID)
+	options := azidentity.ClientSecretCredentialOptions{
+		ClientOptions: azcore.ClientOptions{
+			Cloud: getCloudConfig(env),
+		},
+	}
+	cred, err := azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, &options)
 	if err != nil {
 		return nil, err
 	}
 
-	armSpt, err := adal.NewServicePrincipalToken(*oauthConfig, clientID, clientSecret, env.ServiceManagementEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	return getClient(env, subscriptionID, tenantID, armSpt), nil
+	return getClient(env, subscriptionID, tenantID, cred, env.TokenAudience), nil
 }
 
 func (az *Client) EnsureResourceGroup(ctx context.Context, name, location string, managedBy *string) (resourceGroup *resources.Group, err error) {
@@ -110,16 +113,28 @@ func (az *Client) GetAccountNumByResourceGroup(ctx context.Context, groupName st
 	return len(result.Values()), nil
 }
 
-func getOAuthConfig(env azure.Environment, subscriptionID, tenantID string) (*adal.OAuthConfig, error) {
-	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, tenantID)
-	if err != nil {
-		return nil, err
+func getCloudConfig(env azure.Environment) cloud.Configuration {
+	switch env.Name {
+	case azure.USGovernmentCloud.Name:
+		return cloud.AzureGovernment
+	case azure.ChinaCloud.Name:
+		return cloud.AzureChina
+	case azure.PublicCloud.Name:
+		return cloud.AzurePublic
+	default:
+		return cloud.Configuration{
+			ActiveDirectoryAuthorityHost: env.ActiveDirectoryEndpoint,
+			Services: map[cloud.ServiceName]cloud.ServiceConfiguration{
+				cloud.ResourceManager: {
+					Audience: env.TokenAudience,
+					Endpoint: env.ResourceManagerEndpoint,
+				},
+			},
+		}
 	}
-
-	return oauthConfig, nil
 }
 
-func getClient(env azure.Environment, subscriptionID, tenantID string, armSpt *adal.ServicePrincipalToken) *Client {
+func getClient(env azure.Environment, subscriptionID, tenantID string, cred *azidentity.ClientSecretCredential, scope string) *Client {
 	c := &Client{
 		environment:    env,
 		subscriptionID: subscriptionID,
@@ -127,7 +142,15 @@ func getClient(env azure.Environment, subscriptionID, tenantID string, armSpt *a
 		accountsClient: storage.NewAccountsClient(subscriptionID),
 	}
 
-	authorizer := autorest.NewBearerAuthorizer(armSpt)
+	if !strings.HasSuffix(scope, "/.default") {
+		scope += "/.default"
+	}
+	// Use an adapter so azidentity in the Azure SDK can be used as Authorizer
+	// when calling the Azure Management Packages, which we currently use. Once
+	// the Azure SDK clients (found in /sdk) move to stable, we can update our
+	// clients and they will be able to use the creds directly without the
+	// authorizer.
+	authorizer := azidext.NewTokenCredentialAdapter(cred, []string{scope})
 	c.groupsClient.Authorizer = authorizer
 	c.accountsClient.Authorizer = authorizer
 
