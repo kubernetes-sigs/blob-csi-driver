@@ -1266,6 +1266,19 @@ func TestAppendDefaultMountOptions(t *testing.T) {
 				"targetPath",
 			},
 		},
+		{
+			options:       []string{"targetPath", "--tmp-path=/var/log", "--pre-mount-validate=false"},
+			tmpPath:       "/tmp",
+			containerName: "containerName",
+			expected: []string{"--cancel-list-on-mount-seconds=10",
+				"--container-name=containerName",
+				"--pre-mount-validate=false",
+				"--empty-dir-check=false",
+				"--tmp-path=/var/log",
+				"--use-https=true",
+				"targetPath",
+			},
+		},
 	}
 
 	for _, test := range tests {
