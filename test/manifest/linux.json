@@ -10,6 +10,9 @@
                 "useCloudControllerManager": true,
                 "networkPlugin": "azure",
                 "containerRuntime": "containerd",
+                "apiServerConfig": {
+                    "--disable-admission-plugins": "PodSecurity"
+                },
                 "addons": [
                     {
                         "name": "azuredisk-csi-driver",
