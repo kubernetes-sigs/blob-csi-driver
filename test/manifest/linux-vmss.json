@@ -10,6 +10,9 @@
                 "userAssignedID": "blobfuse-csi-driver-e2e-test-id",
                 "useCloudControllerManager": true,
                 "networkPolicy": "none",
+                "apiServerConfig": {
+                    "--disable-admission-plugins": "PodSecurity"
+                },
                 "addons": [
                     {
                         "name": "azuredisk-csi-driver",
