@@ -27,7 +27,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	apps "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -43,8 +43,9 @@ import (
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/framework/deployment"
 	e2eevents "k8s.io/kubernetes/test/e2e/framework/events"
-	e2elog "k8s.io/kubernetes/test/e2e/framework/log"
+	e2ekubectl "k8s.io/kubernetes/test/e2e/framework/kubectl"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
+	e2eoutput "k8s.io/kubernetes/test/e2e/framework/pod/output"
 	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
 	testutil "k8s.io/kubernetes/test/utils"
 	imageutils "k8s.io/kubernetes/test/utils/image"
@@ -86,7 +87,7 @@ func (t *TestStorageClass) Create() storagev1.StorageClass {
 }
 
 func (t *TestStorageClass) Cleanup() {
-	e2elog.Logf("deleting StorageClass %s", t.storageClass.Name)
+	framework.Logf("deleting StorageClass %s", t.storageClass.Name)
 	err := t.client.StorageV1().StorageClasses().Delete(context.TODO(), t.storageClass.Name, metav1.DeleteOptions{})
 	framework.ExpectNoError(err)
 }
@@ -245,7 +246,7 @@ func generatePVC(namespace, storageClassName, claimSize string, volumeMode v1.Pe
 }
 
 func (t *TestPersistentVolumeClaim) Cleanup() {
-	e2elog.Logf("deleting PVC %q/%q", t.namespace.Name, t.persistentVolumeClaim.Name)
+	framework.Logf("deleting PVC %q/%q", t.namespace.Name, t.persistentVolumeClaim.Name)
 	err := e2epv.DeletePersistentVolumeClaim(t.client, t.persistentVolumeClaim.Name, t.namespace.Name)
 	framework.ExpectNoError(err)
 	// Wait for the PV to get deleted if reclaim policy is Delete. (If it's
@@ -360,7 +361,7 @@ func (t *TestDeployment) Create() {
 	var err error
 	t.deployment, err = t.client.AppsV1().Deployments(t.namespace.Name).Create(context.TODO(), t.deployment, metav1.CreateOptions{})
 	framework.ExpectNoError(err)
-	err = testutil.WaitForDeploymentComplete(t.client, t.deployment, e2elog.Logf, poll, pollLongTimeout)
+	err = testutil.WaitForDeploymentComplete(t.client, t.deployment, framework.Logf, poll, pollLongTimeout)
 	framework.ExpectNoError(err)
 	pods, err := deployment.GetPodsForDeployment(t.client, t.deployment)
 	framework.ExpectNoError(err)
@@ -379,7 +380,7 @@ func (t *TestDeployment) WaitForPodReady() {
 }
 
 func (t *TestDeployment) Exec(command []string, expectedString string) {
-	_, err := framework.LookForStringInPodExec(t.namespace.Name, t.podName, command, expectedString, execTimeout)
+	_, err := e2eoutput.LookForStringInPodExec(t.namespace.Name, t.podName, command, expectedString, execTimeout)
 	framework.ExpectNoError(err)
 }
 
@@ -388,7 +389,7 @@ func (t *TestDeployment) PollForStringInPodsExec(command []string, expectedStrin
 }
 
 func (t *TestDeployment) DeletePodAndWait() {
-	e2elog.Logf("Deleting pod %q in namespace %q", t.podName, t.namespace.Name)
+	framework.Logf("Deleting pod %q in namespace %q", t.podName, t.namespace.Name)
 	err := t.client.CoreV1().Pods(t.namespace.Name).Delete(context.TODO(), t.podName, metav1.DeleteOptions{})
 	if err != nil {
 		if !apierrs.IsNotFound(err) {
@@ -396,22 +397,20 @@ func (t *TestDeployment) DeletePodAndWait() {
 		}
 		return
 	}
-	e2elog.Logf("Waiting for pod %q in namespace %q to be fully deleted", t.podName, t.namespace.Name)
-	err = e2epod.WaitForPodNoLongerRunningInNamespace(t.client, t.podName, t.namespace.Name)
+	framework.Logf("Waiting for pod %q in namespace %q to be fully deleted", t.podName, t.namespace.Name)
+	err = e2epod.WaitForPodNotFoundInNamespace(t.client, t.podName, t.namespace.Name, e2epod.DefaultPodDeletionTimeout)
 	if err != nil {
-		if !apierrs.IsNotFound(err) {
-			framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %w", t.podName, err))
-		}
+		framework.ExpectNoError(fmt.Errorf("pod %q error waiting for delete: %w", t.podName, err))
 	}
 }
 
 func (t *TestDeployment) Cleanup() {
-	e2elog.Logf("deleting Deployment %q/%q", t.namespace.Name, t.deployment.Name)
+	framework.Logf("deleting Deployment %q/%q", t.namespace.Name, t.deployment.Name)
 	body, err := t.Logs()
 	if err != nil {
-		e2elog.Logf("Error getting logs for pod %s: %w", t.podName, err)
+		framework.Logf("Error getting logs for pod %s: %w", t.podName, err)
 	} else {
-		e2elog.Logf("Pod %s has the following logs: %s", t.podName, body)
+		framework.Logf("Pod %s has the following logs: %s", t.podName, body)
 	}
 	err = t.client.AppsV1().Deployments(t.namespace.Name).Delete(context.TODO(), t.deployment.Name, metav1.DeleteOptions{})
 	framework.ExpectNoError(err)
@@ -602,18 +601,18 @@ func (t *TestSecret) Create() {
 }
 
 func (t *TestSecret) Cleanup() {
-	e2elog.Logf("deleting Secret %s", t.secret.Name)
+	framework.Logf("deleting Secret %s", t.secret.Name)
 	err := t.client.CoreV1().Secrets(t.namespace.Name).Delete(context.TODO(), t.secret.Name, metav1.DeleteOptions{})
 	framework.ExpectNoError(err)
 }
 
 func cleanupPodOrFail(client clientset.Interface, name, namespace string) {
-	e2elog.Logf("deleting Pod %q/%q", namespace, name)
+	framework.Logf("deleting Pod %q/%q", namespace, name)
 	body, err := podLogs(client, name, namespace)
 	if err != nil {
-		e2elog.Logf("Error getting logs for pod %s: %w", name, err)
+		framework.Logf("Error getting logs for pod %s: %w", name, err)
 	} else {
-		e2elog.Logf("Pod %s has the following logs: %s", name, body)
+		framework.Logf("Pod %s has the following logs: %s", name, body)
 	}
 	e2epod.DeletePodOrFail(client, namespace, name)
 }
@@ -641,7 +640,7 @@ func waitForPersistentVolumeClaimDeleted(c clientset.Interface, ns string, pvcNa
 func pollForStringWorker(namespace string, pod string, command []string, expectedString string, ch chan<- error) {
 	args := append([]string{"exec", pod, "--"}, command...)
 	err := wait.PollImmediate(poll, pollForStringTimeout, func() (bool, error) {
-		stdout, err := framework.RunKubectl(namespace, args...)
+		stdout, err := e2ekubectl.RunKubectl(namespace, args...)
 		if err != nil {
 			framework.Logf("Error waiting for output %q in pod %q: %v.", expectedString, pod, err)
 			return false, nil

@@ -18,12 +18,13 @@ package provider
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2022-03-01/compute"
 
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
@@ -32,8 +33,7 @@ import (
 	"sigs.k8s.io/cloud-provider-azure/pkg/consts"
 )
 
-func (fs *FlexScaleSet) newVmssFlexCache() (*azcache.TimedCache, error) {
-
+func (fs *FlexScaleSet) newVmssFlexCache(ctx context.Context) (*azcache.TimedCache, error) {
 	getter := func(key string) (interface{}, error) {
 		localCache := &sync.Map{}
 
@@ -43,7 +43,7 @@ func (fs *FlexScaleSet) newVmssFlexCache() (*azcache.TimedCache, error) {
 		}
 
 		for _, resourceGroup := range allResourceGroups.List() {
-			allScaleSets, rerr := fs.VirtualMachineScaleSetsClient.List(context.Background(), resourceGroup)
+			allScaleSets, rerr := fs.VirtualMachineScaleSetsClient.List(ctx, resourceGroup)
 			if rerr != nil {
 				if rerr.IsNotFound() {
 					klog.Warningf("Skip caching vmss for resource group %s due to error: %v", resourceGroup, rerr.Error())
@@ -60,7 +60,7 @@ func (fs *FlexScaleSet) newVmssFlexCache() (*azcache.TimedCache, error) {
 					continue
 				}
 
-				if scaleSet.OrchestrationMode == compute.OrchestrationModeFlexible {
+				if scaleSet.OrchestrationMode == compute.Flexible {
 					localCache.Store(*scaleSet.ID, &scaleSet)
 				}
 			}
@@ -75,12 +75,9 @@ func (fs *FlexScaleSet) newVmssFlexCache() (*azcache.TimedCache, error) {
 	return azcache.NewTimedcache(time.Duration(fs.Config.VmssFlexCacheTTLInSeconds)*time.Second, getter)
 }
 
-func (fs *FlexScaleSet) newVmssFlexVMCache() (*azcache.TimedCache, error) {
+func (fs *FlexScaleSet) newVmssFlexVMCache(ctx context.Context) (*azcache.TimedCache, error) {
 	getter := func(key string) (interface{}, error) {
 		localCache := &sync.Map{}
-
-		ctx, cancel := getContextWithCancel()
-		defer cancel()
 
 		vms, rerr := fs.VirtualMachinesClient.ListVmssFlexVMsWithoutInstanceView(ctx, key)
 		if rerr != nil {
@@ -160,7 +157,7 @@ func (fs *FlexScaleSet) getNodeNameByVMName(vmName string) (string, error) {
 	}
 
 	nodeName, err := getter(vmName, azcache.CacheReadTypeDefault)
-	if err == cloudprovider.InstanceNotFound {
+	if errors.Is(err, cloudprovider.InstanceNotFound) {
 		klog.V(2).Infof("Could not find node (%s) in the existing cache. Forcely freshing the cache to check again...", nodeName)
 		return getter(vmName, azcache.CacheReadTypeForceRefresh)
 	}
@@ -201,7 +198,7 @@ func (fs *FlexScaleSet) getNodeVmssFlexID(nodeName string) (string, error) {
 	}
 
 	vmssFlexID, err := getter(nodeName, azcache.CacheReadTypeDefault)
-	if err == cloudprovider.InstanceNotFound {
+	if errors.Is(err, cloudprovider.InstanceNotFound) {
 		klog.V(2).Infof("Could not find node (%s) in the existing cache. Forcely freshing the cache to check again...", nodeName)
 		return getter(nodeName, azcache.CacheReadTypeForceRefresh)
 	}
@@ -219,15 +216,14 @@ func (fs *FlexScaleSet) getVmssFlexVM(nodeName string, crt azcache.AzureCacheRea
 	if err != nil {
 		return vm, err
 	}
-
 	vmMap := cached.(*sync.Map)
-	cachvmedVM, ok := vmMap.Load(nodeName)
+	cachedVM, ok := vmMap.Load(nodeName)
 	if !ok {
 		klog.V(2).Infof("did not find node (%s) in the existing cache, which means it is deleted...", nodeName)
 		return vm, cloudprovider.InstanceNotFound
 	}
 
-	return *(cachvmedVM.(*compute.VirtualMachine)), nil
+	return *(cachedVM.(*compute.VirtualMachine)), nil
 }
 
 func (fs *FlexScaleSet) getVmssFlexByVmssFlexID(vmssFlexID string, crt azcache.AzureCacheReadType) (*compute.VirtualMachineScaleSet, error) {
@@ -235,7 +231,6 @@ func (fs *FlexScaleSet) getVmssFlexByVmssFlexID(vmssFlexID string, crt azcache.A
 	if err != nil {
 		return nil, err
 	}
-
 	vmssFlexes := cached.(*sync.Map)
 	if vmssFlex, ok := vmssFlexes.Load(vmssFlexID); ok {
 		result := vmssFlex.(*compute.VirtualMachineScaleSet)
@@ -247,7 +242,6 @@ func (fs *FlexScaleSet) getVmssFlexByVmssFlexID(vmssFlexID string, crt azcache.A
 	if err != nil {
 		return nil, err
 	}
-
 	vmssFlexes = cached.(*sync.Map)
 	if vmssFlex, ok := vmssFlexes.Load(vmssFlexID); ok {
 		result := vmssFlex.(*compute.VirtualMachineScaleSet)
@@ -273,7 +267,6 @@ func (fs *FlexScaleSet) getVmssFlexIDByName(vmssFlexName string) (string, error)
 	if err != nil {
 		return "", err
 	}
-
 	var targetVmssFlexID string
 	vmssFlexes := cached.(*sync.Map)
 	vmssFlexes.Range(func(key, value interface{}) bool {
@@ -331,7 +324,6 @@ func (fs *FlexScaleSet) DeleteCacheForNode(nodeName string) error {
 	if err != nil {
 		return err
 	}
-
 	vmMap := cached.(*sync.Map)
 	vmMap.Delete(nodeName)
 

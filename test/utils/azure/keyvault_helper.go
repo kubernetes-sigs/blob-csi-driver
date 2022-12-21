@@ -29,7 +29,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"k8s.io/apiserver/pkg/storage/names"
 	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
 )

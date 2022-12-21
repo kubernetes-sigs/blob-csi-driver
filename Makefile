@@ -34,7 +34,7 @@ ifdef ENABLE_BLOBFUSE_PROXY
 override E2E_HELM_OPTIONS := $(E2E_HELM_OPTIONS) --set controller.logLevel=6 --set node.logLevel=6 --set node.enableBlobfuseProxy=true
 endif
 E2E_HELM_OPTIONS += ${EXTRA_HELM_OPTIONS}
-GINKGO_FLAGS = -ginkgo.v
+GINKGO_FLAGS = -ginkgo.v -ginkgo.timeout=24h
 GO111MODULE = on
 GOPATH ?= $(shell go env GOPATH)
 GOBIN ?= $(GOPATH)/bin

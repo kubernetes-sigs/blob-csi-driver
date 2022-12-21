@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
 
