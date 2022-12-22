@@ -25,7 +25,6 @@ import (
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
@@ -48,6 +47,7 @@ import (
 	e2epv "k8s.io/kubernetes/test/e2e/framework/pv"
 	testutil "k8s.io/kubernetes/test/utils"
 	imageutils "k8s.io/kubernetes/test/utils/image"
+	"k8s.io/utils/pointer"
 )
 
 const (
@@ -448,7 +448,7 @@ func NewTestPod(c clientset.Interface, ns *v1.Namespace, command string) *TestPo
 				},
 				RestartPolicy:                v1.RestartPolicyNever,
 				Volumes:                      make([]v1.Volume, 0),
-				AutomountServiceAccountToken: to.BoolPtr(false),
+				AutomountServiceAccountToken: pointer.Bool(false),
 			},
 		},
 	}
@@ -556,7 +556,7 @@ func (t *TestPod) SetupInlineVolume(name, mountPath, secretName, containerName s
 					"containerName":   containerName,
 					"mountOptions":    "-o allow_other --file-cache-timeout-in-seconds=240",
 				},
-				ReadOnly: to.BoolPtr(readOnly),
+				ReadOnly: pointer.Bool(readOnly),
 			},
 		},
 	}
