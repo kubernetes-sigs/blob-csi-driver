@@ -24,7 +24,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2022-03-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	v1 "k8s.io/api/core/v1"
@@ -117,14 +117,14 @@ func (c *ManagedDiskController) CreateManagedDisk(ctx context.Context, options *
 	diskSizeGB := int32(options.SizeGB)
 	diskSku := options.StorageAccountType
 
-	rg := c.common.resourceGroup
+	rg := c.common.cloud.ResourceGroup
 	if options.ResourceGroup != "" {
 		rg = options.ResourceGroup
 	}
-	if options.SubscriptionID != "" && !strings.EqualFold(options.SubscriptionID, c.common.subscriptionID) && options.ResourceGroup == "" {
+	if options.SubscriptionID != "" && !strings.EqualFold(options.SubscriptionID, c.common.cloud.SubscriptionID) && options.ResourceGroup == "" {
 		return "", fmt.Errorf("resourceGroup must be specified when subscriptionID(%s) is not empty", options.SubscriptionID)
 	}
-	subsID := c.common.subscriptionID
+	subsID := c.common.cloud.SubscriptionID
 	if options.SubscriptionID != "" {
 		subsID = options.SubscriptionID
 	}
@@ -141,7 +141,7 @@ func (c *ManagedDiskController) CreateManagedDisk(ctx context.Context, options *
 
 	if options.NetworkAccessPolicy != "" {
 		diskProperties.NetworkAccessPolicy = options.NetworkAccessPolicy
-		if options.NetworkAccessPolicy == compute.NetworkAccessPolicyAllowPrivate {
+		if options.NetworkAccessPolicy == compute.AllowPrivate {
 			if options.DiskAccessID == nil {
 				return "", fmt.Errorf("DiskAccessID should not be empty when NetworkAccessPolicy is AllowPrivate")
 			}
@@ -153,9 +153,9 @@ func (c *ManagedDiskController) CreateManagedDisk(ctx context.Context, options *
 		}
 	}
 
-	if diskSku == compute.DiskStorageAccountTypesUltraSSDLRS || diskSku == consts.PremiumV2LRS {
+	if diskSku == compute.UltraSSDLRS || diskSku == consts.PremiumV2LRS {
 		if options.DiskIOPSReadWrite == "" {
-			if diskSku == compute.DiskStorageAccountTypesUltraSSDLRS {
+			if diskSku == compute.UltraSSDLRS {
 				diskIOPSReadWrite := int64(consts.DefaultDiskIOPSReadWrite)
 				diskProperties.DiskIOPSReadWrite = to.Int64Ptr(diskIOPSReadWrite)
 			}
@@ -169,7 +169,7 @@ func (c *ManagedDiskController) CreateManagedDisk(ctx context.Context, options *
 		}
 
 		if options.DiskMBpsReadWrite == "" {
-			if diskSku == compute.DiskStorageAccountTypesUltraSSDLRS {
+			if diskSku == compute.UltraSSDLRS {
 				diskMBpsReadWrite := int64(consts.DefaultDiskMBpsReadWrite)
 				diskProperties.DiskMBpsReadWrite = to.Int64Ptr(diskMBpsReadWrite)
 			}
@@ -221,7 +221,7 @@ func (c *ManagedDiskController) CreateManagedDisk(ctx context.Context, options *
 		diskProperties.MaxShares = &options.MaxShares
 	}
 
-	location := c.common.location
+	location := c.common.cloud.Location
 	if options.Location != "" {
 		location = options.Location
 	}
@@ -234,10 +234,10 @@ func (c *ManagedDiskController) CreateManagedDisk(ctx context.Context, options *
 		DiskProperties: &diskProperties,
 	}
 
-	if el := c.common.extendedLocation; el != nil {
+	if c.common.cloud.HasExtendedLocation() {
 		model.ExtendedLocation = &compute.ExtendedLocation{
-			Name: to.StringPtr(el.Name),
-			Type: compute.ExtendedLocationTypes(el.Type),
+			Name: to.StringPtr(c.common.cloud.ExtendedLocationName),
+			Type: compute.ExtendedLocationTypes(c.common.cloud.ExtendedLocationType),
 		}
 	}
 
@@ -363,7 +363,7 @@ func (c *ManagedDiskController) ResizeDisk(ctx context.Context, diskURI string, 
 		return newSizeQuant, nil
 	}
 
-	if !supportOnlineResize && result.DiskProperties.DiskState != compute.DiskStateUnattached {
+	if !supportOnlineResize && result.DiskProperties.DiskState != compute.Unattached {
 		return oldSize, fmt.Errorf("azureDisk - disk resize is only supported on Unattached disk, current disk state: %s, already attached to %s", result.DiskProperties.DiskState, to.String(result.ManagedBy))
 	}
 

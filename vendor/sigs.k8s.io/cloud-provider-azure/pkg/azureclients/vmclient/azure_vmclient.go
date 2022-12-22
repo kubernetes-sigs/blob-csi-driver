@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2022-03-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -397,6 +397,7 @@ func (c *Client) WaitForUpdateResult(ctx context.Context, future *azure.Future, 
 	mc := metrics.NewMetricContext("vm", "wait_for_update_result", resourceGroupName, c.subscriptionID, source)
 	response, err := c.armClient.WaitForAsyncOperationResult(ctx, future, "VMWaitForUpdateResult")
 	mc.Observe(retry.NewErrorOrNil(false, err))
+	defer c.armClient.CloseResponse(ctx, response)
 
 	if err != nil {
 		if response != nil {

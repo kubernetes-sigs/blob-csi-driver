@@ -19,8 +19,9 @@ package testsuites
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
@@ -65,7 +66,11 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 
 				ginkgo.By("deploying the pod")
 				tpod.Create()
-				defer tpod.Cleanup()
+				defer func() {
+					framework.Logf("wait for 1 minute for pod to be cached in kubelet, otherwise pod not found error may happen")
+					time.Sleep(1 * time.Minute)
+					tpod.Cleanup()
+				}()
 				ginkgo.By("checking that the pods command exits with no error")
 				tpod.WaitForSuccess()
 			}

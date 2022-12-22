@@ -19,7 +19,7 @@ package testsuites
 import (
 	"fmt"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"

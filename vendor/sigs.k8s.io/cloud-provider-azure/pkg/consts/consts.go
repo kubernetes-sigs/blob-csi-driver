@@ -19,7 +19,7 @@ package consts
 import (
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2021-12-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2022-03-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 )
 
@@ -28,6 +28,8 @@ const (
 	VMTypeVMSS = "vmss"
 	// VMTypeStandard is the vmas vm type
 	VMTypeStandard = "standard"
+	// VMTypeVmssFlex is the vmssflex vm type
+	VMTypeVmssFlex = "vmssflex"
 
 	// ExternalResourceGroupLabel is the label representing the node is in a different
 	// resource group from other cloud provider components
@@ -298,7 +300,7 @@ const (
 
 	// ServiceAnnotationLoadBalancerHealthProbeRequestPath determines the request path of the load balancer health probe.
 	// This is only useful for the HTTP and HTTPS, and would be ignored when using TCP. If not set,
-	// `/healthz` would be configured by default.
+	// `/` would be configured by default.
 	ServiceAnnotationLoadBalancerHealthProbeRequestPath = "service.beta.kubernetes.io/azure-load-balancer-health-probe-request-path"
 
 	// ServiceAnnotationAzurePIPTags determines what tags should be applied to the public IP of the service. The cluster name
@@ -381,6 +383,8 @@ const (
 	CannotUpdateVMBeingDeletedMessagePrefix = "'Put on Virtual Machine Scale Set VM Instance' is not allowed on Virtual Machine Scale Set"
 	// CannotUpdateVMBeingDeletedMessageSuffix is the suffix of the error message that the request failed due to delete a VM that is being deleted
 	CannotUpdateVMBeingDeletedMessageSuffix = "since it is marked for deletion"
+	// OperationPreemptedErrorCode is the error code returned for vm operation preempted errors
+	OperationPreemptedErrorCode = "OperationPreempted"
 )
 
 // node ipam controller
@@ -426,9 +430,27 @@ const RateLimited = "rate limited"
 // CreatedByTag tag key for CSI drivers
 const CreatedByTag = "k8s-azure-created-by"
 
+// port specific
+const (
+	PortAnnotationPrefixPattern            = "service.beta.kubernetes.io/port_%d_%s"
+	PortAnnotationNoLBRule      PortParams = "no_lb_rule"
+	// NoHealthProbeRule determines whether the port is only used for health probe. no lb probe rule will be created.
+	PortAnnotationNoHealthProbeRule PortParams = "no_probe_rule"
+)
+
+type PortParams string
+
 // health probe
 const (
-	HealthProbeAnnotationPrefixPattern = "service.beta.kubernetes.io/port_%d_health-probe_"
+	HealthProbeAnnotationPrefixPattern = "health-probe_%s"
+
+	// HealthProbeParamsProtocol determines the protocol for the health probe params.
+	// It always takes priority over spec.appProtocol or any other specified protocol
+	HealthProbeParamsProtocol HealthProbeParams = "protocol"
+
+	// HealthProbeParamsPort determines the probe port for the health probe params.
+	// It always takes priority over the NodePort of the spec.ports in a Service
+	HealthProbeParamsPort HealthProbeParams = "port"
 
 	// HealthProbeParamsProbeInterval determines the probe interval of the load balancer health probe.
 	// The minimum probe interval is 5 seconds and the default value is 5. The total duration of all intervals cannot exceed 120 seconds.
