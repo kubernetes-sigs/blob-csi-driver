@@ -27,11 +27,11 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
@@ -72,7 +72,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var vnetResourceGroup, vnetName, subnetName, accessTier string
 	var matchTags, useDataPlaneAPI bool
 	// set allowBlobPublicAccess as false by default
-	allowBlobPublicAccess := to.BoolPtr(false)
+	allowBlobPublicAccess := pointer.Bool(false)
 
 	containerNameReplaceMap := map[string]string{}
 
@@ -111,7 +111,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			secretNamespace = v
 		case isHnsEnabledField:
 			if strings.EqualFold(v, trueValue) {
-				isHnsEnabled = to.BoolPtr(true)
+				isHnsEnabled = pointer.Bool(true)
 			}
 		case storeAccountKeyField:
 			if strings.EqualFold(v, falseValue) {
@@ -119,11 +119,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			}
 		case allowBlobPublicAccessField:
 			if strings.EqualFold(v, trueValue) {
-				allowBlobPublicAccess = to.BoolPtr(true)
+				allowBlobPublicAccess = pointer.Bool(true)
 			}
 		case requireInfraEncryptionField:
 			if strings.EqualFold(v, trueValue) {
-				requireInfraEncryption = to.BoolPtr(true)
+				requireInfraEncryption = pointer.Bool(true)
 			}
 		case pvcNamespaceKey:
 			pvcNamespace = v
@@ -207,8 +207,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		enableNfsV3     *bool
 	)
 	if protocol == NFS {
-		isHnsEnabled = to.BoolPtr(true)
-		enableNfsV3 = to.BoolPtr(true)
+		isHnsEnabled = pointer.Bool(true)
+		enableNfsV3 = pointer.Bool(true)
 		// set VirtualNetworkResourceIDs for storage account firewall setting
 		vnetResourceID := d.getSubnetResourceID(vnetResourceGroup, vnetName, subnetName)
 		klog.V(2).Infof("set vnetResourceID(%s) for NFS protocol", vnetResourceID)
