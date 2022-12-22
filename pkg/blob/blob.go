@@ -92,6 +92,7 @@ const (
 	vnetNameField                = "vnetname"
 	subnetNameField              = "subnetname"
 	accessTierField              = "accesstier"
+	networkEndpointTypeField     = "networkendpointtype"
 	mountPermissionsField        = "mountpermissions"
 	useDataPlaneAPIField         = "usedataplaneapi"
 
@@ -122,6 +123,8 @@ const (
 	pvNameMetadata       = "${pv.metadata.name}"
 
 	VolumeID = "volumeid"
+
+	defaultStorageEndPointSuffix = "core.windows.net"
 )
 
 var (
