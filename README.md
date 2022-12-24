@@ -7,6 +7,8 @@
 This driver allows Kubernetes to access Azure Storage through one of following methods:
  - [azure-storage-fuse](https://github.com/Azure/azure-storage-fuse)
  - [NFSv3](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support)
+ 
+Disclaimer: Deploying this driver manually is not an officially supported Microsoft product. For a fully managed and supported experience on Kubernetes, use [AKS with the managed blob csi driver](https://learn.microsoft.com/en-us/azure/aks/azure-blob-csi).
 
 #### csi plugin name: `blob.csi.azure.com`
 
