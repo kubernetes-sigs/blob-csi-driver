@@ -92,7 +92,9 @@ spec:
   csi:
     driver: blob.csi.azure.com
     readOnly: false
-    volumeHandle: unique-volumeid  # make sure this volumeid is unique in the cluster
+    # make sure volumeid is unique for every identical storage blob container in the cluster
+    # character `#` is reserved for internal use and cannot be used in volumehandle
+    volumeHandle: unique-volumeid
     volumeAttributes:
       containerName: EXISTING_CONTAINER_NAME
     nodeStageSecretRef:
