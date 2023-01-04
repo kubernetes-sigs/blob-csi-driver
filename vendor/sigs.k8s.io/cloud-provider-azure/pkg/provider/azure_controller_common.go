@@ -100,6 +100,8 @@ type controllerCommon struct {
 	detachDiskMap sync.Map
 	// attach/detach disk rate limiter
 	diskOpRateLimiter flowcontrol.RateLimiter
+	// DisableUpdateCache whether disable update cache in disk attach/detach
+	DisableUpdateCache bool
 }
 
 // AttachDiskOptions attach disk options
@@ -261,9 +263,18 @@ func (c *controllerCommon) AttachDisk(ctx context.Context, async bool, diskName,
 	}
 	c.diskStateMap.Store(disk, "attaching")
 	defer c.diskStateMap.Delete(disk)
-	future, err := vmset.AttachDisk(ctx, nodeName, diskMap)
-	if future == nil {
-		return -1, fmt.Errorf("nil future was returned: %w", err)
+
+	defer func() {
+		// invalidate the cache if there is error in disk attach
+		if err != nil {
+			_ = vmset.DeleteCacheForNode(string(nodeName))
+		}
+	}()
+
+	var future *azure.Future
+	future, err = vmset.AttachDisk(ctx, nodeName, diskMap)
+	if err != nil {
+		return -1, err
 	}
 	// err will be handled by waitForUpdateResult below
 
@@ -286,7 +297,6 @@ func (c *controllerCommon) AttachDisk(ctx context.Context, async bool, diskName,
 // waitForUpdateResult handles asynchronous VM update operations and retries with backoff if OperationPreempted error is observed
 func (c *controllerCommon) waitForUpdateResult(ctx context.Context, vmset VMSet, nodeName types.NodeName, future *azure.Future, updateErr error) (err error) {
 	err = updateErr
-
 	if err == nil {
 		err = vmset.WaitForUpdateResult(ctx, future, nodeName, "attach_disk")
 	}
@@ -308,7 +318,6 @@ func (c *controllerCommon) waitForUpdateResult(ctx context.Context, vmset VMSet,
 	if err != nil && configAccepted(future) {
 		err = retry.NewPartialUpdateError(err.Error())
 	}
-
 	return
 }
 
@@ -423,6 +432,12 @@ func (c *controllerCommon) UpdateVM(ctx context.Context, nodeName types.NodeName
 	node := strings.ToLower(string(nodeName))
 	c.lockMap.LockEntry(node)
 	defer c.lockMap.UnlockEntry(node)
+
+	defer func() {
+		_ = vmset.DeleteCacheForNode(string(nodeName))
+	}()
+
+	klog.V(2).Infof("azureDisk - update: vm(%s)", nodeName)
 	return vmset.UpdateVM(ctx, nodeName)
 }
 
