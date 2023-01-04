@@ -316,8 +316,14 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	if createPrivateEndpoint {
-		setKeyValueInMap(parameters, serverNameField, fmt.Sprintf("%s.blob.%s", accountName, storageEndpointSuffix))
+	if createPrivateEndpoint && protocol == NFS {
+		// As for blobfuse/blobfuse2, serverName, i.e.,AZURE_STORAGE_BLOB_ENDPOINT env variable can't include
+		// "privatelink", issue: https://github.com/Azure/azure-storage-fuse/issues/1014
+		//
+		// And use public endpoint will be befine to blobfuse/blobfuse2, because it will be resolved to private endpoint
+		// by private dns zone, which includes CNAME record, documented here:
+		// https://learn.microsoft.com/en-us/azure/storage/common/storage-private-endpoints?toc=%2Fazure%2Fstorage%2Fblobs%2Ftoc.json&bc=%2Fazure%2Fstorage%2Fblobs%2Fbreadcrumb%2Ftoc.json#dns-changes-for-private-endpoints
+		setKeyValueInMap(parameters, serverNameField, fmt.Sprintf("%s.privatelink.blob.%s", accountName, storageEndpointSuffix))
 	}
 
 	accountOptions.Name = accountName
