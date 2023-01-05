@@ -77,7 +77,7 @@ integration-test: blob
 
 .PHONY: e2e-test
 e2e-test:
-	if [ ! -z "$(EXTERNAL_E2E_TEST_BLOBFUSE)" ] || [ ! -z "$(EXTERNAL_E2E_TEST_NFS)" ]; then \
+	if [ ! -z "$(EXTERNAL_E2E_TEST_BLOBFUSE)" ] || [ ! -z "$(EXTERNAL_E2E_TEST_BLOBFUSE_v2)" ] || [ ! -z "$(EXTERNAL_E2E_TEST_NFS)" ]; then \
 		bash ./test/external-e2e/run.sh;\
 	else \
 		go test -v -timeout=0 ./test/e2e ${GINKGO_FLAGS};\
