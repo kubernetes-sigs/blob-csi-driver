@@ -1,4 +1,4 @@
-## Set up CSI driver on AKS cluster
+## Install open source CSI driver on AKS cluster
 
  - Prerequisites
 
