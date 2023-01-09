@@ -708,4 +708,107 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		}
 		test.Run(cs, ns)
 	})
+
+	ginkgo.It("should be able to unmount blobfuse volume if volume is already deleted [blob.csi.azure.com]", func() {
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 1; done",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "10Gi",
+					MountOptions: []string{
+						"-o allow_other",
+						"--file-cache-timeout-in-seconds=120",
+						"--cancel-list-on-mount-seconds=0",
+					},
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+
+		test := testsuites.DynamicallyProvisionedVolumeUnmountTest{
+			CSIDriver: testDriver,
+			Driver:    blobDriver,
+			Pod:       pod,
+			PodCheck: &testsuites.PodExecCheck{
+				Cmd:            []string{"cat", "/mnt/test-1/data"},
+				ExpectedString: "hello world\n",
+			},
+			StorageClassParameters: map[string]string{
+				"skuName":  "Standard_LRS",
+				"protocol": "fuse",
+			},
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("should be able to unmount blobfuse2 volume if volume is already deleted [blob.csi.azure.com]", func() {
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 1; done",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "10Gi",
+					MountOptions: []string{
+						"-o allow_other",
+						"--virtual-directory=true", // blobfuse2 mount options
+					},
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+
+		test := testsuites.DynamicallyProvisionedVolumeUnmountTest{
+			CSIDriver: testDriver,
+			Driver:    blobDriver,
+			Pod:       pod,
+			PodCheck: &testsuites.PodExecCheck{
+				Cmd:            []string{"cat", "/mnt/test-1/data"},
+				ExpectedString: "hello world\n",
+			},
+			StorageClassParameters: map[string]string{
+				"skuName":  "Standard_LRS",
+				"protocol": "fuse2",
+			},
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("should be able to unmount NFS volume if volume is already deleted [blob.csi.azure.com]", func() {
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 1; done",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "10Gi",
+					MountOptions: []string{
+						"nconnect=8",
+					},
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+
+		test := testsuites.DynamicallyProvisionedVolumeUnmountTest{
+			CSIDriver: testDriver,
+			Driver:    blobDriver,
+			Pod:       pod,
+			PodCheck: &testsuites.PodExecCheck{
+				Cmd:            []string{"cat", "/mnt/test-1/data"},
+				ExpectedString: "hello world\n",
+			},
+			StorageClassParameters: map[string]string{
+				"skuName":          "Premium_LRS",
+				"protocol":         "nfs",
+				"mountPermissions": "0755",
+			},
+		}
+		test.Run(cs, ns)
+	})
 })
