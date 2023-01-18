@@ -108,3 +108,6 @@ blobfuse test --container-name=CONTAINER-NAME --tmp-path=/tmp/blobfuse -o allow_
 mkdir /tmp/test
 mount -t nfs -o sec=sys,vers=3,nolock accountname.blob.core.windows.net:/accountname/container-name /tmp/test
 ```
+
+### Tips
+ - [Errors when mounting an Azure Blob storage container](https://learn.microsoft.com/en-us/troubleshoot/azure/azure-kubernetes/mounting-azure-blob-storage-container-fail)
