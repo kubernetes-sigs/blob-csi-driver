@@ -109,5 +109,36 @@ mkdir /tmp/test
 mount -t nfs -o sec=sys,vers=3,nolock accountname.blob.core.windows.net:/accountname/container-name /tmp/test
 ```
 
+<details><summary>
+Get client-side logs on AKS Linux node if there is mount error 
+</summary>
+
+```console
+# get ama-logs pod which is running on the AKS Linux node
+kubectl get po -n kube-system -o wide | grep ama-logs
+# get blobfuse logs
+kubectl -n kube-system cp ama-logs-xxxx:/var/log/blobfuse.log /tmp/blobfuse.log
+# get blobfuse2 logs
+kubectl -n kube-system cp ama-logs-xxxx:/var/log/blobfuse2.log /tmp/blobfuse2.log
+```
+
+</details>
+
+<details><summary>
+Get client-side logs on Linux node if there is mount error 
+</summary>
+
+```console
+kubectl debug node/node-name --image=nginx
+# get blobfuse logs
+kubectl cp node-debugger-node-name-xxxx:/host/var/log/blobfuse.log /tmp/blobfuse.log
+# get blobfuse2 logs
+kubectl cp node-debugger-node-name-xxxx:/host/var/log/blobfuse2.log /tmp/blobfuse2.log
+#after log collected, delete the debug pod by:
+kubectl delete po node-debugger-node-name-xxxx
+```
+ 
+</details>
+
 ### Tips
  - [Errors when mounting an Azure Blob storage container](https://learn.microsoft.com/en-us/troubleshoot/azure/azure-kubernetes/mounting-azure-blob-storage-container-fail)
