@@ -35,8 +35,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
-	"sigs.k8s.io/cloud-provider-azure/pkg/auth"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
+	providerconfig "sigs.k8s.io/cloud-provider-azure/pkg/provider/config"
 )
 
 var (
@@ -185,7 +185,7 @@ func (d *Driver) initializeKvClient() (*kv.BaseClient, error) {
 func (d *Driver) getKeyvaultToken() (authorizer autorest.Authorizer, err error) {
 	env := d.cloud.Environment
 	kvEndPoint := strings.TrimSuffix(env.KeyVaultEndpoint, "/")
-	servicePrincipalToken, err := auth.GetServicePrincipalToken(&d.cloud.Config.AzureAuthConfig, &env, kvEndPoint)
+	servicePrincipalToken, err := providerconfig.GetServicePrincipalToken(&d.cloud.Config.AzureAuthConfig, &env, kvEndPoint)
 	if err != nil {
 		return nil, err
 	}

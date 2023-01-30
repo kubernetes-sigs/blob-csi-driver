@@ -23,6 +23,8 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 	"github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -92,12 +94,12 @@ func (t *PreProvisionedSASTokenTest) Run(client clientset.Interface, namespace *
 func GenerateSASToken(accountName, accountKey string) string {
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	framework.ExpectNoError(err)
-	serviceClient, err := azblob.NewServiceClientWithSharedKey(fmt.Sprintf("https://%s.blob.core.windows.net/", accountName), credential, nil)
+	serviceClient, err := service.NewClientWithSharedKeyCredential(fmt.Sprintf("https://%s.blob.core.windows.net/", accountName), credential, nil)
 	framework.ExpectNoError(err)
 	sasURL, err := serviceClient.GetSASURL(
-		azblob.AccountSASResourceTypes{Object: true, Service: true, Container: true},
-		azblob.AccountSASPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true},
-		time.Now(), time.Now().Add(10*time.Hour))
+		sas.AccountResourceTypes{Object: true, Service: true, Container: true},
+		sas.AccountPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true},
+		sas.AccountServices{Blob: true}, time.Now(), time.Now().Add(10*time.Hour))
 	framework.ExpectNoError(err)
 	u, err := url.Parse(sasURL)
 	framework.ExpectNoError(err)
