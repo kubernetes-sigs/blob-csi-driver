@@ -106,7 +106,7 @@ blobfuse test --container-name=CONTAINER-NAME --tmp-path=/tmp/blobfuse -o allow_
  
 ```console
 mkdir /tmp/test
-mount -t nfs -o sec=sys,vers=3,nolock accountname.blob.core.windows.net:/accountname/container-name /tmp/test
+mount -v -t nfs -o sec=sys,vers=3,nolock accountname.blob.core.windows.net:/accountname/container-name /tmp/test
 ```
 
 <details><summary>
