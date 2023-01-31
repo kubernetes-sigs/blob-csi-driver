@@ -24,15 +24,14 @@ import (
 	"strings"
 	"testing"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"k8s.io/utils/pointer"
-
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"k8s.io/utils/pointer"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/blobclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 	"sigs.k8s.io/cloud-provider-azure/pkg/retry"
@@ -46,6 +45,8 @@ const (
 	CUSTOM
 	NULL
 )
+
+var _ blobclient.Interface = &mockBlobClient{}
 
 // mock blobclient that returns the errortype for create/delete/get operations (default value nil)
 type mockBlobClient struct {
@@ -90,7 +91,15 @@ func (c *mockBlobClient) GetContainer(ctx context.Context, subsID, resourceGroup
 	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
 
-func newMockBlobClient(errorType *errType, custom *string, conProp *storage.ContainerProperties) *mockBlobClient {
+func (c *mockBlobClient) GetServiceProperties(ctx context.Context, subsID, resourceGroupName, accountName string) (storage.BlobServiceProperties, error) {
+	return storage.BlobServiceProperties{}, nil
+}
+
+func (c *mockBlobClient) SetServiceProperties(ctx context.Context, subsID, resourceGroupName, accountName string, parameters storage.BlobServiceProperties) (storage.BlobServiceProperties, error) {
+	return storage.BlobServiceProperties{}, nil
+}
+
+func newMockBlobClient(errorType *errType, custom *string, conProp *storage.ContainerProperties) blobclient.Interface {
 	return &mockBlobClient{errorType: errorType, custom: custom, conProp: conProp}
 }
 
@@ -1350,5 +1359,54 @@ func TestDeleteBlobContainer(t *testing.T) {
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
+	}
+}
+
+func Test_parseDays(t *testing.T) {
+	type args struct {
+		dayStr string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    int32
+		wantErr bool
+	}{
+		{
+			name: "empty string",
+			args: args{
+				dayStr: "",
+			},
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name: "out of range",
+			args: args{
+				dayStr: "366",
+			},
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name: "ok",
+			args: args{
+				dayStr: "365",
+			},
+			want:    365,
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := parseDays(tt.args.dayStr)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseDays() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("parseDays() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

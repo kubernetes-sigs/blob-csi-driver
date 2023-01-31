@@ -73,9 +73,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		parameters = make(map[string]string)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
-	var isHnsEnabled, requireInfraEncryption *bool
+	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning *bool
 	var vnetResourceGroup, vnetName, subnetName, accessTier, networkEndpointType, storageEndpointSuffix string
 	var matchTags, useDataPlaneAPI bool
+	var softDeleteBlobs, softDeleteContainers int32
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := pointer.Bool(false)
 
@@ -118,6 +119,20 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			if strings.EqualFold(v, trueValue) {
 				isHnsEnabled = pointer.Bool(true)
 			}
+		case softDeleteBlobsField:
+			days, err := parseDays(v)
+			if err != nil {
+				return nil, err
+			}
+			softDeleteBlobs = days
+		case softDeleteContainersField:
+			days, err := parseDays(v)
+			if err != nil {
+				return nil, err
+			}
+			softDeleteContainers = days
+		case enableBlobVersioningField:
+			enableBlobVersioning = pointer.Bool(strings.EqualFold(v, trueValue))
 		case storeAccountKeyField:
 			if strings.EqualFold(v, falseValue) {
 				storeAccountKey = false
@@ -162,6 +177,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			useDataPlaneAPI = strings.EqualFold(v, trueValue)
 		default:
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", k))
+		}
+	}
+
+	if pointer.BoolDeref(enableBlobVersioning, false) {
+		if protocol == NFS || pointer.BoolDeref(isHnsEnabled, false) {
+			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("enableBlobVersioning is not supported for NFS protocol or HNS enabled account"))
 		}
 	}
 
@@ -278,6 +299,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		CreatePrivateEndpoint:           createPrivateEndpoint,
 		StorageType:                     provider.StorageTypeBlob,
 		StorageEndpointSuffix:           storageEndpointSuffix,
+		EnableBlobVersioning:            enableBlobVersioning,
+		SoftDeleteBlobs:                 softDeleteBlobs,
+		SoftDeleteContainers:            softDeleteContainers,
 	}
 
 	var accountKey string
@@ -654,4 +678,16 @@ func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) error {
 		}
 	}
 	return nil
+}
+
+func parseDays(dayStr string) (int32, error) {
+	days, err := strconv.Atoi(dayStr)
+	if err != nil {
+		return 0, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s:%s in storage class", softDeleteBlobsField, dayStr))
+	}
+	if days <= 0 || days > 365 {
+		return 0, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s:%s in storage class, should be in range [1, 365]", softDeleteBlobsField, dayStr))
+	}
+
+	return int32(days), nil
 }
