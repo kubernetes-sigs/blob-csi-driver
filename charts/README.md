@@ -5,6 +5,7 @@
 
 ### Tips
  - configure with [blobfuse-proxy](../deploy/blobfuse-proxy) to make blobfuse mount still available after driver restart
+ > note: [blobfuse-proxy](../deploy/blobfuse-proxy) is only available on **debian** OS based agent node (not available on OpenShift)
    - specify `node.enableBlobfuseProxy=true` together with [blobfuse-proxy](../deploy/blobfuse-proxy)
  - run controller on control plane node: `--set controller.runOnControlPlane=true`
  - set replica of controller as `1`: `--set controller.replicas=1`
