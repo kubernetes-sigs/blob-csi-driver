@@ -45,8 +45,10 @@ This option does not depend on cloud provider config file, supports cross subscr
 >
  - install by [helm charts](./charts)
  - install by [kubectl](./docs/install-blob-csi-driver.md)
- - install open source csi driver on AKS, follow guide [here](./docs/install-driver-on-aks.md)
- - install managed csi driver on following platforms:
+ - install open source CSI driver on following platforms:
+   - [AKS](./docs/install-driver-on-aks.md)
+   - [Azure RedHat OpenShift](https://github.com/ezYakaEagle442/aro-pub-storage/blob/master/setup-store-CSI-driver-azure-blob.md)
+ - install managed CSI driver on following platforms:
    - [AKS](https://learn.microsoft.com/en-us/azure/aks/azure-blob-csi)
    - [Azure RedHat OpenShift](https://github.com/ezYakaEagle442/aro-pub-storage/blob/master/setup-store-CSI-driver-azure-blob.md)
 
