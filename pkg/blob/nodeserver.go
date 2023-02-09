@@ -312,7 +312,11 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		if err := wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
 			return true, d.mounter.MountSensitive(source, targetPath, NFS, mountOptions, []string{})
 		}); err != nil {
-			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with %v", volumeID, source, targetPath, err))
+			var helpLinkMsg string
+			if d.appendMountErrorHelpLink {
+				helpLinkMsg = fmt.Sprintf("\nPlease refer to http://aka.ms/blobmounterror for possible causes and solutions for mount errors.")
+			}
+			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with %v%s", volumeID, source, targetPath, err, helpLinkMsg))
 		}
 
 		if performChmodOp {
@@ -367,7 +371,11 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	if err != nil {
-		err = status.Errorf(codes.Internal, "Mount failed with error: %v, output: %v", err, output)
+		var helpLinkMsg string
+		if d.appendMountErrorHelpLink {
+			helpLinkMsg = fmt.Sprintf("\nPlease refer to http://aka.ms/blobmounterror for possible causes and solutions for mount errors.")
+		}
+		err = status.Errorf(codes.Internal, "Mount failed with error: %v, output: %v%s", err, output, helpLinkMsg)
 		klog.Errorf("%v", err)
 		notMnt, mntErr := d.mounter.IsLikelyNotMountPoint(targetPath)
 		if mntErr != nil {
