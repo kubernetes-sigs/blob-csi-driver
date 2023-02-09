@@ -141,4 +141,4 @@ kubectl delete po node-debugger-node-name-xxxx
 </details>
 
 ### Tips
- - [Errors when mounting an Azure Blob storage container](https://learn.microsoft.com/en-us/troubleshoot/azure/azure-kubernetes/mounting-azure-blob-storage-container-fail)
+ - [Troubleshoot Azure Blob storage mount issues on AKS](http://aka.ms/blobmounterror)
