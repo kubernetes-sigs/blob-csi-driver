@@ -114,6 +114,7 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
    - blobfuse cache is on `/mnt` directory by default, `/mnt` is mounted on temp disk if VM sku provides temp disk, `/mnt` is mounted on os disk if VM sku does not provide temp disk
    - with blobfuse-proxy deployment (default on AKS), user could set `--tmp-path=` mount option to specify a different cache directory
  - [Mount an azure blob storage with a dedicated user-assigned managed identity](https://github.com/qxsch/Azure-Aks/tree/master/aks-blobfuse-mi)
+ - [Blobfuse Performance and caching](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#performance-and-caching)
 
 #### `containerName` parameter supports following pv/pvc metadata conversion
 > if `containerName` value contains following strings, it would be converted into corresponding pv/pvc name or namespace
