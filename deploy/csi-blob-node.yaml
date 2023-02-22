@@ -119,7 +119,6 @@ spec:
             - "--enable-blobfuse-proxy=false"
             - "--blobfuse-proxy-endpoint=$(BLOBFUSE_PROXY_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
-            - "--metrics-address=0.0.0.0:29635"
             - "--user-agent-suffix=OSS-kubectl"
           ports:
             - containerPort: 29633
