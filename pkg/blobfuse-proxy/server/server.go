@@ -71,6 +71,9 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 	if protocol == blob.Fuse2 || server.blobfuseVersion == BlobfuseV2 {
 		klog.V(2).Infof("using blobfuse V2 to mount")
 		args = "mount " + args
+		// add this arg for blobfuse2 to solve the issue:
+		// https://github.com/Azure/azure-storage-fuse/issues/1015
+		args = args + " " + "--ignore-open-flags=true"
 		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
 	} else {
 		klog.V(2).Infof("using blobfuse V1 to mount")
