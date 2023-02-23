@@ -120,7 +120,6 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.allowEmptyCloudConfig`                          | Whether allow running node driver without cloud config          | `true`
 | `node.allowInlineVolumeKeyAccessWithIdentity`         | Whether allow accessing storage account key using cluster identity for inline volume          | `false`
 | `node.maxUnavailable`                                 | `maxUnavailable` value of driver node daemonset       | `1`
-| `node.metricsPort`                                    | metrics port of csi-blob-node                         | `29635`                                                          |
 | `node.livenessProbe.healthPort `                      | health check port for liveness probe                  | `29633` |
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
 | `node.mountPermissions`                               | mounted folder permissions (only applies for NFS)                 | `0777`
