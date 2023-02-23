@@ -74,6 +74,7 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 		// add this arg for blobfuse2 to solve the issue:
 		// https://github.com/Azure/azure-storage-fuse/issues/1015
 		if !strings.Contains(args, "--ignore-open-flags") {
+			klog.V(2).Infof("append --ignore-open-flags=true to mount args")
 			args = args + " " + "--ignore-open-flags=true"
 		}
 		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
