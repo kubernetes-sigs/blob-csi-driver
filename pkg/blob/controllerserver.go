@@ -182,7 +182,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 
 	if pointer.BoolDeref(enableBlobVersioning, false) {
 		if protocol == NFS || pointer.BoolDeref(isHnsEnabled, false) {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("enableBlobVersioning is not supported for NFS protocol or HNS enabled account"))
+			return nil, status.Errorf(codes.InvalidArgument, "enableBlobVersioning is not supported for NFS protocol or HNS enabled account")
 		}
 	}
 
