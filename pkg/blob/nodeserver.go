@@ -314,7 +314,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		}); err != nil {
 			var helpLinkMsg string
 			if d.appendMountErrorHelpLink {
-				helpLinkMsg = fmt.Sprintf("\nPlease refer to http://aka.ms/blobmounterror for possible causes and solutions for mount errors.")
+				helpLinkMsg = "\nPlease refer to http://aka.ms/blobmounterror for possible causes and solutions for mount errors."
 			}
 			return nil, status.Error(codes.Internal, fmt.Sprintf("volume(%s) mount %q on %q failed with %v%s", volumeID, source, targetPath, err, helpLinkMsg))
 		}
@@ -373,7 +373,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	if err != nil {
 		var helpLinkMsg string
 		if d.appendMountErrorHelpLink {
-			helpLinkMsg = fmt.Sprintf("\nPlease refer to http://aka.ms/blobmounterror for possible causes and solutions for mount errors.")
+			helpLinkMsg = "\nPlease refer to http://aka.ms/blobmounterror for possible causes and solutions for mount errors."
 		}
 		err = status.Errorf(codes.Internal, "Mount failed with error: %v, output: %v%s", err, output, helpLinkMsg)
 		klog.Errorf("%v", err)
