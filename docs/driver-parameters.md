@@ -115,6 +115,7 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
    - with blobfuse-proxy deployment (default on AKS), user could set `--tmp-path=` mount option to specify a different cache directory
  - [Mount an azure blob storage with a dedicated user-assigned managed identity](https://github.com/qxsch/Azure-Aks/tree/master/aks-blobfuse-mi)
  - [Blobfuse Performance and caching](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#performance-and-caching)
+ - [Blobfuse CLI Flag Options v1 & v2](https://github.com/Azure/azure-storage-fuse/blob/main/MIGRATION.md#blobfuse-cli-flag-options)
 
 #### `containerName` parameter supports following pv/pvc metadata conversion
 > if `containerName` value contains following strings, it would be converted into corresponding pv/pvc name or namespace
