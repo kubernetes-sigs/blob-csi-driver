@@ -372,6 +372,8 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		switch strings.ToLower(k) {
 		case subscriptionIDField:
 			subsID = v
+		case resourceGroupField:
+			rgName = v
 		case containerNameField:
 			containerName = v
 		case keyVaultURLField:
