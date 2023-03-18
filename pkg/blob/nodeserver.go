@@ -181,7 +181,11 @@ func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv
 	cmd.Env = append(os.Environ(), authEnv...)
 	output, err := cmd.CombinedOutput()
 	klog.V(2).Infof("mount output: %s\n", string(output))
-
+	if err == nil && protocol == Fuse2 {
+		// todo: remove this when https://github.com/Azure/azure-storage-fuse/issues/1079 is fixed
+		klog.V(2).Infof("sleep 2s, waiting for blobfuse2 mount complete")
+		time.Sleep(2 * time.Second)
+	}
 	return string(output), err
 }
 
