@@ -2,7 +2,7 @@ image:
   baseRepo: mcr.microsoft.com
   blob:
     repository: /oss/kubernetes-csi/blob-csi
-    tag: v1.19.0
+    tag: v1.20.1
     pullPolicy: IfNotPresent
   csiProvisioner:
     repository: /oss/kubernetes-csi/csi-provisioner
@@ -111,7 +111,6 @@ node:
   allowEmptyCloudConfig: true
   allowInlineVolumeKeyAccessWithIdentity: false
   maxUnavailable: 1
-  metricsPort: 29635
   livenessProbe:
     healthPort: 29633
   logLevel: 5
