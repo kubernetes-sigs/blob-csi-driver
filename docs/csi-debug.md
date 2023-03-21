@@ -38,6 +38,10 @@ kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 > ```console
 > kubectl logs daemonset/csi-blob-node -c blob -n kube-system -f
 > ```
+> get blobfuse-proxy logs on the node
+> ```console
+> journalctl -u blobfuse-proxy -l
+> ```
 
  - check blobfuse mount inside driver
 ```console
