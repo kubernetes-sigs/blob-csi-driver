@@ -146,12 +146,12 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 }
 
 func (d *Driver) mountBlobfuseWithProxy(args string, protocol string, authEnv []string) (string, error) {
-	klog.V(2).Infof("mouting using blobfuse proxy")
 	var resp *mount_azure_blob.MountAzureBlobResponse
 	var output string
 	connectionTimout := time.Duration(d.blobfuseProxyConnTimout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), connectionTimout)
 	defer cancel()
+	klog.V(2).Infof("start connecting to blobfuse proxy, protocol: %s, args: %s", protocol, args)
 	conn, err := grpc.DialContext(ctx, d.blobfuseProxyEndpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err == nil {
 		mountClient := NewMountClient(conn)
@@ -160,7 +160,7 @@ func (d *Driver) mountBlobfuseWithProxy(args string, protocol string, authEnv []
 			Protocol:  protocol,
 			AuthEnv:   authEnv,
 		}
-		klog.V(2).Infof("calling BlobfuseProxy: MountAzureBlob function")
+		klog.V(2).Infof("begin to mount with blobfuse proxy, protocol: %s, args: %s", protocol, args)
 		resp, err = mountClient.service.MountAzureBlob(context.TODO(), &mountreq)
 		if err != nil {
 			klog.Error("GRPC call returned with an error:", err)
@@ -173,15 +173,16 @@ func (d *Driver) mountBlobfuseWithProxy(args string, protocol string, authEnv []
 func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv []string) (string, error) {
 	var cmd *exec.Cmd
 
-	klog.V(2).Infof("mounting blobfuse inside driver")
+	mountLog := "mount inside driver with"
 	if protocol == Fuse2 {
-		klog.V(2).Infof("using blobfuse V2 to mount")
+		mountLog += " v2"
 		args = "mount " + args
 		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
 	} else {
-		klog.V(2).Infof("using blobfuse V1 to mount")
+		mountLog += " v1"
 		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
 	}
+	klog.V(2).Infof("%s, protocol: %s, args: %s", mountLog, protocol, args)
 
 	cmd.Env = append(os.Environ(), authEnv...)
 	output, err := cmd.CombinedOutput()
