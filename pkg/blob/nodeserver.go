@@ -46,6 +46,11 @@ import (
 	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
 )
 
+const (
+	waitForMountInterval = 20 * time.Millisecond
+	waitForMountTimeout  = 3 * time.Second
+)
+
 type MountClient struct {
 	service mount_azure_blob.MountServiceClient
 }
@@ -181,11 +186,7 @@ func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv
 	cmd.Env = append(os.Environ(), authEnv...)
 	output, err := cmd.CombinedOutput()
 	klog.V(2).Infof("mount output: %s\n", string(output))
-	if err == nil && protocol == Fuse2 {
-		// todo: remove this when https://github.com/Azure/azure-storage-fuse/issues/1079 is fixed
-		klog.V(2).Infof("sleep 2s, waiting for blobfuse2 mount complete")
-		time.Sleep(2 * time.Second)
-	}
+
 	return string(output), err
 }
 
@@ -406,6 +407,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, err
 	}
 
+	// wait a few seconds to make sure blobfuse mount is successful
+	// please refer to https://github.com/Azure/azure-storage-fuse/pull/1088 for more details
+	if err := waitForMount(targetPath, waitForMountInterval, waitForMountTimeout); err != nil {
+		return nil, fmt.Errorf("failed to wait for mount: %w", err)
+	}
+
 	klog.V(2).Infof("volume(%s) mount on %q succeeded", volumeID, targetPath)
 	return &csi.NodeStageVolumeResponse{}, nil
 }
@@ -574,4 +581,25 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode) (bool, error)
 		return !notMnt, err
 	}
 	return !notMnt, nil
+}
+
+func waitForMount(path string, intervel, timeout time.Duration) error {
+	timeAfter := time.After(timeout)
+	timeTick := time.Tick(intervel)
+
+	for {
+		select {
+		case <-timeTick:
+			notMount, err := mount.New("").IsLikelyNotMountPoint(path)
+			if err != nil {
+				return err
+			}
+			if !notMount {
+				klog.V(2).Infof("blobfuse mount at %s success", path)
+				return nil
+			}
+		case <-timeAfter:
+			return fmt.Errorf("timeout waiting for mount %s", path)
+		}
+	}
 }
