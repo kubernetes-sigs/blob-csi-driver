@@ -65,12 +65,11 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 	args := req.GetMountArgs()
 	authEnv := req.GetAuthEnv()
 	protocol := req.GetProtocol()
-	klog.V(2).Infof("received mount request: Protocol: %s, server default blobfuseVersion: %v, Mounting with args %v \n", protocol, server.blobfuseVersion, args)
+	klog.V(2).Infof("received mount request: protocol: %s, server default blobfuseVersion: %v, mount args %v \n", protocol, server.blobfuseVersion, args)
 
 	var cmd *exec.Cmd
 	var result mount_azure_blob.MountAzureBlobResponse
 	if protocol == blob.Fuse2 || server.blobfuseVersion == BlobfuseV2 {
-		klog.V(2).Infof("using blobfuse V2 to mount")
 		args = "mount " + args
 		// add this arg for blobfuse2 to solve the issue:
 		// https://github.com/Azure/azure-storage-fuse/issues/1015
@@ -78,9 +77,10 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 			klog.V(2).Infof("append --ignore-open-flags=true to mount args")
 			args = args + " " + "--ignore-open-flags=true"
 		}
+		klog.V(2).Infof("mount with v2, protocol: %s, args: %s", protocol, args)
 		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
 	} else {
-		klog.V(2).Infof("using blobfuse V1 to mount")
+		klog.V(2).Infof("mount with v1, protocol: %s, args: %s", protocol, args)
 		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
 	}
 
