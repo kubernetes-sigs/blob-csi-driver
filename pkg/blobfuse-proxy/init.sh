@@ -25,13 +25,35 @@ READ_AHEAD_KB=${READ_AHEAD_KB:-15380}
 
 HOST_CMD="nsenter --mount=/proc/1/ns/mnt"
 
-# install/update blobfuse
-if [ "${INSTALL_BLOBFUSE}" = "true" ]
+if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
   cp /blobfuse-proxy/packages-microsoft-prod.deb /host/etc/
-  yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && \
-  $HOST_CMD apt update && \
-  $HOST_CMD apt-get install -y fuse blobfuse2 blobfuse="${BLOBFUSE_VERSION}" && \
+  yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt update
+
+  # install/update blobfuse
+  if [ "${INSTALL_BLOBFUSE}" = "true" ]
+  then
+    # install blobfuse with latest version or specific version
+    if [ -z "${BLOBFUSE_VERSION}" ]; then
+      echo "install blobfuse with latest version"
+      yes | $HOST_CMD apt-get install -y fuse blobfuse
+    else
+      yes | $HOST_CMD apt-get install -y fuse blobfuse="${BLOBFUSE_VERSION}"
+    fi
+  fi
+
+  # install/update blobfuse2
+  if [ "${INSTALL_BLOBFUSE2}" = "true" ]
+  then
+    # install blobfuse2 with latest version or specific version
+    if [ -z "${BLOBFUSE2_VERSION}" ]; then
+      echo "install blobfuse2 with latest version"
+      yes | $HOST_CMD apt-get install -y fuse3 blobfuse2
+    else
+      yes | $HOST_CMD apt-get install -y fuse3 blobfuse2="${BLOBFUSE2_VERSION}"
+    fi
+  fi
+
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
