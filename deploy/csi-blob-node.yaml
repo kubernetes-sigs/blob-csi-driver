@@ -46,12 +46,16 @@ spec:
           env:
             - name: DEBIAN_FRONTEND
               value: "noninteractive"
-            - name: INSTALL_BLOBFUSE
-              value: "true"
             - name: INSTALL_BLOBFUSE_PROXY
               value: "true"
+            - name: INSTALL_BLOBFUSE
+              value: "false"
             - name: BLOBFUSE_VERSION
-              value: 1.4.5
+              value: ""
+            - name: INSTALL_BLOBFUSE2
+              value: "true"
+            - name: BLOBFUSE2_VERSION
+              value: ""
             - name: SET_MAX_OPEN_FILE_NUM
               value: "true"
             - name: MAX_FILE_NUM

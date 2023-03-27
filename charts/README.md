@@ -124,8 +124,10 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
 | `node.mountPermissions`                               | mounted folder permissions (only applies for NFS)                 | `0777`
 | `node.enableBlobfuseProxy`                            | enable blobfuse-proxy on agent node                           | `false`                                                          |
-| `node.blobfuseProxy.installBlobfuse`                  | whether install blobfuse on agent node| `true`                                                          |
-| `node.blobfuseProxy.blobfuseVersion`                  | installed blobfuse version on agent node| `1.4.2`                                                          |
+| `node.blobfuseProxy.installBlobfuse`                  | whether blobfuse should be installed on agent node| `false`                                                          |
+| `node.blobfuseProxy.blobfuseVersion`                  | installed blobfuse version on agent node (if the value is empty, it means that the latest version should be installed.) | ``                                                          |
+| `node.blobfuseProxy.installBlobfuse2`                 | whether blobfuse2 should be installed on agent node| `true`                                                          |
+| `node.blobfuseProxy.blobfuse2Version`                 | installed blobfuse2 version on agent node (if the value is empty, it means that the latest version should be installed.) | ``
 | `node.blobfuseProxy.setMaxOpenFileNum`                | whether set max open file num on agent node| `true`                                                          |
 | `node.blobfuseProxy.maxOpenFileNum`                   | max open file num on agent node| `9000000`                                                          |
 | `node.blobfuseProxy.disableUpdateDB`                  | whether disable updateDB on blobfuse (saving storage account list usage) | `true`                                                          |

@@ -28,6 +28,8 @@ HOST_CMD="nsenter --mount=/proc/1/ns/mnt"
 if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
   cp /blobfuse-proxy/packages-microsoft-prod.deb /host/etc/
+  # when running dpkg -i /etc/packages-microsoft-prod.deb, need to enter y to continue. 
+  # refer to https://stackoverflow.com/questions/45349571/how-to-install-deb-with-dpkg-non-interactively
   yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt update
 
   # install/update blobfuse
@@ -36,9 +38,9 @@ then
     # install blobfuse with latest version or specific version
     if [ -z "${BLOBFUSE_VERSION}" ]; then
       echo "install blobfuse with latest version"
-      yes | $HOST_CMD apt-get install -y fuse blobfuse
+      $HOST_CMD apt-get install -y fuse blobfuse
     else
-      yes | $HOST_CMD apt-get install -y fuse blobfuse="${BLOBFUSE_VERSION}"
+      $HOST_CMD apt-get install -y fuse blobfuse="${BLOBFUSE_VERSION}"
     fi
   fi
 
@@ -48,9 +50,9 @@ then
     # install blobfuse2 with latest version or specific version
     if [ -z "${BLOBFUSE2_VERSION}" ]; then
       echo "install blobfuse2 with latest version"
-      yes | $HOST_CMD apt-get install -y fuse3 blobfuse2
+      $HOST_CMD apt-get install -y blobfuse2
     else
-      yes | $HOST_CMD apt-get install -y fuse3 blobfuse2="${BLOBFUSE2_VERSION}"
+      $HOST_CMD apt-get install -y blobfuse2="${BLOBFUSE2_VERSION}"
     fi
   fi
 
