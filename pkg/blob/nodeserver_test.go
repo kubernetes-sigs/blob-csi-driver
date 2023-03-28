@@ -24,8 +24,10 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -753,4 +755,60 @@ func TestMountBlobfuseInsideDriver(t *testing.T) {
 	_, err := d.mountBlobfuseInsideDriver(args, Fuse, authEnv)
 	// the error should be of type exec.ExitError
 	assert.NotNil(t, err)
+}
+
+func Test_waitForMount(t *testing.T) {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		t.Skip("Skipping test on ", runtime.GOOS)
+	}
+
+	tmpDir, err := os.MkdirTemp("", "")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	type args struct {
+		path     string
+		intervel time.Duration
+		timeout  time.Duration
+	}
+
+	tests := []struct {
+		name      string
+		args      args
+		wantErr   bool
+		subErrMsg string
+	}{
+		{
+			name: "test error timeout",
+			args: args{
+				path:     tmpDir,
+				intervel: 1 * time.Millisecond,
+				timeout:  10 * time.Millisecond,
+			},
+			wantErr:   true,
+			subErrMsg: "timeout",
+		},
+		{
+			name: "test error no such file or directory",
+			args: args{
+				path:     "/no/such/file/or/directory",
+				intervel: 1 * time.Millisecond,
+				timeout:  10 * time.Millisecond,
+			},
+			wantErr:   true,
+			subErrMsg: "no such file or directory",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := waitForMount(tt.args.path, tt.args.intervel, tt.args.timeout)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("waitForMount() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil && !strings.Contains(err.Error(), tt.subErrMsg) {
+				t.Errorf("waitForMount() error = %v, wantErr %v", err, tt.subErrMsg)
+			}
+		})
+	}
 }
