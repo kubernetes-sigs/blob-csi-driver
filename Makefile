@@ -25,8 +25,8 @@ ifndef PUBLISH
 override IMAGE_VERSION := e2e-$(GIT_COMMIT)
 endif
 endif
-IMAGE_TAG ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
-IMAGE_TAG_LATEST = $(REGISTRY)/$(IMAGE_NAME):latest
+CSI_IMAGE_TAG ?= $(REGISTRY)/$(IMAGE_NAME):$(IMAGE_VERSION)
+CSI_IMAGE_TAG_LATEST = $(REGISTRY)/$(IMAGE_NAME):latest
 BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
 LDFLAGS ?= "-X ${PKG}/pkg/blob.driverVersion=${IMAGE_VERSION} -X ${PKG}/pkg/blob.gitCommit=${GIT_COMMIT} -X ${PKG}/pkg/blob.buildDate=${BUILD_DATE} -s -w -extldflags '-static'"
 E2E_HELM_OPTIONS ?= --set image.blob.pullPolicy=Always --set image.blob.repository=$(REGISTRY)/$(IMAGE_NAME) --set image.blob.tag=$(IMAGE_VERSION) --set driver.userAgentSuffix="e2e-test"
@@ -86,7 +86,7 @@ e2e-test:
 .PHONY: e2e-bootstrap
 e2e-bootstrap: install-helm
 	# Only build and push the image if it does not exist in the registry
-	docker pull $(IMAGE_TAG) || make blob-container push
+	docker pull $(CSI_IMAGE_TAG) || make blob-container push
 	helm install blob-csi-driver ./charts/latest/blob-csi-driver --namespace kube-system --wait --timeout=15m -v=5 --debug \
 		--set controller.replicas=1 \
 		--set cloud=$(CLOUD) \
@@ -114,13 +114,13 @@ blob-darwin:
 
 .PHONY: container
 container: blob
-	docker build -t $(IMAGE_TAG) --output=type=docker -f ./pkg/blobplugin/Dockerfile .
+	docker build -t $(CSI_IMAGE_TAG) --output=type=docker -f ./pkg/blobplugin/Dockerfile .
 
 .PHONY: container-linux
 container-linux:
 	docker buildx build --pull --output=type=$(OUTPUT_TYPE) --platform="linux/$(ARCH)" \
 		--provenance=false --sbom=false \
-		-t $(IMAGE_TAG)-linux-$(ARCH) --build-arg ARCH=$(ARCH) -f ./pkg/blobplugin/Dockerfile .
+		-t $(CSI_IMAGE_TAG)-linux-$(ARCH) --build-arg ARCH=$(ARCH) -f ./pkg/blobplugin/Dockerfile .
 
 .PHONY: blob-container
 blob-container:
@@ -142,27 +142,27 @@ endif
 .PHONY: push
 push:
 ifdef CI
-	docker manifest create --amend $(IMAGE_TAG) $(foreach osarch, $(ALL_OS_ARCH), $(IMAGE_TAG)-${osarch})
-	docker manifest push --purge $(IMAGE_TAG)
-	docker manifest inspect $(IMAGE_TAG)
+	docker manifest create --amend $(CSI_IMAGE_TAG) $(foreach osarch, $(ALL_OS_ARCH), $(CSI_IMAGE_TAG)-${osarch})
+	docker manifest push --purge $(CSI_IMAGE_TAG)
+	docker manifest inspect $(CSI_IMAGE_TAG)
 else
-	docker push $(IMAGE_TAG)
+	docker push $(CSI_IMAGE_TAG)
 endif
 
 .PHONY: push-latest
 push-latest:
 ifdef CI
-	docker manifest create --amend $(IMAGE_TAG_LATEST) $(foreach osarch, $(ALL_OS_ARCH), $(IMAGE_TAG)-${osarch})
-	docker manifest push --purge $(IMAGE_TAG_LATEST)
-	docker manifest inspect $(IMAGE_TAG_LATEST)
+	docker manifest create --amend $(CSI_IMAGE_TAG_LATEST) $(foreach osarch, $(ALL_OS_ARCH), $(CSI_IMAGE_TAG)-${osarch})
+	docker manifest push --purge $(CSI_IMAGE_TAG_LATEST)
+	docker manifest inspect $(CSI_IMAGE_TAG_LATEST)
 else
-	docker push $(IMAGE_TAG_LATEST)
+	docker push $(CSI_IMAGE_TAG_LATEST)
 endif
 
 .PHONY: build-push
 build-push: blob-container
-	docker tag $(IMAGE_TAG) $(IMAGE_TAG_LATEST)
-	docker push $(IMAGE_TAG_LATEST)
+	docker tag $(CSI_IMAGE_TAG) $(CSI_IMAGE_TAG_LATEST)
+	docker push $(CSI_IMAGE_TAG_LATEST)
 
 .PHONY: clean
 clean:
