@@ -17,7 +17,6 @@
 set -xe
 
 INSTALL_BLOBFUSE_PROXY=${INSTALL_BLOBFUSE_PROXY:-true}
-INSTALL_BLOBFUSE=${INSTALL_BLOBFUSE:-true}
 DISABLE_UPDATEDB=${DISABLE_UPDATEDB:-true}
 SET_MAX_OPEN_FILE_NUM=${SET_MAX_OPEN_FILE_NUM:-true}
 SET_READ_AHEAD_SIZE=${SET_READ_AHEAD_SIZE:-true}
@@ -32,30 +31,40 @@ then
   # refer to https://stackoverflow.com/questions/45349571/how-to-install-deb-with-dpkg-non-interactively
   yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt update
 
-  # install/update blobfuse
+  pkg_list=""
   if [ "${INSTALL_BLOBFUSE}" = "true" ]
   then
+    pkg_list="${pkg_list} fuse"
     # install blobfuse with latest version or specific version
     if [ -z "${BLOBFUSE_VERSION}" ]; then
       echo "install blobfuse with latest version"
-      $HOST_CMD apt-get install -y fuse blobfuse
+      pkg_list="${pkg_list} blobfuse"
     else
-      $HOST_CMD apt-get install -y fuse blobfuse="${BLOBFUSE_VERSION}"
+      pkg_list="${pkg_list} blobfuse=${BLOBFUSE_VERSION}"
     fi
   fi
 
-  # install/update blobfuse2
   if [ "${INSTALL_BLOBFUSE2}" = "true" ]
   then
+    release=$($HOST_CMD lsb_release -rs)
+    if [ "$release" = "18.04" ]; then
+      echo "install fuse for blobfuse2"
+      pkg_list="${pkg_list} fuse"
+    else
+      echo "install fuse3 for blobfuse2, current release is $release"
+      pkg_list="${pkg_list} fuse3"
+    fi
+
     # install blobfuse2 with latest version or specific version
     if [ -z "${BLOBFUSE2_VERSION}" ]; then
       echo "install blobfuse2 with latest version"
-      $HOST_CMD apt-get install -y blobfuse2
+      pkg_list="${pkg_list} blobfuse2"
     else
-      $HOST_CMD apt-get install -y blobfuse2="${BLOBFUSE2_VERSION}"
+      pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
     fi
   fi
-
+  echo "begin to install ${pkg_list}"
+  $HOST_CMD apt-get install -y $pkg_list
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 

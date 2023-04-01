@@ -49,7 +49,7 @@ spec:
             - name: INSTALL_BLOBFUSE_PROXY
               value: "true"
             - name: INSTALL_BLOBFUSE
-              value: "false"
+              value: "true"
             - name: BLOBFUSE_VERSION
               value: ""
             - name: INSTALL_BLOBFUSE2

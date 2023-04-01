@@ -124,7 +124,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
 | `node.mountPermissions`                               | mounted folder permissions (only applies for NFS)                 | `0777`
 | `node.enableBlobfuseProxy`                            | enable blobfuse-proxy on agent node                           | `false`                                                          |
-| `node.blobfuseProxy.installBlobfuse`                  | whether blobfuse should be installed on agent node| `false`                                                          |
+| `node.blobfuseProxy.installBlobfuse`                  | whether blobfuse should be installed on agent node| `true`                                                          |
 | `node.blobfuseProxy.blobfuseVersion`                  | installed blobfuse version on agent node (if the value is empty, it means that the latest version should be installed.) | ``                                                          |
 | `node.blobfuseProxy.installBlobfuse2`                 | whether blobfuse2 should be installed on agent node| `true`                                                          |
 | `node.blobfuseProxy.blobfuse2Version`                 | installed blobfuse2 version on agent node (if the value is empty, it means that the latest version should be installed.) | ``

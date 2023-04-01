@@ -116,7 +116,7 @@ node:
   logLevel: 5
   enableBlobfuseProxy: false
   blobfuseProxy:
-    installBlobfuse: false
+    installBlobfuse: true
     blobfuseVersion: ""
     installBlobfuse2: true
     blobfuse2Version: ""
