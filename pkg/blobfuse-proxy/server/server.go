@@ -23,7 +23,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
@@ -95,11 +94,6 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 	klog.V(2).Infof("blobfuse output: %s\n", result.Output)
 	if err != nil {
 		return &result, fmt.Errorf("%w %s", err, result.Output)
-	}
-	if protocol == blob.Fuse2 || server.blobfuseVersion == BlobfuseV2 {
-		// todo: remove this when https://github.com/Azure/azure-storage-fuse/issues/1079 is fixed
-		klog.V(2).Infof("sleep 2s, waiting for blobfuse2 mount complete\n")
-		time.Sleep(2 * time.Second)
 	}
 	return &result, nil
 }
