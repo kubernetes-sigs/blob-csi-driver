@@ -145,7 +145,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
-func (d *Driver) mountBlobfuseWithProxy(args string, protocol string, authEnv []string) (string, error) {
+func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string) (string, error) {
 	var resp *mount_azure_blob.MountAzureBlobResponse
 	var output string
 	connectionTimout := time.Duration(d.blobfuseProxyConnTimout) * time.Second

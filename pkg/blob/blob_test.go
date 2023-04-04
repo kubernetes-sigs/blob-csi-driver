@@ -945,7 +945,7 @@ func TestSetAzureCredentials(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		result, err := setAzureCredentials(test.kubeClient, test.accountName, test.accountKey, test.secretNamespace)
+		result, err := setAzureCredentials(context.TODO(), test.kubeClient, test.accountName, test.accountKey, test.secretNamespace)
 		if result != test.expectedName || !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("desc: %s,\n input: kubeClient(%v), accountName(%v), accountKey(%v),\n setAzureCredentials result: %v, expectedName: %v err: %v, expectedErr: %v",
 				test.desc, test.kubeClient, test.accountName, test.accountKey, result, test.expectedName, err, test.expectedErr)
@@ -1047,7 +1047,7 @@ func TestGetStorageAccountFromSecret(t *testing.T) {
 				d.cloud.KubeClient = nil
 				secretName := "foo"
 				secretNamespace := "bar"
-				_, _, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				_, _, err := d.GetStorageAccountFromSecret(context.TODO(), secretName, secretNamespace)
 				expectedErr := fmt.Errorf("could not get account key from secret(%s): KubeClient is nil", secretName)
 				if assert.Error(t, err) {
 					assert.Equal(t, expectedErr, err)
@@ -1062,7 +1062,7 @@ func TestGetStorageAccountFromSecret(t *testing.T) {
 				d.cloud.KubeClient = fakeClient
 				secretName := ""
 				secretNamespace := ""
-				_, _, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				_, _, err := d.GetStorageAccountFromSecret(context.TODO(), secretName, secretNamespace)
 				// expectedErr := fmt.Errorf("could not get secret(%v): %w", secretName, err)
 				assert.Error(t, err) // could not check what type of error, needs fix
 				/*if assert.Error(t, err) {
@@ -1095,7 +1095,7 @@ func TestGetStorageAccountFromSecret(t *testing.T) {
 				if secretCreateErr != nil {
 					t.Error("failed to create secret")
 				}
-				an, ak, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				an, ak, err := d.GetStorageAccountFromSecret(context.TODO(), secretName, secretNamespace)
 				assert.Equal(t, accountName, an, "accountName's should match")
 				assert.Equal(t, accountKey, ak, "accountKey's should match")
 				assert.Equal(t, nil, err, "error should be nil")
