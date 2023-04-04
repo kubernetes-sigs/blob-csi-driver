@@ -19,17 +19,12 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
-	"os/exec"
-	"strings"
 	"time"
 
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
 	"sigs.k8s.io/blob-csi-driver/test/e2e/testsuites"
 
 	"github.com/onsi/ginkgo/v2"
-	"github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
@@ -57,9 +52,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 
 		cs = f.ClientSet
 		ns = f.Namespace
+		testDriver = driver.InitBlobCSIDriver()
 	})
 
-	testDriver = driver.InitBlobCSIDriver()
 	ginkgo.It("should create a volume on demand without saving storage account key", func() {
 		pods := []testsuites.PodDetails{
 			{
@@ -372,26 +367,30 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 	})
 
 	ginkgo.It("should create a volume on demand (Bring Your Own Key)", func() {
-		// get storage account secret name
-		err := os.Chdir("../..")
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		defer func() {
-			err := os.Chdir("test/e2e")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		}()
+		// create a volume
+		volName := fmt.Sprintf("byok-%d", ginkgo.GinkgoParallelProcess())
+		resp, err := blobDriver.CreateVolume(context.Background(), makeCreateVolumeReq(volName, ns.Name))
+		framework.ExpectNoError(err, "create volume error")
+		volumeID := resp.Volume.VolumeId
+		// get accountname and key
+		accountName, accountKey, _, _, err := blobDriver.GetStorageAccountAndContainer(context.Background(), volumeID, nil, nil)
+		framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volumeID, err))
+		// create secret
+		secretName := "byok-secret"
+		secretData := map[string]string{
+			"azurestorageaccountname": accountName,
+			"azurestorageaccountkey":  accountKey,
+		}
+		tsecret := testsuites.NewTestSecret(cs, ns, secretName, secretData)
+		tsecret.Create()
+		defer tsecret.Cleanup()
 
-		getSecretNameScript := "test/utils/get_storage_account_secret_name.sh"
-		log.Printf("run script: %s\n", getSecretNameScript)
-
-		cmd := exec.Command("bash", getSecretNameScript)
-		output, err := cmd.CombinedOutput()
-		log.Printf("got output: %v, error: %v\n", string(output), err)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-		secretName := strings.TrimSuffix(string(output), "\n")
-		log.Printf("got storage account secret name: %v\n", secretName)
-		bringKeyStorageClassParameters["csi.storage.k8s.io/provisioner-secret-name"] = secretName
-		bringKeyStorageClassParameters["csi.storage.k8s.io/node-stage-secret-name"] = secretName
+		var bringKeyStorageClassParameters = map[string]string{
+			"csi.storage.k8s.io/provisioner-secret-name":      secretName,
+			"csi.storage.k8s.io/node-stage-secret-name":       secretName,
+			"csi.storage.k8s.io/provisioner-secret-namespace": ns.Name,
+			"csi.storage.k8s.io/node-stage-secret-namespace":  ns.Name,
+		}
 
 		pods := []testsuites.PodDetails{
 			{
@@ -446,39 +445,23 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 	})
 
 	ginkgo.It("should create an CSI inline volume [blob.csi.azure.com]", func() {
-		// get storage account secret name
-		err := os.Chdir("../..")
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		defer func() {
-			err := os.Chdir("test/e2e")
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		}()
-
-		getSecretNameScript := "test/utils/get_storage_account_secret_name.sh"
-		log.Printf("run script: %s\n", getSecretNameScript)
-
-		cmd := exec.Command("bash", getSecretNameScript)
-		output, err := cmd.CombinedOutput()
-		log.Printf("got output: %v, error: %v\n", string(output), err)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-		secretName := strings.TrimSuffix(string(output), "\n")
-		log.Printf("got storage account secret name: %v\n", secretName)
-		segments := strings.Split(secretName, "-")
-		if len(segments) != 5 {
-			ginkgo.Fail(fmt.Sprintf("%s have %d elements, expected: %d ", secretName, len(segments), 5))
-		}
-		accountName := segments[3]
-
+		// create a volume
 		containerName := "csi-inline-blobfuse-volume"
-		req := makeCreateVolumeReq(containerName, ns.Name)
-		req.Parameters["storageAccount"] = accountName
-		resp, err := blobDriver.CreateVolume(context.Background(), req)
-		if err != nil {
-			ginkgo.Fail(fmt.Sprintf("create volume error: %v", err))
-		}
+		resp, err := blobDriver.CreateVolume(context.Background(), makeCreateVolumeReq(containerName, ns.Name))
+		framework.ExpectNoError(err, "create volume error")
 		volumeID := resp.Volume.VolumeId
-		ginkgo.By(fmt.Sprintf("Successfully provisioned Blobfuse volume: %q\n", volumeID))
+		// get accountname and key
+		accountName, accountKey, _, _, err := blobDriver.GetStorageAccountAndContainer(context.Background(), volumeID, nil, nil)
+		framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volumeID, err))
+		// create secret
+		secretName := "csi-inline-blobfuse-volume-secret"
+		secretData := map[string]string{
+			"azurestorageaccountname": accountName,
+			"azurestorageaccountkey":  accountKey,
+		}
+		tsecret := testsuites.NewTestSecret(cs, ns, secretName, secretData)
+		tsecret.Create()
+		defer tsecret.Cleanup()
 
 		pods := []testsuites.PodDetails{
 			{
@@ -607,7 +590,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	ginkgo.It("should create a private endpoint volume on demand", func() {
+	ginkgo.It("should create a private endpoint volume on demand", ginkgo.Serial, func() {
 		if isAzureStackCloud {
 			ginkgo.Skip("test case is not available for Azure Stack")
 		}
@@ -641,7 +624,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	ginkgo.It("should create a private endpoint volume on demand with protocol [fuse2]", func() {
+	ginkgo.It("should create a private endpoint volume on demand with protocol [fuse2]", ginkgo.Serial, func() {
 		if isAzureStackCloud {
 			ginkgo.Skip("test case is not available for Azure Stack")
 		}
@@ -675,7 +658,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(cs, ns)
 	})
 
-	ginkgo.It("should create a private endpoint volume on demand with protocol [nfs]", func() {
+	ginkgo.It("should create a private endpoint volume on demand with protocol [nfs]", ginkgo.Serial, func() {
 		if isAzureStackCloud {
 			ginkgo.Skip("test case is not available for Azure Stack")
 		}
@@ -807,6 +790,53 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"skuName":          "Premium_LRS",
 				"protocol":         "nfs",
 				"mountPermissions": "0755",
+			},
+		}
+		test.Run(cs, ns)
+	})
+
+	ginkgo.It("[blob.csi.azure.com] verify examples", ginkgo.Label("flaky"), func() {
+		createExampleDeployment := testCmd{
+			command:  "bash",
+			args:     []string{"hack/verify-examples.sh"},
+			startLog: "create example deployments",
+			endLog:   "example deployments created",
+		}
+		execTestCmd([]testCmd{createExampleDeployment})
+	})
+
+	ginkgo.It("volume mount is still valid after driver restart [blob.csi.azure.com]", ginkgo.Serial, func() {
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 3600; done",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "10Gi",
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+
+		podCheckCmd := []string{"cat", "/mnt/test-1/data"}
+		expectedString := "hello world\n"
+		test := testsuites.DynamicallyProvisionedRestartDriverTest{
+			CSIDriver: testDriver,
+			Pod:       pod,
+			PodCheck: &testsuites.PodExecCheck{
+				Cmd:            podCheckCmd,
+				ExpectedString: expectedString,
+			},
+			StorageClassParameters: make(map[string]string),
+			RestartDriverFunc: func() {
+				restartDriver := testCmd{
+					command:  "bash",
+					args:     []string{"test/utils/restart_driver_daemonset.sh"},
+					startLog: "Restart driver node daemonset ...",
+					endLog:   "Restart driver node daemonset done successfully",
+				}
+				execTestCmd([]testCmd{restartDriver})
 			},
 		}
 		test.Run(cs, ns)

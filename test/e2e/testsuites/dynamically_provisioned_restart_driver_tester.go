@@ -17,6 +17,9 @@ limitations under the License.
 package testsuites
 
 import (
+	"os"
+	"sync"
+
 	"github.com/onsi/ginkgo/v2"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -35,30 +38,72 @@ type DynamicallyProvisionedRestartDriverTest struct {
 }
 
 func (t *DynamicallyProvisionedRestartDriverTest) Run(client clientset.Interface, namespace *v1.Namespace) {
-	tDeployment, cleanup, _ := t.Pod.SetupDeployment(client, namespace, t.CSIDriver, t.StorageClassParameters)
-	// defer must be called here for resources not get removed before using them
-	for i := range cleanup {
-		defer cleanup[i]()
+	var wg, wgPodReady sync.WaitGroup
+	var restartCompleted = make(chan struct{})
+
+	var run = func() {
+		defer wg.Done()
+		defer ginkgo.GinkgoRecover()
+
+		tDeployment, cleanup, _ := t.Pod.SetupDeployment(client, namespace, t.CSIDriver, t.StorageClassParameters)
+		// defer must be called here for resources not get removed before using them
+		for i := range cleanup {
+			defer cleanup[i]()
+		}
+
+		ginkgo.By("creating the deployment for the pod")
+		tDeployment.Create()
+
+		ginkgo.By("checking that the pod is running")
+		tDeployment.WaitForPodReady()
+
+		if t.PodCheck != nil {
+			ginkgo.By("checking if pod is able to access volume")
+			tDeployment.PollForStringInPodsExec(t.PodCheck.Cmd, t.PodCheck.ExpectedString)
+		}
+		wgPodReady.Done()
+
+		<-restartCompleted
+		ginkgo.By("driver daemonset restarted, check if pod still has access to volume")
+		if t.PodCheck != nil {
+			ginkgo.By("checking if pod still has access to volume after driver restart")
+			tDeployment.PollForStringInPodsExec(t.PodCheck.Cmd, t.PodCheck.ExpectedString)
+		}
 	}
 
-	ginkgo.By("creating the deployment for the pod")
-	tDeployment.Create()
+	ginkgo.By("run for nfs")
+	t.StorageClassParameters["protocol"] = "nfs"
+	wg.Add(1)
+	wgPodReady.Add(1)
+	go run()
 
-	ginkgo.By("checking that the pod is running")
-	tDeployment.WaitForPodReady()
+	_, useBlobfuseProxy := os.LookupEnv("ENABLE_BLOBFUSE_PROXY")
+	if useBlobfuseProxy {
+		t.StorageClassParameters["skuName"] = "Standard_LRS"
 
-	if t.PodCheck != nil {
-		ginkgo.By("checking if pod is able to access volume")
-		tDeployment.PollForStringInPodsExec(t.PodCheck.Cmd, t.PodCheck.ExpectedString)
+		ginkgo.By("run for blobfuse")
+		t.StorageClassParameters["protocol"] = "fuse"
+		wg.Add(1)
+		wgPodReady.Add(1)
+		go run()
+
+		ginkgo.By("run for blobfuse2")
+		t.StorageClassParameters["protocol"] = "fuse2"
+		wg.Add(1)
+		wgPodReady.Add(1)
+		go run()
 	}
+
+	// wait for pod to be ready
+	wgPodReady.Wait()
 
 	// restart the driver
 	ginkgo.By("restarting the driver daemonset")
 	t.RestartDriverFunc()
 
-	// check if original pod could still access volume
-	if t.PodCheck != nil {
-		ginkgo.By("checking if pod still has access to volume after driver restart")
-		tDeployment.PollForStringInPodsExec(t.PodCheck.Cmd, t.PodCheck.ExpectedString)
-	}
+	// restart completed, notify all goroutine to continue checking
+	close(restartCompleted)
+
+	// wait for cleanup finish
+	wg.Wait()
 }

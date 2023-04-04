@@ -34,7 +34,6 @@ ifdef ENABLE_BLOBFUSE_PROXY
 override E2E_HELM_OPTIONS := $(E2E_HELM_OPTIONS) --set controller.logLevel=6 --set node.logLevel=6 --set node.enableBlobfuseProxy=true
 endif
 E2E_HELM_OPTIONS += ${EXTRA_HELM_OPTIONS}
-GINKGO_FLAGS = -ginkgo.v -ginkgo.timeout=2h
 GO111MODULE = on
 GOPATH ?= $(shell go env GOPATH)
 GOBIN ?= $(GOPATH)/bin
@@ -76,11 +75,11 @@ integration-test: blob
 	go test -v -timeout=30m ./test/integration
 
 .PHONY: e2e-test
-e2e-test:
+e2e-test: install-ginkgo
 	if [ ! -z "$(EXTERNAL_E2E_TEST_BLOBFUSE)" ] || [ ! -z "$(EXTERNAL_E2E_TEST_BLOBFUSE_v2)" ] || [ ! -z "$(EXTERNAL_E2E_TEST_NFS)" ]; then \
 		bash ./test/external-e2e/run.sh;\
 	else \
-		go test -v -timeout=0 ./test/e2e ${GINKGO_FLAGS};\
+		ginkgo -p -vv --fail-fast --output-interceptor-mode=none --flake-attempts 2 ./test/e2e -- --project-root=$(shell pwd);\
 	fi
 
 .PHONY: e2e-bootstrap
@@ -95,6 +94,10 @@ e2e-bootstrap: install-helm
 .PHONY: install-helm
 install-helm:
 	curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
+
+.PHONY: install-ginkgo
+install-ginkgo:
+	go install github.com/onsi/ginkgo/v2/ginkgo@v2.9.2
 
 .PHONY: e2e-teardown
 e2e-teardown:
