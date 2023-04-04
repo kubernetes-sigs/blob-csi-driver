@@ -33,6 +33,9 @@ spec:
                     values:
                       - virtual-kubelet
       priorityClassName: system-node-critical
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       tolerations:
         - operator: "Exists"
       initContainers:
