@@ -1033,7 +1033,7 @@ func TestGetStorageAccesskey(t *testing.T) {
 	}
 }
 
-func TestGetStorageAccountFromSecret(t *testing.T) {
+func TestGetInfoFromSecret(t *testing.T) {
 	fakeClient := fake.NewSimpleClientset()
 	testCases := []struct {
 		name     string
@@ -1047,7 +1047,7 @@ func TestGetStorageAccountFromSecret(t *testing.T) {
 				d.cloud.KubeClient = nil
 				secretName := "foo"
 				secretNamespace := "bar"
-				_, _, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				_, _, _, _, _, err := d.GetInfoFromSecret(context.TODO(), secretName, secretNamespace)
 				expectedErr := fmt.Errorf("could not get account key from secret(%s): KubeClient is nil", secretName)
 				if assert.Error(t, err) {
 					assert.Equal(t, expectedErr, err)
@@ -1062,7 +1062,7 @@ func TestGetStorageAccountFromSecret(t *testing.T) {
 				d.cloud.KubeClient = fakeClient
 				secretName := ""
 				secretNamespace := ""
-				_, _, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
+				_, _, _, _, _, err := d.GetInfoFromSecret(context.TODO(), secretName, secretNamespace)
 				// expectedErr := fmt.Errorf("could not get secret(%v): %w", secretName, err)
 				assert.Error(t, err) // could not check what type of error, needs fix
 				/*if assert.Error(t, err) {
@@ -1071,12 +1071,12 @@ func TestGetStorageAccountFromSecret(t *testing.T) {
 			},
 		},
 		{
-			name: "Successful Input",
+			name: "get account name from secret",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
 				d.cloud.KubeClient = fakeClient
-				secretName := "john smith"
+				secretName := "store_account_name_key"
 				secretNamespace := "namespace"
 				accountName := "bar"
 				accountKey := "foo"
@@ -1095,9 +1095,50 @@ func TestGetStorageAccountFromSecret(t *testing.T) {
 				if secretCreateErr != nil {
 					t.Error("failed to create secret")
 				}
-				an, ak, err := d.GetStorageAccountFromSecret(secretName, secretNamespace)
-				assert.Equal(t, accountName, an, "accountName's should match")
-				assert.Equal(t, accountKey, ak, "accountKey's should match")
+				an, ak, accountSasToken, msiSecret, storageSPNClientSecret, err := d.GetInfoFromSecret(context.TODO(), secretName, secretNamespace)
+				assert.Equal(t, accountName, an, "accountName should match")
+				assert.Equal(t, accountKey, ak, "accountKey should match")
+				assert.Equal(t, "", accountSasToken, "accountSasToken should be empty")
+				assert.Equal(t, "", msiSecret, "msiSecret should be empty")
+				assert.Equal(t, "", storageSPNClientSecret, "storageSPNClientSecret should be empty")
+				assert.Equal(t, nil, err, "error should be nil")
+			},
+		},
+		{
+			name: "get other info from secret",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.KubeClient = fakeClient
+				secretName := "store_other_info"
+				secretNamespace := "namespace"
+				accountName := "bar"
+				accountSasTokenValue := "foo"
+				msiSecretValue := "msiSecret"
+				storageSPNClientSecretValue := "storageSPNClientSecret"
+				secret := &v1api.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: secretNamespace,
+						Name:      secretName,
+					},
+					Data: map[string][]byte{
+						defaultSecretAccountName:    []byte(accountName),
+						accountSasTokenField:        []byte(accountSasTokenValue),
+						msiSecretField:              []byte(msiSecretValue),
+						storageSPNClientSecretField: []byte(storageSPNClientSecretValue),
+					},
+					Type: "Opaque",
+				}
+				_, secretCreateErr := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+				if secretCreateErr != nil {
+					t.Error("failed to create secret")
+				}
+				an, ak, accountSasToken, msiSecret, storageSPNClientSecret, err := d.GetInfoFromSecret(context.TODO(), secretName, secretNamespace)
+				assert.Equal(t, accountName, an, "accountName should match")
+				assert.Equal(t, "", ak, "accountKey should be empty")
+				assert.Equal(t, accountSasTokenValue, accountSasToken, "sasToken should match")
+				assert.Equal(t, msiSecretValue, msiSecret, "msiSecret should match")
+				assert.Equal(t, storageSPNClientSecretValue, storageSPNClientSecret, "storageSPNClientSecret should match")
 				assert.Equal(t, nil, err, "error should be nil")
 			},
 		},
