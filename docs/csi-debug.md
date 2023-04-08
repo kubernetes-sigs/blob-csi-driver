@@ -96,7 +96,7 @@ mount | grep blobfuse | uniq
 ### troubleshooting connection failure on agent node
  - blobfuse
 
-Blobfuse mount will fail due to incorrect storage account name, key or container name, run below commands to check whether blobfuse mount would work on agent node:
+To check if blobfuse mount would work on the agent node, run the following commands to verify that the storage account name, key, and container name are correct. If any of these are incorrect, the blobfuse mount will fail:
 ```console
 mkdir test
 export AZURE_STORAGE_ACCOUNT=
@@ -105,6 +105,7 @@ export AZURE_STORAGE_ACCESS_KEY=
 # export AZURE_STORAGE_BLOB_ENDPOINT=accountname.blob.core.chinacloudapi.cn
 blobfuse test --container-name=CONTAINER-NAME --tmp-path=/tmp/blobfuse -o allow_other --file-cache-timeout-in-seconds=120
 ```
+> You can find more detailed information about environment variables at https://github.com/Azure/azure-storage-fuse#environment-variables.
 
  - NFSv3
  
