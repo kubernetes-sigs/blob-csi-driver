@@ -19,7 +19,7 @@ package testsuites
 import (
 	"context"
 	"fmt"
-	"time"
+	"strings"
 
 	"github.com/onsi/ginkgo/v2"
 
@@ -52,8 +52,13 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 			accountName, accountKey, _, _, err := t.Driver.GetStorageAccountAndContainer(context.Background(), volume.VolumeID, nil, nil)
 			framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volume.VolumeID, err))
 			var secretData map[string]string
-
+			var i int
 			var run = func() {
+				// add suffix to volumeID to force kubelet to NodeStageVolume every time,
+				// otherwise it will skip NodeStageVolume for the same VolumeID(VolumeHanlde)
+				pod.Volumes[n].VolumeID = fmt.Sprintf("%s-%d", volume.VolumeID, i)
+				i++
+
 				tsecret := NewTestSecret(client, namespace, volume.NodeStageSecretRef, secretData)
 				tsecret.Create()
 				defer tsecret.Cleanup()
@@ -67,10 +72,9 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 				ginkgo.By("deploying the pod")
 				tpod.Create()
 				defer func() {
-					framework.Logf("wait for 1 minute for pod to be cached in kubelet, otherwise pod not found error may happen")
-					time.Sleep(1 * time.Minute)
 					tpod.Cleanup()
 				}()
+
 				ginkgo.By("checking that the pods command exits with no error")
 				tpod.WaitForSuccess()
 			}
@@ -107,6 +111,7 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 				"azurestoragespnclientsecret": kvClient.Cred.AADClientSecret,
 			}
 
+			// assign role to service principal
 			objectID, err := kvClient.GetServicePrincipalObjectID(context.TODO(), kvClient.Cred.AADClientID)
 			framework.ExpectNoError(err, fmt.Sprintf("Error GetServicePrincipalObjectID from clientID(%s): %v", kvClient.Cred.AADClientID, err))
 
@@ -118,14 +123,17 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 
 			roleDefID := *roleDef.ID
 			_, err = authClient.AssignRole(context.TODO(), resourceID, objectID, roleDefID)
+			if err != nil && strings.Contains(err.Error(), "The role assignment already exists") {
+				err = nil
+			}
 			framework.ExpectNoError(err, fmt.Sprintf("Error AssignRole (roleDefID(%s)) to objectID(%s) to access resource (resourceID(%s)), error: %v", roleDefID, objectID, resourceID, err))
 
 			run()
 
 			// test for managed identity(objectID)
-			// e2e-vmss test job uses msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal
 			objectID, err = kvClient.GetMSIObjectID(context.TODO(), "blobfuse-csi-driver-e2e-test-id")
 			if err != nil {
+				// only e2e-vmss test job will use msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal, so skip here
 				return
 			}
 
@@ -140,6 +148,9 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 			}
 			ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the managed identity, objectID:%s", objectID))
 			_, err = authClient.AssignRole(context.TODO(), resourceID, objectID, roleDefID)
+			if err != nil && strings.Contains(err.Error(), "The role assignment already exists") {
+				err = nil
+			}
 			framework.ExpectNoError(err, fmt.Sprintf("Error AssignRole (roleDefID(%s)) to objectID(%s) to access resource (resourceID(%s)), error: %v", roleDefID, objectID, resourceID, err))
 
 			run()
@@ -147,6 +158,7 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 			// test for managed identity(resourceID)
 			resourceID, err = kvClient.GetMSIResourceID(context.TODO(), "blobfuse-csi-driver-e2e-test-id")
 			if err != nil {
+				// only e2e-vmss test job will use msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal, so skip here
 				return
 			}
 			ginkgo.By(fmt.Sprintf("Run for managed identity (resourceID %s)", resourceID))

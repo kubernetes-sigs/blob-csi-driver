@@ -121,10 +121,6 @@ func CreateAzureCredentialFile() (*Credentials, error) {
 		if err != nil {
 			return nil, err
 		}
-		// set env for azidentity.EnvironmentCredential
-		os.Setenv("AZURE_TENANT_ID", c.TenantID)
-		os.Setenv("AZURE_CLIENT_ID", c.ClientID)
-		os.Setenv("AZURE_CLIENT_SECRET", c.ClientSecret)
 		return parseAndExecuteTemplate(cloud, c.TenantID, c.SubscriptionID, c.ClientID, c.ClientSecret, resourceGroup, location)
 	}
 

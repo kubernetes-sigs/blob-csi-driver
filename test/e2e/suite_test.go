@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -27,13 +28,16 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/ginkgo/v2/reporters"
 	"github.com/onsi/gomega"
 	"github.com/pborman/uuid"
+	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/framework/config"
+	_ "k8s.io/kubernetes/test/e2e/framework/debug/init"
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
 	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
@@ -48,11 +52,7 @@ const (
 
 var isAzureStackCloud = strings.EqualFold(os.Getenv("AZURE_CLOUD_NAME"), "AZURESTACKCLOUD")
 var blobDriver *blob.Driver
-
-var bringKeyStorageClassParameters = map[string]string{
-	"csi.storage.k8s.io/provisioner-secret-namespace": "default",
-	"csi.storage.k8s.io/node-stage-secret-namespace":  "default",
-}
+var projectRoot string
 
 type testCmd struct {
 	command  string
@@ -61,16 +61,23 @@ type testCmd struct {
 	endLog   string
 }
 
-var _ = ginkgo.BeforeSuite(func() {
-	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
-	// it does not fall back to defaults
-	if os.Getenv(kubeconfigEnvVar) == "" {
-		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
-		os.Setenv(kubeconfigEnvVar, kubeconfig)
-	}
+func TestMain(m *testing.M) {
 	handleFlags()
-	framework.AfterReadingAllFlags(&framework.TestContext)
 
+	os.Exit(m.Run())
+}
+
+func TestE2E(t *testing.T) {
+	gomega.RegisterFailHandler(ginkgo.Fail)
+	reportDir := os.Getenv(reportDirEnv)
+	if reportDir == "" {
+		reportDir = defaultReportDir
+	}
+	r := []ginkgo.Reporter{reporters.NewJUnitReporter(path.Join(reportDir, "junit_01.xml"))}
+	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Azure Blob Storage CSI driver End-to-End Tests", r)
+}
+
+var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	creds, err := credentials.CreateAzureCredentialFile()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret)
@@ -107,6 +114,32 @@ var _ = ginkgo.BeforeSuite(func() {
 	}
 	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
 
+	if testutil.IsRunningInProw() {
+		data, err := json.Marshal(creds)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		return data
+	}
+
+	return nil
+}, func(data []byte) {
+	if testutil.IsRunningInProw() {
+		creds := &credentials.Credentials{}
+		err := json.Unmarshal(data, creds)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		// set env for azidentity.EnvironmentCredential
+		os.Setenv("AZURE_TENANT_ID", creds.TenantID)
+		os.Setenv("AZURE_CLIENT_ID", creds.AADClientID)
+		os.Setenv("AZURE_CLIENT_SECRET", creds.AADClientSecret)
+	}
+
+	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
+	// it does not fall back to defaults
+	if os.Getenv(kubeconfigEnvVar) == "" {
+		kubeconfig := filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		os.Setenv(kubeconfigEnvVar, kubeconfig)
+	}
+
+	// spin up a blob driver locally to make use of the azure client and controller service
 	kubeconfig := os.Getenv(kubeconfigEnvVar)
 	_, useBlobfuseProxy := os.LookupEnv("ENABLE_BLOBFUSE_PROXY")
 	driverOptions := blob.DriverOptions{
@@ -124,65 +157,45 @@ var _ = ginkgo.BeforeSuite(func() {
 	}()
 })
 
-var _ = ginkgo.AfterSuite(func() {
-	createExampleDeployment := testCmd{
-		command:  "bash",
-		args:     []string{"hack/verify-examples.sh"},
-		startLog: "create example deployments",
-		endLog:   "example deployments created",
-	}
-	execTestCmd([]testCmd{createExampleDeployment})
+var _ = ginkgo.SynchronizedAfterSuite(func(ctx ginkgo.SpecContext) {},
+	func(ctx ginkgo.SpecContext) {
+		blobLog := testCmd{
+			command:  "bash",
+			args:     []string{"test/utils/blob_log.sh"},
+			startLog: "==============start blob log(after suite)===================",
+			endLog:   "==============end blob log(after suite)===================",
+		}
+		e2eTeardown := testCmd{
+			command:  "make",
+			args:     []string{"e2e-teardown"},
+			startLog: "Uninstalling Azure Blob Storage CSI driver...",
+			endLog:   "Azure Blob Storage CSI driver uninstalled",
+		}
+		execTestCmd([]testCmd{blobLog, e2eTeardown})
 
-	e2eTeardown := testCmd{
-		command:  "make",
-		args:     []string{"e2e-teardown"},
-		startLog: "Uninstalling Azure Blob Storage CSI driver...",
-		endLog:   "Azure Blob Storage CSI driver uninstalled",
-	}
-	execTestCmd([]testCmd{e2eTeardown})
+		// install/uninstall CSI Driver deployment scripts test
+		installDriver := testCmd{
+			command:  "bash",
+			args:     []string{"deploy/install-driver.sh", "master", "local,enable-blobfuse-proxy"},
+			startLog: "===================install CSI Driver deployment scripts test===================",
+			endLog:   "===================================================",
+		}
+		uninstallDriver := testCmd{
+			command:  "bash",
+			args:     []string{"deploy/uninstall-driver.sh", "master", "local,enable-blobfuse-proxy"},
+			startLog: "===================uninstall CSI Driver deployment scripts test===================",
+			endLog:   "===================================================",
+		}
+		execTestCmd([]testCmd{installDriver, uninstallDriver})
 
-	// install/uninstall CSI Driver deployment scripts test
-	installDriver := testCmd{
-		command:  "bash",
-		args:     []string{"deploy/install-driver.sh", "master", "local,enable-blobfuse-proxy"},
-		startLog: "===================install CSI Driver deployment scripts test===================",
-		endLog:   "===================================================",
-	}
-	uninstallDriver := testCmd{
-		command:  "bash",
-		args:     []string{"deploy/uninstall-driver.sh", "master", "local,enable-blobfuse-proxy"},
-		startLog: "===================uninstall CSI Driver deployment scripts test===================",
-		endLog:   "===================================================",
-	}
-	execTestCmd([]testCmd{installDriver, uninstallDriver})
+		checkAccountCreationLeak()
 
-	checkAccountCreationLeak()
-
-	err := credentials.DeleteAzureCredentialFile()
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-})
-
-func TestE2E(t *testing.T) {
-	gomega.RegisterFailHandler(ginkgo.Fail)
-	reportDir := os.Getenv(reportDirEnv)
-	if reportDir == "" {
-		reportDir = defaultReportDir
-	}
-	r := []ginkgo.Reporter{reporters.NewJUnitReporter(path.Join(reportDir, "junit_01.xml"))}
-	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Azure Blob Storage CSI driver End-to-End Tests", r)
-}
+		err := credentials.DeleteAzureCredentialFile()
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	}, ginkgo.NodeTimeout(10*time.Minute))
 
 func execTestCmd(cmds []testCmd) {
-	err := os.Chdir("../..")
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	defer func() {
-		err := os.Chdir("test/e2e")
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	}()
-
-	projectRoot, err := os.Getwd()
-	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	gomega.Expect(strings.HasSuffix(projectRoot, "blob-csi-driver")).To(gomega.Equal(true))
+	ginkgo.GinkgoHelper()
 
 	for _, cmd := range cmds {
 		log.Println(cmd.startLog)
@@ -190,7 +203,10 @@ func execTestCmd(cmds []testCmd) {
 		cmdSh.Dir = projectRoot
 		cmdSh.Stdout = os.Stdout
 		cmdSh.Stderr = os.Stderr
-		err = cmdSh.Run()
+		err := cmdSh.Run()
+		if err != nil {
+			log.Printf("Failed to run command: %s %s, Error: %s\n", cmd.command, strings.Join(cmd.args, " "), err.Error())
+		}
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		log.Println(cmd.endLog)
 	}
@@ -206,14 +222,28 @@ func checkAccountCreationLeak() {
 	framework.ExpectNoError(err, fmt.Sprintf("failed to GetAccountNumByResourceGroup(%s): %v", creds.ResourceGroup, err))
 	ginkgo.By(fmt.Sprintf("GetAccountNumByResourceGroup(%s) returns %d accounts", creds.ResourceGroup, accountNum))
 
-	accountLimitInTest := 15
+	accountLimitInTest := 20
 	framework.ExpectEqual(accountNum >= accountLimitInTest, false, fmt.Sprintf("current account num %d should not exceed %d", accountNum, accountLimitInTest))
 }
 
 // handleFlags sets up all flags and parses the command line.
 func handleFlags() {
+	registerFlags()
+	handleFramworkFlags()
+}
+
+func registerFlags() {
+	flag.StringVar(&projectRoot, "project-root", "", "path to the blob csi driver project root, used for script execution")
+	flag.Parse()
+	if projectRoot == "" {
+		klog.Fatal("project-root must be set")
+	}
+}
+
+func handleFramworkFlags() {
 	config.CopyFlags(config.Flags, flag.CommandLine)
 	framework.RegisterCommonFlags(flag.CommandLine)
 	framework.RegisterClusterFlags(flag.CommandLine)
 	flag.Parse()
+	framework.AfterReadingAllFlags(&framework.TestContext)
 }

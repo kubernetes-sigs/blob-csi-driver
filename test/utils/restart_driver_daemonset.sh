@@ -14,9 +14,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -euo pipefail
+set -eo pipefail
 
-echo "restart driver node daemonset ..."
+echo "*****************start blob log (before restart)***********************"
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+source $DIR/blob_log.sh
+echo "*****************end blob log (before restart)*********************"
+
 kubectl rollout restart ds csi-blob-node -n kube-system
-
-sleep 10
+kubectl rollout status daemonset/csi-blob-node -n kube-system --watch --timeout=1m

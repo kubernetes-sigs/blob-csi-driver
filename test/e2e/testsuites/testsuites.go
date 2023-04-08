@@ -551,7 +551,7 @@ func (t *TestPod) SetupInlineVolume(name, mountPath, secretName, containerName s
 				Driver: blob.DefaultDriverName,
 				VolumeAttributes: map[string]string{
 					"secretName":      secretName,
-					"secretNamespace": "default",
+					"secretNamespace": t.namespace.Name,
 					"containerName":   containerName,
 					"mountOptions":    "-o allow_other --file-cache-timeout-in-seconds=240",
 				},
@@ -622,7 +622,7 @@ func podLogs(client clientset.Interface, name, namespace string) ([]byte, error)
 }
 
 // waitForPersistentVolumeClaimDeleted waits for a PersistentVolumeClaim to be removed from the system until timeout occurs, whichever comes first.
-func waitForPersistentVolumeClaimDeleted(c clientset.Interface, ns string, pvcName string, Poll, timeout time.Duration) error {
+func waitForPersistentVolumeClaimDeleted(c clientset.Interface, pvcName string, ns string, Poll, timeout time.Duration) error {
 	framework.Logf("Waiting up to %v for PersistentVolumeClaim %s to be removed", timeout, pvcName)
 	for start := time.Now(); time.Since(start) < timeout; time.Sleep(Poll) {
 		_, err := c.CoreV1().PersistentVolumeClaims(ns).Get(context.TODO(), pvcName, metav1.GetOptions{})
