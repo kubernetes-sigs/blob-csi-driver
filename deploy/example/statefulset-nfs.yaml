@@ -33,9 +33,8 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: persistent-storage
-        annotations:
-          volume.beta.kubernetes.io/storage-class: blob-nfs
       spec:
+        storageClassName: blob-nfs
         accessModes: ["ReadWriteMany"]
         resources:
           requests:

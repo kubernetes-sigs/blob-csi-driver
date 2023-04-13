@@ -37,9 +37,8 @@ spec:
   volumeClaimTemplates:
     - metadata:
         name: persistent-storage
-        annotations:
-          volume.beta.kubernetes.io/storage-class: blob-fuse
       spec:
+        storageClassName: blob-fuse
         accessModes: ["ReadWriteMany"]
         resources:
           requests:
