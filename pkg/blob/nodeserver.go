@@ -48,7 +48,7 @@ import (
 
 const (
 	waitForMountInterval = 20 * time.Millisecond
-	waitForMountTimeout  = 3 * time.Second
+	waitForMountTimeout  = 60 * time.Second
 )
 
 type MountClient struct {
