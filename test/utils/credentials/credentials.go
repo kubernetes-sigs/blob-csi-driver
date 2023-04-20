@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -140,7 +139,7 @@ func DeleteAzureCredentialFile() error {
 // ParseAzureCredentialFile parses the temporary Azure credential file and returns the credentials
 func ParseAzureCredentialFile() (*Credentials, error) {
 	cred := &Credentials{}
-	data, err := ioutil.ReadFile(TempAzureCredentialFilePath)
+	data, err := os.ReadFile(TempAzureCredentialFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +155,7 @@ func ParseAzureCredentialFile() (*Credentials, error) {
 // getCredentialsFromAzureCredentials parses the azure credentials toml (AZURE_CREDENTIALS)
 // in Prow and returns the credential information usable to Azure Blob Storage CSI driver
 func getCredentialsFromAzureCredentials(azureCredentialsPath string) (*FromProw, error) {
-	content, err := ioutil.ReadFile(azureCredentialsPath)
+	content, err := os.ReadFile(azureCredentialsPath)
 	log.Printf("Reading credentials file %v", azureCredentialsPath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading credentials file %v %w", azureCredentialsPath, err)

@@ -18,7 +18,6 @@ package credentials
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"testing"
 	"text/template"
@@ -80,7 +79,7 @@ func TestCreateAzureCredentialFileOnAzureStackCloud(t *testing.T) {
 }
 
 func withAzureCredentials(t *testing.T) {
-	tempFile, err := ioutil.TempFile("", "azure.toml")
+	tempFile, err := os.CreateTemp("", "azure.toml")
 	assert.NoError(t, err)
 	defer func() {
 		err := os.Remove(tempFile.Name())
@@ -109,7 +108,7 @@ func withAzureCredentials(t *testing.T) {
 	assert.Equal(t, testResourceGroup, creds.ResourceGroup)
 	assert.Equal(t, testLocation, creds.Location)
 
-	azureCredentialFileContent, err := ioutil.ReadFile(TempAzureCredentialFilePath)
+	azureCredentialFileContent, err := os.ReadFile(TempAzureCredentialFilePath)
 	assert.NoError(t, err)
 
 	const expectedAzureCredentialFileContent = `
@@ -163,7 +162,7 @@ func withEnvironmentVariables(t *testing.T) {
 	assert.Equal(t, testResourceGroup, creds.ResourceGroup)
 	assert.Equal(t, testLocation, creds.Location)
 
-	azureCredentialFileContent, err := ioutil.ReadFile(TempAzureCredentialFilePath)
+	azureCredentialFileContent, err := os.ReadFile(TempAzureCredentialFilePath)
 	assert.NoError(t, err)
 
 	const expectedAzureCredentialFileContent = `
