@@ -24,7 +24,10 @@ READ_AHEAD_KB=${READ_AHEAD_KB:-15380}
 
 HOST_CMD="nsenter --mount=/proc/1/ns/mnt"
 
-if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
+DISTRIBUTION=$($HOST_CMD cat /etc/os-release | grep ^ID= | cut -d'=' -f2 | tr -d '"')
+echo "Linux distribution: $DISTRIBUTION"
+
+if [ "${DISTRIBUTION}" = "ubuntu" ] && ([ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ])
 then
   cp /blobfuse-proxy/packages-microsoft-prod.deb /host/etc/
   # when running dpkg -i /etc/packages-microsoft-prod.deb, need to enter y to continue. 
@@ -34,7 +37,9 @@ then
   pkg_list=""
   if [ "${INSTALL_BLOBFUSE}" = "true" ]
   then
-    pkg_list="${pkg_list} fuse"
+    if [ "$release" = "18.04" ]; then
+      pkg_list="${pkg_list} fuse"
+    fi
     # install blobfuse with latest version or specific version
     if [ -z "${BLOBFUSE_VERSION}" ]; then
       echo "install blobfuse with latest version"
