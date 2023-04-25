@@ -172,6 +172,8 @@ func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string)
 func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv []string) (string, error) {
 	var cmd *exec.Cmd
 
+	args = volumehelper.TrimDuplicatedSpace(args)
+
 	mountLog := "mount inside driver with"
 	if protocol == Fuse2 {
 		mountLog += " v2"
