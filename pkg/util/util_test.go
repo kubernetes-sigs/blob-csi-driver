@@ -304,11 +304,12 @@ func TestTrimDuplicatedSpace(t *testing.T) {
 		want string
 	}{
 		{
+			// ignore spell lint error
 			name: "trim duplicated space",
 			args: args{
-				s: "  fo o   bar  ",
+				s: "  12 3   456  ",
 			},
-			want: " fo o bar ",
+			want: " 12 3 456 ",
 		},
 	}
 	for _, tt := range tests {
