@@ -75,7 +75,7 @@ then
     fi
   fi
   echo "begin to install ${pkg_list}"
-  $HOST_CMD apt-get install -y "$pkg_list"
+  $HOST_CMD apt-get install -y $pkg_list
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
