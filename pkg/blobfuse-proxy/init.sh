@@ -27,12 +27,12 @@ HOST_CMD="nsenter --mount=/proc/1/ns/mnt"
 DISTRIBUTION=$($HOST_CMD cat /etc/os-release | grep ^ID= | cut -d'=' -f2 | tr -d '"')
 echo "Linux distribution: $DISTRIBUTION"
 
-if [ "${DISTRIBUTION}" = "ubuntu" ] && ([ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ])
+if [ "${DISTRIBUTION}" = "ubuntu" ] && { [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]; }
 then
   release=$($HOST_CMD lsb_release -rs)
   echo "Ubuntu release: $release"
   
-  if [ $(expr "$release" \< "22.04") -eq 1 ]
+  if [ "$(expr "$release" \< "22.04")" -eq 1 ]
   then
     cp /blobfuse-proxy/packages-microsoft-prod-18.04.deb /host/etc/packages-microsoft-prod.deb
   else
@@ -44,7 +44,7 @@ then
   yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt update
 
   pkg_list=""
-  if [ "${INSTALL_BLOBFUSE}" = "true" ] && [ $(expr "$release" \< "22.04") -eq 1 ]
+  if [ "${INSTALL_BLOBFUSE}" = "true" ] && [ "$(expr "$release" \< "22.04")" -eq 1 ]
   then
     pkg_list="${pkg_list} fuse"
     # install blobfuse with latest version or specific version
@@ -58,7 +58,7 @@ then
 
   if [ "${INSTALL_BLOBFUSE2}" = "true" ]
   then
-    if [ $(expr "$release" \< "22.04") -eq 1 ]; then
+    if [ "$(expr "$release" \< "22.04")" -eq 1 ]; then
       echo "install fuse for blobfuse2"
       pkg_list="${pkg_list} fuse"
     else
@@ -75,7 +75,7 @@ then
     fi
   fi
   echo "begin to install ${pkg_list}"
-  $HOST_CMD apt-get install -y $pkg_list
+  $HOST_CMD apt-get install -y "$pkg_list"
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
