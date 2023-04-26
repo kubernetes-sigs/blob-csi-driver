@@ -19,6 +19,7 @@ package util
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 
@@ -182,4 +183,10 @@ func GetOSInfo(f interface{}) (*OsInfo, error) {
 
 	klog.V(2).Infof("get OS info: %v", oi)
 	return oi, nil
+}
+
+func TrimDuplicatedSpace(s string) string {
+	reg := regexp.MustCompile(`\s+`)
+	s = reg.ReplaceAllString(s, " ")
+	return s
 }
