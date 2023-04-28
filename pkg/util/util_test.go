@@ -293,3 +293,30 @@ func TestGetOSInfo(t *testing.T) {
 		})
 	}
 }
+
+func TestTrimDuplicatedSpace(t *testing.T) {
+	type args struct {
+		s string
+	}
+	tests := []struct {
+		name string
+		args args
+		want string
+	}{
+		{
+			// ignore spell lint error
+			name: "trim duplicated space",
+			args: args{
+				s: "  12 3   456  ",
+			},
+			want: " 12 3 456 ",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := TrimDuplicatedSpace(tt.args.s); got != tt.want {
+				t.Errorf("TrimDuplicatedSpace() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
