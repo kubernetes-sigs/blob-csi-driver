@@ -76,9 +76,11 @@ func (server *MountServer) MountAzureBlob(ctx context.Context,
 			klog.V(2).Infof("append --ignore-open-flags=true to mount args")
 			args = args + " " + "--ignore-open-flags=true"
 		}
+		args = util.TrimDuplicatedSpace(args)
 		klog.V(2).Infof("mount with v2, protocol: %s, args: %s", protocol, args)
 		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
 	} else {
+		args = util.TrimDuplicatedSpace(args)
 		klog.V(2).Infof("mount with v1, protocol: %s, args: %s", protocol, args)
 		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
 	}
