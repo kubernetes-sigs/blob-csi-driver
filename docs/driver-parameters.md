@@ -45,8 +45,8 @@ enableBlobVersioning | Enable [blob versioning](https://learn.microsoft.com/en-u
 Blobfuse driver does not honor `fsGroup` securityContext setting, instead user could use `-o gid=1000` in `mountoptions` to set ownership, check [here](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#mount-options) for more mountoptions.
 
  - [Azure DataLake storage account](https://docs.microsoft.com/en-us/azure/storage/blobs/upgrade-to-data-lake-storage-gen2-how-to) support
-   - set `isHnsEnabled: "true"` in storage class parameter to create ADLS account by driver in dynamic provisioning.
-   - mount option `--use-adls=true` must be specified to enable blobfuse access ADLS account in static provisioning.
+   - To create an ADLS account using the driver in dynamic provisioning, you need to specify `isHnsEnabled: "true"` in the storage class parameters.
+   - To enable blobfuse access to an ADLS account in static provisioning, you need to specify the mount option `--use-adls=true` in the persistent volume.
 
  - account tags format created by dynamic provisioning
 ```
