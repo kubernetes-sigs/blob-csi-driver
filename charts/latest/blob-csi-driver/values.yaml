@@ -117,9 +117,9 @@ node:
   enableBlobfuseProxy: false
   blobfuseProxy:
     installBlobfuse: true
-    blobfuseVersion: ""
+    blobfuseVersion: "1.4.5"
     installBlobfuse2: true
-    blobfuse2Version: ""
+    blobfuse2Version: "2.0.3"
     setMaxOpenFileNum: true
     maxOpenFileNum: "9000000"
     disableUpdateDB: true
