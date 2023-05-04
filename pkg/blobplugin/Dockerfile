@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM registry.k8s.io/build-image/debian-base:bullseye-v1.4.2
+FROM registry.k8s.io/build-image/debian-base:bullseye-v1.4.3
 
 ARG ARCH=amd64
 ARG binary=./_output/${ARCH}/blobplugin
@@ -33,8 +33,9 @@ RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-
 ARG ARCH=amd64
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \
-  wget -O /blobfuse-proxy/packages-microsoft-prod.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb && \
-  dpkg -i /blobfuse-proxy/packages-microsoft-prod.deb && apt update && apt install blobfuse blobfuse2 fuse -y && apt remove wget -y; fi
+  wget -O /blobfuse-proxy/packages-microsoft-prod-22.04.deb https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb && \
+  wget -O /blobfuse-proxy/packages-microsoft-prod-18.04.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb && \
+  dpkg -i /blobfuse-proxy/packages-microsoft-prod-18.04.deb && apt update && apt install blobfuse blobfuse2 fuse -y && apt remove wget -y; fi
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
