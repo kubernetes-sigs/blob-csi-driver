@@ -80,6 +80,10 @@ spec:
               value: "{{ .Values.node.blobfuseProxy.installBlobfuse }}"
             - name: BLOBFUSE_VERSION
               value: "{{ .Values.node.blobfuseProxy.blobfuseVersion }}"
+            - name: INSTALL_BLOBFUSE2
+              value: "{{ .Values.node.blobfuseProxy.installBlobfuse2 }}"
+            - name: BLOBFUSE2_VERSION
+              value: "{{ .Values.node.blobfuseProxy.blobfuse2Version }}"
             - name: SET_MAX_OPEN_FILE_NUM
               value: "{{ .Values.node.blobfuseProxy.setMaxOpenFileNum }}"
             - name: MAX_FILE_NUM

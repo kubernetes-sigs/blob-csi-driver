@@ -54,11 +54,14 @@ echo "==========================================================================
 ip=`kubectl get svc csi-$DRIVER-controller -n kube-system | awk '{print $4}'`
 curl http://$ip:29634/metrics
 
+if [ -n "$ENABLE_BLOBFUSE_PROXY" ]; then
+    echo "print out install-blobfuse-proxy logs ..."
+    echo "======================================================================================"
+    LABEL="app=csi-$DRIVER-node"
+    PROXY=install-blobfuse-proxy
+    kubectl get pods -n${NS} -l${LABEL} \
+        | awk 'NR>1 {print $1}' \
+        | xargs -I {} kubectl logs {} --prefix -c${PROXY} -n${NS}
+fi
 
-echo "print out sysctl-install-blobfuseproxy logs ..."
-echo "======================================================================================"
-LABEL='app=csi-blobfuse-proxy'
-PROXY=sysctl-install-blobfuse-proxy
-kubectl get pods -n${NS} -l${LABEL} \
-    | awk 'NR>1 {print $1}' \
-    | xargs -I {} kubectl logs {} --prefix -c${PROXY} -n${NS}
+
