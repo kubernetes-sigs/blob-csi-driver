@@ -38,9 +38,14 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
 This option does not depend on cloud provider config file, supports cross subscription and on-premise cluster scenario. Refer to [detailed steps](./deploy/example/e2e_usage.md#option2-bring-your-own-storage-account).
 
 ### Install driver on a Kubernetes cluster
-> To install latest blobfuse v1 & v2 versions, run following command directly after driver is running on the agent node:
+> To install specific blobfuse v1 version, run following command directly after driver is running on the agent node:
 > ```console
 > kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE","value":"true"},{"name":"BLOBFUSE_VERSION","value":"1.4.5"}],"name":"install-blobfuse-proxy"}]}}}}'
+> ```
+>
+> To install specific blobfuse v2 version, run following command directly after driver is running on the agent node:
+> ```console
+> kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.0.2"}],"name":"install-blobfuse-proxy"}]}}}}'
 > ```
 >
  - install by [helm charts](./charts)
