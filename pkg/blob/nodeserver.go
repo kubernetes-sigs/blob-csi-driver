@@ -173,6 +173,8 @@ func (d *Driver) mountBlobfuseWithProxy(args string, protocol string, authEnv []
 func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv []string) (string, error) {
 	var cmd *exec.Cmd
 
+	args = volumehelper.TrimDuplicatedSpace(args)
+
 	klog.V(2).Infof("mounting blobfuse inside driver")
 	if protocol == Fuse2 {
 		klog.V(2).Infof("using blobfuse V2 to mount")
