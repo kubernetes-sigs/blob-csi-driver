@@ -151,7 +151,7 @@ node:
     - operator: "Exists"
 
 feature:
-  enableFSGroupPolicy: false
+  fsGroupPolicy: ReadWriteOnceWithFSType
   enableGetVolumeStats: false
 
 driver:
