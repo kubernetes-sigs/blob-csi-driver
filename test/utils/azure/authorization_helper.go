@@ -23,7 +23,7 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
 
-	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-01-01-preview/authorization"
+	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2020-04-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -69,15 +69,6 @@ func (a *AuthorizationClient) AssignRole(ctx context.Context, resourceID, princi
 				RoleDefinitionID: pointer.String(roleDefID),
 			},
 		})
-}
-
-func (a *AuthorizationClient) DeleteRoleAssignment(ctx context.Context, id string) (authorization.RoleAssignment, error) {
-	roleAssignmentsClient, err := a.getRoleAssignmentsClient()
-	if err != nil {
-		return authorization.RoleAssignment{}, err
-	}
-
-	return roleAssignmentsClient.DeleteByID(ctx, id)
 }
 
 func (a *AuthorizationClient) GetRoleDefinition(ctx context.Context, resourceID, roleName string) (authorization.RoleDefinition, error) {

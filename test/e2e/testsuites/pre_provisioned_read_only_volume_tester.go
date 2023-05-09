@@ -17,6 +17,7 @@ limitations under the License.
 package testsuites
 
 import (
+	"context"
 	"fmt"
 
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
@@ -35,21 +36,21 @@ type PreProvisionedReadOnlyVolumeTest struct {
 	Pods      []PodDetails
 }
 
-func (t *PreProvisionedReadOnlyVolumeTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+func (t *PreProvisionedReadOnlyVolumeTest) Run(ctx context.Context, client clientset.Interface, namespace *v1.Namespace) {
 	for _, pod := range t.Pods {
-		tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
+		tpod, cleanup := pod.SetupWithPreProvisionedVolumes(ctx, client, namespace, t.CSIDriver)
 		// defer must be called here for resources not get removed before using them
 		for i := range cleanup {
-			defer cleanup[i]()
+			defer cleanup[i](ctx)
 		}
 
 		ginkgo.By("deploying the pod")
-		tpod.Create()
-		defer tpod.Cleanup()
+		tpod.Create(ctx)
+		defer tpod.Cleanup(ctx)
 		ginkgo.By("checking that the pods command exits with an error")
-		tpod.WaitForFailure()
+		tpod.WaitForFailure(ctx)
 		ginkgo.By("checking that pod logs contain expected message")
-		body, err := tpod.Logs()
+		body, err := tpod.Logs(ctx)
 		framework.ExpectNoError(err, fmt.Sprintf("Error getting logs for pod %s: %v", tpod.pod.Name, err))
 		gomega.Expect(string(body)).To(gomega.ContainSubstring(expectedReadOnlyLog))
 	}

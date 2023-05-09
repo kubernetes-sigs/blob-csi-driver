@@ -254,7 +254,7 @@ func (c *ManagedDiskController) CreateManagedDisk(ctx context.Context, options *
 	if options.SkipGetDiskOperation {
 		klog.Warningf("azureDisk - GetDisk(%s, StorageAccountType:%s) is throttled, unable to confirm provisioningState in poll process", options.DiskName, options.StorageAccountType)
 	} else {
-		err = kwait.ExponentialBackoffWithContext(ctx, defaultBackOff, func() (bool, error) {
+		err = kwait.ExponentialBackoffWithContext(ctx, defaultBackOff, func(ctx context.Context) (bool, error) {
 			provisionState, id, err := c.GetDisk(ctx, subsID, rg, options.DiskName)
 			if err == nil {
 				if id != "" {
@@ -288,8 +288,8 @@ func (c *ManagedDiskController) DeleteManagedDisk(ctx context.Context, diskURI s
 		return err
 	}
 
-	if _, ok := c.common.diskStateMap.Load(strings.ToLower(diskURI)); ok {
-		return fmt.Errorf("failed to delete disk(%s) since it's in attaching or detaching state", diskURI)
+	if state, ok := c.common.diskStateMap.Load(strings.ToLower(diskURI)); ok {
+		return fmt.Errorf("failed to delete disk(%s) since it's in %s state", diskURI, state.(string))
 	}
 
 	diskName := path.Base(diskURI)

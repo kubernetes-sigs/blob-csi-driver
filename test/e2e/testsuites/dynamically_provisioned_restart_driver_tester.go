@@ -17,6 +17,7 @@ limitations under the License.
 package testsuites
 
 import (
+	"context"
 	"os"
 	"sync"
 
@@ -37,7 +38,7 @@ type DynamicallyProvisionedRestartDriverTest struct {
 	RestartDriverFunc      func()
 }
 
-func (t *DynamicallyProvisionedRestartDriverTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+func (t *DynamicallyProvisionedRestartDriverTest) Run(ctx context.Context, client clientset.Interface, namespace *v1.Namespace) {
 	var wg, wgPodReady sync.WaitGroup
 	var restartCompleted = make(chan struct{})
 
@@ -45,17 +46,17 @@ func (t *DynamicallyProvisionedRestartDriverTest) Run(client clientset.Interface
 		defer wg.Done()
 		defer ginkgo.GinkgoRecover()
 
-		tDeployment, cleanup, _ := t.Pod.SetupDeployment(client, namespace, t.CSIDriver, t.StorageClassParameters)
+		tDeployment, cleanup, _ := t.Pod.SetupDeployment(ctx, client, namespace, t.CSIDriver, t.StorageClassParameters)
 		// defer must be called here for resources not get removed before using them
 		for i := range cleanup {
-			defer cleanup[i]()
+			defer cleanup[i](ctx)
 		}
 
 		ginkgo.By("creating the deployment for the pod")
-		tDeployment.Create()
+		tDeployment.Create(ctx)
 
 		ginkgo.By("checking that the pod is running")
-		tDeployment.WaitForPodReady()
+		tDeployment.WaitForPodReady(ctx)
 
 		if t.PodCheck != nil {
 			ginkgo.By("checking if pod is able to access volume")

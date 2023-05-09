@@ -77,12 +77,12 @@ func TestE2E(t *testing.T) {
 	ginkgo.RunSpecsWithDefaultAndCustomReporters(t, "Azure Blob Storage CSI driver End-to-End Tests", r)
 }
 
-var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
+var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	creds, err := credentials.CreateAzureCredentialFile()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	_, err = azureClient.EnsureResourceGroup(context.Background(), creds.ResourceGroup, creds.Location, nil)
+	_, err = azureClient.EnsureResourceGroup(ctx, creds.ResourceGroup, creds.Location, nil)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	if testutil.IsRunningInProw() {
@@ -121,7 +121,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func() []byte {
 	}
 
 	return nil
-}, func(data []byte) {
+}, func(ctx ginkgo.SpecContext, data []byte) {
 	if testutil.IsRunningInProw() {
 		creds := &credentials.Credentials{}
 		err := json.Unmarshal(data, creds)
@@ -188,7 +188,7 @@ var _ = ginkgo.SynchronizedAfterSuite(func(ctx ginkgo.SpecContext) {},
 		}
 		execTestCmd([]testCmd{installDriver, uninstallDriver})
 
-		checkAccountCreationLeak()
+		checkAccountCreationLeak(ctx)
 
 		err := credentials.DeleteAzureCredentialFile()
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
@@ -212,13 +212,13 @@ func execTestCmd(cmds []testCmd) {
 	}
 }
 
-func checkAccountCreationLeak() {
+func checkAccountCreationLeak(ctx context.Context) {
 	creds, err := credentials.CreateAzureCredentialFile()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	accountNum, err := azureClient.GetAccountNumByResourceGroup(context.TODO(), creds.ResourceGroup)
+	accountNum, err := azureClient.GetAccountNumByResourceGroup(ctx, creds.ResourceGroup)
 	framework.ExpectNoError(err, fmt.Sprintf("failed to GetAccountNumByResourceGroup(%s): %v", creds.ResourceGroup, err))
 	ginkgo.By(fmt.Sprintf("GetAccountNumByResourceGroup(%s) returns %d accounts", creds.ResourceGroup, accountNum))
 
