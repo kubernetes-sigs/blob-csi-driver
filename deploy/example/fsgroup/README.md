@@ -4,7 +4,7 @@
 
 ### Option#1: Enable fsGroupPolicy support in [driver helm installation](../../../charts)
 
-add `--set feature.enableFSGroupPolicy=true` in helm installation command.
+add `--set feature.fsGroupPolicy=File` in helm installation command.
 
 ### Option#2: Enable fsGroupPolicy support on a cluster with CSI driver already installed
 

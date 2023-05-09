@@ -27,7 +27,7 @@ setup_e2e_binaries() {
     export EXTRA_HELM_OPTIONS="--set driver.name=$DRIVER.csi.azure.com --set controller.name=csi-$DRIVER-controller --set node.name=csi-$DRIVER-node --set driver.azureGoSDKLogLevel=INFO"
     if [ ! -z ${EXTERNAL_E2E_TEST_NFS} ]; then
         # enable fsGroupPolicy (only available from k8s 1.20)
-        export EXTRA_HELM_OPTIONS=$EXTRA_HELM_OPTIONS" --set feature.enableFSGroupPolicy=true"
+        export EXTRA_HELM_OPTIONS=$EXTRA_HELM_OPTIONS" --set feature.fsGroupPolicy=File"
     fi
 
      # test on alternative driver name
