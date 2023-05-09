@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/blobclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
@@ -1259,14 +1260,14 @@ func TestCreateBlobContainer(t *testing.T) {
 			containerName: "containerName",
 			secrets:       map[string]string{},
 			clientErr:     DATAPLANE,
-			expectedErr:   fmt.Errorf("timed out waiting for the condition"),
+			expectedErr:   wait.ErrWaitTimeout,
 		},
 		{
 			desc:          "Management API Error",
 			containerName: "containerName",
 			secrets:       map[string]string{},
 			clientErr:     MANAGEMENT,
-			expectedErr:   fmt.Errorf("timed out waiting for the condition"),
+			expectedErr:   wait.ErrWaitTimeout,
 		},
 		{
 			desc:          "Random Client Error",
