@@ -17,6 +17,8 @@ limitations under the License.
 package testsuites
 
 import (
+	"context"
+
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
 
 	"github.com/onsi/ginkgo/v2"
@@ -35,21 +37,21 @@ type DynamicallyProvisionedInlineVolumeTest struct {
 	ReadOnly      bool
 }
 
-func (t *DynamicallyProvisionedInlineVolumeTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+func (t *DynamicallyProvisionedInlineVolumeTest) Run(ctx context.Context, client clientset.Interface, namespace *v1.Namespace) {
 	for _, pod := range t.Pods {
 		var tpod *TestPod
-		var cleanup []func()
+		var cleanup []func(context.Context)
 		tpod, cleanup = pod.SetupWithCSIInlineVolumes(client, namespace, t.CSIDriver, t.SecretName, t.ContainerName, t.ReadOnly)
 
 		// defer must be called here for resources not get removed before using them
 		for i := range cleanup {
-			defer cleanup[i]()
+			defer cleanup[i](ctx)
 		}
 
 		ginkgo.By("deploying the pod")
-		tpod.Create()
-		defer tpod.Cleanup()
+		tpod.Create(ctx)
+		defer tpod.Cleanup(ctx)
 		ginkgo.By("checking that the pods command exits with no error")
-		tpod.WaitForSuccess()
+		tpod.WaitForSuccess(ctx)
 	}
 }

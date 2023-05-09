@@ -17,7 +17,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"time"
 
@@ -41,7 +40,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		testDriver driver.PVTestDriver
 	)
 
-	ginkgo.BeforeEach(func() {
+	ginkgo.BeforeEach(func(ctx ginkgo.SpecContext) {
 		checkPodsRestart := testCmd{
 			command:  "sh",
 			args:     []string{"test/utils/check_driver_pods_restart.sh"},
@@ -55,7 +54,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		testDriver = driver.InitBlobCSIDriver()
 	})
 
-	ginkgo.It("should create a volume on demand without saving storage account key", func() {
+	ginkgo.It("should create a volume on demand without saving storage account key", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
@@ -87,10 +86,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"accessTier":             "Hot",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a volume on demand with mount options", func() {
+	ginkgo.It("should create a volume on demand with mount options", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
@@ -120,10 +119,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"accessTier":          "Cool",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a volume on demand with specified secretName", func() {
+	ginkgo.It("should create a volume on demand with specified secretName", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
@@ -153,10 +152,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pods:                   pods,
 			StorageClassParameters: scParameters,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a deployment object, write and read to it, delete the pod and write and read to it again", func() {
+	ginkgo.It("should create a deployment object, write and read to it, delete the pod and write and read to it again", func(ctx ginkgo.SpecContext) {
 		pod := testsuites.PodDetails{
 			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 1; done",
 			Volumes: []testsuites.VolumeDetails{
@@ -191,11 +190,11 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"containerName":         "container-${pvc.metadata.name}",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
 	// Track issue https://github.com/kubernetes/kubernetes/issues/70505
-	ginkgo.It("should create a volume on demand and mount it as readOnly in a pod", func() {
+	ginkgo.It("should create a volume on demand and mount it as readOnly in a pod", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "touch /mnt/test-1/data",
@@ -220,10 +219,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		if isAzureStackCloud {
 			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create multiple PV objects, bind to PVCs and attach all to different pods on the same node", func() {
+	ginkgo.It("should create multiple PV objects, bind to PVCs and attach all to different pods on the same node", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "while true; do echo $(date -u) >> /mnt/test-1/data; sleep 1; done",
@@ -265,10 +264,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		if isAzureStackCloud {
 			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It(fmt.Sprintf("should delete PV with reclaimPolicy %q", v1.PersistentVolumeReclaimDelete), func() {
+	ginkgo.It(fmt.Sprintf("should delete PV with reclaimPolicy %q", v1.PersistentVolumeReclaimDelete), func(ctx ginkgo.SpecContext) {
 		reclaimPolicy := v1.PersistentVolumeReclaimDelete
 		volumes := []testsuites.VolumeDetails{
 			{
@@ -282,10 +281,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Volumes:                volumes,
 			StorageClassParameters: map[string]string{"skuName": "Standard_LRS"},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It(fmt.Sprintf("[env] should retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
+	ginkgo.It(fmt.Sprintf("[env] should retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func(ctx ginkgo.SpecContext) {
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
 		volumes := []testsuites.VolumeDetails{
 			{
@@ -306,10 +305,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		if isAzureStackCloud {
 			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a pod with multiple volumes", func() {
+	ginkgo.It("should create a pod with multiple volumes", func(ctx ginkgo.SpecContext) {
 		volumes := []testsuites.VolumeDetails{}
 		for i := 1; i <= 6; i++ {
 			volume := testsuites.VolumeDetails{
@@ -332,10 +331,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should receive FailedMount event with invalid mount options", func() {
+	ginkgo.It("should receive FailedMount event with invalid mount options", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
@@ -363,17 +362,17 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"allowBlobPublicAccess": "true",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a volume on demand (Bring Your Own Key)", func() {
+	ginkgo.It("should create a volume on demand (Bring Your Own Key)", func(ctx ginkgo.SpecContext) {
 		// create a volume
 		volName := fmt.Sprintf("byok-%d", ginkgo.GinkgoParallelProcess())
-		resp, err := blobDriver.CreateVolume(context.Background(), makeCreateVolumeReq(volName, ns.Name))
+		resp, err := blobDriver.CreateVolume(ctx, makeCreateVolumeReq(volName, ns.Name))
 		framework.ExpectNoError(err, "create volume error")
 		volumeID := resp.Volume.VolumeId
 		// get accountname and key
-		accountName, accountKey, _, _, err := blobDriver.GetStorageAccountAndContainer(context.Background(), volumeID, nil, nil)
+		accountName, accountKey, _, _, err := blobDriver.GetStorageAccountAndContainer(ctx, volumeID, nil, nil)
 		framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volumeID, err))
 		// create secret
 		secretName := "byok-secret"
@@ -382,8 +381,8 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			"azurestorageaccountkey":  accountKey,
 		}
 		tsecret := testsuites.NewTestSecret(cs, ns, secretName, secretData)
-		tsecret.Create()
-		defer tsecret.Cleanup()
+		tsecret.Create(ctx)
+		defer tsecret.Cleanup(ctx)
 
 		var bringKeyStorageClassParameters = map[string]string{
 			"csi.storage.k8s.io/provisioner-secret-name":      secretName,
@@ -415,10 +414,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pods:                   pods,
 			StorageClassParameters: bringKeyStorageClassParameters,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a volume on demand and resize it [blob.csi.azure.com]", func() {
+	ginkgo.It("should create a volume on demand and resize it [blob.csi.azure.com]", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
@@ -441,17 +440,17 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"matchTags": "true",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create an CSI inline volume [blob.csi.azure.com]", func() {
+	ginkgo.It("should create an CSI inline volume [blob.csi.azure.com]", func(ctx ginkgo.SpecContext) {
 		// create a volume
 		containerName := "csi-inline-blobfuse-volume"
-		resp, err := blobDriver.CreateVolume(context.Background(), makeCreateVolumeReq(containerName, ns.Name))
+		resp, err := blobDriver.CreateVolume(ctx, makeCreateVolumeReq(containerName, ns.Name))
 		framework.ExpectNoError(err, "create volume error")
 		volumeID := resp.Volume.VolumeId
 		// get accountname and key
-		accountName, accountKey, _, _, err := blobDriver.GetStorageAccountAndContainer(context.Background(), volumeID, nil, nil)
+		accountName, accountKey, _, _, err := blobDriver.GetStorageAccountAndContainer(ctx, volumeID, nil, nil)
 		framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volumeID, err))
 		// create secret
 		secretName := "csi-inline-blobfuse-volume-secret"
@@ -460,8 +459,8 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			"azurestorageaccountkey":  accountKey,
 		}
 		tsecret := testsuites.NewTestSecret(cs, ns, secretName, secretData)
-		tsecret.Create()
-		defer tsecret.Cleanup()
+		tsecret.Create(ctx)
+		defer tsecret.Cleanup(ctx)
 
 		pods := []testsuites.PodDetails{
 			{
@@ -488,10 +487,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			ContainerName: containerName,
 			ReadOnly:      false,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a NFSv3 volume on demand with mount options [nfs]", func() {
+	ginkgo.It("should create a NFSv3 volume on demand with mount options [nfs]", func(ctx ginkgo.SpecContext) {
 		if isAzureStackCloud {
 			ginkgo.Skip("test case is not available for Azure Stack")
 		}
@@ -521,10 +520,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"mountPermissions": "0755",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a NFSv3 volume on demand with zero mountPermissions [nfs]", func() {
+	ginkgo.It("should create a NFSv3 volume on demand with zero mountPermissions [nfs]", func(ctx ginkgo.SpecContext) {
 		if isAzureStackCloud {
 			ginkgo.Skip("test case is not available for Azure Stack")
 		}
@@ -554,10 +553,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"mountPermissions": "0",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a blobfuse2 volume on demand with mount options [fuse2]", func() {
+	ginkgo.It("should create a blobfuse2 volume on demand with mount options [fuse2]", func(ctx ginkgo.SpecContext) {
 		if isAzureStackCloud {
 			ginkgo.Skip("test case is not available for Azure Stack")
 		}
@@ -587,10 +586,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"protocol": "fuse2",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a private endpoint volume on demand", ginkgo.Serial, func() {
+	ginkgo.It("should create a private endpoint volume on demand", ginkgo.Serial, func(ctx ginkgo.SpecContext) {
 		if isAzureStackCloud {
 			ginkgo.Skip("test case is not available for Azure Stack")
 		}
@@ -621,10 +620,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"networkEndpointType": "privateEndpoint",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a private endpoint volume on demand with protocol [fuse2]", ginkgo.Serial, func() {
+	ginkgo.It("should create a private endpoint volume on demand with protocol [fuse2]", ginkgo.Serial, func(ctx ginkgo.SpecContext) {
 		if isAzureStackCloud {
 			ginkgo.Skip("test case is not available for Azure Stack")
 		}
@@ -655,10 +654,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"networkEndpointType": "privateEndpoint",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a private endpoint volume on demand with protocol [nfs]", ginkgo.Serial, func() {
+	ginkgo.It("should create a private endpoint volume on demand with protocol [nfs]", ginkgo.Serial, func(ctx ginkgo.SpecContext) {
 		if isAzureStackCloud {
 			ginkgo.Skip("test case is not available for Azure Stack")
 		}
@@ -689,10 +688,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"networkEndpointType": "privateEndpoint",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should be able to unmount blobfuse volume if volume is already deleted [blob.csi.azure.com]", func() {
+	ginkgo.It("should be able to unmount blobfuse volume if volume is already deleted [blob.csi.azure.com]", func(ctx ginkgo.SpecContext) {
 		pod := testsuites.PodDetails{
 			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 1; done",
 			Volumes: []testsuites.VolumeDetails{
@@ -724,10 +723,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"protocol": "fuse",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should be able to unmount blobfuse2 volume if volume is already deleted [blob.csi.azure.com]", func() {
+	ginkgo.It("should be able to unmount blobfuse2 volume if volume is already deleted [blob.csi.azure.com]", func(ctx ginkgo.SpecContext) {
 		pod := testsuites.PodDetails{
 			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 1; done",
 			Volumes: []testsuites.VolumeDetails{
@@ -758,10 +757,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"protocol": "fuse2",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should be able to unmount NFS volume if volume is already deleted [blob.csi.azure.com]", func() {
+	ginkgo.It("should be able to unmount NFS volume if volume is already deleted [blob.csi.azure.com]", func(ctx ginkgo.SpecContext) {
 		pod := testsuites.PodDetails{
 			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 1; done",
 			Volumes: []testsuites.VolumeDetails{
@@ -792,10 +791,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"mountPermissions": "0755",
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("[blob.csi.azure.com] verify examples", ginkgo.Label("flaky"), func() {
+	ginkgo.It("[blob.csi.azure.com] verify examples", ginkgo.Label("flaky"), func(ctx ginkgo.SpecContext) {
 		createExampleDeployment := testCmd{
 			command:  "bash",
 			args:     []string{"hack/verify-examples.sh"},
@@ -805,7 +804,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		execTestCmd([]testCmd{createExampleDeployment})
 	})
 
-	ginkgo.It("volume mount is still valid after driver restart [blob.csi.azure.com]", ginkgo.Serial, func() {
+	ginkgo.It("volume mount is still valid after driver restart [blob.csi.azure.com]", ginkgo.Serial, func(ctx ginkgo.SpecContext) {
 		pod := testsuites.PodDetails{
 			Cmd: "echo 'hello world' >> /mnt/test-1/data && while true; do sleep 3600; done",
 			Volumes: []testsuites.VolumeDetails{
@@ -839,6 +838,6 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				execTestCmd([]testCmd{restartDriver})
 			},
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 })

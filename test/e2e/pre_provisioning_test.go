@@ -17,7 +17,6 @@ limitations under the License.
 package e2e
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -54,7 +53,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 		volumeID   string
 	)
 
-	ginkgo.BeforeEach(func() {
+	ginkgo.BeforeEach(func(ctx ginkgo.SpecContext) {
 		checkPodsRestart := testCmd{
 			command:  "sh",
 			args:     []string{"test/utils/check_driver_pods_restart.sh"},
@@ -68,13 +67,13 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 		testDriver = driver.InitBlobCSIDriver()
 
 		volName := fmt.Sprintf("pre-provisioned-%d-%v", ginkgo.GinkgoParallelProcess(), strconv.Itoa(rand.Intn(10000)))
-		resp, err := blobDriver.CreateVolume(context.Background(), makeCreateVolumeReq(volName, ns.Name))
+		resp, err := blobDriver.CreateVolume(ctx, makeCreateVolumeReq(volName, ns.Name))
 		framework.ExpectNoError(err, "create volume error")
 		volumeID = resp.Volume.VolumeId
 
-		ginkgo.DeferCleanup(func() {
+		ginkgo.DeferCleanup(func(ctx ginkgo.SpecContext) {
 			_, err := blobDriver.DeleteVolume(
-				context.Background(),
+				ctx,
 				&csi.DeleteVolumeRequest{
 					VolumeId: volumeID,
 				})
@@ -82,7 +81,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 		})
 	})
 
-	ginkgo.It("[env] should use a pre-provisioned volume and mount it as readOnly in a pod", func() {
+	ginkgo.It("[env] should use a pre-provisioned volume and mount it as readOnly in a pod", func(ctx ginkgo.SpecContext) {
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		pods := []testsuites.PodDetails{
 			{
@@ -105,10 +104,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It(fmt.Sprintf("[env] should use a pre-provisioned volume and retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func() {
+	ginkgo.It(fmt.Sprintf("[env] should use a pre-provisioned volume and retain PV with reclaimPolicy %q", v1.PersistentVolumeReclaimRetain), func(ctx ginkgo.SpecContext) {
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
 		volumes := []testsuites.VolumeDetails{
@@ -123,10 +122,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			CSIDriver: testDriver,
 			Volumes:   volumes,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should use a pre-provisioned volume and mount it by multiple pods", func() {
+	ginkgo.It("should use a pre-provisioned volume and mount it by multiple pods", func(ctx ginkgo.SpecContext) {
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		pods := []testsuites.PodDetails{}
 		for i := 1; i <= 6; i++ {
@@ -153,10 +152,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should use existing credentials in k8s cluster", func() {
+	ginkgo.It("should use existing credentials in k8s cluster", func(ctx ginkgo.SpecContext) {
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
 		volumeBindingMode := storagev1.VolumeBindingImmediate
@@ -183,10 +182,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should use provided credentials", ginkgo.Label("flaky"), func() {
+	ginkgo.It("should use provided credentials", ginkgo.Label("flaky"), func(ctx ginkgo.SpecContext) {
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
 		volumeBindingMode := storagev1.VolumeBindingImmediate
@@ -216,10 +215,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			Pods:      pods,
 			Driver:    blobDriver,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should use Key Vault", func() {
+	ginkgo.It("should use Key Vault", func(ctx ginkgo.SpecContext) {
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
 		volumeBindingMode := storagev1.VolumeBindingImmediate
@@ -249,10 +248,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			Pods:      pods,
 			Driver:    blobDriver,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should use SAS token", func() {
+	ginkgo.It("should use SAS token", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
@@ -278,7 +277,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 			Pods:      pods,
 			Driver:    blobDriver,
 		}
-		test.Run(cs, ns)
+		test.Run(ctx, cs, ns)
 	})
 })
 

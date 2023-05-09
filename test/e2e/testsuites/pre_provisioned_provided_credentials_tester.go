@@ -40,7 +40,7 @@ type PreProvisionedProvidedCredentiasTest struct {
 	Driver    *blob.Driver
 }
 
-func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+func (t *PreProvisionedProvidedCredentiasTest) Run(ctx context.Context, client clientset.Interface, namespace *v1.Namespace) {
 	kvClient, err := azure.NewKeyVaultClient()
 	framework.ExpectNoError(err)
 
@@ -49,7 +49,7 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 
 	for _, pod := range t.Pods {
 		for n, volume := range pod.Volumes {
-			accountName, accountKey, _, _, err := t.Driver.GetStorageAccountAndContainer(context.Background(), volume.VolumeID, nil, nil)
+			accountName, accountKey, _, _, err := t.Driver.GetStorageAccountAndContainer(ctx, volume.VolumeID, nil, nil)
 			framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volume.VolumeID, err))
 			var secretData map[string]string
 			var i int
@@ -60,23 +60,23 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 				i++
 
 				tsecret := NewTestSecret(client, namespace, volume.NodeStageSecretRef, secretData)
-				tsecret.Create()
-				defer tsecret.Cleanup()
+				tsecret.Create(ctx)
+				defer tsecret.Cleanup(ctx)
 
-				tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
+				tpod, cleanup := pod.SetupWithPreProvisionedVolumes(ctx, client, namespace, t.CSIDriver)
 				// defer must be called here for resources not get removed before using them
 				for i := range cleanup {
-					defer cleanup[i]()
+					defer cleanup[i](ctx)
 				}
 
 				ginkgo.By("deploying the pod")
-				tpod.Create()
+				tpod.Create(ctx)
 				defer func() {
-					tpod.Cleanup()
+					tpod.Cleanup(ctx)
 				}()
 
 				ginkgo.By("checking that the pods command exits with no error")
-				tpod.WaitForSuccess()
+				tpod.WaitForSuccess(ctx)
 			}
 
 			// test for storage account key
@@ -112,17 +112,17 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 			}
 
 			// assign role to service principal
-			objectID, err := kvClient.GetServicePrincipalObjectID(context.TODO(), kvClient.Cred.AADClientID)
+			objectID, err := kvClient.GetServicePrincipalObjectID(ctx, kvClient.Cred.AADClientID)
 			framework.ExpectNoError(err, fmt.Sprintf("Error GetServicePrincipalObjectID from clientID(%s): %v", kvClient.Cred.AADClientID, err))
 
 			resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Storage/storageAccounts/%s", kvClient.Cred.SubscriptionID, kvClient.Cred.ResourceGroup, accountName)
 
 			ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the service principal, objectID:%s", objectID))
-			roleDef, err := authClient.GetRoleDefinition(context.TODO(), resourceID, "Storage Blob Data Contributor")
+			roleDef, err := authClient.GetRoleDefinition(ctx, resourceID, "Storage Blob Data Contributor")
 			framework.ExpectNoError(err, fmt.Sprintf("Error GetRoleDefinition from resourceID(%s): %v", resourceID, err))
 
 			roleDefID := *roleDef.ID
-			_, err = authClient.AssignRole(context.TODO(), resourceID, objectID, roleDefID)
+			_, err = authClient.AssignRole(ctx, resourceID, objectID, roleDefID)
 			if err != nil && strings.Contains(err.Error(), "The role assignment already exists") {
 				err = nil
 			}
@@ -131,7 +131,7 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 			run()
 
 			// test for managed identity(objectID)
-			objectID, err = kvClient.GetMSIObjectID(context.TODO(), "blobfuse-csi-driver-e2e-test-id")
+			objectID, err = kvClient.GetMSIObjectID(ctx, "blobfuse-csi-driver-e2e-test-id")
 			if err != nil {
 				// only e2e-vmss test job will use msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal, so skip here
 				return
@@ -147,7 +147,7 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 				"azurestorageaccountname": accountName,
 			}
 			ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the managed identity, objectID:%s", objectID))
-			_, err = authClient.AssignRole(context.TODO(), resourceID, objectID, roleDefID)
+			_, err = authClient.AssignRole(ctx, resourceID, objectID, roleDefID)
 			if err != nil && strings.Contains(err.Error(), "The role assignment already exists") {
 				err = nil
 			}
@@ -156,7 +156,7 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(client clientset.Interface, n
 			run()
 
 			// test for managed identity(resourceID)
-			resourceID, err = kvClient.GetMSIResourceID(context.TODO(), "blobfuse-csi-driver-e2e-test-id")
+			resourceID, err = kvClient.GetMSIResourceID(ctx, "blobfuse-csi-driver-e2e-test-id")
 			if err != nil {
 				// only e2e-vmss test job will use msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal, so skip here
 				return

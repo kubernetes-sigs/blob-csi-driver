@@ -17,6 +17,7 @@ limitations under the License.
 package testsuites
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/onsi/ginkgo/v2"
@@ -36,7 +37,7 @@ type PreProvisionedExistingCredentialsTest struct {
 	Pods      []PodDetails
 }
 
-func (t *PreProvisionedExistingCredentialsTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+func (t *PreProvisionedExistingCredentialsTest) Run(ctx context.Context, client clientset.Interface, namespace *v1.Namespace) {
 	for _, pod := range t.Pods {
 		for n, volume := range pod.Volumes {
 			resourceGroupName, accountName, containerName, _, _, err := blob.GetContainerInfo(volume.VolumeID)
@@ -53,25 +54,25 @@ func (t *PreProvisionedExistingCredentialsTest) Run(client clientset.Interface, 
 			ginkgo.By("creating the storageclass with existing credentials")
 			sc := t.CSIDriver.GetProvisionStorageClass(parameters, volume.MountOptions, volume.ReclaimPolicy, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
 			tsc := NewTestStorageClass(client, namespace, sc)
-			createdStorageClass := tsc.Create()
-			defer tsc.Cleanup()
+			createdStorageClass := tsc.Create(ctx)
+			defer tsc.Cleanup(ctx)
 
 			ginkgo.By("creating pvc with storageclass")
 			tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass)
-			tpvc.Create()
-			defer tpvc.Cleanup()
+			tpvc.Create(ctx)
+			defer tpvc.Cleanup(ctx)
 
 			ginkgo.By("validating the pvc")
-			tpvc.WaitForBound()
-			tpvc.ValidateProvisionedPersistentVolume()
+			tpvc.WaitForBound(ctx)
+			tpvc.ValidateProvisionedPersistentVolume(ctx)
 
 			tpod := NewTestPod(client, namespace, pod.Cmd)
 			tpod.SetupVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", volume.VolumeMount.NameGenerate, n+1), fmt.Sprintf("%s%d", volume.VolumeMount.MountPathGenerate, n+1), volume.VolumeMount.ReadOnly)
 			ginkgo.By("deploying the pod")
-			tpod.Create()
-			defer tpod.Cleanup()
+			tpod.Create(ctx)
+			defer tpod.Cleanup(ctx)
 			ginkgo.By("checking that the pods command exits with no error")
-			tpod.WaitForSuccess()
+			tpod.WaitForSuccess(ctx)
 		}
 	}
 }

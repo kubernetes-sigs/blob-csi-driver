@@ -42,22 +42,22 @@ type DynamicallyProvisionedResizeVolumeTest struct {
 	StorageClassParameters map[string]string
 }
 
-func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+func (t *DynamicallyProvisionedResizeVolumeTest) Run(ctx context.Context, client clientset.Interface, namespace *v1.Namespace) {
 	for _, pod := range t.Pods {
-		tpod, cleanup := pod.SetupWithDynamicVolumes(client, namespace, t.CSIDriver, t.StorageClassParameters)
+		tpod, cleanup := pod.SetupWithDynamicVolumes(ctx, client, namespace, t.CSIDriver, t.StorageClassParameters)
 		// defer must be called here for resources not get removed before using them
 		for i := range cleanup {
-			defer cleanup[i]()
+			defer cleanup[i](ctx)
 		}
 
 		ginkgo.By("deploying the pod")
-		tpod.Create()
-		defer tpod.Cleanup()
+		tpod.Create(ctx)
+		defer tpod.Cleanup(ctx)
 		ginkgo.By("checking that the pods command exits with no error")
-		tpod.WaitForSuccess()
+		tpod.WaitForSuccess(ctx)
 
 		pvcName := tpod.pod.Spec.Volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName
-		pvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(context.TODO(), pvcName, metav1.GetOptions{})
+		pvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(ctx, pvcName, metav1.GetOptions{})
 		if err != nil {
 			framework.ExpectNoError(err, fmt.Sprintf("fail to get original pvc(%s): %v", pvcName, err))
 		}
@@ -69,7 +69,7 @@ func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface,
 		pvc.Spec.Resources.Requests["storage"] = originalSize
 
 		ginkgo.By("resizing the pvc")
-		updatedPvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Update(context.TODO(), pvc, metav1.UpdateOptions{})
+		updatedPvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Update(ctx, pvc, metav1.UpdateOptions{})
 		if err != nil {
 			framework.ExpectNoError(err, fmt.Sprintf("fail to resize pvc(%s): %v", pvcName, err))
 		}
@@ -79,7 +79,7 @@ func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface,
 		time.Sleep(30 * time.Second)
 
 		ginkgo.By("checking the resizing result")
-		newPvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(context.TODO(), tpod.pod.Spec.Volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName, metav1.GetOptions{})
+		newPvc, err := client.CoreV1().PersistentVolumeClaims(namespace.Name).Get(ctx, tpod.pod.Spec.Volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName, metav1.GetOptions{})
 		if err != nil {
 			framework.ExpectNoError(err, fmt.Sprintf("fail to get new pvc(%s): %v", pvcName, err))
 		}
@@ -89,7 +89,7 @@ func (t *DynamicallyProvisionedResizeVolumeTest) Run(client clientset.Interface,
 		}
 
 		ginkgo.By("checking the resizing PV result")
-		newPv, _ := client.CoreV1().PersistentVolumes().Get(context.Background(), updatedPvc.Spec.VolumeName, metav1.GetOptions{})
+		newPv, _ := client.CoreV1().PersistentVolumes().Get(ctx, updatedPvc.Spec.VolumeName, metav1.GetOptions{})
 		newPvSize := newPv.Spec.Capacity["storage"]
 		newPvSizeStr := newPvSize.String() + "Gi"
 

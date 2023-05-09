@@ -43,7 +43,7 @@ type PreProvisionedSASTokenTest struct {
 	Driver    *blob.Driver
 }
 
-func (t *PreProvisionedSASTokenTest) Run(client clientset.Interface, namespace *v1.Namespace) {
+func (t *PreProvisionedSASTokenTest) Run(ctx context.Context, client clientset.Interface, namespace *v1.Namespace) {
 	keyVaultClient, err := azure.NewKeyVaultClient()
 	framework.ExpectNoError(err)
 
@@ -51,14 +51,14 @@ func (t *PreProvisionedSASTokenTest) Run(client clientset.Interface, namespace *
 		for n, volume := range pod.Volumes {
 			// In the method GetStorageAccountAndContainer, we can get an account key of the blob volume
 			// by calling azure API, but not the sas token...
-			accountName, accountKey, _, containerName, err := t.Driver.GetStorageAccountAndContainer(context.TODO(), volume.VolumeID, nil, nil)
+			accountName, accountKey, _, containerName, err := t.Driver.GetStorageAccountAndContainer(ctx, volume.VolumeID, nil, nil)
 			framework.ExpectNoError(err, fmt.Sprintf("Error GetStorageAccountAndContainer from volumeID(%s): %v", volume.VolumeID, err))
 
 			ginkgo.By("creating KeyVault...")
-			vault, err := keyVaultClient.CreateVault(context.TODO())
+			vault, err := keyVaultClient.CreateVault(ctx)
 			framework.ExpectNoError(err)
 			defer func() {
-				err := keyVaultClient.CleanVault(context.TODO())
+				err := keyVaultClient.CleanVault(ctx)
 				framework.ExpectNoError(err)
 			}()
 
@@ -66,7 +66,7 @@ func (t *PreProvisionedSASTokenTest) Run(client clientset.Interface, namespace *
 			sasToken := GenerateSASToken(accountName, accountKey)
 
 			ginkgo.By("creating secret for SAS token...")
-			accountSASSecret, err := keyVaultClient.CreateSecret(context.TODO(), accountName+"-sas", sasToken)
+			accountSASSecret, err := keyVaultClient.CreateSecret(ctx, accountName+"-sas", sasToken)
 			framework.ExpectNoError(err)
 
 			pod.Volumes[n].Attrib["containerName"] = containerName
@@ -75,18 +75,18 @@ func (t *PreProvisionedSASTokenTest) Run(client clientset.Interface, namespace *
 			pod.Volumes[n].Attrib["keyVaultSecretName"] = *accountSASSecret.Name
 			pod.Volumes[n].Attrib["azurestorageauthtype"] = "SAS"
 
-			tpod, cleanup := pod.SetupWithPreProvisionedVolumes(client, namespace, t.CSIDriver)
+			tpod, cleanup := pod.SetupWithPreProvisionedVolumes(ctx, client, namespace, t.CSIDriver)
 			// defer must be called here for resources not get removed before using them
 			for i := range cleanup {
-				defer cleanup[i]()
+				defer cleanup[i](ctx)
 			}
 
 			ginkgo.By("deploying the pod")
-			tpod.Create()
-			defer tpod.Cleanup()
+			tpod.Create(ctx)
+			defer tpod.Cleanup(ctx)
 
 			ginkgo.By("checking that the pods command exits with no error")
-			tpod.WaitForSuccess()
+			tpod.WaitForSuccess(ctx)
 		}
 	}
 }

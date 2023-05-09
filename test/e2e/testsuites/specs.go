@@ -17,6 +17,7 @@ limitations under the License.
 package testsuites
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -86,20 +87,20 @@ type DataSource struct {
 	Name string
 }
 
-func (pod *PodDetails) SetupWithCSIInlineVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver, secretName, shareName string, readOnly bool) (*TestPod, []func()) {
+func (pod *PodDetails) SetupWithCSIInlineVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver, secretName, shareName string, readOnly bool) (*TestPod, []func(context.Context)) {
 	tpod := NewTestPod(client, namespace, pod.Cmd)
-	cleanupFuncs := make([]func(), 0)
+	cleanupFuncs := make([]func(ctx context.Context), 0)
 	for n, v := range pod.Volumes {
 		tpod.SetupInlineVolume(fmt.Sprintf("%s%d", v.VolumeMount.NameGenerate, n+1), fmt.Sprintf("%s%d", v.VolumeMount.MountPathGenerate, n+1), secretName, shareName, readOnly)
 	}
 	return tpod, cleanupFuncs
 }
 
-func (pod *PodDetails) SetupWithDynamicVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver, storageClassParameters map[string]string) (*TestPod, []func()) {
+func (pod *PodDetails) SetupWithDynamicVolumes(ctx context.Context, client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver, storageClassParameters map[string]string) (*TestPod, []func(context.Context)) {
 	tpod := NewTestPod(client, namespace, pod.Cmd)
-	cleanupFuncs := make([]func(), 0)
+	cleanupFuncs := make([]func(ctx context.Context), 0)
 	for n, v := range pod.Volumes {
-		tpvc, funcs := v.SetupDynamicPersistentVolumeClaim(client, namespace, csiDriver, storageClassParameters)
+		tpvc, funcs := v.SetupDynamicPersistentVolumeClaim(ctx, client, namespace, csiDriver, storageClassParameters)
 		cleanupFuncs = append(cleanupFuncs, funcs...)
 		if v.VolumeMode == Block {
 			tpod.SetupRawBlockVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeDevice.NameGenerate, n+1), v.VolumeDevice.DevicePath)
@@ -111,9 +112,9 @@ func (pod *PodDetails) SetupWithDynamicVolumes(client clientset.Interface, names
 }
 
 // SetupWithDynamicMultipleVolumes each pod will be mounted with multiple volumes with different storage account types
-func (pod *PodDetails) SetupWithDynamicMultipleVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestPod, []func()) {
+func (pod *PodDetails) SetupWithDynamicMultipleVolumes(ctx context.Context, client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver) (*TestPod, []func(context.Context)) {
 	tpod := NewTestPod(client, namespace, pod.Cmd)
-	cleanupFuncs := make([]func(), 0)
+	cleanupFuncs := make([]func(ctx context.Context), 0)
 	supportedStorageAccountTypes := azurePublicCloudSupportedStorageAccountTypes
 	if isAzureStackCloud {
 		supportedStorageAccountTypes = azureStackCloudSupportedStorageAccountTypes
@@ -121,7 +122,7 @@ func (pod *PodDetails) SetupWithDynamicMultipleVolumes(client clientset.Interfac
 	accountTypeCount := len(supportedStorageAccountTypes)
 	for n, v := range pod.Volumes {
 		storageClassParameters := map[string]string{"skuName": supportedStorageAccountTypes[n%accountTypeCount]}
-		tpvc, funcs := v.SetupDynamicPersistentVolumeClaim(client, namespace, csiDriver, storageClassParameters)
+		tpvc, funcs := v.SetupDynamicPersistentVolumeClaim(ctx, client, namespace, csiDriver, storageClassParameters)
 		cleanupFuncs = append(cleanupFuncs, funcs...)
 		if v.VolumeMode == Block {
 			tpod.SetupRawBlockVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeDevice.NameGenerate, n+1), v.VolumeDevice.DevicePath)
@@ -132,11 +133,11 @@ func (pod *PodDetails) SetupWithDynamicMultipleVolumes(client clientset.Interfac
 	return tpod, cleanupFuncs
 }
 
-func (pod *PodDetails) SetupWithPreProvisionedVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.PreProvisionedVolumeTestDriver) (*TestPod, []func()) {
+func (pod *PodDetails) SetupWithPreProvisionedVolumes(ctx context.Context, client clientset.Interface, namespace *v1.Namespace, csiDriver driver.PreProvisionedVolumeTestDriver) (*TestPod, []func(context.Context)) {
 	tpod := NewTestPod(client, namespace, pod.Cmd)
-	cleanupFuncs := make([]func(), 0)
+	cleanupFuncs := make([]func(ctx context.Context), 0)
 	for n, v := range pod.Volumes {
-		tpvc, funcs := v.SetupPreProvisionedPersistentVolumeClaim(client, namespace, csiDriver)
+		tpvc, funcs := v.SetupPreProvisionedPersistentVolumeClaim(ctx, client, namespace, csiDriver)
 		cleanupFuncs = append(cleanupFuncs, funcs...)
 
 		if v.VolumeMode == Block {
@@ -148,19 +149,19 @@ func (pod *PodDetails) SetupWithPreProvisionedVolumes(client clientset.Interface
 	return tpod, cleanupFuncs
 }
 
-func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver, storageClassParameters map[string]string) (*TestDeployment, []func(), string) {
-	cleanupFuncs := make([]func(), 0)
+func (pod *PodDetails) SetupDeployment(ctx context.Context, client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver, storageClassParameters map[string]string) (*TestDeployment, []func(context.Context), string) {
+	cleanupFuncs := make([]func(ctx context.Context), 0)
 	volume := pod.Volumes[0]
 	ginkgo.By("setting up the StorageClass")
 	storageClass := csiDriver.GetProvisionStorageClass(storageClassParameters, volume.MountOptions, volume.ReclaimPolicy, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
 	tsc := NewTestStorageClass(client, namespace, storageClass)
-	createdStorageClass := tsc.Create()
+	createdStorageClass := tsc.Create(ctx)
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
 	ginkgo.By("setting up the PVC")
 	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass)
-	tpvc.Create()
-	tpvc.WaitForBound()
-	tpvc.ValidateProvisionedPersistentVolume()
+	tpvc.Create(ctx)
+	tpvc.WaitForBound(ctx)
+	tpvc.ValidateProvisionedPersistentVolume(ctx)
 	cleanupFuncs = append(cleanupFuncs, tpvc.Cleanup)
 	ginkgo.By("setting up the Deployment")
 	tDeployment := NewTestDeployment(client, namespace, pod.Cmd, tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", volume.VolumeMount.NameGenerate, 1), fmt.Sprintf("%s%d", volume.VolumeMount.MountPathGenerate, 1), volume.VolumeMount.ReadOnly)
@@ -173,12 +174,12 @@ func (pod *PodDetails) SetupDeployment(client clientset.Interface, namespace *v1
 	return tDeployment, cleanupFuncs, volumeID
 }
 
-func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver, storageClassParameters map[string]string) (*TestPersistentVolumeClaim, []func()) {
-	cleanupFuncs := make([]func(), 0)
+func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(ctx context.Context, client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver, storageClassParameters map[string]string) (*TestPersistentVolumeClaim, []func(context.Context)) {
+	cleanupFuncs := make([]func(ctx context.Context), 0)
 	ginkgo.By("setting up the StorageClass")
 	storageClass := csiDriver.GetProvisionStorageClass(storageClassParameters, volume.MountOptions, volume.ReclaimPolicy, volume.VolumeBindingMode, volume.AllowedTopologyValues, namespace.Name)
 	tsc := NewTestStorageClass(client, namespace, storageClass)
-	createdStorageClass := tsc.Create()
+	createdStorageClass := tsc.Create(ctx)
 	cleanupFuncs = append(cleanupFuncs, tsc.Cleanup)
 	ginkgo.By("setting up the PVC and PV")
 	var tpvc *TestPersistentVolumeClaim
@@ -190,32 +191,32 @@ func (volume *VolumeDetails) SetupDynamicPersistentVolumeClaim(client clientset.
 	} else {
 		tpvc = NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, &createdStorageClass)
 	}
-	tpvc.Create()
+	tpvc.Create(ctx)
 	cleanupFuncs = append(cleanupFuncs, tpvc.Cleanup)
 	// PV will not be ready until PVC is used in a pod when volumeBindingMode: WaitForFirstConsumer
 	if volume.VolumeBindingMode == nil || *volume.VolumeBindingMode == storagev1.VolumeBindingImmediate {
-		tpvc.WaitForBound()
-		tpvc.ValidateProvisionedPersistentVolume()
+		tpvc.WaitForBound(ctx)
+		tpvc.ValidateProvisionedPersistentVolume(ctx)
 	}
 
 	return tpvc, cleanupFuncs
 }
 
-func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.PreProvisionedVolumeTestDriver) (*TestPersistentVolumeClaim, []func()) {
-	cleanupFuncs := make([]func(), 0)
+func (volume *VolumeDetails) SetupPreProvisionedPersistentVolumeClaim(ctx context.Context, client clientset.Interface, namespace *v1.Namespace, csiDriver driver.PreProvisionedVolumeTestDriver) (*TestPersistentVolumeClaim, []func(ctx context.Context)) {
+	cleanupFuncs := make([]func(ctx context.Context), 0)
 	ginkgo.By("setting up the PV")
 	attrib := volume.Attrib
 	nodeStageSecretRef := volume.NodeStageSecretRef
 	pv := csiDriver.GetPersistentVolume(volume.VolumeID, volume.FSType, volume.ClaimSize, volume.ReclaimPolicy, namespace.Name, attrib, nodeStageSecretRef)
 	tpv := NewTestPreProvisionedPersistentVolume(client, pv)
-	tpv.Create()
+	tpv.Create(ctx)
 	ginkgo.By("setting up the PVC")
 	tpvc := NewTestPersistentVolumeClaim(client, namespace, volume.ClaimSize, volume.VolumeMode, nil)
-	tpvc.Create()
+	tpvc.Create(ctx)
 	cleanupFuncs = append(cleanupFuncs, tpvc.DeleteBoundPersistentVolume)
 	cleanupFuncs = append(cleanupFuncs, tpvc.Cleanup)
-	tpvc.WaitForBound()
-	tpvc.ValidateProvisionedPersistentVolume()
+	tpvc.WaitForBound(ctx)
+	tpvc.ValidateProvisionedPersistentVolume(ctx)
 
 	return tpvc, cleanupFuncs
 }
