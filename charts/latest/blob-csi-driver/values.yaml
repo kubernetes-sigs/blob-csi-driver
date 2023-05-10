@@ -165,3 +165,9 @@ driver:
 linux:
   kubelet: /var/lib/kubelet
   distro: debian
+
+workloadIdentity:
+  clientID: ""
+  # [optional] If the AAD application or user-assigned managed identity is not in the same tenant as the cluster
+  # then set tenantID with the application or user-assigned managed identity tenant ID
+  tenantID: ""
