@@ -468,6 +468,10 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 				if name != "" {
 					accountName = name
 				}
+				if err != nil && strings.EqualFold(azureStorageAuthType, "msi") {
+					klog.V(2).Infof("ignore error(%v) since secret is optional for auth type(%s)", err, azureStorageAuthType)
+					err = nil
+				}
 				if err != nil && !getAccountKeyFromSecret && (azureStorageAuthType == "" || strings.EqualFold(azureStorageAuthType, "key")) {
 					klog.V(2).Infof("get account(%s) key from secret(%s, %s) failed with error: %v, use cluster identity to get account key instead",
 						accountName, secretNamespace, secretName, err)
