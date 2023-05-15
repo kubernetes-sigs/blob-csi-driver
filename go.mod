@@ -13,7 +13,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.3
 	github.com/imdario/mergo v0.3.9 // indirect
-	github.com/kubernetes-csi/csi-lib-utils v0.9.1
+	github.com/kubernetes-csi/csi-lib-utils v0.13.0
 	github.com/onsi/gomega v1.27.6
 	github.com/pborman/uuid v1.2.0
 	github.com/pelletier/go-toml v1.9.4
