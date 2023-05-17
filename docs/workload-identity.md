@@ -1,15 +1,14 @@
-# How to Use workload identity with Blob CSI driver
+# workload identity support
+> Note:
+>  - supported version: v1.22.0
+>  - workload identity is supported on OpenShift, capz and other self-managed clusters
+>  - workload identity is NOT supported on AKS **managed** Blob CSI driver since the driver controller is managed by AKS control plane which is already using [managed identity](https://learn.microsoft.com/en-us/azure/aks/use-managed-identity) by default, it's not necessary to use workload identity for AKS managed Blob CSI driver.
 
 ## Prerequisites
 
-This document is mainly refer to [Azure AD Workload Identity Quick Start](https://azure.github.io/azure-workload-identity/docs/quick-start.html). Please Complete the [Installation guide](https://azure.github.io/azure-workload-identity/docs/installation.html) before the following steps.
+Before proceeding with the following steps, please ensure that you have completed the [Workload Identity installation guide](https://azure.github.io/azure-workload-identity/docs/installation.html). After completing the installation, you should have already installed the mutating admission webhook and obtained the OIDC issuer URL for your cluster.
 
-After you finish the Installation guide, you should have already:
-
-* installed the mutating admission webhook
-* obtained your cluster’s OIDC issuer URL
-
-## 1. Export environment variables
+## 1. Set environment variables
 
 ```shell
 export CLUSTER_NAME="<your cluster name>"
@@ -34,36 +33,22 @@ export SA_LIST=( "csi-blob-controller-sa" "csi-blob-node-sa" )
 export NAMESPACE="kube-system"
 ```
 
-## 2. Create Blob resource group
-
-If you are using AKS, you can get the resource group where Blob storage class reside by running:
+## 2. Create an AAD application or user-assigned managed identity and grant required permissions
 
 ```shell
-export AZURE_BLOB_RESOURCE_GROUP="$(az aks show --name $CLUSTER_NAME --resource-group $CLUSTER_RESOURCE_GROUP --query "nodeResourceGroup" -o tsv)"
-```
-
-You can also create resource group by yourself, but you must [specify the resource group](https://github.com/cvvz/blob-csi-driver/blob/workload_identity/docs/driver-parameters.md) in the storage class while using Blob CSI driver:
-
-```shell
-az group create -n $AZURE_BLOB_RESOURCE_GROUP -l $LOCATION
-```
-
-## 3. Create an AAD application or user-assigned managed identity and grant required permissions 
-
-```shell
-# create an AAD application if using Azure AD Application for this tutorial
+# create an AAD application if you are using Azure AD Application
 az ad sp create-for-rbac --name "${APPLICATION_NAME}"
 ```
 
 ```shell
-# create a user-assigned managed identity if using user-assigned managed identity for this tutorial
+# create a user-assigned managed identity if you are using user-assigned managed identity
 az group create -n ${IDENTITY_RESOURCE_GROUP} -l $LOCATION
 az identity create --name "${USER_ASSIGNED_IDENTITY_NAME}" --resource-group "${IDENTITY_RESOURCE_GROUP}"
 ```
 
 Grant required permission to the AAD application or user-assigned managed identity, for simplicity, we just assign Contributor role to the resource group where Blob storage class reside:
 
-If using Azure AD Application:
+ - if you are using Azure AD Application:
 
 ```shell
 export APPLICATION_CLIENT_ID="$(az ad sp list --display-name "${APPLICATION_NAME}" --query '[0].appId' -otsv)"
@@ -71,7 +56,7 @@ export AZURE_BLOB_RESOURCE_GROUP_ID="$(az group show -n $AZURE_BLOB_RESOURCE_GRO
 az role assignment create --assignee $APPLICATION_CLIENT_ID --role Contributor --scope $AZURE_BLOB_RESOURCE_GROUP_ID
 ```
 
-if using user-assigned managed identity:
+ - if you are using user-assigned managed identity:
 
 ```shell
 export USER_ASSIGNED_IDENTITY_OBJECT_ID="$(az identity show --name "${USER_ASSIGNED_IDENTITY_NAME}" --resource-group "${IDENTITY_RESOURCE_GROUP}" --query 'principalId' -otsv)"
@@ -79,9 +64,9 @@ export AZURE_BLOB_RESOURCE_GROUP_ID="$(az group show -n $AZURE_BLOB_RESOURCE_GRO
 az role assignment create --assignee $USER_ASSIGNED_IDENTITY_OBJECT_ID --role Contributor --scope $AZURE_BLOB_RESOURCE_GROUP_ID
 ```
 
-## 4. Establish federated identity credential between the identity and the Blob service account issuer & subject
+## 3. Establish federated identity credential between the identity and the Blob service account issuer & subject
 
-If using Azure AD Application:
+ - if you are using Azure AD Application:
 
 ```shell
 # Get the object ID of the AAD application
@@ -105,7 +90,7 @@ az ad app federated-credential create --id ${APPLICATION_OBJECT_ID} --parameters
 done
 ```
 
-If using user-assigned managed identity:
+ - if you are using user-assigned managed identity:
 
 ```shell
 for SERVICE_ACCOUNT_NAME in "${SA_LIST[@]}"
@@ -119,18 +104,10 @@ az identity federated-credential create \
 done
 ```
 
-## 5. Deploy Blob CSI Driver
+## 4. Install CSI driver manually
+ > workload identity is NOT supported on AKS **managed** Blob CSI driver
 
-Deploy storageclass:
-
-```shell
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blobfuse.yaml
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blob-nfs.yaml
-```
-
-Deploy Blob CSI Driver
-
-If using Azure AD Application:
+ - if you are using Azure AD Application:
 
 ```shell
 export CLIENT_ID="$(az ad sp list --display-name "${APPLICATION_NAME}" --query '[0].appId' -otsv)"
@@ -141,7 +118,7 @@ helm install blob-csi-driver charts/latest/blob-csi-driver \
 --set workloadIdentity.tenantID=$TENANT_ID
 ```
 
-If using user-assigned managed identity:
+ - if you are using user-assigned managed identity:
 
 ```shell
 export CLIENT_ID="$(az identity show --name "${USER_ASSIGNED_IDENTITY_NAME}" --resource-group "${IDENTITY_RESOURCE_GROUP}" --query 'clientId' -otsv)"
@@ -152,11 +129,9 @@ helm install blob-csi-driver charts/latest/blob-csi-driver \
 --set workloadIdentity.tenantID=$TENANT_ID
 ```
 
-## 6. Deploy application using Blob CSI driver
+## 5. Deploy application using CSI driver volume
 
 ```shell
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/storageclass-blobfuse.yaml
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/nfs/statefulset.yaml
-kubectl create -f  https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/deployment.yaml
 ```
-
-Please make sure all the Pods are running.
