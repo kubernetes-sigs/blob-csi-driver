@@ -38,7 +38,7 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
 This option does not depend on cloud provider config file, supports cross subscription and on-premise cluster scenario. Refer to [detailed steps](./deploy/example/e2e_usage.md#option2-bring-your-own-storage-account).
 
 ### Install driver on a Kubernetes cluster
-> Note: this only works on Ubuntu 18.04 node now
+> Note: this feature is only available in v1.19.5, v1.21.1 and later versions.
 >
 > To install specific blobfuse v1 version, run following command directly after driver is running on the agent node:
 > ```console
