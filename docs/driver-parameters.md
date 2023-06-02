@@ -103,6 +103,7 @@ volumeAttributes.keyVaultSecretVersion | Azure Key Vault secret version | existi
 kubectl create secret generic azure-secret --from-literal=azurestorageaccountname="xxx" --from-literal azurestorageaccountkey="xxx" --type=Opaque
 kubectl create secret generic azure-secret --from-literal=azurestorageaccountname="xxx" --from-literal azurestorageaccountsastoken="xxx" --type=Opaque
 kubectl create secret generic azure-secret --from-literal msisecret="xxx" --type=Opaque
+# azurestoragespnclientid, azurestoragespntenantid field setting in secret is only supported from v1.21.3
 kubectl create secret generic azure-secret --from-literal azurestoragespnclientsecret="xxx" azurestoragespnclientid="xxx" azurestoragespntenantid="xxx" --type=Opaque
  ```
 
