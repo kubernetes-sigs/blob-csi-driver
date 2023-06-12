@@ -33,8 +33,8 @@ if [ $ver != "master" ]; then
   repo="$repo/$ver"
 fi
 
-
 echo "Uninstalling Azure Blob Storage CSI driver, version: $ver ..."
+kubectl delete daemonset csi-blobfuse-proxy -n kube-system --ignore-not-found
 kubectl delete -f $repo/csi-blob-controller.yaml --ignore-not-found
 kubectl delete -f $repo/csi-blob-node.yaml --ignore-not-found
 kubectl delete -f $repo/csi-blob-driver.yaml --ignore-not-found
