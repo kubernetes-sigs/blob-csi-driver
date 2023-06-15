@@ -82,6 +82,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"secretNamespace": "default",
 				// make sure this is the first test case due to storeAccountKey is set as false
 				"storeAccountKey":        "false",
+				"getLatestAccountKey":    "true",
 				"requireInfraEncryption": "true",
 				"accessTier":             "Hot",
 			},

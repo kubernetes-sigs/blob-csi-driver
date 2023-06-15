@@ -19,6 +19,7 @@ package blob
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -70,6 +71,7 @@ const (
 	containerNameField           = "containername"
 	containerNamePrefixField     = "containernameprefix"
 	storeAccountKeyField         = "storeaccountkey"
+	getLatestAccountKeyField     = "getlatestaccountkey"
 	isHnsEnabledField            = "ishnsenabled"
 	softDeleteBlobsField         = "softdeleteblobs"
 	softDeleteContainersField    = "softdeletecontainers"
@@ -381,6 +383,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		azureStorageAuthType    string
 		authEnv                 []string
 		getAccountKeyFromSecret bool
+		getLatestAccountKey     bool
 	)
 
 	for k, v := range attrib {
@@ -426,6 +429,10 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			storageSPNTenantID = v
 		case "azurestorageaadendpoint":
 			authEnv = append(authEnv, "AZURE_STORAGE_AAD_ENDPOINT="+v)
+		case getLatestAccountKeyField:
+			if getLatestAccountKey, err = strconv.ParseBool(v); err != nil {
+				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("invalid %s: %s in volume context", getLatestAccountKeyField, v)
+			}
 		}
 	}
 	klog.V(2).Infof("volumeID(%s) authEnv: %s", volumeID, authEnv)
@@ -485,7 +492,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 				if err != nil && !getAccountKeyFromSecret && (azureStorageAuthType == "" || strings.EqualFold(azureStorageAuthType, "key")) {
 					klog.V(2).Infof("get account(%s) key from secret(%s, %s) failed with error: %v, use cluster identity to get account key instead",
 						accountName, secretNamespace, secretName, err)
-					accountKey, err = d.cloud.GetStorageAccesskey(ctx, subsID, accountName, rgName)
+					accountKey, err = d.cloud.GetStorageAccesskey(ctx, subsID, accountName, rgName, getLatestAccountKey)
 					if err != nil {
 						return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
 					}
@@ -567,6 +574,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 		keyVaultURL           string
 		keyVaultSecretName    string
 		keyVaultSecretVersion string
+		getLatestAccountKey   bool
 		err                   error
 	)
 
@@ -586,6 +594,10 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 			accountName = v
 		case storageAccountNameField: // for compatibility
 			accountName = v
+		case getLatestAccountKeyField:
+			if getLatestAccountKey, err = strconv.ParseBool(v); err != nil {
+				return "", "", "", "", fmt.Errorf("invalid %s: %s in volume context", getLatestAccountKeyField, v)
+			}
 		}
 	}
 
@@ -614,7 +626,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 				rgName = d.cloud.ResourceGroup
 			}
 
-			accountKey, err = d.cloud.GetStorageAccesskey(ctx, subsID, accountName, rgName)
+			accountKey, err = d.cloud.GetStorageAccesskey(ctx, subsID, accountName, rgName, getLatestAccountKey)
 			if err != nil {
 				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
 			}
@@ -784,7 +796,7 @@ func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.
 	_, accountKey, _, _, _, _, _, err := d.GetInfoFromSecret(ctx, secretName, secretNamespace) //nolint
 	if err != nil {
 		klog.V(2).Infof("could not get account(%s) key from secret(%s) namespace(%s), error: %v, use cluster identity to get account key instead", accountOptions.Name, secretName, secretNamespace, err)
-		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountOptions.SubscriptionID, accountOptions.Name, accountOptions.ResourceGroup)
+		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountOptions.SubscriptionID, accountOptions.Name, accountOptions.ResourceGroup, accountOptions.GetLatestAccountKey)
 	}
 	return accountOptions.Name, accountKey, err
 }
