@@ -47,62 +47,68 @@ import (
 
 const (
 	// DefaultDriverName holds the name of the csi-driver
-	DefaultDriverName            = "blob.csi.azure.com"
-	blobCSIDriverName            = "blob_csi_driver"
-	separator                    = "#"
-	volumeIDTemplate             = "%s#%s#%s#%s#%s#%s"
-	secretNameTemplate           = "azure-storage-account-%s-secret"
-	serverNameField              = "server"
-	storageEndpointSuffixField   = "storageendpointsuffix"
-	tagsField                    = "tags"
-	matchTagsField               = "matchtags"
-	protocolField                = "protocol"
-	accountNameField             = "accountname"
-	accountKeyField              = "accountkey"
-	storageAccountField          = "storageaccount"
-	storageAccountTypeField      = "storageaccounttype"
-	skuNameField                 = "skuname"
-	subscriptionIDField          = "subscriptionid"
-	resourceGroupField           = "resourcegroup"
-	locationField                = "location"
-	secretNameField              = "secretname"
-	secretNamespaceField         = "secretnamespace"
-	containerNameField           = "containername"
-	containerNamePrefixField     = "containernameprefix"
-	storeAccountKeyField         = "storeaccountkey"
-	isHnsEnabledField            = "ishnsenabled"
-	softDeleteBlobsField         = "softdeleteblobs"
-	softDeleteContainersField    = "softdeletecontainers"
-	enableBlobVersioningField    = "enableblobversioning"
-	getAccountKeyFromSecretField = "getaccountkeyfromsecret"
-	storageSPNClientIDField      = "azurestoragespnclientid"
-	storageSPNTenantIDField      = "azurestoragespntenantid"
-	keyVaultURLField             = "keyvaulturl"
-	keyVaultSecretNameField      = "keyvaultsecretname"
-	keyVaultSecretVersionField   = "keyvaultsecretversion"
-	storageAccountNameField      = "storageaccountname"
-	allowBlobPublicAccessField   = "allowblobpublicaccess"
-	requireInfraEncryptionField  = "requireinfraencryption"
-	ephemeralField               = "csi.storage.k8s.io/ephemeral"
-	podNamespaceField            = "csi.storage.k8s.io/pod.namespace"
-	mountOptionsField            = "mountoptions"
-	falseValue                   = "false"
-	trueValue                    = "true"
-	defaultSecretAccountName     = "azurestorageaccountname"
-	defaultSecretAccountKey      = "azurestorageaccountkey"
-	accountSasTokenField         = "azurestorageaccountsastoken"
-	msiSecretField               = "msisecret"
-	storageSPNClientSecretField  = "azurestoragespnclientsecret"
-	Fuse                         = "fuse"
-	Fuse2                        = "fuse2"
-	NFS                          = "nfs"
-	vnetResourceGroupField       = "vnetresourcegroup"
-	vnetNameField                = "vnetname"
-	subnetNameField              = "subnetname"
-	accessTierField              = "accesstier"
-	networkEndpointTypeField     = "networkendpointtype"
-	mountPermissionsField        = "mountpermissions"
-	useDataPlaneAPIField         = "usedataplaneapi"
+	DefaultDriverName              = "blob.csi.azure.com"
+	blobCSIDriverName              = "blob_csi_driver"
+	separator                      = "#"
+	volumeIDTemplate               = "%s#%s#%s#%s#%s#%s"
+	secretNameTemplate             = "azure-storage-account-%s-secret"
+	serverNameField                = "server"
+	storageEndpointSuffixField     = "storageendpointsuffix"
+	tagsField                      = "tags"
+	matchTagsField                 = "matchtags"
+	protocolField                  = "protocol"
+	accountNameField               = "accountname"
+	accountKeyField                = "accountkey"
+	storageAccountField            = "storageaccount"
+	storageAccountTypeField        = "storageaccounttype"
+	skuNameField                   = "skuname"
+	subscriptionIDField            = "subscriptionid"
+	resourceGroupField             = "resourcegroup"
+	locationField                  = "location"
+	secretNameField                = "secretname"
+	secretNamespaceField           = "secretnamespace"
+	containerNameField             = "containername"
+	containerNamePrefixField       = "containernameprefix"
+	storeAccountKeyField           = "storeaccountkey"
+	isHnsEnabledField              = "ishnsenabled"
+	softDeleteBlobsField           = "softdeleteblobs"
+	softDeleteContainersField      = "softdeletecontainers"
+	enableBlobVersioningField      = "enableblobversioning"
+	getAccountKeyFromSecretField   = "getaccountkeyfromsecret"
+	storageSPNClientIDField        = "azurestoragespnclientid"
+	storageSPNTenantIDField        = "azurestoragespntenantid"
+	storageAuthTypeField           = "azurestorageauthtype"
+	storageIentityClientIDField    = "azurestorageidentityclientid"
+	storageIdentityObjectIDField   = "azurestorageidentityobjectid"
+	storageIdentityResourceIDField = "azurestorageidentityresourceid"
+	msiEndpointField               = "msiendpoint"
+	storageAADEndpointField        = "azurestorageaadendpoint"
+	keyVaultURLField               = "keyvaulturl"
+	keyVaultSecretNameField        = "keyvaultsecretname"
+	keyVaultSecretVersionField     = "keyvaultsecretversion"
+	storageAccountNameField        = "storageaccountname"
+	allowBlobPublicAccessField     = "allowblobpublicaccess"
+	requireInfraEncryptionField    = "requireinfraencryption"
+	ephemeralField                 = "csi.storage.k8s.io/ephemeral"
+	podNamespaceField              = "csi.storage.k8s.io/pod.namespace"
+	mountOptionsField              = "mountoptions"
+	falseValue                     = "false"
+	trueValue                      = "true"
+	defaultSecretAccountName       = "azurestorageaccountname"
+	defaultSecretAccountKey        = "azurestorageaccountkey"
+	accountSasTokenField           = "azurestorageaccountsastoken"
+	msiSecretField                 = "msisecret"
+	storageSPNClientSecretField    = "azurestoragespnclientsecret"
+	Fuse                           = "fuse"
+	Fuse2                          = "fuse2"
+	NFS                            = "nfs"
+	vnetResourceGroupField         = "vnetresourcegroup"
+	vnetNameField                  = "vnetname"
+	subnetNameField                = "subnetname"
+	accessTierField                = "accesstier"
+	networkEndpointTypeField       = "networkendpointtype"
+	mountPermissionsField          = "mountpermissions"
+	useDataPlaneAPIField           = "usedataplaneapi"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3
@@ -409,22 +415,22 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			pvcNamespace = v
 		case getAccountKeyFromSecretField:
 			getAccountKeyFromSecret = strings.EqualFold(v, trueValue)
-		case "azurestorageauthtype":
+		case storageAuthTypeField:
 			azureStorageAuthType = v
 			authEnv = append(authEnv, "AZURE_STORAGE_AUTH_TYPE="+v)
-		case "azurestorageidentityclientid":
+		case storageIentityClientIDField:
 			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_CLIENT_ID="+v)
-		case "azurestorageidentityobjectid":
+		case storageIdentityObjectIDField:
 			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_OBJECT_ID="+v)
-		case "azurestorageidentityresourceid":
+		case storageIdentityResourceIDField:
 			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_RESOURCE_ID="+v)
-		case "msiendpoint":
+		case msiEndpointField:
 			authEnv = append(authEnv, "MSI_ENDPOINT="+v)
 		case storageSPNClientIDField:
 			storageSPNClientID = v
 		case storageSPNTenantIDField:
 			storageSPNTenantID = v
-		case "azurestorageaadendpoint":
+		case storageAADEndpointField:
 			authEnv = append(authEnv, "AZURE_STORAGE_AAD_ENDPOINT="+v)
 		}
 	}

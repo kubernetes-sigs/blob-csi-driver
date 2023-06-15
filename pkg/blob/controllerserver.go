@@ -153,6 +153,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case pvNameKey:
 			containerNameReplaceMap[pvNameMetadata] = v
 		case serverNameField:
+		case storageAuthTypeField:
+		case storageIentityClientIDField:
+		case storageIdentityObjectIDField:
+		case storageIdentityResourceIDField:
+		case msiEndpointField:
+		case storageAADEndpointField:
 			// no op, only used in NodeStageVolume
 		case storageEndpointSuffixField:
 			storageEndpointSuffix = v
