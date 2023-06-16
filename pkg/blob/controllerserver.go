@@ -75,8 +75,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
 	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning *bool
 	var vnetResourceGroup, vnetName, subnetName, accessTier, networkEndpointType, storageEndpointSuffix string
-	var matchTags, useDataPlaneAPI bool
+	var matchTags, useDataPlaneAPI, getLatestAccountKey bool
 	var softDeleteBlobs, softDeleteContainers int32
+	var err error
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := pointer.Bool(false)
 
@@ -136,6 +137,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case storeAccountKeyField:
 			if strings.EqualFold(v, falseValue) {
 				storeAccountKey = false
+			}
+		case getLatestAccountKeyField:
+			if getLatestAccountKey, err = strconv.ParseBool(v); err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "invalid %s: %s in volume context", getLatestAccountKeyField, v)
 			}
 		case allowBlobPublicAccessField:
 			if strings.EqualFold(v, trueValue) {
@@ -308,6 +313,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		EnableBlobVersioning:            enableBlobVersioning,
 		SoftDeleteBlobs:                 softDeleteBlobs,
 		SoftDeleteContainers:            softDeleteContainers,
+		GetLatestAccountKey:             getLatestAccountKey,
 	}
 
 	var accountKey string

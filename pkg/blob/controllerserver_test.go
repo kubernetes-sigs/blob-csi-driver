@@ -229,15 +229,9 @@ func TestCreateVolume(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
-				mp := make(map[string]string)
-				mp[protocolField] = "unit-test"
-				mp[skuNameField] = "unit-test"
-				mp[storageAccountTypeField] = "unit-test"
-				mp[locationField] = "unit-test"
-				mp[storageAccountField] = "unit-test"
-				mp[resourceGroupField] = "unit-test"
-				mp[containerNameField] = "unit-test"
-				mp[mountPermissionsField] = "0750"
+				mp := map[string]string{
+					protocolField: "unit-test",
+				}
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
@@ -248,6 +242,29 @@ func TestCreateVolume(t *testing.T) {
 				}
 				_, err := d.CreateVolume(context.Background(), req)
 				expectedErr := status.Errorf(codes.InvalidArgument, "protocol(unit-test) is not supported, supported protocol list: [fuse fuse2 nfs]")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "invalid getLatestAccountKey value",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				mp := map[string]string{
+					getLatestAccountKeyField: "invalid",
+				}
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				expectedErr := status.Errorf(codes.InvalidArgument, "invalid %s: %s in volume context", getLatestAccountKeyField, "invalid")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
