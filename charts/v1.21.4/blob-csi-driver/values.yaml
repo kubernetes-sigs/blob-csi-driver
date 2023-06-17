@@ -2,7 +2,7 @@ image:
   baseRepo: mcr.microsoft.com
   blob:
     repository: /oss/kubernetes-csi/blob-csi
-    tag: v1.21.3
+    tag: v1.21.4
     pullPolicy: IfNotPresent
   csiProvisioner:
     repository: /oss/kubernetes-csi/csi-provisioner
