@@ -16,7 +16,7 @@ require (
 	github.com/kubernetes-csi/csi-lib-utils v0.13.0
 	github.com/onsi/gomega v1.27.8
 	github.com/pborman/uuid v1.2.0
-	github.com/pelletier/go-toml v1.9.4
+	github.com/pelletier/go-toml v1.9.5
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/net v0.10.0
 	google.golang.org/grpc v1.51.0
@@ -26,7 +26,7 @@ require (
 	k8s.io/client-go v0.27.2
 	k8s.io/component-base v0.27.2
 	k8s.io/klog/v2 v2.100.1
-	k8s.io/kubernetes v1.27.1
+	k8s.io/kubernetes v1.27.3
 	k8s.io/mount-utils v0.27.1
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 	sigs.k8s.io/cloud-provider-azure v1.27.1-0.20230613061957-d0cd51201edc
