@@ -202,9 +202,9 @@ type Driver struct {
 	// a map storing all volumes created by this driver <volumeName, accountName>
 	volMap sync.Map
 	// a timed cache storing all volumeIDs and storage accounts that are using data plane API
-	dataPlaneAPIVolCache *azcache.TimedCache
+	dataPlaneAPIVolCache azcache.Resource
 	// a timed cache storing account search history (solve account list throttling issue)
-	accountSearchCache *azcache.TimedCache
+	accountSearchCache azcache.Resource
 }
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
@@ -236,10 +236,10 @@ func NewDriver(options *DriverOptions) *Driver {
 
 	var err error
 	getter := func(key string) (interface{}, error) { return nil, nil }
-	if d.accountSearchCache, err = azcache.NewTimedcache(time.Minute, getter); err != nil {
+	if d.accountSearchCache, err = azcache.NewTimedCache(time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
-	if d.dataPlaneAPIVolCache, err = azcache.NewTimedcache(10*time.Minute, getter); err != nil {
+	if d.dataPlaneAPIVolCache, err = azcache.NewTimedCache(10*time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
 	return &d
