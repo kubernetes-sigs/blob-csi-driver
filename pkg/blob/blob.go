@@ -728,10 +728,10 @@ func getStorageAccount(secrets map[string]string) (string, string, error) {
 	}
 
 	if accountName == "" {
-		return accountName, accountKey, fmt.Errorf("could not find %s or %s field secrets(%v)", accountNameField, defaultSecretAccountName, secrets)
+		return accountName, accountKey, fmt.Errorf("could not find %s or %s field in secrets", accountNameField, defaultSecretAccountName)
 	}
 	if accountKey == "" {
-		return accountName, accountKey, fmt.Errorf("could not find %s or %s field in secrets(%v)", accountKeyField, defaultSecretAccountKey, secrets)
+		return accountName, accountKey, fmt.Errorf("could not find %s or %s field in secrets", accountKeyField, defaultSecretAccountKey)
 	}
 
 	accountName = strings.TrimSpace(accountName)
