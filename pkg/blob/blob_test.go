@@ -779,31 +779,31 @@ func TestGetStorageAccount(t *testing.T) {
 			},
 			expectedAccountName: "",
 			expectedAccountKey:  "",
-			expectedError:       fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(map[accountname: accountkey:])"),
+			expectedError:       fmt.Errorf("could not find accountname or azurestorageaccountname field"),
 		},
 		{
 			options:             emptyAccountKeyMap,
 			expectedAccountName: "testaccount",
 			expectedAccountKey:  "",
-			expectedError:       fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets(%v)", emptyAccountKeyMap),
+			expectedError:       fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets"),
 		},
 		{
 			options:             emptyAccountNameMap,
 			expectedAccountName: "",
 			expectedAccountKey:  "testkey",
-			expectedError:       fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", emptyAccountNameMap),
+			expectedError:       fmt.Errorf("could not find accountname or azurestorageaccountname field in secrets"),
 		},
 		{
 			options:             emptyAzureAccountKeyMap,
 			expectedAccountName: "testaccount",
 			expectedAccountKey:  "",
-			expectedError:       fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets(%v)", emptyAzureAccountKeyMap),
+			expectedError:       fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets"),
 		},
 		{
 			options:             emptyAzureAccountNameMap,
 			expectedAccountName: "",
 			expectedAccountKey:  "testkey",
-			expectedError:       fmt.Errorf("could not find accountname or azurestorageaccountname field secrets(%v)", emptyAzureAccountNameMap),
+			expectedError:       fmt.Errorf("could not find accountname or azurestorageaccountname field in secrets"),
 		},
 		{
 			options:             nil,
@@ -844,9 +844,7 @@ func TestGetContainerReference(t *testing.T) {
 			secrets: map[string]string{
 				"accountKey": fakeAccountKey,
 			},
-			expectedError: fmt.Errorf("could not find %s or %s field secrets(%v)", accountNameField, defaultSecretAccountName, map[string]string{
-				"accountKey": fakeAccountKey,
-			}),
+			expectedError: fmt.Errorf("could not find %s or %s field in secrets", accountNameField, defaultSecretAccountName),
 		},
 		{
 			name:          "failed to retrieve accountKey",
@@ -854,9 +852,7 @@ func TestGetContainerReference(t *testing.T) {
 			secrets: map[string]string{
 				"accountName": fakeAccountName,
 			},
-			expectedError: fmt.Errorf("could not find %s or %s field in secrets(%v)", accountKeyField, defaultSecretAccountKey, map[string]string{
-				"accountName": fakeAccountName,
-			}),
+			expectedError: fmt.Errorf("could not find %s or %s field in secrets", accountKeyField, defaultSecretAccountKey),
 		},
 		{
 			name:          "failed to obtain client",
