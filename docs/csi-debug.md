@@ -76,13 +76,12 @@ change below deployment config, e.g.
         imagePullPolicy: Always
 ```
 
-### get blobfuse driver version
+### get blobfuse driver version on the node
 ```console
-kubectl exec -it csi-blob-node-fmbqw -n kube-system -c blob -- sh
-blobfuse -v
+blobfuse2 -v
 ```
 <pre>
-blobfuse 1.2.4
+blobfuse2 version 2.0.4
 </pre>
 
 ### check blobfuse mount on the agent node
