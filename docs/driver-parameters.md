@@ -1,6 +1,17 @@
 ## Driver Parameters
  > parameter names are case-insensitive
 
+<details><summary>required permissions for CSI driver</summary>
+<pre>
+    - Microsoft.Storage/storageAccounts/blobServices/read
+    - Microsoft.Storage/storageAccounts/blobServices/containers/write
+    - Microsoft.Storage/storageAccounts/listKeys/action
+    - Microsoft.Storage/storageAccounts/read
+    - Microsoft.Storage/storageAccounts/write
+    - Microsoft.Storage/storageAccounts/delete
+</pre>
+</details>
+
 ### Dynamic Provisioning
   > [blobfuse example](../deploy/example/storageclass-blobfuse.yaml)
 
