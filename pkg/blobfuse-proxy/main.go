@@ -43,6 +43,12 @@ func main() {
 		klog.Fatalf("failed to  parse endpoint %v", err.Error())
 	}
 
+	// add /usr/bin to PATH
+	pathEnv := os.Getenv("PATH")
+	klog.V(2).Info("existing PATH: %s", pathEnv)
+	pathEnv = pathEnv + ":/usr/bin"
+	os.Setenv("PATH", pathEnv)
+
 	if proto == "unix" {
 		addr = "/" + addr
 		if err := os.Remove(addr); err != nil && !os.IsNotExist(err) {
