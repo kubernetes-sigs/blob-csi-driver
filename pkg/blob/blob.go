@@ -815,7 +815,7 @@ func (d *Driver) GetInfoFromSecret(ctx context.Context, secretName, secretNamesp
 	spnClientID := strings.TrimSpace(string(secret.Data[storageSPNClientIDField][:]))
 	spnTenantID := strings.TrimSpace(string(secret.Data[storageSPNTenantIDField][:]))
 
-	klog.V(4).Infof("got storage account(%s) from secret", accountName)
+	klog.V(4).Infof("got storage account(%s) from secret(%s) namespace(%s)", accountName, secretName, secretNamespace)
 	return accountName, accountKey, accountSasToken, msiSecret, spnClientSecret, spnClientID, spnTenantID, nil
 }
 
