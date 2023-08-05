@@ -755,7 +755,7 @@ func (d *Driver) GetStorageAccountFromSecret(secretName, secretNamespace string)
 	accountName := strings.TrimSpace(string(secret.Data[defaultSecretAccountName][:]))
 	accountKey := strings.TrimSpace(string(secret.Data[defaultSecretAccountKey][:]))
 
-	klog.V(4).Infof("got storage account(%s) from secret", accountName)
+	klog.V(4).Infof("got storage account(%s) from secret(%s) namespace(%s)", accountName, secretName, secretNamespace)
 	return accountName, accountKey, nil
 }
 
