@@ -314,10 +314,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nserverAddress %v",
 			targetPath, protocol, volumeID, attrib, mountFlags, serverAddress)
 
+		mountType := AZNFS
+		if !d.enableAZNFS {
+			mountType = NFS
+		}
+
 		source := fmt.Sprintf("%s:/%s/%s", serverAddress, accountName, containerName)
 		mountOptions := util.JoinMountOptions(mountFlags, []string{"sec=sys,vers=3,nolock"})
 		if err := wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
-			return true, d.mounter.MountSensitive(source, targetPath, NFS, mountOptions, []string{})
+			return true, d.mounter.MountSensitive(source, targetPath, mountType, mountOptions, []string{})
 		}); err != nil {
 			var helpLinkMsg string
 			if d.appendMountErrorHelpLink {
