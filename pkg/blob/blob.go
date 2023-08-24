@@ -169,7 +169,7 @@ type DriverOptions struct {
 	MountPermissions                       uint64
 	KubeAPIQPS                             float64
 	KubeAPIBurst                           int
-	EnableAZNFS                            bool
+	EnableAznfsMount                       bool
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -194,7 +194,7 @@ type Driver struct {
 	mountPermissions                       uint64
 	kubeAPIQPS                             float64
 	kubeAPIBurst                           int
-	enableAZNFS                            bool
+	enableAznfsMount                       bool
 	mounter                                *mount.SafeFormatAndMount
 	volLockMap                             *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
@@ -232,7 +232,7 @@ func NewDriver(options *DriverOptions) *Driver {
 		mountPermissions:                       options.MountPermissions,
 		kubeAPIQPS:                             options.KubeAPIQPS,
 		kubeAPIBurst:                           options.KubeAPIBurst,
-		enableAZNFS:                            options.EnableAZNFS,
+		enableAznfsMount:                       options.EnableAznfsMount,
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion

@@ -155,7 +155,7 @@ node:
   nodeSelector: {}
   tolerations:
     - operator: "Exists"
-  enableAZNFS: true
+  enableAznfsMount: true
 
 feature:
   fsGroupPolicy: ReadWriteOnceWithFSType

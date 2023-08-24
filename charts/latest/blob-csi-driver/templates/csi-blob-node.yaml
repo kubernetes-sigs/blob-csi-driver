@@ -35,7 +35,7 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.imagePullSecrets | indent 8 }}
       {{- end }}
-      {{- if or .Values.node.enableBlobfuseProxy .Values.node.enableAZNFS }}
+      {{- if or .Values.node.enableBlobfuseProxy .Values.node.enableAznfsMount }}
       hostPID: true
       {{- end }}
       hostNetwork: true
@@ -170,7 +170,7 @@ spec:
             - "--append-timestamp-cache-dir={{ .Values.node.appendTimeStampInCacheDir }}"
             - "--mount-permissions={{ .Values.node.mountPermissions }}"
             - "--allow-inline-volume-key-access-with-idenitity={{ .Values.node.allowInlineVolumeKeyAccessWithIdentity }}"
-            - "--enable-aznfs={{ .Values.node.enableAZNFS }}"
+            - "--enable-aznfs={{ .Values.node.enableAznfsMount }}"
           ports:
             - containerPort: {{ .Values.node.livenessProbe.healthPort }}
               name: healthz
@@ -239,12 +239,12 @@ spec:
               mountPath: /etc/pki/ca-trust/extracted
               readOnly: true
             {{- end }}
-            {{- if .Values.node.enableAZNFS }}
+            {{- if .Values.node.enableAznfsMount }}
             - mountPath: /opt/microsoft/aznfs/data
               name: aznfs-data
             {{- end }}
           resources: {{- toYaml .Values.node.resources.blob | nindent 12 }}
-{{- if .Values.node.enableAZNFS }}
+{{- if .Values.node.enableAznfsMount }}
         - name: aznfswatchdog
 {{- if hasPrefix "/" .Values.image.blob.repository }}
           image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
@@ -305,7 +305,7 @@ spec:
           hostPath:
             path: /etc/pki/ca-trust/extracted
         {{- end }}
-        {{- if .Values.node.enableAZNFS }}
+        {{- if .Values.node.enableAznfsMount }}
         - hostPath:
             path: /opt/microsoft/aznfs/data
             type: DirectoryOrCreate

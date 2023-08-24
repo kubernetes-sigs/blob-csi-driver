@@ -315,7 +315,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			targetPath, protocol, volumeID, attrib, mountFlags, serverAddress)
 
 		mountType := AZNFS
-		if !d.enableAZNFS {
+		if !d.enableAznfsMount {
 			mountType = NFS
 		}
 
