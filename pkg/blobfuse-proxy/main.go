@@ -32,10 +32,10 @@ var (
 )
 
 func main() {
+	klog.InitFlags(nil)
 	if err := flag.Set("logtostderr", "true"); err != nil {
 		klog.Fatalf("failed to set logtostderr flag: %v", err)
 	}
-	klog.InitFlags(nil)
 	flag.Parse()
 	proto, addr, err := csicommon.ParseEndpoint(*blobfuseProxyEndpoint)
 	if err != nil {
