@@ -59,7 +59,7 @@ var (
 
 func main() {
 	klog.InitFlags(nil)
-	flag.Set("logtostderr", "true")
+	_ = flag.Set("logtostderr", "true")
 	flag.Parse()
 	if *version {
 		info, err := blob.GetVersionYAML(*driverName)

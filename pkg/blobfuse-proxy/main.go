@@ -33,7 +33,7 @@ var (
 
 func main() {
 	klog.InitFlags(nil)
-	flag.Set("logtostderr", "true")
+	_ = flag.Set("logtostderr", "true")
 	flag.Parse()
 	proto, addr, err := csicommon.ParseEndpoint(*blobfuseProxyEndpoint)
 	if err != nil {
