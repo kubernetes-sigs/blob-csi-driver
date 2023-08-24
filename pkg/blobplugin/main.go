@@ -31,10 +31,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func init() {
-	_ = flag.Set("logtostderr", "true")
-}
-
 var (
 	endpoint                               = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
 	blobfuseProxyEndpoint                  = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
@@ -62,6 +58,9 @@ var (
 )
 
 func main() {
+	if err := flag.Set("logtostderr", "true"); err != nil {
+		klog.Fatalf("failed to set logtostderr flag: %v", err)
+	}
 	klog.InitFlags(nil)
 	flag.Parse()
 	if *version {
