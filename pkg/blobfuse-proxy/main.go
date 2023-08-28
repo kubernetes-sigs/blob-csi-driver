@@ -27,16 +27,13 @@ import (
 	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 )
 
-func init() {
-	_ = flag.Set("logtostderr", "true")
-}
-
 var (
 	blobfuseProxyEndpoint = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
 )
 
 func main() {
 	klog.InitFlags(nil)
+	_ = flag.Set("logtostderr", "true")
 	flag.Parse()
 	proto, addr, err := csicommon.ParseEndpoint(*blobfuseProxyEndpoint)
 	if err != nil {
