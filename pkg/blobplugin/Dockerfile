@@ -29,6 +29,8 @@ RUN chmod +x /blobfuse-proxy/init.sh && \
  chmod +x /blobfuse-proxy/blobfuse-proxy
 
 RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase
+# remove unused packages which have CVEs
+RUN apt remove libcap2 libldap-2.4-2 -y
 
 ARG ARCH=amd64
 RUN if [ "$ARCH" = "amd64" ] ; then \
