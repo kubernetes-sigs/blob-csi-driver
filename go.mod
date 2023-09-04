@@ -15,7 +15,7 @@ require (
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/kubernetes-csi/csi-lib-utils v0.13.0
 	github.com/onsi/gomega v1.27.10
-	github.com/pborman/uuid v1.2.0
+	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.9.5
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/net v0.13.0
