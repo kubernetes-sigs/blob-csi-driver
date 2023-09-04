@@ -145,10 +145,17 @@ node:
       requests:
         cpu: 10m
         memory: 20Mi
+    aznfswatchdog:
+      limits:
+        memory: 100Mi
+      requests:
+        cpu: 10m
+        memory: 20Mi
   affinity: {}
   nodeSelector: {}
   tolerations:
     - operator: "Exists"
+  enableAznfsMount: true
 
 feature:
   fsGroupPolicy: ReadWriteOnceWithFSType
