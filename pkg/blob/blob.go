@@ -104,6 +104,7 @@ const (
 	Fuse                           = "fuse"
 	Fuse2                          = "fuse2"
 	NFS                            = "nfs"
+	AZNFS                          = "aznfs"
 	vnetResourceGroupField         = "vnetresourcegroup"
 	vnetNameField                  = "vnetname"
 	subnetNameField                = "subnetname"
@@ -168,6 +169,7 @@ type DriverOptions struct {
 	MountPermissions                       uint64
 	KubeAPIQPS                             float64
 	KubeAPIBurst                           int
+	EnableAznfsMount                       bool
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -192,6 +194,7 @@ type Driver struct {
 	mountPermissions                       uint64
 	kubeAPIQPS                             float64
 	kubeAPIBurst                           int
+	enableAznfsMount                       bool
 	mounter                                *mount.SafeFormatAndMount
 	volLockMap                             *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
@@ -229,6 +232,7 @@ func NewDriver(options *DriverOptions) *Driver {
 		mountPermissions:                       options.MountPermissions,
 		kubeAPIQPS:                             options.KubeAPIQPS,
 		kubeAPIBurst:                           options.KubeAPIBurst,
+		enableAznfsMount:                       options.EnableAznfsMount,
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion
