@@ -111,7 +111,7 @@ blob: blobfuse-proxy
 blob-windows:
 	CGO_ENABLED=0 GOOS=windows go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin.exe ./pkg/blobplugin
 
-.PHONT: blob-darwin
+.PHONY: blob-darwin
 blob-darwin:
 	CGO_ENABLED=0 GOOS=darwin go build -a -ldflags ${LDFLAGS} -mod vendor -o _output/blobplugin ./pkg/blobplugin
 
@@ -182,4 +182,4 @@ delete-metrics-svc:
 
 .PHONY: blobfuse-proxy
 blobfuse-proxy:
-	CGO_ENABLED=0 GOOS=linux go build -mod vendor -ldflags="-s -w" -o _output/${ARCH}/blobfuse-proxy ./pkg/blobfuse-proxy
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -mod vendor -ldflags="-s -w" -o _output/${ARCH}/blobfuse-proxy ./pkg/blobfuse-proxy

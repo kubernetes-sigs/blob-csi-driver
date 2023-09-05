@@ -35,9 +35,9 @@ spec:
       imagePullSecrets:
 {{ toYaml .Values.imagePullSecrets | indent 8 }}
       {{- end }}
-{{- if .Values.node.enableBlobfuseProxy }}
+      {{- if or .Values.node.enableBlobfuseProxy .Values.node.enableAznfsMount }}
       hostPID: true
-{{- end }}
+      {{- end }}
       hostNetwork: true
       dnsPolicy: Default
       serviceAccountName: {{ .Values.serviceAccount.node }}
@@ -170,6 +170,7 @@ spec:
             - "--append-timestamp-cache-dir={{ .Values.node.appendTimeStampInCacheDir }}"
             - "--mount-permissions={{ .Values.node.mountPermissions }}"
             - "--allow-inline-volume-key-access-with-idenitity={{ .Values.node.allowInlineVolumeKeyAccessWithIdentity }}"
+            - "--enable-aznfs-mount={{ .Values.node.enableAznfsMount }}"
           ports:
             - containerPort: {{ .Values.node.livenessProbe.healthPort }}
               name: healthz
@@ -238,7 +239,31 @@ spec:
               mountPath: /etc/pki/ca-trust/extracted
               readOnly: true
             {{- end }}
+            {{- if .Values.node.enableAznfsMount }}
+            - mountPath: /opt/microsoft/aznfs/data
+              name: aznfs-data
+            {{- end }}
           resources: {{- toYaml .Values.node.resources.blob | nindent 12 }}
+{{- if .Values.node.enableAznfsMount }}
+        - name: aznfswatchdog
+{{- if hasPrefix "/" .Values.image.blob.repository }}
+          image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- else }}
+          image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
+{{- end }}
+          command:
+            - "aznfswatchdog"
+          imagePullPolicy: {{ .Values.image.blob.pullPolicy }}
+          securityContext:
+            privileged: true
+          resources: {{- toYaml .Values.node.resources.aznfswatchdog | nindent 12 }}
+          volumeMounts:
+            - mountPath: /opt/microsoft/aznfs/data
+              name: aznfs-data
+            - mountPath: {{ .Values.linux.kubelet }}/
+              mountPropagation: Bidirectional
+              name: mountpoint-dir
+{{- end }}
       volumes:
 {{- if .Values.node.enableBlobfuseProxy }}
         - name: host-usr
@@ -279,6 +304,12 @@ spec:
         - name: ssl-pki
           hostPath:
             path: /etc/pki/ca-trust/extracted
+        {{- end }}
+        {{- if .Values.node.enableAznfsMount }}
+        - hostPath:
+            path: /opt/microsoft/aznfs/data
+            type: DirectoryOrCreate
+          name: aznfs-data
         {{- end }}
       {{- if .Values.securityContext }}
       securityContext: {{- toYaml .Values.securityContext | nindent 8 }}

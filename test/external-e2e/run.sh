@@ -40,7 +40,6 @@ setup_e2e_binaries() {
 }
 
 print_logs() {
-    bash ./hack/verify-examples.sh
     echo "print out driver logs ..."
     bash ./test/utils/blob_log.sh $DRIVER
 }
@@ -80,3 +79,6 @@ if [ ! -z ${EXTERNAL_E2E_TEST_NFS} ]; then
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-nfs.yaml \
         --kubeconfig=$KUBECONFIG
 fi
+
+echo "begin to run verify-examples.sh ...."
+bash ./hack/verify-examples.sh
