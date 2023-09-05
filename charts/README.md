@@ -148,6 +148,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `linux.distro`                                        | configure ssl certificates for different Linux distribution(available values: `debian`, `fedora`)             | `debian`
 | `workloadIdentity.clientID` | client ID of workload identity | ''
 | `workloadIdentity.tenantID` | [optional] If the AAD application or user-assigned managed identity is not in the same tenant as the cluster then set tenantID with the AAD application or user-assigned managed identity tenant ID | ''
+| `node.enableAznfsMount` | enable [AZNFS mount helper](https://github.com/Azure/AZNFS-mount/) for NFS protocol | true
 
 ## troubleshooting
  - Add `--wait -v=5 --debug` in `helm install` command to get detailed error

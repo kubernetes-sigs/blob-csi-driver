@@ -28,9 +28,16 @@ RUN chmod +x /blobfuse-proxy/init.sh && \
  chmod +x /blobfuse-proxy/blobfuse-proxy.service && \
  chmod +x /blobfuse-proxy/blobfuse-proxy
 
-RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase
+# packages that are only needed by aznfs: procps conntrack iptables bind9-host iproute2 bash netcat sysvinit-utils.
+RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase procps conntrack iptables bind9-host iproute2 bash netcat sysvinit-utils
 
-ARG ARCH=amd64
+# install aznfs
+RUN if [ "$ARCH" = "amd64" ] ; then \
+  wget -O aznfs.tar.gz https://github.com/Azure/AZNFS-mount/releases/download/1.0.8/aznfs-1.0.8-1.x86_64.tar.gz; \
+else \
+  wget -O aznfs.tar.gz https://github.com/Azure/AZNFS-mount/releases/download/1.0.8/aznfs-1.0.8-1.arm64.tar.gz;fi
+RUN tar xvzf aznfs.tar.gz -C / && rm aznfs.tar.gz
+
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \
   wget -O /blobfuse-proxy/packages-microsoft-prod-22.04.deb https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb && \
