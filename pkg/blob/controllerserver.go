@@ -73,10 +73,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		parameters = make(map[string]string)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
-	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning *bool
+	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning, createPrivateEndpoint, enableNfsV3 *bool
 	var vnetResourceGroup, vnetName, subnetName, accessTier, networkEndpointType, storageEndpointSuffix string
 	var matchTags, useDataPlaneAPI, getLatestAccountKey bool
 	var softDeleteBlobs, softDeleteContainers int32
+	var vnetResourceIDs []string
 	var err error
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := pointer.Bool(false)
@@ -240,21 +241,16 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	enableHTTPSTrafficOnly := true
-	createPrivateEndpoint := false
 	if strings.EqualFold(networkEndpointType, privateEndpoint) {
-		createPrivateEndpoint = true
+		createPrivateEndpoint = pointer.BoolPtr(true)
 	}
 	accountKind := string(storage.KindStorageV2)
-	var (
-		vnetResourceIDs []string
-		enableNfsV3     *bool
-	)
 	if protocol == NFS {
 		isHnsEnabled = pointer.Bool(true)
 		enableNfsV3 = pointer.Bool(true)
 		// NFS protocol does not need account key
 		storeAccountKey = false
-		if !createPrivateEndpoint {
+		if !pointer.BoolDeref(createPrivateEndpoint, false) {
 			// set VirtualNetworkResourceIDs for storage account firewall setting
 			vnetResourceID := d.getSubnetResourceID(vnetResourceGroup, vnetName, subnetName)
 			klog.V(2).Infof("set vnetResourceID(%s) for NFS protocol", vnetResourceID)
@@ -323,7 +319,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if v, ok := d.volMap.Load(volName); ok {
 			accountName = v.(string)
 		} else {
-			lockKey := fmt.Sprintf("%s%s%s%s%s%v", storageAccountType, accountKind, resourceGroup, location, protocol, createPrivateEndpoint)
+			lockKey := fmt.Sprintf("%s%s%s%s%s%v", storageAccountType, accountKind, resourceGroup, location, protocol, pointer.BoolDeref(createPrivateEndpoint, false))
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
@@ -352,7 +348,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	if createPrivateEndpoint && protocol == NFS {
+	if pointer.BoolDeref(createPrivateEndpoint, false) && protocol == NFS {
 		// As for blobfuse/blobfuse2, serverName, i.e.,AZURE_STORAGE_BLOB_ENDPOINT env variable can't include
 		// "privatelink", issue: https://github.com/Azure/azure-storage-fuse/issues/1014
 		//
