@@ -92,6 +92,7 @@ func TestNewDriver(t *testing.T) {
 	fakedriver.Version = driverVersion
 	fakedriver.accountSearchCache = driver.accountSearchCache
 	fakedriver.dataPlaneAPIVolCache = driver.dataPlaneAPIVolCache
+	fakedriver.volStatsCache = driver.volStatsCache
 	assert.Equal(t, driver, fakedriver)
 }
 
