@@ -3,7 +3,7 @@ entries:
   blob-csi-driver:
   - apiVersion: v1
     appVersion: v1.23.0
-    created: "2023-09-14T07:08:57.809415676Z"
+    created: "2023-09-14T07:10:07.895401784Z"
     description: Azure Blob Storage CSI driver
     digest: 57151e21e33660522f25694bd8ae985e5e17c7ffe09904ad2af4025e8bf1da72
     name: blob-csi-driver
@@ -11,17 +11,8 @@ entries:
     - https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts/v1.23.0/blob-csi-driver-v1.23.0.tgz
     version: v1.23.0
   - apiVersion: v1
-    appVersion: v1.23.0
-    created: "2023-09-14T07:08:57.79789653Z"
-    description: Azure Blob Storage CSI driver
-    digest: 760a4b7bb9e2498ac613c5bf350838884c372252912dac0e00260525f8b7b31f
-    name: blob-csi-driver
-    urls:
-    - https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts/latest/blob-csi-driver-v1.23.0.tgz
-    version: v1.23.0
-  - apiVersion: v1
     appVersion: v1.22.2
-    created: "2023-09-14T07:08:57.808765115Z"
+    created: "2023-09-14T07:10:07.894776849Z"
     description: Azure Blob Storage CSI driver
     digest: 259e66dc12db7310fe1c51e49c964398e0a6b7d511133916dd7d25f748f0b791
     name: blob-csi-driver
@@ -30,7 +21,7 @@ entries:
     version: v1.22.2
   - apiVersion: v1
     appVersion: v1.22.1
-    created: "2023-09-14T07:08:57.808160217Z"
+    created: "2023-09-14T07:10:07.894161608Z"
     description: Azure Blob Storage CSI driver
     digest: 8329d477d55c82f97bb09fb172c5f39a1677bedc13c7410bd93b306194516438
     name: blob-csi-driver
@@ -39,7 +30,7 @@ entries:
     version: v1.22.1
   - apiVersion: v1
     appVersion: v1.21.4
-    created: "2023-09-14T07:08:57.807519271Z"
+    created: "2023-09-14T07:10:07.893545411Z"
     description: Azure Blob Storage CSI driver
     digest: e4fa13670caf6b0d3e9fefa55d100daa439cd7187dabd45318ab03c7d4b17710
     name: blob-csi-driver
@@ -48,7 +39,7 @@ entries:
     version: v1.21.4
   - apiVersion: v1
     appVersion: v1.20.3
-    created: "2023-09-14T07:08:57.806903126Z"
+    created: "2023-09-14T07:10:07.892937422Z"
     description: Azure Blob Storage CSI driver
     digest: 8c2c20547b2e0e1b39d2f2efd04c1bd778f14af5feae2bda86d722dac3c02643
     name: blob-csi-driver
@@ -57,7 +48,7 @@ entries:
     version: v1.20.3
   - apiVersion: v1
     appVersion: v1.19.5
-    created: "2023-09-14T07:08:57.805829655Z"
+    created: "2023-09-14T07:10:07.891871785Z"
     description: Azure Blob Storage CSI driver
     digest: 183c3e5cd84b709f1455cc7c84ed5bd573e8a24149fd6442d38999835b0a1711
     name: blob-csi-driver
@@ -66,7 +57,7 @@ entries:
     version: v1.19.5
   - apiVersion: v1
     appVersion: v1.18.0
-    created: "2023-09-14T07:08:57.805158045Z"
+    created: "2023-09-14T07:10:07.891255613Z"
     description: Azure Blob Storage CSI driver
     digest: 3eac15488da5be7d1e78431929f7cda35bceb1af3fe107ffbd84606e047c9204
     name: blob-csi-driver
@@ -75,7 +66,7 @@ entries:
     version: v1.18.0
   - apiVersion: v1
     appVersion: v1.17.0
-    created: "2023-09-14T07:08:57.804454096Z"
+    created: "2023-09-14T07:10:07.8902352Z"
     description: Azure Blob Storage CSI driver
     digest: 22cfa17fc5e8d771ff8edd26729266a9a8ee55c0e150df85ef15698f7fe985e9
     name: blob-csi-driver
@@ -84,7 +75,7 @@ entries:
     version: v1.17.0
   - apiVersion: v1
     appVersion: v1.16.0
-    created: "2023-09-14T07:08:57.803211425Z"
+    created: "2023-09-14T07:10:07.889144209Z"
     description: Azure Blob Storage CSI driver
     digest: bf6249c0e3e3d3d009d4c79ceb7fda9a56c0565b969de753628792ea3ea5ece8
     name: blob-csi-driver
@@ -93,7 +84,7 @@ entries:
     version: v1.16.0
   - apiVersion: v1
     appVersion: v1.15.0
-    created: "2023-09-14T07:08:57.802207457Z"
+    created: "2023-09-14T07:10:07.888518009Z"
     description: Azure Blob Storage CSI driver
     digest: 8daa35cd4957695cb64b45da05a15b4020df5545a8ac44c4668dad4bba82c8a9
     name: blob-csi-driver
@@ -102,7 +93,7 @@ entries:
     version: v1.15.0
   - apiVersion: v1
     appVersion: v1.14.0
-    created: "2023-09-14T07:08:57.801638694Z"
+    created: "2023-09-14T07:10:07.887919949Z"
     description: Azure Blob Storage CSI driver
     digest: 442bc579b231aab626b9e474e2c0ed3f101d47d61c99aa9a7f863af7ce268d9d
     name: blob-csi-driver
@@ -111,7 +102,7 @@ entries:
     version: v1.14.0
   - apiVersion: v1
     appVersion: v1.13.0
-    created: "2023-09-14T07:08:57.801044901Z"
+    created: "2023-09-14T07:10:07.887324297Z"
     description: Azure Blob Storage CSI driver
     digest: b577b0b771138109aa90eb09d56fc07273ca0b584a263ee8f789e35796279f31
     name: blob-csi-driver
@@ -120,7 +111,7 @@ entries:
     version: v1.13.0
   - apiVersion: v1
     appVersion: v1.12.0
-    created: "2023-09-14T07:08:57.800433527Z"
+    created: "2023-09-14T07:10:07.886741071Z"
     description: Azure Blob Storage CSI driver
     digest: 124e87af2581b374b89a39940698620c23d3eae6dcee518d302461ffea93e9a8
     name: blob-csi-driver
@@ -129,7 +120,7 @@ entries:
     version: v1.12.0
   - apiVersion: v1
     appVersion: v1.11.0
-    created: "2023-09-14T07:08:57.799852028Z"
+    created: "2023-09-14T07:10:07.886122719Z"
     description: Azure Blob Storage CSI driver
     digest: 07c4d76017491b3d0bdd70de90e814096938bf7916da0c149c3805294bd57560
     name: blob-csi-driver
@@ -138,7 +129,7 @@ entries:
     version: v1.11.0
   - apiVersion: v1
     appVersion: v1.10.0
-    created: "2023-09-14T07:08:57.79924594Z"
+    created: "2023-09-14T07:10:07.88549666Z"
     description: Azure Blob Storage CSI driver
     digest: 79716efa958385adf57eb3570843e1b4512d8c801e8e070625e94264f3e917a9
     name: blob-csi-driver
@@ -147,7 +138,7 @@ entries:
     version: v1.10.0
   - apiVersion: v1
     appVersion: v1.9.0
-    created: "2023-09-14T07:08:57.814768799Z"
+    created: "2023-09-14T07:10:07.900772998Z"
     description: Azure Blob Storage CSI driver
     digest: fca0b9215d3277346f68c643fb3ead75158971f0d1945ab01ec559196f3cf842
     name: blob-csi-driver
@@ -156,7 +147,7 @@ entries:
     version: v1.9.0
   - apiVersion: v1
     appVersion: v1.8.0
-    created: "2023-09-14T07:08:57.814178994Z"
+    created: "2023-09-14T07:10:07.900207312Z"
     description: Azure Blob Storage CSI driver
     digest: 3b78e2ab4f33577c54d4f57276c824717d2ad2aa3741210e938fcaf927bc751f
     name: blob-csi-driver
@@ -165,7 +156,7 @@ entries:
     version: v1.8.0
   - apiVersion: v1
     appVersion: v1.7.0
-    created: "2023-09-14T07:08:57.813560514Z"
+    created: "2023-09-14T07:10:07.89963445Z"
     description: Azure Blob Storage CSI driver
     digest: 28da5b55c3d2689d6da85eb7da344385e9cb99bdb2af18c24fea93670abfe7ea
     name: blob-csi-driver
@@ -174,7 +165,7 @@ entries:
     version: v1.7.0
   - apiVersion: v1
     appVersion: v1.6.0
-    created: "2023-09-14T07:08:57.812955839Z"
+    created: "2023-09-14T07:10:07.899045279Z"
     description: Azure Blob Storage CSI driver
     digest: 6f24f2e6623f6f8862e47d4fbdf13b5f351ceec6bb9a4591ef7fc2fca9fc1eef
     name: blob-csi-driver
@@ -183,7 +174,7 @@ entries:
     version: v1.6.0
   - apiVersion: v1
     appVersion: v1.5.0
-    created: "2023-09-14T07:08:57.812368486Z"
+    created: "2023-09-14T07:10:07.898388106Z"
     description: Azure Blob Storage CSI driver
     digest: 95d14c9b70b319760d388ea47727c8c97e9287867a8852aeb67b7175b52fe8f5
     name: blob-csi-driver
@@ -192,7 +183,7 @@ entries:
     version: v1.5.0
   - apiVersion: v1
     appVersion: v1.4.1
-    created: "2023-09-14T07:08:57.811801206Z"
+    created: "2023-09-14T07:10:07.89687391Z"
     description: Azure Blob Storage CSI driver
     digest: 5fcf69c449f065fa1d5722e5a7fed8a28000efa790907e9ff4b552c5fbd16d22
     name: blob-csi-driver
@@ -201,7 +192,7 @@ entries:
     version: v1.4.1
   - apiVersion: v1
     appVersion: v1.4.0
-    created: "2023-09-14T07:08:57.810440215Z"
+    created: "2023-09-14T07:10:07.896376484Z"
     description: Azure Blob Storage CSI driver
     digest: b466543344a6411f6130ba87b093955d39ab8614c6b4ed8505a0a0c96073cb33
     name: blob-csi-driver
@@ -210,7 +201,7 @@ entries:
     version: v1.4.0
   - apiVersion: v1
     appVersion: v1.3.0
-    created: "2023-09-14T07:08:57.809884126Z"
+    created: "2023-09-14T07:10:07.89587395Z"
     description: Azure Blob Storage CSI driver
     digest: 58d02cb70a3a966b349d62e880b7149fb06ac009474e35e580784fd3c98a5b07
     name: blob-csi-driver
@@ -219,7 +210,7 @@ entries:
     version: v1.3.0
   - apiVersion: v1
     appVersion: v1.2.0
-    created: "2023-09-14T07:08:57.806310233Z"
+    created: "2023-09-14T07:10:07.892325402Z"
     description: Azure Blob Storage CSI driver
     digest: 27fb89f20b5fddc7329e6d7c2374857b22c1d61592e397a53f47121eea68c344
     name: blob-csi-driver
@@ -228,7 +219,7 @@ entries:
     version: v1.2.0
   - apiVersion: v1
     appVersion: v1.1.0
-    created: "2023-09-14T07:08:57.798623345Z"
+    created: "2023-09-14T07:10:07.884828709Z"
     description: Azure Blob Storage CSI driver
     digest: a251a55243de207c69ef53f72abee45e93b72fa4fc43dc204b7f1cdfd459acdb
     name: blob-csi-driver
@@ -237,7 +228,7 @@ entries:
     version: v1.1.0
   - apiVersion: v1
     appVersion: v1.0.0
-    created: "2023-09-14T07:08:57.798181123Z"
+    created: "2023-09-14T07:10:07.884368201Z"
     description: Azure Blob Storage CSI driver
     digest: e83f037a165eafc83a978bd7e6bf6221b052ac34363aecb12e6a73607dc58b89
     name: blob-csi-driver
@@ -246,11 +237,11 @@ entries:
     version: v1.0.0
   - apiVersion: v1
     appVersion: latest
-    created: "2023-09-14T07:08:57.797164035Z"
+    created: "2023-09-14T07:10:07.884046607Z"
     description: Azure Blob Storage CSI driver
-    digest: 33f05e6b1a28a17af824be063512ae8e3ec14e6e5208c11bf0aabc8767d77346
+    digest: 6969f573ca05b1668502af495bc247fcbaf263312836fa4fe02aaf406a7ba15a
     name: blob-csi-driver
     urls:
     - https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts/latest/blob-csi-driver-v0.0.0.tgz
     version: v0.0.0
-generated: "2023-09-14T07:08:57.796343443Z"
+generated: "2023-09-14T07:10:07.882364219Z"
