@@ -55,6 +55,7 @@ var (
 	kubeAPIBurst                           = flag.Int("kube-api-burst", 50, "Burst to use while communicating with the kubernetes apiserver.")
 	appendMountErrorHelpLink               = flag.Bool("append-mount-error-help-link", true, "Whether to include a link for help with mount errors when a mount error occurs.")
 	enableAznfsMount                       = flag.Bool("enable-aznfs-mount", false, "replace nfs mount with aznfs mount")
+	volStatsCacheExpireInMinutes           = flag.Int("vol-stats-cache-expire-in-minutes", 10, "The cache expire time in minutes for volume stats cache")
 )
 
 func main() {
@@ -96,6 +97,7 @@ func handle() {
 		KubeAPIQPS:                             *kubeAPIQPS,
 		KubeAPIBurst:                           *kubeAPIBurst,
 		EnableAznfsMount:                       *enableAznfsMount,
+		VolStatsCacheExpireInMinutes:           *volStatsCacheExpireInMinutes,
 	}
 	driver := blob.NewDriver(&driverOptions)
 	if driver == nil {
