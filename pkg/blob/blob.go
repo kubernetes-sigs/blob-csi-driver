@@ -166,6 +166,7 @@ type DriverOptions struct {
 	MountPermissions                       uint64
 	KubeAPIQPS                             float64
 	KubeAPIBurst                           int
+	VolStatsCacheExpireInMinutes           int
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -203,6 +204,8 @@ type Driver struct {
 	dataPlaneAPIVolCache *azcache.TimedCache
 	// a timed cache storing account search history (solve account list throttling issue)
 	accountSearchCache *azcache.TimedCache
+	// a timed cache storing volume stats <volumeID, volumeStats>
+	volStatsCache *azcache.TimedCache
 }
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
@@ -238,6 +241,13 @@ func NewDriver(options *DriverOptions) *Driver {
 		klog.Fatalf("%v", err)
 	}
 	if d.dataPlaneAPIVolCache, err = azcache.NewTimedcache(10*time.Minute, getter); err != nil {
+		klog.Fatalf("%v", err)
+	}
+
+	if options.VolStatsCacheExpireInMinutes <= 0 {
+		options.VolStatsCacheExpireInMinutes = 10 // default expire in 10 minutes
+	}
+	if d.volStatsCache, err = azcache.NewTimedcache(time.Duration(options.VolStatsCacheExpireInMinutes)*time.Minute, getter); err != nil {
 		klog.Fatalf("%v", err)
 	}
 	return &d
