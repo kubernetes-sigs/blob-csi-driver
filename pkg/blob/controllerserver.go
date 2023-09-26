@@ -312,6 +312,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		GetLatestAccountKey:             getLatestAccountKey,
 	}
 
+	var volumeID string
+	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_create_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+	}()
+
 	var accountKey string
 	accountName := account
 	secrets := req.GetSecrets()
@@ -379,13 +386,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		validContainerName = getValidContainerName(validContainerName, protocol)
 		setKeyValueInMap(parameters, containerNameField, validContainerName)
 	}
-
-	var volumeID string
-	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_create_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
-	isOperationSucceeded := false
-	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
-	}()
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) subsID(%s) rg(%s) location(%s) size(%d)", validContainerName, accountName, storageAccountType, subsID, resourceGroup, location, requestGiB)
 	if err := d.CreateBlobContainer(ctx, subsID, resourceGroup, accountName, validContainerName, secrets); err != nil {
