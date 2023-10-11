@@ -25,7 +25,7 @@ jobs:
         sudo dpkg -i packages-microsoft-prod.deb
         sudo apt-get update
         sudo apt-get install blobfuse
-        make verify
+        go test -covermode=count -coverprofile=profile.cov ./pkg/...
 
     - name: Run build test
       run: |
