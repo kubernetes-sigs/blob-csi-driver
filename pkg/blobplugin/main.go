@@ -31,10 +31,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func init() {
-	_ = flag.Set("logtostderr", "true")
-}
-
 var (
 	endpoint                               = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
 	blobfuseProxyEndpoint                  = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
@@ -64,6 +60,7 @@ var (
 
 func main() {
 	klog.InitFlags(nil)
+	_ = flag.Set("logtostderr", "true")
 	flag.Parse()
 	if *version {
 		info, err := blob.GetVersionYAML(*driverName)
