@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -e
+# set -e
 
 NS=kube-system
 CONTAINER=blob
@@ -49,11 +49,6 @@ kubectl get pods -n${NS} -l${LABEL} \
     | awk 'NR>1 {print $1}' \
     | xargs -I {} kubectl logs {} --prefix -c${CONTAINER} -n${NS}
 
-echo "print out cloudprovider_azure metrics ..."
-echo "======================================================================================"
-ip=`kubectl get svc csi-$DRIVER-controller -n kube-system | awk '{print $4}'`
-curl http://$ip:29634/metrics
-
 if [ -n "$ENABLE_BLOBFUSE_PROXY" ]; then
     echo "print out install-blobfuse-proxy logs ..."
     echo "======================================================================================"
@@ -64,4 +59,12 @@ if [ -n "$ENABLE_BLOBFUSE_PROXY" ]; then
         | xargs -I {} kubectl logs {} --prefix -c${PROXY} -n${NS}
 fi
 
-
+echo "======================================================================================"
+ip=`kubectl get svc csi-$DRIVER-controller -n kube-system | awk '{print $4}'`
+if echo "$ip" | grep -q "\."; then
+    echo "print out cloudprovider_azure metrics ..."
+    curl http://$ip:29634/metrics
+else
+    echo "csi-$DRIVER-controller service ip is empty"
+    kubectl get svc csi-$DRIVER-controller -n kube-system
+fi
