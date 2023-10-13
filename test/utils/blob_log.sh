@@ -61,7 +61,7 @@ fi
 
 echo "======================================================================================"
 ip=`kubectl get svc csi-$DRIVER-controller -n kube-system | awk '{print $4}'`
-if [ -n "$ip" ]; then
+if echo "$ip" | grep -q "\."; then
     echo "print out cloudprovider_azure metrics ..."
     curl http://$ip:29634/metrics
 else
