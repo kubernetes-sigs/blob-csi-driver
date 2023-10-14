@@ -55,10 +55,11 @@ var blobDriver *blob.Driver
 var projectRoot string
 
 type testCmd struct {
-	command  string
-	args     []string
-	startLog string
-	endLog   string
+	command     string
+	args        []string
+	startLog    string
+	endLog      string
+	ignoreError bool
 }
 
 func TestMain(m *testing.M) {
@@ -160,10 +161,11 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 var _ = ginkgo.SynchronizedAfterSuite(func(ctx ginkgo.SpecContext) {},
 	func(ctx ginkgo.SpecContext) {
 		blobLog := testCmd{
-			command:  "bash",
-			args:     []string{"test/utils/blob_log.sh"},
-			startLog: "==============start blob log(after suite)===================",
-			endLog:   "==============end blob log(after suite)===================",
+			command:     "bash",
+			args:        []string{"test/utils/blob_log.sh"},
+			startLog:    "==============start blob log(after suite)===================",
+			endLog:      "==============end blob log(after suite)===================",
+			ignoreError: true,
 		}
 		e2eTeardown := testCmd{
 			command:  "make",
@@ -206,6 +208,9 @@ func execTestCmd(cmds []testCmd) {
 		err := cmdSh.Run()
 		if err != nil {
 			log.Printf("Failed to run command: %s %s, Error: %s\n", cmd.command, strings.Join(cmd.args, " "), err.Error())
+			if !cmd.ignoreError {
+				gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			}
 		}
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		log.Println(cmd.endLog)
