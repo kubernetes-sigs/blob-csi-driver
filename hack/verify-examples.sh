@@ -42,9 +42,6 @@ EXAMPLES=(\
     deploy/example/deployment.yaml \
     deploy/example/statefulset.yaml \
     deploy/example/statefulset-nonroot.yaml \
-    deploy/example/deployment-nfs.yaml \
-    deploy/example/statefulset-nfs.yaml \
-    deploy/example/statefulset-nonroot-nfs.yaml \
 )
 
 for EXAMPLE in "${EXAMPLES[@]}"; do
