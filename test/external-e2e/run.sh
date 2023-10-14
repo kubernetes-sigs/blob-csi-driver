@@ -17,7 +17,7 @@
 set -xe
 
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
-DRIVER="test"
+DRIVER="blob"
 
 setup_e2e_binaries() {
     # download k8s external e2e binary
