@@ -5,7 +5,7 @@ ShortName: blobfuse
 StorageClass:
   FromFile: /tmp/csi/storageclass.yaml
 DriverInfo:
-  Name: test.csi.azure.com
+  Name: blob.csi.azure.com
   Capabilities:
     persistence: true
     exec: true
