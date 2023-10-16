@@ -118,7 +118,7 @@ blob-darwin:
 
 .PHONY: container
 container: blob
-	docker build -t $(CSI_IMAGE_TAG) --output=type=docker -f ./pkg/blobplugin/Dockerfile .
+	docker build -t $(CSI_IMAGE_TAG) --build-arg ARCH=$(ARCH) --output=type=docker -f ./pkg/blobplugin/Dockerfile .
 
 .PHONY: container-linux
 container-linux:
