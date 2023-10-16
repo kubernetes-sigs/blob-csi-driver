@@ -29,101 +29,98 @@ echo "Linux distribution: $DISTRIBUTION"
 ARCH=$($HOST_CMD uname -m)
 echo "Linux Arch is $(uname -m)"
 
-if [ "${ARCH}" != "aarch64" ]
+if [ "${DISTRIBUTION}" = "ubuntu" ] && { [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]; }
 then
-  if [ "${DISTRIBUTION}" = "ubuntu" ] && { [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]; }
+  release=$($HOST_CMD lsb_release -rs)
+  echo "Ubuntu release: $release"
+  
+  if [ "$(expr "$release" \< "22.04")" -eq 1 ]
   then
-    release=$($HOST_CMD lsb_release -rs)
-    echo "Ubuntu release: $release"
-    
-    if [ "$(expr "$release" \< "22.04")" -eq 1 ]
-    then
-      cp /blobfuse-proxy/packages-microsoft-prod-18.04.deb /host/etc/packages-microsoft-prod.deb
+    cp /blobfuse-proxy/packages-microsoft-prod-18.04.deb /host/etc/packages-microsoft-prod.deb
+  else
+    cp /blobfuse-proxy/packages-microsoft-prod-22.04.deb /host/etc/packages-microsoft-prod.deb
+  fi
+  
+  # when running dpkg -i /etc/packages-microsoft-prod.deb, need to enter y to continue. 
+  # refer to https://stackoverflow.com/questions/45349571/how-to-install-deb-with-dpkg-non-interactively
+  yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt update
+
+  pkg_list=""
+  if [ "${INSTALL_BLOBFUSE}" = "true" ] && [ "$(expr "$release" \< "22.04")" -eq 1 ]
+  then
+    pkg_list="${pkg_list} fuse"
+    # install blobfuse with latest version or specific version
+    if [ -z "${BLOBFUSE_VERSION}" ]; then
+      echo "install blobfuse with latest version"
+      pkg_list="${pkg_list} blobfuse"
     else
-      cp /blobfuse-proxy/packages-microsoft-prod-22.04.deb /host/etc/packages-microsoft-prod.deb
+      pkg_list="${pkg_list} blobfuse=${BLOBFUSE_VERSION}"
     fi
-    
-    # when running dpkg -i /etc/packages-microsoft-prod.deb, need to enter y to continue. 
-    # refer to https://stackoverflow.com/questions/45349571/how-to-install-deb-with-dpkg-non-interactively
-    yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt update
+  fi
 
-    pkg_list=""
-    if [ "${INSTALL_BLOBFUSE}" = "true" ] && [ "$(expr "$release" \< "22.04")" -eq 1 ]
-    then
+  if [ "${INSTALL_BLOBFUSE2}" = "true" ]
+  then
+    if [ "$(expr "$release" \< "22.04")" -eq 1 ]; then
+      echo "install fuse for blobfuse2"
       pkg_list="${pkg_list} fuse"
-      # install blobfuse with latest version or specific version
-      if [ -z "${BLOBFUSE_VERSION}" ]; then
-        echo "install blobfuse with latest version"
-        pkg_list="${pkg_list} blobfuse"
-      else
-        pkg_list="${pkg_list} blobfuse=${BLOBFUSE_VERSION}"
-      fi
+    else
+      echo "install fuse3 for blobfuse2, current release is $release"
+      pkg_list="${pkg_list} fuse3"
     fi
 
-    if [ "${INSTALL_BLOBFUSE2}" = "true" ]
-    then
-      if [ "$(expr "$release" \< "22.04")" -eq 1 ]; then
-        echo "install fuse for blobfuse2"
-        pkg_list="${pkg_list} fuse"
-      else
-        echo "install fuse3 for blobfuse2, current release is $release"
-        pkg_list="${pkg_list} fuse3"
-      fi
-
-      # install blobfuse2 with latest version or specific version
-      if [ -z "${BLOBFUSE2_VERSION}" ]; then
-        echo "install blobfuse2 with latest version"
-        pkg_list="${pkg_list} blobfuse2"
-      else
-        pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
-      fi
-    fi
-    echo "begin to install ${pkg_list}"
-    $HOST_CMD apt-get install -y $pkg_list
-    $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
-  fi
-
-  updateBlobfuseProxy="true"
-  if [ -f "/host/usr/bin/blobfuse-proxy" ];then
-    old=$(sha256sum /host/usr/bin/blobfuse-proxy | awk '{print $1}')
-    new=$(sha256sum /blobfuse-proxy/blobfuse-proxy | awk '{print $1}')
-    if [ "$old" = "$new" ];then
-      updateBlobfuseProxy="false"
-      echo "no need to update blobfuse-proxy"
+    # install blobfuse2 with latest version or specific version
+    if [ -z "${BLOBFUSE2_VERSION}" ]; then
+      echo "install blobfuse2 with latest version"
+      pkg_list="${pkg_list} blobfuse2"
+    else
+      pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
     fi
   fi
+  echo "begin to install ${pkg_list}"
+  $HOST_CMD apt-get install -y $pkg_list
+  $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
+fi
 
-  if [ "$updateBlobfuseProxy" = "true" ];then
-    echo "copy blobfuse-proxy...."
-    rm -rf /host/var/lib/kubelet/plugins/blob.csi.azure.com/blobfuse-proxy.sock
-    rm -rf /host/usr/bin/blobfuse-proxy
-    cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy
-    chmod 755 /host/usr/bin/blobfuse-proxy
+updateBlobfuseProxy="true"
+if [ -f "/host/usr/bin/blobfuse-proxy" ];then
+  old=$(sha256sum /host/usr/bin/blobfuse-proxy | awk '{print $1}')
+  new=$(sha256sum /blobfuse-proxy/blobfuse-proxy | awk '{print $1}')
+  if [ "$old" = "$new" ];then
+    updateBlobfuseProxy="false"
+    echo "no need to update blobfuse-proxy"
   fi
+fi
 
-  updateService="true"
-  if [ -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
-    old=$(sha256sum /host/usr/lib/systemd/system/blobfuse-proxy.service | awk '{print $1}')
-    new=$(sha256sum /blobfuse-proxy/blobfuse-proxy.service | awk '{print $1}')
-    if [ "$old" = "$new" ];then
-      updateService="false"
-      echo "no need to update blobfuse-proxy.service"
-    fi
+if [ "$updateBlobfuseProxy" = "true" ];then
+  echo "copy blobfuse-proxy...."
+  rm -rf /host/var/lib/kubelet/plugins/blob.csi.azure.com/blobfuse-proxy.sock
+  rm -rf /host/usr/bin/blobfuse-proxy
+  cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy
+  chmod 755 /host/usr/bin/blobfuse-proxy
+fi
+
+updateService="true"
+if [ -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
+  old=$(sha256sum /host/usr/lib/systemd/system/blobfuse-proxy.service | awk '{print $1}')
+  new=$(sha256sum /blobfuse-proxy/blobfuse-proxy.service | awk '{print $1}')
+  if [ "$old" = "$new" ];then
+    updateService="false"
+    echo "no need to update blobfuse-proxy.service"
   fi
+fi
 
-  if [ "$updateService" = "true" ];then
-    echo "copy blobfuse-proxy.service...."
-    mkdir -p /host/usr/lib/systemd/system
-    cp /blobfuse-proxy/blobfuse-proxy.service /host/usr/lib/systemd/system/blobfuse-proxy.service
-  fi
+if [ "$updateService" = "true" ];then
+  echo "copy blobfuse-proxy.service...."
+  mkdir -p /host/usr/lib/systemd/system
+  cp /blobfuse-proxy/blobfuse-proxy.service /host/usr/lib/systemd/system/blobfuse-proxy.service
+fi
 
-  if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
-    if [ "$updateBlobfuseProxy" = "true" ] || [ "$updateService" = "true" ];then
-      echo "start blobfuse-proxy...."
-      $HOST_CMD systemctl daemon-reload
-      $HOST_CMD systemctl enable blobfuse-proxy.service
-      $HOST_CMD systemctl restart blobfuse-proxy.service
-    fi
+if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
+  if [ "$updateBlobfuseProxy" = "true" ] || [ "$updateService" = "true" ];then
+    echo "start blobfuse-proxy...."
+    $HOST_CMD systemctl daemon-reload
+    $HOST_CMD systemctl enable blobfuse-proxy.service
+    $HOST_CMD systemctl restart blobfuse-proxy.service
   fi
 fi
 
