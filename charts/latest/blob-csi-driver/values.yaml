@@ -111,6 +111,7 @@ node:
   allowEmptyCloudConfig: true
   allowInlineVolumeKeyAccessWithIdentity: false
   maxUnavailable: 1
+  metricsPort: 29635
   livenessProbe:
     healthPort: 29633
   logLevel: 5

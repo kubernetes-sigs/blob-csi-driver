@@ -60,6 +60,7 @@ func NewFakeDriver() *Driver {
 	driver.Name = fakeDriverName
 	driver.Version = vendorVersion
 	driver.subnetLockMap = util.NewLockMap()
+	driver.cloud = &azure.Cloud{}
 	return driver
 }
 
@@ -92,6 +93,7 @@ func TestNewDriver(t *testing.T) {
 	fakedriver.accountSearchCache = driver.accountSearchCache
 	fakedriver.dataPlaneAPIVolCache = driver.dataPlaneAPIVolCache
 	fakedriver.volStatsCache = driver.volStatsCache
+	fakedriver.cloud = driver.cloud
 	assert.Equal(t, driver, fakedriver)
 }
 

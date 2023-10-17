@@ -28,6 +28,7 @@ import (
 
 	volumehelper "sigs.k8s.io/blob-csi-driver/pkg/util"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
+	"sigs.k8s.io/cloud-provider-azure/pkg/metrics"
 
 	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -238,6 +239,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
 
+	mc := metrics.NewMetricContext(blobCSIDriverName, "node_stage_volume", d.cloud.ResourceGroup, "", d.Name)
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+	}()
+
 	var serverAddress, storageEndpointSuffix, protocol, ephemeralVolMountOptions string
 	var ephemeralVol, isHnsEnabled bool
 
@@ -340,6 +347,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			klog.V(2).Infof("skip chmod on targetPath(%s) since mountPermissions is set as 0", targetPath)
 		}
 
+		isOperationSucceeded = true
 		klog.V(2).Infof("volume(%s) mount %s on %s succeeded", volumeID, source, targetPath)
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
@@ -442,6 +450,12 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 	}
 	defer d.volumeLocks.Release(volumeID)
 
+	mc := metrics.NewMetricContext(blobCSIDriverName, "node_unstage_volume", d.cloud.ResourceGroup, "", d.Name)
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+	}()
+
 	klog.V(2).Infof("NodeUnstageVolume: volume %s unmounting on %s", volumeID, stagingTargetPath)
 	err := mount.CleanupMountPoint(stagingTargetPath, d.mounter, true /*extensiveMountPointCheck*/)
 	if err != nil {
@@ -449,6 +463,7 @@ func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolu
 	}
 	klog.V(2).Infof("NodeUnstageVolume: volume %s unmount on %s successfully", volumeID, stagingTargetPath)
 
+	isOperationSucceeded = true
 	return &csi.NodeUnstageVolumeResponse{}, nil
 }
 
@@ -490,6 +505,12 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 		klog.V(6).Infof("NodeGetVolumeStats: volume stats for volume %s path %s is cached", req.VolumeId, req.VolumePath)
 		return &resp, nil
 	}
+
+	mc := metrics.NewMetricContext(blobCSIDriverName, "node_get_volume_stats", d.cloud.ResourceGroup, "", d.Name)
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, req.VolumeId)
+	}()
 
 	if _, err := os.Lstat(req.VolumePath); err != nil {
 		if os.IsNotExist(err) {
@@ -548,6 +569,7 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 		},
 	}
 
+	isOperationSucceeded = true
 	klog.V(6).Infof("NodeGetVolumeStats: volume stats for volume %s path %s is %v", req.VolumeId, req.VolumePath, resp)
 	// cache the volume stats per volume
 	d.volStatsCache.Set(req.VolumeId, *resp)

@@ -127,6 +127,7 @@ spec:
             - "--blobfuse-proxy-endpoint=$(BLOBFUSE_PROXY_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
             - "--user-agent-suffix=OSS-kubectl"
+            - "--metrics-address=0.0.0.0:29635"
           ports:
             - containerPort: 29633
               name: healthz
