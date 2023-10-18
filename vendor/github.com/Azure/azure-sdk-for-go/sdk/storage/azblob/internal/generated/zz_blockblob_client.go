@@ -22,21 +22,10 @@ import (
 )
 
 // BlockBlobClient contains the methods for the BlockBlob group.
-// Don't use this type directly, use NewBlockBlobClient() instead.
+// Don't use this type directly, use a constructor function instead.
 type BlockBlobClient struct {
+	internal *azcore.Client
 	endpoint string
-	pl       runtime.Pipeline
-}
-
-// NewBlockBlobClient creates a new instance of BlockBlobClient with the specified values.
-// endpoint - The URL of the service account, container, or blob that is the target of the desired operation.
-// pl - the pipeline used for sending requests and handling responses.
-func NewBlockBlobClient(endpoint string, pl runtime.Pipeline) *BlockBlobClient {
-	client := &BlockBlobClient{
-		endpoint: endpoint,
-		pl:       pl,
-	}
-	return client
 }
 
 // CommitBlockList - The Commit Block List operation writes a blob by specifying the list of block IDs that make up the blob.
@@ -47,21 +36,22 @@ func NewBlockBlobClient(endpoint string, pl runtime.Pipeline) *BlockBlobClient {
 // the most recently uploaded version of the block, whichever list it may
 // belong to.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// blocks - Blob Blocks.
-// options - BlockBlobClientCommitBlockListOptions contains the optional parameters for the BlockBlobClient.CommitBlockList
-// method.
-// BlobHTTPHeaders - BlobHTTPHeaders contains a group of parameters for the BlobClient.SetHTTPHeaders method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// CpkScopeInfo - CpkScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-func (client *BlockBlobClient) CommitBlockList(ctx context.Context, blocks BlockLookupList, options *BlockBlobClientCommitBlockListOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlockBlobClientCommitBlockListResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - blocks - Blob Blocks.
+//   - options - BlockBlobClientCommitBlockListOptions contains the optional parameters for the BlockBlobClient.CommitBlockList
+//     method.
+//   - BlobHTTPHeaders - BlobHTTPHeaders contains a group of parameters for the BlobClient.SetHTTPHeaders method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - CPKScopeInfo - CPKScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+func (client *BlockBlobClient) CommitBlockList(ctx context.Context, blocks BlockLookupList, options *BlockBlobClientCommitBlockListOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlockBlobClientCommitBlockListResponse, error) {
 	req, err := client.commitBlockListCreateRequest(ctx, blocks, options, blobHTTPHeaders, leaseAccessConditions, cpkInfo, cpkScopeInfo, modifiedAccessConditions)
 	if err != nil {
 		return BlockBlobClientCommitBlockListResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlockBlobClientCommitBlockListResponse{}, err
 	}
@@ -72,7 +62,7 @@ func (client *BlockBlobClient) CommitBlockList(ctx context.Context, blocks Block
 }
 
 // commitBlockListCreateRequest creates the CommitBlockList request.
-func (client *BlockBlobClient) commitBlockListCreateRequest(ctx context.Context, blocks BlockLookupList, options *BlockBlobClientCommitBlockListOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
+func (client *BlockBlobClient) commitBlockListCreateRequest(ctx context.Context, blocks BlockLookupList, options *BlockBlobClientCommitBlockListOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPut, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -106,7 +96,9 @@ func (client *BlockBlobClient) commitBlockListCreateRequest(ctx context.Context,
 	}
 	if options != nil && options.Metadata != nil {
 		for k, v := range options.Metadata {
-			req.Raw().Header["x-ms-meta-"+k] = []string{v}
+			if v != nil {
+				req.Raw().Header["x-ms-meta-"+k] = []string{*v}
+			}
 		}
 	}
 	if leaseAccessConditions != nil && leaseAccessConditions.LeaseID != nil {
@@ -131,10 +123,10 @@ func (client *BlockBlobClient) commitBlockListCreateRequest(ctx context.Context,
 		req.Raw().Header["x-ms-access-tier"] = []string{string(*options.Tier)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -145,7 +137,7 @@ func (client *BlockBlobClient) commitBlockListCreateRequest(ctx context.Context,
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -153,7 +145,7 @@ func (client *BlockBlobClient) commitBlockListCreateRequest(ctx context.Context,
 		req.Raw().Header["x-ms-tags"] = []string{*options.BlobTagsString}
 	}
 	if options != nil && options.ImmutabilityPolicyExpiry != nil {
-		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{options.ImmutabilityPolicyExpiry.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{(*options.ImmutabilityPolicyExpiry).In(gmt).Format(time.RFC1123)}
 	}
 	if options != nil && options.ImmutabilityPolicyMode != nil {
 		req.Raw().Header["x-ms-immutability-policy-mode"] = []string{string(*options.ImmutabilityPolicyMode)}
@@ -162,7 +154,10 @@ func (client *BlockBlobClient) commitBlockListCreateRequest(ctx context.Context,
 		req.Raw().Header["x-ms-legal-hold"] = []string{strconv.FormatBool(*options.LegalHold)}
 	}
 	req.Raw().Header["Accept"] = []string{"application/xml"}
-	return req, runtime.MarshalAsXML(req, blocks)
+	if err := runtime.MarshalAsXML(req, blocks); err != nil {
+		return nil, err
+	}
+	return req, nil
 }
 
 // commitBlockListHandleResponse handles the CommitBlockList response.
@@ -229,17 +224,18 @@ func (client *BlockBlobClient) commitBlockListHandleResponse(resp *http.Response
 
 // GetBlockList - The Get Block List operation retrieves the list of blocks that have been uploaded as part of a block blob
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// listType - Specifies whether to return the list of committed blocks, the list of uncommitted blocks, or both lists together.
-// options - BlockBlobClientGetBlockListOptions contains the optional parameters for the BlockBlobClient.GetBlockList method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//
+// Generated from API version 2023-08-03
+//   - listType - Specifies whether to return the list of committed blocks, the list of uncommitted blocks, or both lists together.
+//   - options - BlockBlobClientGetBlockListOptions contains the optional parameters for the BlockBlobClient.GetBlockList method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
 func (client *BlockBlobClient) GetBlockList(ctx context.Context, listType BlockListType, options *BlockBlobClientGetBlockListOptions, leaseAccessConditions *LeaseAccessConditions, modifiedAccessConditions *ModifiedAccessConditions) (BlockBlobClientGetBlockListResponse, error) {
 	req, err := client.getBlockListCreateRequest(ctx, listType, options, leaseAccessConditions, modifiedAccessConditions)
 	if err != nil {
 		return BlockBlobClientGetBlockListResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlockBlobClientGetBlockListResponse{}, err
 	}
@@ -271,7 +267,7 @@ func (client *BlockBlobClient) getBlockListCreateRequest(ctx context.Context, li
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -330,26 +326,27 @@ func (client *BlockBlobClient) getBlockListHandleResponse(resp *http.Response) (
 // partial updates to a block blob’s contents using a source URL, use the Put
 // Block from URL API in conjunction with Put Block List.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// contentLength - The length of the request.
-// copySource - Specifies the name of the source page blob snapshot. This value is a URL of up to 2 KB in length that specifies
-// a page blob snapshot. The value should be URL-encoded as it would appear in a request
-// URI. The source blob must either be public or must be authenticated via a shared access signature.
-// options - BlockBlobClientPutBlobFromURLOptions contains the optional parameters for the BlockBlobClient.PutBlobFromURL
-// method.
-// BlobHTTPHeaders - BlobHTTPHeaders contains a group of parameters for the BlobClient.SetHTTPHeaders method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// CpkScopeInfo - CpkScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-// SourceModifiedAccessConditions - SourceModifiedAccessConditions contains a group of parameters for the BlobClient.StartCopyFromURL
-// method.
-func (client *BlockBlobClient) PutBlobFromURL(ctx context.Context, contentLength int64, copySource string, options *BlockBlobClientPutBlobFromURLOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions, sourceModifiedAccessConditions *SourceModifiedAccessConditions) (BlockBlobClientPutBlobFromURLResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - contentLength - The length of the request.
+//   - copySource - Specifies the name of the source page blob snapshot. This value is a URL of up to 2 KB in length that specifies
+//     a page blob snapshot. The value should be URL-encoded as it would appear in a request
+//     URI. The source blob must either be public or must be authenticated via a shared access signature.
+//   - options - BlockBlobClientPutBlobFromURLOptions contains the optional parameters for the BlockBlobClient.PutBlobFromURL
+//     method.
+//   - BlobHTTPHeaders - BlobHTTPHeaders contains a group of parameters for the BlobClient.SetHTTPHeaders method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - CPKScopeInfo - CPKScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//   - SourceModifiedAccessConditions - SourceModifiedAccessConditions contains a group of parameters for the BlobClient.StartCopyFromURL
+//     method.
+func (client *BlockBlobClient) PutBlobFromURL(ctx context.Context, contentLength int64, copySource string, options *BlockBlobClientPutBlobFromURLOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions, sourceModifiedAccessConditions *SourceModifiedAccessConditions) (BlockBlobClientPutBlobFromURLResponse, error) {
 	req, err := client.putBlobFromURLCreateRequest(ctx, contentLength, copySource, options, blobHTTPHeaders, leaseAccessConditions, cpkInfo, cpkScopeInfo, modifiedAccessConditions, sourceModifiedAccessConditions)
 	if err != nil {
 		return BlockBlobClientPutBlobFromURLResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlockBlobClientPutBlobFromURLResponse{}, err
 	}
@@ -360,7 +357,7 @@ func (client *BlockBlobClient) PutBlobFromURL(ctx context.Context, contentLength
 }
 
 // putBlobFromURLCreateRequest creates the PutBlobFromURL request.
-func (client *BlockBlobClient) putBlobFromURLCreateRequest(ctx context.Context, contentLength int64, copySource string, options *BlockBlobClientPutBlobFromURLOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions, sourceModifiedAccessConditions *SourceModifiedAccessConditions) (*policy.Request, error) {
+func (client *BlockBlobClient) putBlobFromURLCreateRequest(ctx context.Context, contentLength int64, copySource string, options *BlockBlobClientPutBlobFromURLOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions, sourceModifiedAccessConditions *SourceModifiedAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPut, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -392,7 +389,9 @@ func (client *BlockBlobClient) putBlobFromURLCreateRequest(ctx context.Context, 
 	}
 	if options != nil && options.Metadata != nil {
 		for k, v := range options.Metadata {
-			req.Raw().Header["x-ms-meta-"+k] = []string{v}
+			if v != nil {
+				req.Raw().Header["x-ms-meta-"+k] = []string{*v}
+			}
 		}
 	}
 	if leaseAccessConditions != nil && leaseAccessConditions.LeaseID != nil {
@@ -417,10 +416,10 @@ func (client *BlockBlobClient) putBlobFromURLCreateRequest(ctx context.Context, 
 		req.Raw().Header["x-ms-access-tier"] = []string{string(*options.Tier)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -432,10 +431,10 @@ func (client *BlockBlobClient) putBlobFromURLCreateRequest(ctx context.Context, 
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfModifiedSince != nil {
-		req.Raw().Header["x-ms-source-if-modified-since"] = []string{sourceModifiedAccessConditions.SourceIfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-source-if-modified-since"] = []string{(*sourceModifiedAccessConditions.SourceIfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfUnmodifiedSince != nil {
-		req.Raw().Header["x-ms-source-if-unmodified-since"] = []string{sourceModifiedAccessConditions.SourceIfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-source-if-unmodified-since"] = []string{(*sourceModifiedAccessConditions.SourceIfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfMatch != nil {
 		req.Raw().Header["x-ms-source-if-match"] = []string{string(*sourceModifiedAccessConditions.SourceIfMatch)}
@@ -446,7 +445,7 @@ func (client *BlockBlobClient) putBlobFromURLCreateRequest(ctx context.Context, 
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfTags != nil {
 		req.Raw().Header["x-ms-source-if-tags"] = []string{*sourceModifiedAccessConditions.SourceIfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -462,6 +461,9 @@ func (client *BlockBlobClient) putBlobFromURLCreateRequest(ctx context.Context, 
 	}
 	if options != nil && options.CopySourceAuthorization != nil {
 		req.Raw().Header["x-ms-copy-source-authorization"] = []string{*options.CopySourceAuthorization}
+	}
+	if options != nil && options.CopySourceTags != nil {
+		req.Raw().Header["x-ms-copy-source-tag-option"] = []string{string(*options.CopySourceTags)}
 	}
 	req.Raw().Header["Accept"] = []string{"application/xml"}
 	return req, nil
@@ -524,22 +526,23 @@ func (client *BlockBlobClient) putBlobFromURLHandleResponse(resp *http.Response)
 
 // StageBlock - The Stage Block operation creates a new block to be committed as part of a blob
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// blockID - A valid Base64 string value that identifies the block. Prior to encoding, the string must be less than or equal
-// to 64 bytes in size. For a given blob, the length of the value specified for the blockid
-// parameter must be the same size for each block.
-// contentLength - The length of the request.
-// body - Initial data
-// options - BlockBlobClientStageBlockOptions contains the optional parameters for the BlockBlobClient.StageBlock method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// CpkScopeInfo - CpkScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
-func (client *BlockBlobClient) StageBlock(ctx context.Context, blockID string, contentLength int64, body io.ReadSeekCloser, options *BlockBlobClientStageBlockOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo) (BlockBlobClientStageBlockResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - blockID - A valid Base64 string value that identifies the block. Prior to encoding, the string must be less than or equal
+//     to 64 bytes in size. For a given blob, the length of the value specified for the blockid
+//     parameter must be the same size for each block.
+//   - contentLength - The length of the request.
+//   - body - Initial data
+//   - options - BlockBlobClientStageBlockOptions contains the optional parameters for the BlockBlobClient.StageBlock method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - CPKScopeInfo - CPKScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
+func (client *BlockBlobClient) StageBlock(ctx context.Context, blockID string, contentLength int64, body io.ReadSeekCloser, options *BlockBlobClientStageBlockOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo) (BlockBlobClientStageBlockResponse, error) {
 	req, err := client.stageBlockCreateRequest(ctx, blockID, contentLength, body, options, leaseAccessConditions, cpkInfo, cpkScopeInfo)
 	if err != nil {
 		return BlockBlobClientStageBlockResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlockBlobClientStageBlockResponse{}, err
 	}
@@ -550,7 +553,7 @@ func (client *BlockBlobClient) StageBlock(ctx context.Context, blockID string, c
 }
 
 // stageBlockCreateRequest creates the StageBlock request.
-func (client *BlockBlobClient) stageBlockCreateRequest(ctx context.Context, blockID string, contentLength int64, body io.ReadSeekCloser, options *BlockBlobClientStageBlockOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo) (*policy.Request, error) {
+func (client *BlockBlobClient) stageBlockCreateRequest(ctx context.Context, blockID string, contentLength int64, body io.ReadSeekCloser, options *BlockBlobClientStageBlockOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPut, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -584,12 +587,15 @@ func (client *BlockBlobClient) stageBlockCreateRequest(ctx context.Context, bloc
 	if cpkScopeInfo != nil && cpkScopeInfo.EncryptionScope != nil {
 		req.Raw().Header["x-ms-encryption-scope"] = []string{*cpkScopeInfo.EncryptionScope}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
 	req.Raw().Header["Accept"] = []string{"application/xml"}
-	return req, req.SetBody(body, "application/octet-stream")
+	if err := req.SetBody(body, "application/octet-stream"); err != nil {
+		return nil, err
+	}
+	return req, nil
 }
 
 // stageBlockHandleResponse handles the StageBlock response.
@@ -644,25 +650,26 @@ func (client *BlockBlobClient) stageBlockHandleResponse(resp *http.Response) (Bl
 // StageBlockFromURL - The Stage Block operation creates a new block to be committed as part of a blob where the contents
 // are read from a URL.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// blockID - A valid Base64 string value that identifies the block. Prior to encoding, the string must be less than or equal
-// to 64 bytes in size. For a given blob, the length of the value specified for the blockid
-// parameter must be the same size for each block.
-// contentLength - The length of the request.
-// sourceURL - Specify a URL to the copy source.
-// options - BlockBlobClientStageBlockFromURLOptions contains the optional parameters for the BlockBlobClient.StageBlockFromURL
-// method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// CpkScopeInfo - CpkScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// SourceModifiedAccessConditions - SourceModifiedAccessConditions contains a group of parameters for the BlobClient.StartCopyFromURL
-// method.
-func (client *BlockBlobClient) StageBlockFromURL(ctx context.Context, blockID string, contentLength int64, sourceURL string, options *BlockBlobClientStageBlockFromURLOptions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, leaseAccessConditions *LeaseAccessConditions, sourceModifiedAccessConditions *SourceModifiedAccessConditions) (BlockBlobClientStageBlockFromURLResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - blockID - A valid Base64 string value that identifies the block. Prior to encoding, the string must be less than or equal
+//     to 64 bytes in size. For a given blob, the length of the value specified for the blockid
+//     parameter must be the same size for each block.
+//   - contentLength - The length of the request.
+//   - sourceURL - Specify a URL to the copy source.
+//   - options - BlockBlobClientStageBlockFromURLOptions contains the optional parameters for the BlockBlobClient.StageBlockFromURL
+//     method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - CPKScopeInfo - CPKScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - SourceModifiedAccessConditions - SourceModifiedAccessConditions contains a group of parameters for the BlobClient.StartCopyFromURL
+//     method.
+func (client *BlockBlobClient) StageBlockFromURL(ctx context.Context, blockID string, contentLength int64, sourceURL string, options *BlockBlobClientStageBlockFromURLOptions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, leaseAccessConditions *LeaseAccessConditions, sourceModifiedAccessConditions *SourceModifiedAccessConditions) (BlockBlobClientStageBlockFromURLResponse, error) {
 	req, err := client.stageBlockFromURLCreateRequest(ctx, blockID, contentLength, sourceURL, options, cpkInfo, cpkScopeInfo, leaseAccessConditions, sourceModifiedAccessConditions)
 	if err != nil {
 		return BlockBlobClientStageBlockFromURLResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlockBlobClientStageBlockFromURLResponse{}, err
 	}
@@ -673,7 +680,7 @@ func (client *BlockBlobClient) StageBlockFromURL(ctx context.Context, blockID st
 }
 
 // stageBlockFromURLCreateRequest creates the StageBlockFromURL request.
-func (client *BlockBlobClient) stageBlockFromURLCreateRequest(ctx context.Context, blockID string, contentLength int64, sourceURL string, options *BlockBlobClientStageBlockFromURLOptions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, leaseAccessConditions *LeaseAccessConditions, sourceModifiedAccessConditions *SourceModifiedAccessConditions) (*policy.Request, error) {
+func (client *BlockBlobClient) stageBlockFromURLCreateRequest(ctx context.Context, blockID string, contentLength int64, sourceURL string, options *BlockBlobClientStageBlockFromURLOptions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, leaseAccessConditions *LeaseAccessConditions, sourceModifiedAccessConditions *SourceModifiedAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPut, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -712,10 +719,10 @@ func (client *BlockBlobClient) stageBlockFromURLCreateRequest(ctx context.Contex
 		req.Raw().Header["x-ms-lease-id"] = []string{*leaseAccessConditions.LeaseID}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfModifiedSince != nil {
-		req.Raw().Header["x-ms-source-if-modified-since"] = []string{sourceModifiedAccessConditions.SourceIfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-source-if-modified-since"] = []string{(*sourceModifiedAccessConditions.SourceIfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfUnmodifiedSince != nil {
-		req.Raw().Header["x-ms-source-if-unmodified-since"] = []string{sourceModifiedAccessConditions.SourceIfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-source-if-unmodified-since"] = []string{(*sourceModifiedAccessConditions.SourceIfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfMatch != nil {
 		req.Raw().Header["x-ms-source-if-match"] = []string{string(*sourceModifiedAccessConditions.SourceIfMatch)}
@@ -723,7 +730,7 @@ func (client *BlockBlobClient) stageBlockFromURLCreateRequest(ctx context.Contex
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfNoneMatch != nil {
 		req.Raw().Header["x-ms-source-if-none-match"] = []string{string(*sourceModifiedAccessConditions.SourceIfNoneMatch)}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -788,21 +795,22 @@ func (client *BlockBlobClient) stageBlockFromURLHandleResponse(resp *http.Respon
 // Blob; the content of the existing blob is overwritten with the content of the new blob. To perform a partial update of
 // the content of a block blob, use the Put Block List operation.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// contentLength - The length of the request.
-// body - Initial data
-// options - BlockBlobClientUploadOptions contains the optional parameters for the BlockBlobClient.Upload method.
-// BlobHTTPHeaders - BlobHTTPHeaders contains a group of parameters for the BlobClient.SetHTTPHeaders method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// CpkScopeInfo - CpkScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-func (client *BlockBlobClient) Upload(ctx context.Context, contentLength int64, body io.ReadSeekCloser, options *BlockBlobClientUploadOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlockBlobClientUploadResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - contentLength - The length of the request.
+//   - body - Initial data
+//   - options - BlockBlobClientUploadOptions contains the optional parameters for the BlockBlobClient.Upload method.
+//   - BlobHTTPHeaders - BlobHTTPHeaders contains a group of parameters for the BlobClient.SetHTTPHeaders method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - CPKScopeInfo - CPKScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+func (client *BlockBlobClient) Upload(ctx context.Context, contentLength int64, body io.ReadSeekCloser, options *BlockBlobClientUploadOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlockBlobClientUploadResponse, error) {
 	req, err := client.uploadCreateRequest(ctx, contentLength, body, options, blobHTTPHeaders, leaseAccessConditions, cpkInfo, cpkScopeInfo, modifiedAccessConditions)
 	if err != nil {
 		return BlockBlobClientUploadResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlockBlobClientUploadResponse{}, err
 	}
@@ -813,7 +821,7 @@ func (client *BlockBlobClient) Upload(ctx context.Context, contentLength int64, 
 }
 
 // uploadCreateRequest creates the Upload request.
-func (client *BlockBlobClient) uploadCreateRequest(ctx context.Context, contentLength int64, body io.ReadSeekCloser, options *BlockBlobClientUploadOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
+func (client *BlockBlobClient) uploadCreateRequest(ctx context.Context, contentLength int64, body io.ReadSeekCloser, options *BlockBlobClientUploadOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPut, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -845,7 +853,9 @@ func (client *BlockBlobClient) uploadCreateRequest(ctx context.Context, contentL
 	}
 	if options != nil && options.Metadata != nil {
 		for k, v := range options.Metadata {
-			req.Raw().Header["x-ms-meta-"+k] = []string{v}
+			if v != nil {
+				req.Raw().Header["x-ms-meta-"+k] = []string{*v}
+			}
 		}
 	}
 	if leaseAccessConditions != nil && leaseAccessConditions.LeaseID != nil {
@@ -870,10 +880,10 @@ func (client *BlockBlobClient) uploadCreateRequest(ctx context.Context, contentL
 		req.Raw().Header["x-ms-access-tier"] = []string{string(*options.Tier)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -884,7 +894,7 @@ func (client *BlockBlobClient) uploadCreateRequest(ctx context.Context, contentL
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -892,7 +902,7 @@ func (client *BlockBlobClient) uploadCreateRequest(ctx context.Context, contentL
 		req.Raw().Header["x-ms-tags"] = []string{*options.BlobTagsString}
 	}
 	if options != nil && options.ImmutabilityPolicyExpiry != nil {
-		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{options.ImmutabilityPolicyExpiry.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{(*options.ImmutabilityPolicyExpiry).In(gmt).Format(time.RFC1123)}
 	}
 	if options != nil && options.ImmutabilityPolicyMode != nil {
 		req.Raw().Header["x-ms-immutability-policy-mode"] = []string{string(*options.ImmutabilityPolicyMode)}
@@ -900,8 +910,14 @@ func (client *BlockBlobClient) uploadCreateRequest(ctx context.Context, contentL
 	if options != nil && options.LegalHold != nil {
 		req.Raw().Header["x-ms-legal-hold"] = []string{strconv.FormatBool(*options.LegalHold)}
 	}
+	if options != nil && options.TransactionalContentCRC64 != nil {
+		req.Raw().Header["x-ms-content-crc64"] = []string{base64.StdEncoding.EncodeToString(options.TransactionalContentCRC64)}
+	}
 	req.Raw().Header["Accept"] = []string{"application/xml"}
-	return req, req.SetBody(body, "application/octet-stream")
+	if err := req.SetBody(body, "application/octet-stream"); err != nil {
+		return nil, err
+	}
+	return req, nil
 }
 
 // uploadHandleResponse handles the Upload response.

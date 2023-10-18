@@ -9,6 +9,7 @@ package blob
 import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/internal/exported"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/internal/generated"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/internal/shared"
 )
 
 const (
@@ -18,6 +19,9 @@ const (
 
 	// DefaultDownloadBlockSize is default block size
 	DefaultDownloadBlockSize = int64(4 * 1024 * 1024) // 4MB
+
+	// DefaultConcurrency is the default number of blocks downloaded or uploaded in parallel
+	DefaultConcurrency = shared.DefaultConcurrency
 )
 
 // BlobType defines values for BlobType
@@ -47,12 +51,13 @@ func PossibleDeleteSnapshotsOptionTypeValues() []DeleteSnapshotsOptionType {
 	return generated.PossibleDeleteSnapshotsOptionTypeValues()
 }
 
-// AccessTier defines values for Blob Access Tier
+// AccessTier defines values for Blob Access Tier.
 type AccessTier = generated.AccessTier
 
 const (
 	AccessTierArchive AccessTier = generated.AccessTierArchive
 	AccessTierCool    AccessTier = generated.AccessTierCool
+	AccessTierCold    AccessTier = generated.AccessTierCold
 	AccessTierHot     AccessTier = generated.AccessTierHot
 	AccessTierP10     AccessTier = generated.AccessTierP10
 	AccessTierP15     AccessTier = generated.AccessTierP15
@@ -129,7 +134,7 @@ func PossibleCopyStatusTypeValues() []CopyStatusType {
 	return generated.PossibleCopyStatusTypeValues()
 }
 
-// EncryptionAlgorithmType defines values for EncryptionAlgorithmType
+// EncryptionAlgorithmType defines values for EncryptionAlgorithmType.
 type EncryptionAlgorithmType = generated.EncryptionAlgorithmType
 
 const (
@@ -142,12 +147,13 @@ func PossibleEncryptionAlgorithmTypeValues() []EncryptionAlgorithmType {
 	return generated.PossibleEncryptionAlgorithmTypeValues()
 }
 
-// ArchiveStatus defines values for ArchiveStatus
+// ArchiveStatus defines values for ArchiveStatus.
 type ArchiveStatus = generated.ArchiveStatus
 
 const (
 	ArchiveStatusRehydratePendingToCool ArchiveStatus = generated.ArchiveStatusRehydratePendingToCool
 	ArchiveStatusRehydratePendingToHot  ArchiveStatus = generated.ArchiveStatusRehydratePendingToHot
+	ArchiveStatusRehydratePendingToCold ArchiveStatus = generated.ArchiveStatusRehydratePendingToCold
 )
 
 // PossibleArchiveStatusValues returns the possible values for the ArchiveStatus const type.
@@ -155,7 +161,7 @@ func PossibleArchiveStatusValues() []ArchiveStatus {
 	return generated.PossibleArchiveStatusValues()
 }
 
-// DeleteType defines values for DeleteType
+// DeleteType defines values for DeleteType.
 type DeleteType = generated.DeleteType
 
 const (
@@ -204,7 +210,7 @@ type SourceContentValidationType interface {
 	notPubliclyImplementable()
 }
 
-// SourceContentValidationTypeCRC64 is a SourceContentValidationType used to provided a precomputed CRC64.
+// SourceContentValidationTypeCRC64 is a SourceContentValidationType used to provide a precomputed CRC64.
 type SourceContentValidationTypeCRC64 []byte
 
 // Apply implements the SourceContentValidationType interface for type SourceContentValidationTypeCRC64.
@@ -216,7 +222,7 @@ func (SourceContentValidationTypeCRC64) notPubliclyImplementable() {}
 
 var _ SourceContentValidationType = (SourceContentValidationTypeCRC64)(nil)
 
-// SourceContentValidationTypeMD5 is a SourceContentValidationType used to provided a precomputed MD5.
+// SourceContentValidationTypeMD5 is a SourceContentValidationType used to provide a precomputed MD5.
 type SourceContentValidationTypeMD5 []byte
 
 // Apply implements the SourceContentValidationType interface for type SourceContentValidationTypeMD5.

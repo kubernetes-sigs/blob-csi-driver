@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/runtime"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"net/http"
 	"strconv"
 	"strings"
@@ -22,36 +23,26 @@ import (
 )
 
 // BlobClient contains the methods for the Blob group.
-// Don't use this type directly, use NewBlobClient() instead.
+// Don't use this type directly, use a constructor function instead.
 type BlobClient struct {
+	internal *azcore.Client
 	endpoint string
-	pl       runtime.Pipeline
-}
-
-// NewBlobClient creates a new instance of BlobClient with the specified values.
-// endpoint - The URL of the service account, container, or blob that is the target of the desired operation.
-// pl - the pipeline used for sending requests and handling responses.
-func NewBlobClient(endpoint string, pl runtime.Pipeline) *BlobClient {
-	client := &BlobClient{
-		endpoint: endpoint,
-		pl:       pl,
-	}
-	return client
 }
 
 // AbortCopyFromURL - The Abort Copy From URL operation aborts a pending Copy From URL operation, and leaves a destination
 // blob with zero length and full metadata.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// copyID - The copy identifier provided in the x-ms-copy-id header of the original Copy Blob operation.
-// options - BlobClientAbortCopyFromURLOptions contains the optional parameters for the BlobClient.AbortCopyFromURL method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//
+// Generated from API version 2023-08-03
+//   - copyID - The copy identifier provided in the x-ms-copy-id header of the original Copy Blob operation.
+//   - options - BlobClientAbortCopyFromURLOptions contains the optional parameters for the BlobClient.AbortCopyFromURL method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
 func (client *BlobClient) AbortCopyFromURL(ctx context.Context, copyID string, options *BlobClientAbortCopyFromURLOptions, leaseAccessConditions *LeaseAccessConditions) (BlobClientAbortCopyFromURLResponse, error) {
 	req, err := client.abortCopyFromURLCreateRequest(ctx, copyID, options, leaseAccessConditions)
 	if err != nil {
 		return BlobClientAbortCopyFromURLResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientAbortCopyFromURLResponse{}, err
 	}
@@ -78,7 +69,7 @@ func (client *BlobClient) abortCopyFromURLCreateRequest(ctx context.Context, cop
 	if leaseAccessConditions != nil && leaseAccessConditions.LeaseID != nil {
 		req.Raw().Header["x-ms-lease-id"] = []string{*leaseAccessConditions.LeaseID}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -110,15 +101,19 @@ func (client *BlobClient) abortCopyFromURLHandleResponse(resp *http.Response) (B
 
 // AcquireLease - [Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientAcquireLeaseOptions contains the optional parameters for the BlobClient.AcquireLease method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-func (client *BlobClient) AcquireLease(ctx context.Context, options *BlobClientAcquireLeaseOptions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientAcquireLeaseResponse, error) {
-	req, err := client.acquireLeaseCreateRequest(ctx, options, modifiedAccessConditions)
+//
+// Generated from API version 2023-08-03
+//   - duration - Specifies the duration of the lease, in seconds, or negative one (-1) for a lease that never expires. A non-infinite
+//     lease can be between 15 and 60 seconds. A lease duration cannot be changed using
+//     renew or change.
+//   - options - BlobClientAcquireLeaseOptions contains the optional parameters for the BlobClient.AcquireLease method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+func (client *BlobClient) AcquireLease(ctx context.Context, duration int32, options *BlobClientAcquireLeaseOptions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientAcquireLeaseResponse, error) {
+	req, err := client.acquireLeaseCreateRequest(ctx, duration, options, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientAcquireLeaseResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientAcquireLeaseResponse{}, err
 	}
@@ -129,7 +124,7 @@ func (client *BlobClient) AcquireLease(ctx context.Context, options *BlobClientA
 }
 
 // acquireLeaseCreateRequest creates the AcquireLease request.
-func (client *BlobClient) acquireLeaseCreateRequest(ctx context.Context, options *BlobClientAcquireLeaseOptions, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
+func (client *BlobClient) acquireLeaseCreateRequest(ctx context.Context, duration int32, options *BlobClientAcquireLeaseOptions, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPut, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -141,17 +136,15 @@ func (client *BlobClient) acquireLeaseCreateRequest(ctx context.Context, options
 	}
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	req.Raw().Header["x-ms-lease-action"] = []string{"acquire"}
-	if options != nil && options.Duration != nil {
-		req.Raw().Header["x-ms-lease-duration"] = []string{strconv.FormatInt(int64(*options.Duration), 10)}
-	}
+	req.Raw().Header["x-ms-lease-duration"] = []string{strconv.FormatInt(int64(duration), 10)}
 	if options != nil && options.ProposedLeaseID != nil {
 		req.Raw().Header["x-ms-proposed-lease-id"] = []string{*options.ProposedLeaseID}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -162,7 +155,7 @@ func (client *BlobClient) acquireLeaseCreateRequest(ctx context.Context, options
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -207,15 +200,16 @@ func (client *BlobClient) acquireLeaseHandleResponse(resp *http.Response) (BlobC
 
 // BreakLease - [Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientBreakLeaseOptions contains the optional parameters for the BlobClient.BreakLease method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientBreakLeaseOptions contains the optional parameters for the BlobClient.BreakLease method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
 func (client *BlobClient) BreakLease(ctx context.Context, options *BlobClientBreakLeaseOptions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientBreakLeaseResponse, error) {
 	req, err := client.breakLeaseCreateRequest(ctx, options, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientBreakLeaseResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientBreakLeaseResponse{}, err
 	}
@@ -242,10 +236,10 @@ func (client *BlobClient) breakLeaseCreateRequest(ctx context.Context, options *
 		req.Raw().Header["x-ms-lease-break-period"] = []string{strconv.FormatInt(int64(*options.BreakPeriod), 10)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -256,7 +250,7 @@ func (client *BlobClient) breakLeaseCreateRequest(ctx context.Context, options *
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -306,19 +300,20 @@ func (client *BlobClient) breakLeaseHandleResponse(resp *http.Response) (BlobCli
 
 // ChangeLease - [Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// leaseID - Specifies the current lease ID on the resource.
-// proposedLeaseID - Proposed lease ID, in a GUID string format. The Blob service returns 400 (Invalid request) if the proposed
-// lease ID is not in the correct format. See Guid Constructor (String) for a list of valid GUID
-// string formats.
-// options - BlobClientChangeLeaseOptions contains the optional parameters for the BlobClient.ChangeLease method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//
+// Generated from API version 2023-08-03
+//   - leaseID - Specifies the current lease ID on the resource.
+//   - proposedLeaseID - Proposed lease ID, in a GUID string format. The Blob service returns 400 (Invalid request) if the proposed
+//     lease ID is not in the correct format. See Guid Constructor (String) for a list of valid GUID
+//     string formats.
+//   - options - BlobClientChangeLeaseOptions contains the optional parameters for the BlobClient.ChangeLease method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
 func (client *BlobClient) ChangeLease(ctx context.Context, leaseID string, proposedLeaseID string, options *BlobClientChangeLeaseOptions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientChangeLeaseResponse, error) {
 	req, err := client.changeLeaseCreateRequest(ctx, leaseID, proposedLeaseID, options, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientChangeLeaseResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientChangeLeaseResponse{}, err
 	}
@@ -344,10 +339,10 @@ func (client *BlobClient) changeLeaseCreateRequest(ctx context.Context, leaseID 
 	req.Raw().Header["x-ms-lease-id"] = []string{leaseID}
 	req.Raw().Header["x-ms-proposed-lease-id"] = []string{proposedLeaseID}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -358,7 +353,7 @@ func (client *BlobClient) changeLeaseCreateRequest(ctx context.Context, leaseID 
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -404,21 +399,23 @@ func (client *BlobClient) changeLeaseHandleResponse(resp *http.Response) (BlobCl
 // CopyFromURL - The Copy From URL operation copies a blob or an internet resource to a new blob. It will not return a response
 // until the copy is complete.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// copySource - Specifies the name of the source page blob snapshot. This value is a URL of up to 2 KB in length that specifies
-// a page blob snapshot. The value should be URL-encoded as it would appear in a request
-// URI. The source blob must either be public or must be authenticated via a shared access signature.
-// options - BlobClientCopyFromURLOptions contains the optional parameters for the BlobClient.CopyFromURL method.
-// SourceModifiedAccessConditions - SourceModifiedAccessConditions contains a group of parameters for the BlobClient.StartCopyFromURL
-// method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-func (client *BlobClient) CopyFromURL(ctx context.Context, copySource string, options *BlobClientCopyFromURLOptions, sourceModifiedAccessConditions *SourceModifiedAccessConditions, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions) (BlobClientCopyFromURLResponse, error) {
-	req, err := client.copyFromURLCreateRequest(ctx, copySource, options, sourceModifiedAccessConditions, modifiedAccessConditions, leaseAccessConditions)
+//
+// Generated from API version 2023-08-03
+//   - copySource - Specifies the name of the source page blob snapshot. This value is a URL of up to 2 KB in length that specifies
+//     a page blob snapshot. The value should be URL-encoded as it would appear in a request
+//     URI. The source blob must either be public or must be authenticated via a shared access signature.
+//   - options - BlobClientCopyFromURLOptions contains the optional parameters for the BlobClient.CopyFromURL method.
+//   - SourceModifiedAccessConditions - SourceModifiedAccessConditions contains a group of parameters for the BlobClient.StartCopyFromURL
+//     method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - CPKScopeInfo - CPKScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
+func (client *BlobClient) CopyFromURL(ctx context.Context, copySource string, options *BlobClientCopyFromURLOptions, sourceModifiedAccessConditions *SourceModifiedAccessConditions, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions, cpkScopeInfo *CPKScopeInfo) (BlobClientCopyFromURLResponse, error) {
+	req, err := client.copyFromURLCreateRequest(ctx, copySource, options, sourceModifiedAccessConditions, modifiedAccessConditions, leaseAccessConditions, cpkScopeInfo)
 	if err != nil {
 		return BlobClientCopyFromURLResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientCopyFromURLResponse{}, err
 	}
@@ -429,7 +426,7 @@ func (client *BlobClient) CopyFromURL(ctx context.Context, copySource string, op
 }
 
 // copyFromURLCreateRequest creates the CopyFromURL request.
-func (client *BlobClient) copyFromURLCreateRequest(ctx context.Context, copySource string, options *BlobClientCopyFromURLOptions, sourceModifiedAccessConditions *SourceModifiedAccessConditions, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions) (*policy.Request, error) {
+func (client *BlobClient) copyFromURLCreateRequest(ctx context.Context, copySource string, options *BlobClientCopyFromURLOptions, sourceModifiedAccessConditions *SourceModifiedAccessConditions, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions, cpkScopeInfo *CPKScopeInfo) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPut, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -442,17 +439,19 @@ func (client *BlobClient) copyFromURLCreateRequest(ctx context.Context, copySour
 	req.Raw().Header["x-ms-requires-sync"] = []string{"true"}
 	if options != nil && options.Metadata != nil {
 		for k, v := range options.Metadata {
-			req.Raw().Header["x-ms-meta-"+k] = []string{v}
+			if v != nil {
+				req.Raw().Header["x-ms-meta-"+k] = []string{*v}
+			}
 		}
 	}
 	if options != nil && options.Tier != nil {
 		req.Raw().Header["x-ms-access-tier"] = []string{string(*options.Tier)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfModifiedSince != nil {
-		req.Raw().Header["x-ms-source-if-modified-since"] = []string{sourceModifiedAccessConditions.SourceIfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-source-if-modified-since"] = []string{(*sourceModifiedAccessConditions.SourceIfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfUnmodifiedSince != nil {
-		req.Raw().Header["x-ms-source-if-unmodified-since"] = []string{sourceModifiedAccessConditions.SourceIfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-source-if-unmodified-since"] = []string{(*sourceModifiedAccessConditions.SourceIfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfMatch != nil {
 		req.Raw().Header["x-ms-source-if-match"] = []string{string(*sourceModifiedAccessConditions.SourceIfMatch)}
@@ -461,10 +460,10 @@ func (client *BlobClient) copyFromURLCreateRequest(ctx context.Context, copySour
 		req.Raw().Header["x-ms-source-if-none-match"] = []string{string(*sourceModifiedAccessConditions.SourceIfNoneMatch)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -479,7 +478,7 @@ func (client *BlobClient) copyFromURLCreateRequest(ctx context.Context, copySour
 	if leaseAccessConditions != nil && leaseAccessConditions.LeaseID != nil {
 		req.Raw().Header["x-ms-lease-id"] = []string{*leaseAccessConditions.LeaseID}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -490,7 +489,7 @@ func (client *BlobClient) copyFromURLCreateRequest(ctx context.Context, copySour
 		req.Raw().Header["x-ms-tags"] = []string{*options.BlobTagsString}
 	}
 	if options != nil && options.ImmutabilityPolicyExpiry != nil {
-		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{options.ImmutabilityPolicyExpiry.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{(*options.ImmutabilityPolicyExpiry).In(gmt).Format(time.RFC1123)}
 	}
 	if options != nil && options.ImmutabilityPolicyMode != nil {
 		req.Raw().Header["x-ms-immutability-policy-mode"] = []string{string(*options.ImmutabilityPolicyMode)}
@@ -500,6 +499,12 @@ func (client *BlobClient) copyFromURLCreateRequest(ctx context.Context, copySour
 	}
 	if options != nil && options.CopySourceAuthorization != nil {
 		req.Raw().Header["x-ms-copy-source-authorization"] = []string{*options.CopySourceAuthorization}
+	}
+	if cpkScopeInfo != nil && cpkScopeInfo.EncryptionScope != nil {
+		req.Raw().Header["x-ms-encryption-scope"] = []string{*cpkScopeInfo.EncryptionScope}
+	}
+	if options != nil && options.CopySourceTags != nil {
+		req.Raw().Header["x-ms-copy-source-tag-option"] = []string{string(*options.CopySourceTags)}
 	}
 	req.Raw().Header["Accept"] = []string{"application/xml"}
 	return req, nil
@@ -557,23 +562,27 @@ func (client *BlobClient) copyFromURLHandleResponse(resp *http.Response) (BlobCl
 		}
 		result.ContentCRC64 = contentCRC64
 	}
+	if val := resp.Header.Get("x-ms-encryption-scope"); val != "" {
+		result.EncryptionScope = &val
+	}
 	return result, nil
 }
 
 // CreateSnapshot - The Create Snapshot operation creates a read-only snapshot of a blob
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientCreateSnapshotOptions contains the optional parameters for the BlobClient.CreateSnapshot method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// CpkScopeInfo - CpkScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-func (client *BlobClient) CreateSnapshot(ctx context.Context, options *BlobClientCreateSnapshotOptions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions) (BlobClientCreateSnapshotResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientCreateSnapshotOptions contains the optional parameters for the BlobClient.CreateSnapshot method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - CPKScopeInfo - CPKScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+func (client *BlobClient) CreateSnapshot(ctx context.Context, options *BlobClientCreateSnapshotOptions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions) (BlobClientCreateSnapshotResponse, error) {
 	req, err := client.createSnapshotCreateRequest(ctx, options, cpkInfo, cpkScopeInfo, modifiedAccessConditions, leaseAccessConditions)
 	if err != nil {
 		return BlobClientCreateSnapshotResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientCreateSnapshotResponse{}, err
 	}
@@ -584,7 +593,7 @@ func (client *BlobClient) CreateSnapshot(ctx context.Context, options *BlobClien
 }
 
 // createSnapshotCreateRequest creates the CreateSnapshot request.
-func (client *BlobClient) createSnapshotCreateRequest(ctx context.Context, options *BlobClientCreateSnapshotOptions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions) (*policy.Request, error) {
+func (client *BlobClient) createSnapshotCreateRequest(ctx context.Context, options *BlobClientCreateSnapshotOptions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPut, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -597,7 +606,9 @@ func (client *BlobClient) createSnapshotCreateRequest(ctx context.Context, optio
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	if options != nil && options.Metadata != nil {
 		for k, v := range options.Metadata {
-			req.Raw().Header["x-ms-meta-"+k] = []string{v}
+			if v != nil {
+				req.Raw().Header["x-ms-meta-"+k] = []string{*v}
+			}
 		}
 	}
 	if cpkInfo != nil && cpkInfo.EncryptionKey != nil {
@@ -613,10 +624,10 @@ func (client *BlobClient) createSnapshotCreateRequest(ctx context.Context, optio
 		req.Raw().Header["x-ms-encryption-scope"] = []string{*cpkScopeInfo.EncryptionScope}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -630,7 +641,7 @@ func (client *BlobClient) createSnapshotCreateRequest(ctx context.Context, optio
 	if leaseAccessConditions != nil && leaseAccessConditions.LeaseID != nil {
 		req.Raw().Header["x-ms-lease-id"] = []string{*leaseAccessConditions.LeaseID}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -695,16 +706,17 @@ func (client *BlobClient) createSnapshotHandleResponse(resp *http.Response) (Blo
 // All other operations on a soft-deleted blob or snapshot causes the service to
 // return an HTTP status code of 404 (ResourceNotFound).
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientDeleteOptions contains the optional parameters for the BlobClient.Delete method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientDeleteOptions contains the optional parameters for the BlobClient.Delete method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
 func (client *BlobClient) Delete(ctx context.Context, options *BlobClientDeleteOptions, leaseAccessConditions *LeaseAccessConditions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientDeleteResponse, error) {
 	req, err := client.deleteCreateRequest(ctx, options, leaseAccessConditions, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientDeleteResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientDeleteResponse{}, err
 	}
@@ -741,10 +753,10 @@ func (client *BlobClient) deleteCreateRequest(ctx context.Context, options *Blob
 		req.Raw().Header["x-ms-delete-snapshots"] = []string{string(*options.DeleteSnapshots)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -755,7 +767,7 @@ func (client *BlobClient) deleteCreateRequest(ctx context.Context, options *Blob
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -787,15 +799,16 @@ func (client *BlobClient) deleteHandleResponse(resp *http.Response) (BlobClientD
 
 // DeleteImmutabilityPolicy - The Delete Immutability Policy operation deletes the immutability policy on the blob
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientDeleteImmutabilityPolicyOptions contains the optional parameters for the BlobClient.DeleteImmutabilityPolicy
-// method.
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientDeleteImmutabilityPolicyOptions contains the optional parameters for the BlobClient.DeleteImmutabilityPolicy
+//     method.
 func (client *BlobClient) DeleteImmutabilityPolicy(ctx context.Context, options *BlobClientDeleteImmutabilityPolicyOptions) (BlobClientDeleteImmutabilityPolicyResponse, error) {
 	req, err := client.deleteImmutabilityPolicyCreateRequest(ctx, options)
 	if err != nil {
 		return BlobClientDeleteImmutabilityPolicyResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientDeleteImmutabilityPolicyResponse{}, err
 	}
@@ -817,7 +830,7 @@ func (client *BlobClient) deleteImmutabilityPolicyCreateRequest(ctx context.Cont
 		reqQP.Set("timeout", strconv.FormatInt(int64(*options.Timeout), 10))
 	}
 	req.Raw().URL.RawQuery = reqQP.Encode()
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -850,17 +863,18 @@ func (client *BlobClient) deleteImmutabilityPolicyHandleResponse(resp *http.Resp
 // Download - The Download operation reads or downloads a blob from the system, including its metadata and properties. You
 // can also call Download to read a snapshot.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientDownloadOptions contains the optional parameters for the BlobClient.Download method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-func (client *BlobClient) Download(ctx context.Context, options *BlobClientDownloadOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientDownloadResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientDownloadOptions contains the optional parameters for the BlobClient.Download method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+func (client *BlobClient) Download(ctx context.Context, options *BlobClientDownloadOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientDownloadResponse, error) {
 	req, err := client.downloadCreateRequest(ctx, options, leaseAccessConditions, cpkInfo, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientDownloadResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientDownloadResponse{}, err
 	}
@@ -871,7 +885,7 @@ func (client *BlobClient) Download(ctx context.Context, options *BlobClientDownl
 }
 
 // downloadCreateRequest creates the Download request.
-func (client *BlobClient) downloadCreateRequest(ctx context.Context, options *BlobClientDownloadOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
+func (client *BlobClient) downloadCreateRequest(ctx context.Context, options *BlobClientDownloadOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodGet, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -910,10 +924,10 @@ func (client *BlobClient) downloadCreateRequest(ctx context.Context, options *Bl
 		req.Raw().Header["x-ms-encryption-algorithm"] = []string{string(*cpkInfo.EncryptionAlgorithm)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -924,7 +938,7 @@ func (client *BlobClient) downloadCreateRequest(ctx context.Context, options *Bl
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -942,12 +956,19 @@ func (client *BlobClient) downloadHandleResponse(resp *http.Response) (BlobClien
 		}
 		result.LastModified = &lastModified
 	}
+	if val := resp.Header.Get("x-ms-creation-time"); val != "" {
+		creationTime, err := time.Parse(time.RFC1123, val)
+		if err != nil {
+			return BlobClientDownloadResponse{}, err
+		}
+		result.CreationTime = &creationTime
+	}
 	for hh := range resp.Header {
 		if len(hh) > len("x-ms-meta-") && strings.EqualFold(hh[:len("x-ms-meta-")], "x-ms-meta-") {
 			if result.Metadata == nil {
-				result.Metadata = map[string]string{}
+				result.Metadata = map[string]*string{}
 			}
-			result.Metadata[hh[len("x-ms-meta-"):]] = resp.Header.Get(hh)
+			result.Metadata[hh[len("x-ms-meta-"):]] = to.Ptr(resp.Header.Get(hh))
 		}
 	}
 	if val := resp.Header.Get("x-ms-or-policy-id"); val != "" {
@@ -956,9 +977,9 @@ func (client *BlobClient) downloadHandleResponse(resp *http.Response) (BlobClien
 	for hh := range resp.Header {
 		if len(hh) > len("x-ms-or-") && strings.EqualFold(hh[:len("x-ms-or-")], "x-ms-or-") {
 			if result.Metadata == nil {
-				result.Metadata = map[string]string{}
+				result.Metadata = map[string]*string{}
 			}
-			result.Metadata[hh[len("x-ms-or-"):]] = resp.Header.Get(hh)
+			result.Metadata[hh[len("x-ms-or-"):]] = to.Ptr(resp.Header.Get(hh))
 		}
 	}
 	if val := resp.Header.Get("Content-Length"); val != "" {
@@ -1147,14 +1168,15 @@ func (client *BlobClient) downloadHandleResponse(resp *http.Response) (BlobClien
 
 // GetAccountInfo - Returns the sku name and account kind
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientGetAccountInfoOptions contains the optional parameters for the BlobClient.GetAccountInfo method.
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientGetAccountInfoOptions contains the optional parameters for the BlobClient.GetAccountInfo method.
 func (client *BlobClient) GetAccountInfo(ctx context.Context, options *BlobClientGetAccountInfoOptions) (BlobClientGetAccountInfoResponse, error) {
 	req, err := client.getAccountInfoCreateRequest(ctx, options)
 	if err != nil {
 		return BlobClientGetAccountInfoResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientGetAccountInfoResponse{}, err
 	}
@@ -1174,7 +1196,7 @@ func (client *BlobClient) getAccountInfoCreateRequest(ctx context.Context, optio
 	reqQP.Set("restype", "account")
 	reqQP.Set("comp", "properties")
 	req.Raw().URL.RawQuery = reqQP.Encode()
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	req.Raw().Header["Accept"] = []string{"application/xml"}
 	return req, nil
 }
@@ -1210,17 +1232,18 @@ func (client *BlobClient) getAccountInfoHandleResponse(resp *http.Response) (Blo
 // GetProperties - The Get Properties operation returns all user-defined metadata, standard HTTP properties, and system properties
 // for the blob. It does not return the content of the blob.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientGetPropertiesOptions contains the optional parameters for the BlobClient.GetProperties method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-func (client *BlobClient) GetProperties(ctx context.Context, options *BlobClientGetPropertiesOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientGetPropertiesResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientGetPropertiesOptions contains the optional parameters for the BlobClient.GetProperties method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+func (client *BlobClient) GetProperties(ctx context.Context, options *BlobClientGetPropertiesOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientGetPropertiesResponse, error) {
 	req, err := client.getPropertiesCreateRequest(ctx, options, leaseAccessConditions, cpkInfo, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientGetPropertiesResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientGetPropertiesResponse{}, err
 	}
@@ -1231,7 +1254,7 @@ func (client *BlobClient) GetProperties(ctx context.Context, options *BlobClient
 }
 
 // getPropertiesCreateRequest creates the GetProperties request.
-func (client *BlobClient) getPropertiesCreateRequest(ctx context.Context, options *BlobClientGetPropertiesOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
+func (client *BlobClient) getPropertiesCreateRequest(ctx context.Context, options *BlobClientGetPropertiesOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodHead, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -1260,10 +1283,10 @@ func (client *BlobClient) getPropertiesCreateRequest(ctx context.Context, option
 		req.Raw().Header["x-ms-encryption-algorithm"] = []string{string(*cpkInfo.EncryptionAlgorithm)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -1274,7 +1297,7 @@ func (client *BlobClient) getPropertiesCreateRequest(ctx context.Context, option
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -1302,9 +1325,9 @@ func (client *BlobClient) getPropertiesHandleResponse(resp *http.Response) (Blob
 	for hh := range resp.Header {
 		if len(hh) > len("x-ms-meta-") && strings.EqualFold(hh[:len("x-ms-meta-")], "x-ms-meta-") {
 			if result.Metadata == nil {
-				result.Metadata = map[string]string{}
+				result.Metadata = map[string]*string{}
 			}
-			result.Metadata[hh[len("x-ms-meta-"):]] = resp.Header.Get(hh)
+			result.Metadata[hh[len("x-ms-meta-"):]] = to.Ptr(resp.Header.Get(hh))
 		}
 	}
 	if val := resp.Header.Get("x-ms-or-policy-id"); val != "" {
@@ -1313,9 +1336,9 @@ func (client *BlobClient) getPropertiesHandleResponse(resp *http.Response) (Blob
 	for hh := range resp.Header {
 		if len(hh) > len("x-ms-or-") && strings.EqualFold(hh[:len("x-ms-or-")], "x-ms-or-") {
 			if result.Metadata == nil {
-				result.Metadata = map[string]string{}
+				result.Metadata = map[string]*string{}
 			}
-			result.Metadata[hh[len("x-ms-or-"):]] = resp.Header.Get(hh)
+			result.Metadata[hh[len("x-ms-or-"):]] = to.Ptr(resp.Header.Get(hh))
 		}
 	}
 	if val := resp.Header.Get("x-ms-blob-type"); val != "" {
@@ -1524,16 +1547,17 @@ func (client *BlobClient) getPropertiesHandleResponse(resp *http.Response) (Blob
 
 // GetTags - The Get Tags operation enables users to get the tags associated with a blob.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientGetTagsOptions contains the optional parameters for the BlobClient.GetTags method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientGetTagsOptions contains the optional parameters for the BlobClient.GetTags method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
 func (client *BlobClient) GetTags(ctx context.Context, options *BlobClientGetTagsOptions, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions) (BlobClientGetTagsResponse, error) {
 	req, err := client.getTagsCreateRequest(ctx, options, modifiedAccessConditions, leaseAccessConditions)
 	if err != nil {
 		return BlobClientGetTagsResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientGetTagsResponse{}, err
 	}
@@ -1561,7 +1585,7 @@ func (client *BlobClient) getTagsCreateRequest(ctx context.Context, options *Blo
 		reqQP.Set("versionid", *options.VersionID)
 	}
 	req.Raw().URL.RawQuery = reqQP.Encode()
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -1602,17 +1626,18 @@ func (client *BlobClient) getTagsHandleResponse(resp *http.Response) (BlobClient
 
 // Query - The Query operation enables users to select/project on blob data by providing simple query expressions.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientQueryOptions contains the optional parameters for the BlobClient.Query method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-func (client *BlobClient) Query(ctx context.Context, options *BlobClientQueryOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientQueryResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientQueryOptions contains the optional parameters for the BlobClient.Query method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+func (client *BlobClient) Query(ctx context.Context, options *BlobClientQueryOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientQueryResponse, error) {
 	req, err := client.queryCreateRequest(ctx, options, leaseAccessConditions, cpkInfo, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientQueryResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientQueryResponse{}, err
 	}
@@ -1623,7 +1648,7 @@ func (client *BlobClient) Query(ctx context.Context, options *BlobClientQueryOpt
 }
 
 // queryCreateRequest creates the Query request.
-func (client *BlobClient) queryCreateRequest(ctx context.Context, options *BlobClientQueryOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
+func (client *BlobClient) queryCreateRequest(ctx context.Context, options *BlobClientQueryOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPost, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -1651,10 +1676,10 @@ func (client *BlobClient) queryCreateRequest(ctx context.Context, options *BlobC
 		req.Raw().Header["x-ms-encryption-algorithm"] = []string{string(*cpkInfo.EncryptionAlgorithm)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -1665,13 +1690,16 @@ func (client *BlobClient) queryCreateRequest(ctx context.Context, options *BlobC
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
 	req.Raw().Header["Accept"] = []string{"application/xml"}
 	if options != nil && options.QueryRequest != nil {
-		return req, runtime.MarshalAsXML(req, *options.QueryRequest)
+		if err := runtime.MarshalAsXML(req, *options.QueryRequest); err != nil {
+			return nil, err
+		}
+		return req, nil
 	}
 	return req, nil
 }
@@ -1689,9 +1717,9 @@ func (client *BlobClient) queryHandleResponse(resp *http.Response) (BlobClientQu
 	for hh := range resp.Header {
 		if len(hh) > len("x-ms-meta-") && strings.EqualFold(hh[:len("x-ms-meta-")], "x-ms-meta-") {
 			if result.Metadata == nil {
-				result.Metadata = map[string]string{}
+				result.Metadata = map[string]*string{}
 			}
-			result.Metadata[hh[len("x-ms-meta-"):]] = resp.Header.Get(hh)
+			result.Metadata[hh[len("x-ms-meta-"):]] = to.Ptr(resp.Header.Get(hh))
 		}
 	}
 	if val := resp.Header.Get("Content-Length"); val != "" {
@@ -1829,16 +1857,17 @@ func (client *BlobClient) queryHandleResponse(resp *http.Response) (BlobClientQu
 
 // ReleaseLease - [Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// leaseID - Specifies the current lease ID on the resource.
-// options - BlobClientReleaseLeaseOptions contains the optional parameters for the BlobClient.ReleaseLease method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//
+// Generated from API version 2023-08-03
+//   - leaseID - Specifies the current lease ID on the resource.
+//   - options - BlobClientReleaseLeaseOptions contains the optional parameters for the BlobClient.ReleaseLease method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
 func (client *BlobClient) ReleaseLease(ctx context.Context, leaseID string, options *BlobClientReleaseLeaseOptions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientReleaseLeaseResponse, error) {
 	req, err := client.releaseLeaseCreateRequest(ctx, leaseID, options, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientReleaseLeaseResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientReleaseLeaseResponse{}, err
 	}
@@ -1863,10 +1892,10 @@ func (client *BlobClient) releaseLeaseCreateRequest(ctx context.Context, leaseID
 	req.Raw().Header["x-ms-lease-action"] = []string{"release"}
 	req.Raw().Header["x-ms-lease-id"] = []string{leaseID}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -1877,7 +1906,7 @@ func (client *BlobClient) releaseLeaseCreateRequest(ctx context.Context, leaseID
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -1919,16 +1948,17 @@ func (client *BlobClient) releaseLeaseHandleResponse(resp *http.Response) (BlobC
 
 // RenewLease - [Update] The Lease Blob operation establishes and manages a lock on a blob for write and delete operations
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// leaseID - Specifies the current lease ID on the resource.
-// options - BlobClientRenewLeaseOptions contains the optional parameters for the BlobClient.RenewLease method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//
+// Generated from API version 2023-08-03
+//   - leaseID - Specifies the current lease ID on the resource.
+//   - options - BlobClientRenewLeaseOptions contains the optional parameters for the BlobClient.RenewLease method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
 func (client *BlobClient) RenewLease(ctx context.Context, leaseID string, options *BlobClientRenewLeaseOptions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientRenewLeaseResponse, error) {
 	req, err := client.renewLeaseCreateRequest(ctx, leaseID, options, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientRenewLeaseResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientRenewLeaseResponse{}, err
 	}
@@ -1953,10 +1983,10 @@ func (client *BlobClient) renewLeaseCreateRequest(ctx context.Context, leaseID s
 	req.Raw().Header["x-ms-lease-action"] = []string{"renew"}
 	req.Raw().Header["x-ms-lease-id"] = []string{leaseID}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -1967,7 +1997,7 @@ func (client *BlobClient) renewLeaseCreateRequest(ctx context.Context, leaseID s
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -2012,15 +2042,16 @@ func (client *BlobClient) renewLeaseHandleResponse(resp *http.Response) (BlobCli
 
 // SetExpiry - Sets the time a blob will expire and be deleted.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// expiryOptions - Required. Indicates mode of the expiry time
-// options - BlobClientSetExpiryOptions contains the optional parameters for the BlobClient.SetExpiry method.
+//
+// Generated from API version 2023-08-03
+//   - expiryOptions - Required. Indicates mode of the expiry time
+//   - options - BlobClientSetExpiryOptions contains the optional parameters for the BlobClient.SetExpiry method.
 func (client *BlobClient) SetExpiry(ctx context.Context, expiryOptions ExpiryOptions, options *BlobClientSetExpiryOptions) (BlobClientSetExpiryResponse, error) {
 	req, err := client.setExpiryCreateRequest(ctx, expiryOptions, options)
 	if err != nil {
 		return BlobClientSetExpiryResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientSetExpiryResponse{}, err
 	}
@@ -2042,7 +2073,7 @@ func (client *BlobClient) setExpiryCreateRequest(ctx context.Context, expiryOpti
 		reqQP.Set("timeout", strconv.FormatInt(int64(*options.Timeout), 10))
 	}
 	req.Raw().URL.RawQuery = reqQP.Encode()
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -2088,17 +2119,18 @@ func (client *BlobClient) setExpiryHandleResponse(resp *http.Response) (BlobClie
 
 // SetHTTPHeaders - The Set HTTP Headers operation sets system properties on the blob
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientSetHTTPHeadersOptions contains the optional parameters for the BlobClient.SetHTTPHeaders method.
-// BlobHTTPHeaders - BlobHTTPHeaders contains a group of parameters for the BlobClient.SetHTTPHeaders method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientSetHTTPHeadersOptions contains the optional parameters for the BlobClient.SetHTTPHeaders method.
+//   - BlobHTTPHeaders - BlobHTTPHeaders contains a group of parameters for the BlobClient.SetHTTPHeaders method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
 func (client *BlobClient) SetHTTPHeaders(ctx context.Context, options *BlobClientSetHTTPHeadersOptions, blobHTTPHeaders *BlobHTTPHeaders, leaseAccessConditions *LeaseAccessConditions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientSetHTTPHeadersResponse, error) {
 	req, err := client.setHTTPHeadersCreateRequest(ctx, options, blobHTTPHeaders, leaseAccessConditions, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientSetHTTPHeadersResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientSetHTTPHeadersResponse{}, err
 	}
@@ -2139,10 +2171,10 @@ func (client *BlobClient) setHTTPHeadersCreateRequest(ctx context.Context, optio
 		req.Raw().Header["x-ms-lease-id"] = []string{*leaseAccessConditions.LeaseID}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -2156,7 +2188,7 @@ func (client *BlobClient) setHTTPHeadersCreateRequest(ctx context.Context, optio
 	if blobHTTPHeaders != nil && blobHTTPHeaders.BlobContentDisposition != nil {
 		req.Raw().Header["x-ms-blob-content-disposition"] = []string{*blobHTTPHeaders.BlobContentDisposition}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -2205,16 +2237,17 @@ func (client *BlobClient) setHTTPHeadersHandleResponse(resp *http.Response) (Blo
 
 // SetImmutabilityPolicy - The Set Immutability Policy operation sets the immutability policy on the blob
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientSetImmutabilityPolicyOptions contains the optional parameters for the BlobClient.SetImmutabilityPolicy
-// method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientSetImmutabilityPolicyOptions contains the optional parameters for the BlobClient.SetImmutabilityPolicy
+//     method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
 func (client *BlobClient) SetImmutabilityPolicy(ctx context.Context, options *BlobClientSetImmutabilityPolicyOptions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientSetImmutabilityPolicyResponse, error) {
 	req, err := client.setImmutabilityPolicyCreateRequest(ctx, options, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientSetImmutabilityPolicyResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientSetImmutabilityPolicyResponse{}, err
 	}
@@ -2236,15 +2269,15 @@ func (client *BlobClient) setImmutabilityPolicyCreateRequest(ctx context.Context
 		reqQP.Set("timeout", strconv.FormatInt(int64(*options.Timeout), 10))
 	}
 	req.Raw().URL.RawQuery = reqQP.Encode()
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if options != nil && options.ImmutabilityPolicyExpiry != nil {
-		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{options.ImmutabilityPolicyExpiry.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{(*options.ImmutabilityPolicyExpiry).In(gmt).Format(time.RFC1123)}
 	}
 	if options != nil && options.ImmutabilityPolicyMode != nil {
 		req.Raw().Header["x-ms-immutability-policy-mode"] = []string{string(*options.ImmutabilityPolicyMode)}
@@ -2287,15 +2320,16 @@ func (client *BlobClient) setImmutabilityPolicyHandleResponse(resp *http.Respons
 
 // SetLegalHold - The Set Legal Hold operation sets a legal hold on the blob.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// legalHold - Specified if a legal hold should be set on the blob.
-// options - BlobClientSetLegalHoldOptions contains the optional parameters for the BlobClient.SetLegalHold method.
+//
+// Generated from API version 2023-08-03
+//   - legalHold - Specified if a legal hold should be set on the blob.
+//   - options - BlobClientSetLegalHoldOptions contains the optional parameters for the BlobClient.SetLegalHold method.
 func (client *BlobClient) SetLegalHold(ctx context.Context, legalHold bool, options *BlobClientSetLegalHoldOptions) (BlobClientSetLegalHoldResponse, error) {
 	req, err := client.setLegalHoldCreateRequest(ctx, legalHold, options)
 	if err != nil {
 		return BlobClientSetLegalHoldResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientSetLegalHoldResponse{}, err
 	}
@@ -2317,7 +2351,7 @@ func (client *BlobClient) setLegalHoldCreateRequest(ctx context.Context, legalHo
 		reqQP.Set("timeout", strconv.FormatInt(int64(*options.Timeout), 10))
 	}
 	req.Raw().URL.RawQuery = reqQP.Encode()
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -2358,18 +2392,19 @@ func (client *BlobClient) setLegalHoldHandleResponse(resp *http.Response) (BlobC
 // SetMetadata - The Set Blob Metadata operation sets user-defined metadata for the specified blob as one or more name-value
 // pairs
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientSetMetadataOptions contains the optional parameters for the BlobClient.SetMetadata method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// CpkInfo - CpkInfo contains a group of parameters for the BlobClient.Download method.
-// CpkScopeInfo - CpkScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-func (client *BlobClient) SetMetadata(ctx context.Context, options *BlobClientSetMetadataOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientSetMetadataResponse, error) {
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientSetMetadataOptions contains the optional parameters for the BlobClient.SetMetadata method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - CPKInfo - CPKInfo contains a group of parameters for the BlobClient.Download method.
+//   - CPKScopeInfo - CPKScopeInfo contains a group of parameters for the BlobClient.SetMetadata method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+func (client *BlobClient) SetMetadata(ctx context.Context, options *BlobClientSetMetadataOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientSetMetadataResponse, error) {
 	req, err := client.setMetadataCreateRequest(ctx, options, leaseAccessConditions, cpkInfo, cpkScopeInfo, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientSetMetadataResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientSetMetadataResponse{}, err
 	}
@@ -2380,7 +2415,7 @@ func (client *BlobClient) SetMetadata(ctx context.Context, options *BlobClientSe
 }
 
 // setMetadataCreateRequest creates the SetMetadata request.
-func (client *BlobClient) setMetadataCreateRequest(ctx context.Context, options *BlobClientSetMetadataOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CpkInfo, cpkScopeInfo *CpkScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
+func (client *BlobClient) setMetadataCreateRequest(ctx context.Context, options *BlobClientSetMetadataOptions, leaseAccessConditions *LeaseAccessConditions, cpkInfo *CPKInfo, cpkScopeInfo *CPKScopeInfo, modifiedAccessConditions *ModifiedAccessConditions) (*policy.Request, error) {
 	req, err := runtime.NewRequest(ctx, http.MethodPut, client.endpoint)
 	if err != nil {
 		return nil, err
@@ -2393,7 +2428,9 @@ func (client *BlobClient) setMetadataCreateRequest(ctx context.Context, options 
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	if options != nil && options.Metadata != nil {
 		for k, v := range options.Metadata {
-			req.Raw().Header["x-ms-meta-"+k] = []string{v}
+			if v != nil {
+				req.Raw().Header["x-ms-meta-"+k] = []string{*v}
+			}
 		}
 	}
 	if leaseAccessConditions != nil && leaseAccessConditions.LeaseID != nil {
@@ -2412,10 +2449,10 @@ func (client *BlobClient) setMetadataCreateRequest(ctx context.Context, options 
 		req.Raw().Header["x-ms-encryption-scope"] = []string{*cpkScopeInfo.EncryptionScope}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -2426,7 +2463,7 @@ func (client *BlobClient) setMetadataCreateRequest(ctx context.Context, options 
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfTags != nil {
 		req.Raw().Header["x-ms-if-tags"] = []string{*modifiedAccessConditions.IfTags}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -2484,17 +2521,18 @@ func (client *BlobClient) setMetadataHandleResponse(resp *http.Response) (BlobCl
 
 // SetTags - The Set Tags operation enables users to set tags on a blob.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// tags - Blob tags
-// options - BlobClientSetTagsOptions contains the optional parameters for the BlobClient.SetTags method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//
+// Generated from API version 2023-08-03
+//   - tags - Blob tags
+//   - options - BlobClientSetTagsOptions contains the optional parameters for the BlobClient.SetTags method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
 func (client *BlobClient) SetTags(ctx context.Context, tags BlobTags, options *BlobClientSetTagsOptions, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions) (BlobClientSetTagsResponse, error) {
 	req, err := client.setTagsCreateRequest(ctx, tags, options, modifiedAccessConditions, leaseAccessConditions)
 	if err != nil {
 		return BlobClientSetTagsResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientSetTagsResponse{}, err
 	}
@@ -2519,7 +2557,7 @@ func (client *BlobClient) setTagsCreateRequest(ctx context.Context, tags BlobTag
 		reqQP.Set("versionid", *options.VersionID)
 	}
 	req.Raw().URL.RawQuery = reqQP.Encode()
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.TransactionalContentMD5 != nil {
 		req.Raw().Header["Content-MD5"] = []string{base64.StdEncoding.EncodeToString(options.TransactionalContentMD5)}
 	}
@@ -2536,7 +2574,10 @@ func (client *BlobClient) setTagsCreateRequest(ctx context.Context, tags BlobTag
 		req.Raw().Header["x-ms-lease-id"] = []string{*leaseAccessConditions.LeaseID}
 	}
 	req.Raw().Header["Accept"] = []string{"application/xml"}
-	return req, runtime.MarshalAsXML(req, tags)
+	if err := runtime.MarshalAsXML(req, tags); err != nil {
+		return nil, err
+	}
+	return req, nil
 }
 
 // setTagsHandleResponse handles the SetTags response.
@@ -2566,17 +2607,18 @@ func (client *BlobClient) setTagsHandleResponse(resp *http.Response) (BlobClient
 // premium page blob's tier determines the allowed size, IOPS, and bandwidth of the blob. A block blob's tier determines Hot/Cool/Archive
 // storage type. This operation does not update the blob's ETag.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// tier - Indicates the tier to be set on the blob.
-// options - BlobClientSetTierOptions contains the optional parameters for the BlobClient.SetTier method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//
+// Generated from API version 2023-08-03
+//   - tier - Indicates the tier to be set on the blob.
+//   - options - BlobClientSetTierOptions contains the optional parameters for the BlobClient.SetTier method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
 func (client *BlobClient) SetTier(ctx context.Context, tier AccessTier, options *BlobClientSetTierOptions, leaseAccessConditions *LeaseAccessConditions, modifiedAccessConditions *ModifiedAccessConditions) (BlobClientSetTierResponse, error) {
 	req, err := client.setTierCreateRequest(ctx, tier, options, leaseAccessConditions, modifiedAccessConditions)
 	if err != nil {
 		return BlobClientSetTierResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientSetTierResponse{}, err
 	}
@@ -2608,7 +2650,7 @@ func (client *BlobClient) setTierCreateRequest(ctx context.Context, tier AccessT
 	if options != nil && options.RehydratePriority != nil {
 		req.Raw().Header["x-ms-rehydrate-priority"] = []string{string(*options.RehydratePriority)}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -2639,21 +2681,22 @@ func (client *BlobClient) setTierHandleResponse(resp *http.Response) (BlobClient
 
 // StartCopyFromURL - The Start Copy From URL operation copies a blob or an internet resource to a new blob.
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// copySource - Specifies the name of the source page blob snapshot. This value is a URL of up to 2 KB in length that specifies
-// a page blob snapshot. The value should be URL-encoded as it would appear in a request
-// URI. The source blob must either be public or must be authenticated via a shared access signature.
-// options - BlobClientStartCopyFromURLOptions contains the optional parameters for the BlobClient.StartCopyFromURL method.
-// SourceModifiedAccessConditions - SourceModifiedAccessConditions contains a group of parameters for the BlobClient.StartCopyFromURL
-// method.
-// ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
-// LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
+//
+// Generated from API version 2023-08-03
+//   - copySource - Specifies the name of the source page blob snapshot. This value is a URL of up to 2 KB in length that specifies
+//     a page blob snapshot. The value should be URL-encoded as it would appear in a request
+//     URI. The source blob must either be public or must be authenticated via a shared access signature.
+//   - options - BlobClientStartCopyFromURLOptions contains the optional parameters for the BlobClient.StartCopyFromURL method.
+//   - SourceModifiedAccessConditions - SourceModifiedAccessConditions contains a group of parameters for the BlobClient.StartCopyFromURL
+//     method.
+//   - ModifiedAccessConditions - ModifiedAccessConditions contains a group of parameters for the ContainerClient.Delete method.
+//   - LeaseAccessConditions - LeaseAccessConditions contains a group of parameters for the ContainerClient.GetProperties method.
 func (client *BlobClient) StartCopyFromURL(ctx context.Context, copySource string, options *BlobClientStartCopyFromURLOptions, sourceModifiedAccessConditions *SourceModifiedAccessConditions, modifiedAccessConditions *ModifiedAccessConditions, leaseAccessConditions *LeaseAccessConditions) (BlobClientStartCopyFromURLResponse, error) {
 	req, err := client.startCopyFromURLCreateRequest(ctx, copySource, options, sourceModifiedAccessConditions, modifiedAccessConditions, leaseAccessConditions)
 	if err != nil {
 		return BlobClientStartCopyFromURLResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientStartCopyFromURLResponse{}, err
 	}
@@ -2676,7 +2719,9 @@ func (client *BlobClient) startCopyFromURLCreateRequest(ctx context.Context, cop
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	if options != nil && options.Metadata != nil {
 		for k, v := range options.Metadata {
-			req.Raw().Header["x-ms-meta-"+k] = []string{v}
+			if v != nil {
+				req.Raw().Header["x-ms-meta-"+k] = []string{*v}
+			}
 		}
 	}
 	if options != nil && options.Tier != nil {
@@ -2686,10 +2731,10 @@ func (client *BlobClient) startCopyFromURLCreateRequest(ctx context.Context, cop
 		req.Raw().Header["x-ms-rehydrate-priority"] = []string{string(*options.RehydratePriority)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfModifiedSince != nil {
-		req.Raw().Header["x-ms-source-if-modified-since"] = []string{sourceModifiedAccessConditions.SourceIfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-source-if-modified-since"] = []string{(*sourceModifiedAccessConditions.SourceIfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfUnmodifiedSince != nil {
-		req.Raw().Header["x-ms-source-if-unmodified-since"] = []string{sourceModifiedAccessConditions.SourceIfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-source-if-unmodified-since"] = []string{(*sourceModifiedAccessConditions.SourceIfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if sourceModifiedAccessConditions != nil && sourceModifiedAccessConditions.SourceIfMatch != nil {
 		req.Raw().Header["x-ms-source-if-match"] = []string{string(*sourceModifiedAccessConditions.SourceIfMatch)}
@@ -2701,10 +2746,10 @@ func (client *BlobClient) startCopyFromURLCreateRequest(ctx context.Context, cop
 		req.Raw().Header["x-ms-source-if-tags"] = []string{*sourceModifiedAccessConditions.SourceIfTags}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfModifiedSince != nil {
-		req.Raw().Header["If-Modified-Since"] = []string{modifiedAccessConditions.IfModifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Modified-Since"] = []string{(*modifiedAccessConditions.IfModifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfUnmodifiedSince != nil {
-		req.Raw().Header["If-Unmodified-Since"] = []string{modifiedAccessConditions.IfUnmodifiedSince.Format(time.RFC1123)}
+		req.Raw().Header["If-Unmodified-Since"] = []string{(*modifiedAccessConditions.IfUnmodifiedSince).In(gmt).Format(time.RFC1123)}
 	}
 	if modifiedAccessConditions != nil && modifiedAccessConditions.IfMatch != nil {
 		req.Raw().Header["If-Match"] = []string{string(*modifiedAccessConditions.IfMatch)}
@@ -2719,7 +2764,7 @@ func (client *BlobClient) startCopyFromURLCreateRequest(ctx context.Context, cop
 	if leaseAccessConditions != nil && leaseAccessConditions.LeaseID != nil {
 		req.Raw().Header["x-ms-lease-id"] = []string{*leaseAccessConditions.LeaseID}
 	}
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
@@ -2730,7 +2775,7 @@ func (client *BlobClient) startCopyFromURLCreateRequest(ctx context.Context, cop
 		req.Raw().Header["x-ms-seal-blob"] = []string{strconv.FormatBool(*options.SealBlob)}
 	}
 	if options != nil && options.ImmutabilityPolicyExpiry != nil {
-		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{options.ImmutabilityPolicyExpiry.Format(time.RFC1123)}
+		req.Raw().Header["x-ms-immutability-policy-until-date"] = []string{(*options.ImmutabilityPolicyExpiry).In(gmt).Format(time.RFC1123)}
 	}
 	if options != nil && options.ImmutabilityPolicyMode != nil {
 		req.Raw().Header["x-ms-immutability-policy-mode"] = []string{string(*options.ImmutabilityPolicyMode)}
@@ -2785,14 +2830,15 @@ func (client *BlobClient) startCopyFromURLHandleResponse(resp *http.Response) (B
 
 // Undelete - Undelete a blob that was previously soft deleted
 // If the operation fails it returns an *azcore.ResponseError type.
-// Generated from API version 2020-10-02
-// options - BlobClientUndeleteOptions contains the optional parameters for the BlobClient.Undelete method.
+//
+// Generated from API version 2023-08-03
+//   - options - BlobClientUndeleteOptions contains the optional parameters for the BlobClient.Undelete method.
 func (client *BlobClient) Undelete(ctx context.Context, options *BlobClientUndeleteOptions) (BlobClientUndeleteResponse, error) {
 	req, err := client.undeleteCreateRequest(ctx, options)
 	if err != nil {
 		return BlobClientUndeleteResponse{}, err
 	}
-	resp, err := client.pl.Do(req)
+	resp, err := client.internal.Pipeline().Do(req)
 	if err != nil {
 		return BlobClientUndeleteResponse{}, err
 	}
@@ -2814,7 +2860,7 @@ func (client *BlobClient) undeleteCreateRequest(ctx context.Context, options *Bl
 		reqQP.Set("timeout", strconv.FormatInt(int64(*options.Timeout), 10))
 	}
 	req.Raw().URL.RawQuery = reqQP.Encode()
-	req.Raw().Header["x-ms-version"] = []string{"2020-10-02"}
+	req.Raw().Header["x-ms-version"] = []string{ServiceVersion}
 	if options != nil && options.RequestID != nil {
 		req.Raw().Header["x-ms-client-request-id"] = []string{*options.RequestID}
 	}
