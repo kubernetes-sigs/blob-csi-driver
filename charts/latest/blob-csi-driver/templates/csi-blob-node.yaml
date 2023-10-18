@@ -171,6 +171,7 @@ spec:
             - "--mount-permissions={{ .Values.node.mountPermissions }}"
             - "--allow-inline-volume-key-access-with-idenitity={{ .Values.node.allowInlineVolumeKeyAccessWithIdentity }}"
             - "--enable-aznfs-mount={{ .Values.node.enableAznfsMount }}"
+            - "--metrics-address=0.0.0.0:{{ .Values.node.metricsPort }}"
           ports:
             - containerPort: {{ .Values.node.livenessProbe.healthPort }}
               name: healthz
