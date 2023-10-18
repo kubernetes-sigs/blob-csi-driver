@@ -29,7 +29,7 @@ RUN chmod +x /blobfuse-proxy/init.sh && \
  chmod +x /blobfuse-proxy/blobfuse-proxy
 
 # packages that are only needed by aznfs: procps conntrack iptables bind9-host iproute2 bash netcat sysvinit-utils.
-RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase procps conntrack iptables bind9-host iproute2 bash netcat sysvinit-utils
+RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase procps conntrack iptables bind9-host iproute2 bash netcat sysvinit-utils curl
 
 # install aznfs
 RUN if [ "$ARCH" = "amd64" ] ; then \
@@ -37,6 +37,16 @@ RUN if [ "$ARCH" = "amd64" ] ; then \
 else \
   wget -O aznfs.tar.gz https://github.com/Azure/AZNFS-mount/releases/download/1.0.8/aznfs-1.0.8-1.arm64.tar.gz;fi
 RUN tar xvzf aznfs.tar.gz -C / && rm aznfs.tar.gz
+
+# install azcopy
+ARG azcopyURL=https://aka.ms/downloadazcopy-v10-linux
+RUN if [ "$ARCH" == "arm64" ] ; then \
+  azcopyURL=${azcopyURL}"-arm64"; fi
+RUN curl -sL ${azcopyURL} | tar -xz && \
+  mv ./azcopy_linux_$ARCH_*/azcopy /usr/local/bin/azcopy && \
+  rm -rf ./azcopy_linux_$ARCH_*
+RUN chmod +x /usr/local/bin/azcopy
+RUN apt remove curl -y
 
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \

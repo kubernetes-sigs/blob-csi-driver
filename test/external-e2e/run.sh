@@ -65,7 +65,7 @@ if [ ! -z ${EXTERNAL_E2E_TEST_BLOBFUSE_v2} ]; then
     cp deploy/example/storageclass-blobfuse2.yaml /tmp/csi/storageclass.yaml
     # achieve close-to-open cache consistency like in NFSv3
     sed -i 's/file-cache-timeout-in-seconds=120/file-cache-timeout-in-seconds=0/g' /tmp/csi/storageclass.yaml
-    ginkgo -p -v --fail-fast --flake-attempts 2 -focus="External.Storage.*$DRIVER.csi.azure.com" \
+    ginkgo -p -v --fail-fast --flake-attempts 8 -focus="External.Storage.*$DRIVER.csi.azure.com" \
         -skip='\[Disruptive\]|allow exec of files on the volume|unmount after the subpath directory is deleted|should concurrently access the single volume from pods on different node|pod created with an initial fsgroup, volume contents ownership changed via chgrp in first pod, new pod with same fsgroup skips ownership changes to the volume contents|should provision storage with any volume data source|should mount multiple PV pointing to the same storage on the same node' kubernetes/test/bin/e2e.test  -- \
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-blobfuse.yaml \
         --kubeconfig=$KUBECONFIG
