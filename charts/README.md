@@ -66,16 +66,16 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.blob.tag`                                      | blob-csi-driver docker image tag                      | `latest`                                                         |
 | `image.blob.pullPolicy`                               | blob-csi-driver image pull policy                     | `IfNotPresent`                                                   |
 | `image.csiProvisioner.repository`                     | csi-provisioner docker image                          | `mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner`           |
-| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | `v3.5.0`                                                         |
+| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | `v3.6.1`                                                         |
 | `image.csiProvisioner.pullPolicy`                     | csi-provisioner image pull policy                     | `IfNotPresent`                                                   |
 | `image.livenessProbe.repository`                      | liveness-probe docker image                           | `mcr.microsoft.com/oss/kubernetes-csi/livenessprobe`             |
-| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | `v2.10.0`                                                         |
+| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | `v2.11.0`                                                         |
 | `image.livenessProbe.pullPolicy`                      | liveness-probe image pull policy                      | `IfNotPresent`                                                   |
 | `image.nodeDriverRegistrar.repository`                | csi-node-driver-registrar docker image                | `mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar` |
-| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | `v2.8.0`                                                      |
+| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | `v2.9.0`                                                      |
 | `image.nodeDriverRegistrar.pullPolicy`                | csi-node-driver-registrar image pull policy           | `IfNotPresent`                                                   |
 | `image.csiResizer.repository`                         | csi-resizer docker image                              | `mcr.microsoft.com/oss/kubernetes-csi/csi-resizer`               |
-| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.8.0`                                                         |
+| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.9.1`                                                         |
 | `image.csiResizer.pullPolicy`                         | csi-resizer image pull policy                         | `IfNotPresent`                                                   |
 | `imagePullSecrets`                                    | Specify docker-registry secret names as an array      | [] (does not add image pull secrets to deployed pods)          |
 | `cloud`                                               | the cloud environment the driver is running on        | `AzurePublicCloud`                                               |
