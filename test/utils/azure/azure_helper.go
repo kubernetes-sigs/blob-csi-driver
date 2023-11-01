@@ -19,49 +19,69 @@ package azure
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
-	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/jongio/azidext/go/azidext"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	resources "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/resourcegroupclient"
 )
 
 type Client struct {
-	environment    azure.Environment
 	subscriptionID string
-	groupsClient   resources.GroupsClient
-	accountsClient storage.AccountsClient
+	groupsClient   resourcegroupclient.Interface
+	accountsClient accountclient.Interface
 }
 
 func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string) (*Client, error) {
-	env, err := azure.EnvironmentFromName(cloud)
+	armConfig := &azclient.ARMClientConfig{
+		Cloud: cloud,
+	}
+	cloudConfig, err := azclient.GetAzureCloudConfig(armConfig)
 	if err != nil {
 		return nil, err
 	}
-
-	options := azidentity.ClientSecretCredentialOptions{
-		ClientOptions: azcore.ClientOptions{
-			Cloud: getCloudConfig(env),
+	credProvider, err := azclient.NewAuthProvider(azclient.AzureAuthConfig{
+		TenantID:        tenantID,
+		AADClientID:     clientID,
+		AADClientSecret: clientSecret,
+	}, &arm.ClientOptions{
+		AuxiliaryTenants: []string{tenantID},
+		ClientOptions: policy.ClientOptions{
+			Cloud: *cloudConfig,
 		},
+	})
+	if err != nil {
+		return nil, err
 	}
-	cred, err := azidentity.NewClientSecretCredential(tenantID, clientID, clientSecret, &options)
+	cred, err := credProvider.GetAzIdentity()
+	if err != nil {
+		return nil, err
+	}
+	factory, err := azclient.NewClientFactory(&azclient.ClientFactoryConfig{
+		SubscriptionID: subscriptionID,
+	}, armConfig, cred)
 	if err != nil {
 		return nil, err
 	}
 
-	return getClient(env, subscriptionID, tenantID, cred, env.TokenAudience), nil
+	return &Client{
+		subscriptionID: subscriptionID,
+		groupsClient:   factory.GetResourceGroupClient(),
+		accountsClient: factory.GetAccountClient(),
+	}, nil
 }
 
-func (az *Client) EnsureResourceGroup(ctx context.Context, name, location string, managedBy *string) (resourceGroup *resources.Group, err error) {
+func (az *Client) EnsureResourceGroup(ctx context.Context, name, location string, managedBy *string) (resourceGroup *resources.ResourceGroup, err error) {
 	var tags map[string]*string
 	group, err := az.groupsClient.Get(ctx, name)
+	if err != nil {
+		group = &resources.ResourceGroup{}
+	}
 	if err == nil && group.Tags != nil {
 		tags = group.Tags
 	} else {
@@ -71,92 +91,38 @@ func (az *Client) EnsureResourceGroup(ctx context.Context, name, location string
 		managedBy = group.ManagedBy
 	}
 	// Tags for correlating resource groups with prow jobs on testgrid
-	tags["buildID"] = stringPointer(os.Getenv("BUILD_ID"))
-	tags["jobName"] = stringPointer(os.Getenv("JOB_NAME"))
-	tags["creationTimestamp"] = stringPointer(time.Now().UTC().Format(time.RFC3339))
+	tags["buildID"] = to.Ptr(os.Getenv("BUILD_ID"))
+	tags["jobName"] = to.Ptr(os.Getenv("JOB_NAME"))
+	tags["creationTimestamp"] = to.Ptr(time.Now().UTC().Format(time.RFC3339))
 
-	response, err := az.groupsClient.CreateOrUpdate(ctx, name, resources.Group{
+	response, err := az.groupsClient.CreateOrUpdate(ctx, name, resources.ResourceGroup{
 		Name:      &name,
 		Location:  &location,
 		ManagedBy: managedBy,
 		Tags:      tags,
 	})
 	if err != nil {
-		return &response, err
+		return response, err
 	}
 
-	return &response, nil
+	return response, nil
 }
 
 func (az *Client) DeleteResourceGroup(ctx context.Context, groupName string) error {
 	_, err := az.groupsClient.Get(ctx, groupName)
 	if err == nil {
-		future, err := az.groupsClient.Delete(ctx, groupName)
+		err := az.groupsClient.Delete(ctx, groupName)
 		if err != nil {
 			return fmt.Errorf("cannot delete resource group %v: %w", groupName, err)
-		}
-		err = future.WaitForCompletionRef(ctx, az.groupsClient.Client)
-		if err != nil {
-			// Skip the teardown errors because of https://github.com/Azure/go-autorest/issues/357
-			// TODO(feiskyer): fix the issue by upgrading go-autorest version >= v11.3.2.
-			log.Printf("Warning: failed to delete resource group %q with error %v", groupName, err)
 		}
 	}
 	return nil
 }
 
 func (az *Client) GetAccountNumByResourceGroup(ctx context.Context, groupName string) (count int, err error) {
-	result, err := az.accountsClient.ListByResourceGroup(ctx, groupName)
+	result, err := az.accountsClient.List(ctx, groupName)
 	if err != nil {
 		return -1, err
 	}
-	return len(result.Values()), nil
-}
-
-func getCloudConfig(env azure.Environment) cloud.Configuration {
-	switch env.Name {
-	case azure.USGovernmentCloud.Name:
-		return cloud.AzureGovernment
-	case azure.ChinaCloud.Name:
-		return cloud.AzureChina
-	case azure.PublicCloud.Name:
-		return cloud.AzurePublic
-	default:
-		return cloud.Configuration{
-			ActiveDirectoryAuthorityHost: env.ActiveDirectoryEndpoint,
-			Services: map[cloud.ServiceName]cloud.ServiceConfiguration{
-				cloud.ResourceManager: {
-					Audience: env.TokenAudience,
-					Endpoint: env.ResourceManagerEndpoint,
-				},
-			},
-		}
-	}
-}
-
-func getClient(env azure.Environment, subscriptionID, tenantID string, cred *azidentity.ClientSecretCredential, scope string) *Client {
-	c := &Client{
-		environment:    env,
-		subscriptionID: subscriptionID,
-		groupsClient:   resources.NewGroupsClientWithBaseURI(env.ResourceManagerEndpoint, subscriptionID),
-		accountsClient: storage.NewAccountsClient(subscriptionID),
-	}
-
-	if !strings.HasSuffix(scope, "/.default") {
-		scope += "/.default"
-	}
-	// Use an adapter so azidentity in the Azure SDK can be used as Authorizer
-	// when calling the Azure Management Packages, which we currently use. Once
-	// the Azure SDK clients (found in /sdk) move to stable, we can update our
-	// clients and they will be able to use the creds directly without the
-	// authorizer.
-	authorizer := azidext.NewTokenCredentialAdapter(cred, []string{scope})
-	c.groupsClient.Authorizer = authorizer
-	c.accountsClient.Authorizer = authorizer
-
-	return c
-}
-
-func stringPointer(s string) *string {
-	return &s
+	return len(result), nil
 }
