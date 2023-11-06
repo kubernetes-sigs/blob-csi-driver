@@ -36,7 +36,7 @@ RUN if [ "$ARCH" = "amd64" ] ; then \
   wget -O aznfs.tar.gz https://github.com/Azure/AZNFS-mount/releases/download/1.0.8/aznfs-1.0.8-1.x86_64.tar.gz; \
 else \
   wget -O aznfs.tar.gz https://github.com/Azure/AZNFS-mount/releases/download/1.0.8/aznfs-1.0.8-1.arm64.tar.gz;fi
-RUN tar xvzf aznfs.tar.gz -C / && rm aznfs.tar.gz
+RUN tar xvzf aznfs.tar.gz -C / --keep-directory-symlink && rm aznfs.tar.gz
 
 # install azcopy
 ARG azcopyURL=https://aka.ms/downloadazcopy-v10-linux
