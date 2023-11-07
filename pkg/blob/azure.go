@@ -52,7 +52,7 @@ func IsAzureStackCloud(cloud *azure.Cloud) bool {
 }
 
 // getCloudProvider get Azure Cloud Provider
-func getCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent string, allowEmptyCloudConfig bool, kubeAPIQPS float64, kubeAPIBurst int) (*azure.Cloud, error) {
+func GetCloudProvider(kubeconfig, nodeID, secretName, secretNamespace, userAgent string, allowEmptyCloudConfig bool, kubeAPIQPS float64, kubeAPIBurst int) (*azure.Cloud, error) {
 	var (
 		config     *azure.Config
 		kubeClient *clientset.Clientset
