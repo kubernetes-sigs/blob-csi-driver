@@ -29,7 +29,7 @@ RUN chmod +x /blobfuse-proxy/init.sh && \
  chmod +x /blobfuse-proxy/blobfuse-proxy
 
 # packages that are only needed by aznfs: procps conntrack iptables bind9-host iproute2 bash netcat sysvinit-utils.
-RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase procps conntrack iptables bind9-host iproute2 bash netcat-traditional sysvinit-utils curl
+RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase procps conntrack iptables bind9-host iproute2 bash netcat-traditional sysvinit-utils
 
 # install aznfs
 RUN if [ "$ARCH" = "amd64" ] ; then \
@@ -39,14 +39,14 @@ else \
 RUN tar xvzf aznfs.tar.gz -C / --keep-directory-symlink && rm aznfs.tar.gz
 
 # install azcopy
-ARG azcopyURL=https://aka.ms/downloadazcopy-v10-linux
+ARG azcopyURL=https://azcopyvnext.azureedge.net/releases/release-10.21.2-20231106/azcopy_linux_amd64_10.21.2.tar.gz
 RUN if [ "$ARCH" == "arm64" ] ; then \
-  azcopyURL=${azcopyURL}"-arm64"; fi
-RUN curl -sL ${azcopyURL} | tar -xz && \
+  azcopyURL=https://azcopyvnext.azureedge.net/releases/release-10.21.2-20231106/azcopy_linux_arm64_10.21.2.tar.gz; fi
+RUN wget -O azcopy.tar.gz ${azcopyURL} && \
+  tar xvzf azcopy.tar.gz -C . && rm azcopy.tar.gz && \
   mv ./azcopy_linux_$ARCH_*/azcopy /usr/local/bin/azcopy && \
   rm -rf ./azcopy_linux_$ARCH_*
 RUN chmod +x /usr/local/bin/azcopy
-RUN apt remove curl -y
 
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \
