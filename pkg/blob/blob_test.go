@@ -56,11 +56,10 @@ func NewFakeDriver() *Driver {
 		BlobfuseProxyConnTimout: 5,
 		EnableBlobMockMount:     false,
 	}
-	driver := NewDriver(&driverOptions)
+	driver := NewDriver(&driverOptions, &azure.Cloud{})
 	driver.Name = fakeDriverName
 	driver.Version = vendorVersion
 	driver.subnetLockMap = util.NewLockMap()
-	driver.cloud = &azure.Cloud{}
 	return driver
 }
 
@@ -73,7 +72,7 @@ func TestNewFakeDriver(t *testing.T) {
 		BlobfuseProxyConnTimout: 5,
 		EnableBlobMockMount:     false,
 	}
-	d := NewDriver(&driverOptions)
+	d := NewDriver(&driverOptions, &azure.Cloud{})
 	assert.NotNil(t, d)
 }
 
@@ -86,7 +85,7 @@ func TestNewDriver(t *testing.T) {
 		BlobfuseProxyConnTimout: 5,
 		EnableBlobMockMount:     false,
 	}
-	driver := NewDriver(&driverOptions)
+	driver := NewDriver(&driverOptions, &azure.Cloud{})
 	fakedriver := NewFakeDriver()
 	fakedriver.Name = DefaultDriverName
 	fakedriver.Version = driverVersion
@@ -134,7 +133,7 @@ func TestRun(t *testing.T) {
 				os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 
 				d := NewFakeDriver()
-				d.Run("tcp://127.0.0.1:0", "", true)
+				d.Run("tcp://127.0.0.1:0", true)
 			},
 		},
 		{
@@ -161,7 +160,7 @@ func TestRun(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
 				d.NodeID = ""
-				d.Run("tcp://127.0.0.1:0", "", true)
+				d.Run("tcp://127.0.0.1:0", true)
 			},
 		},
 	}

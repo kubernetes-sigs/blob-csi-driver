@@ -81,31 +81,34 @@ func handle() {
 	driverOptions := blob.DriverOptions{
 		NodeID:                                 *nodeID,
 		DriverName:                             *driverName,
-		CloudConfigSecretName:                  *cloudConfigSecretName,
-		CloudConfigSecretNamespace:             *cloudConfigSecretNamespace,
 		BlobfuseProxyEndpoint:                  *blobfuseProxyEndpoint,
 		EnableBlobfuseProxy:                    *enableBlobfuseProxy,
 		BlobfuseProxyConnTimout:                *blobfuseProxyConnTimout,
 		EnableBlobMockMount:                    *enableBlobMockMount,
-		CustomUserAgent:                        *customUserAgent,
-		UserAgentSuffix:                        *userAgentSuffix,
-		AllowEmptyCloudConfig:                  *allowEmptyCloudConfig,
 		EnableGetVolumeStats:                   *enableGetVolumeStats,
 		AppendTimeStampInCacheDir:              *appendTimeStampInCacheDir,
 		MountPermissions:                       *mountPermissions,
 		AllowInlineVolumeKeyAccessWithIdentity: *allowInlineVolumeKeyAccessWithIdentity,
 		AppendMountErrorHelpLink:               *appendMountErrorHelpLink,
-		KubeAPIQPS:                             *kubeAPIQPS,
-		KubeAPIBurst:                           *kubeAPIBurst,
 		EnableAznfsMount:                       *enableAznfsMount,
 		VolStatsCacheExpireInMinutes:           *volStatsCacheExpireInMinutes,
 		SasTokenExpirationMinutes:              *sasTokenExpirationMinutes,
 	}
-	driver := blob.NewDriver(&driverOptions)
+
+	userAgent := blob.GetUserAgent(driverOptions.DriverName, *customUserAgent, *userAgentSuffix)
+	klog.V(2).Infof("driver userAgent: %s", userAgent)
+
+	cloud, err := blob.GetCloudProvider(*kubeconfig, driverOptions.NodeID, *cloudConfigSecretName, *cloudConfigSecretNamespace, userAgent, *allowEmptyCloudConfig, *kubeAPIQPS, *kubeAPIBurst)
+	if err != nil {
+		klog.Fatalf("failed to get Azure Cloud Provider, error: %v", err)
+	}
+	klog.V(2).Infof("cloud: %s, location: %s, rg: %s, VnetName: %s, VnetResourceGroup: %s, SubnetName: %s", cloud.Cloud, cloud.Location, cloud.ResourceGroup, cloud.VnetName, cloud.VnetResourceGroup, cloud.SubnetName)
+
+	driver := blob.NewDriver(&driverOptions, cloud)
 	if driver == nil {
 		klog.Fatalln("Failed to initialize Azure Blob Storage CSI driver")
 	}
-	driver.Run(*endpoint, *kubeconfig, false)
+	driver.Run(*endpoint, false)
 }
 
 func exportMetrics() {
