@@ -114,7 +114,7 @@ node:
   livenessProbe:
     healthPort: 29633
   logLevel: 5
-  enableBlobfuseProxy: false
+  enableBlobfuseProxy: true
   blobfuseProxy:
     installBlobfuse: true
     blobfuseVersion: "1.4.5"

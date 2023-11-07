@@ -167,8 +167,8 @@ type OsInfo struct {
 }
 
 const (
-	keyDistribID      = "DISTRIB_ID"
-	keyDistribRelease = "DISTRIB_RELEASE"
+	keyID        = "ID"
+	keyVersionID = "VERSION_ID"
 )
 
 func GetOSInfo(f interface{}) (*OsInfo, error) {
@@ -178,8 +178,8 @@ func GetOSInfo(f interface{}) (*OsInfo, error) {
 	}
 
 	oi := &OsInfo{}
-	oi.Distro = cfg.Section("").Key(keyDistribID).String()
-	oi.Version = cfg.Section("").Key(keyDistribRelease).String()
+	oi.Distro = cfg.Section("").Key(keyID).String()
+	oi.Version = cfg.Section("").Key(keyVersionID).String()
 
 	klog.V(2).Infof("get OS info: %v", oi)
 	return oi, nil

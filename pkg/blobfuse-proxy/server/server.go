@@ -115,14 +115,24 @@ func RunGRPCServer(
 }
 
 func getBlobfuseVersion() BlobfuseVersion {
-	osinfo, err := util.GetOSInfo("/etc/lsb-release")
+	osinfo, err := util.GetOSInfo("/etc/os-release")
 	if err != nil {
 		klog.Warningf("failed to get OS info: %v, default using blobfuse v1", err)
 		return BlobfuseV1
 	}
 
-	if osinfo.Distro == "Ubuntu" && osinfo.Version >= "22.04" {
-		klog.V(2).Info("proxy default using blobfuse V2 for mounting")
+	if strings.EqualFold(osinfo.Distro, "mariner") && osinfo.Version >= "2.0" {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on Mariner 2.0+")
+		return BlobfuseV2
+	}
+
+	if strings.EqualFold(osinfo.Distro, "rhcos") {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on RHCOS")
+		return BlobfuseV2
+	}
+
+	if strings.EqualFold(osinfo.Distro, "ubuntu") && osinfo.Version >= "22.04" {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on Ubuntu 22.04+")
 		return BlobfuseV2
 	}
 
