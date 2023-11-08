@@ -272,10 +272,10 @@ func TestGetOSInfo(t *testing.T) {
 		{
 			name: "parse os info correctly",
 			args: args{
-				f: []byte("DISTRIB_ID=Ubuntu\nDISTRIB_RELEASE=22.04"),
+				f: []byte("ID=ubuntu\nVERSION_ID=\"22.04\""),
 			},
 			want: &OsInfo{
-				Distro:  "Ubuntu",
+				Distro:  "ubuntu",
 				Version: "22.04",
 			},
 			wantErr: false,

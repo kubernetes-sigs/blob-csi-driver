@@ -21,10 +21,16 @@ COPY ${binary} /blobplugin
 RUN mkdir /blobfuse-proxy/
 
 COPY ./pkg/blobfuse-proxy/init.sh /blobfuse-proxy/
+COPY ./pkg/blobfuse-proxy/install-proxy-ubuntu.sh /blobfuse-proxy/
+COPY ./pkg/blobfuse-proxy/install-proxy-rhcos.sh /blobfuse-proxy/
+COPY ./pkg/blobfuse-proxy/install-proxy-mariner.sh /blobfuse-proxy/
 COPY ./pkg/blobfuse-proxy/blobfuse-proxy.service /blobfuse-proxy/
 COPY ./_output/${ARCH}/blobfuse-proxy /blobfuse-proxy/
 
 RUN chmod +x /blobfuse-proxy/init.sh && \
+ chmod +x /blobfuse-proxy/install-proxy-ubuntu.sh && \
+ chmod +x /blobfuse-proxy/install-proxy-rhcos.sh && \
+ chmod +x /blobfuse-proxy/install-proxy-mariner.sh && \
  chmod +x /blobfuse-proxy/blobfuse-proxy.service && \
  chmod +x /blobfuse-proxy/blobfuse-proxy
 

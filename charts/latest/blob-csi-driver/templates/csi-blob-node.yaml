@@ -66,7 +66,6 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
 {{- end }}
-{{- if .Values.node.enableBlobfuseProxy }}
       initContainers:
         - name: install-blobfuse-proxy
 {{- if hasPrefix "/" .Values.image.blob.repository }}
@@ -90,6 +89,8 @@ spec:
               value: "{{ .Values.node.blobfuseProxy.installBlobfuse2 }}"
             - name: BLOBFUSE2_VERSION
               value: "{{ .Values.node.blobfuseProxy.blobfuse2Version }}"
+            - name: INSTALL_BLOBFUSE_PROXY
+              value: "{{ .Values.node.enableBlobfuseProxy }}"
             - name: SET_MAX_OPEN_FILE_NUM
               value: "{{ .Values.node.blobfuseProxy.setMaxOpenFileNum }}"
             - name: MAX_FILE_NUM
@@ -99,9 +100,10 @@ spec:
           volumeMounts:
             - name: host-usr
               mountPath: /host/usr
+            - name: host-usr-local
+              mountPath: /host/usr/local
             - name: host-etc
               mountPath: /host/etc
-{{- end }}
       containers:
         - name: liveness-probe
           imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
@@ -266,14 +268,15 @@ spec:
               name: mountpoint-dir
 {{- end }}
       volumes:
-{{- if .Values.node.enableBlobfuseProxy }}
         - name: host-usr
           hostPath:
             path: /usr
+        - name: host-usr-local
+          hostPath:
+            path: /usr/local
         - name: host-etc
           hostPath:
             path: /etc
-{{- end }}
         - hostPath:
             path: {{ .Values.linux.kubelet }}/plugins/{{ .Values.driver.name }}
             type: DirectoryOrCreate
