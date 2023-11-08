@@ -1661,3 +1661,46 @@ func TestIsSupportedAccessTier(t *testing.T) {
 		}
 	}
 }
+
+func TestIsNFSProtocol(t *testing.T) {
+	tests := []struct {
+		protocol       string
+		expectedResult bool
+	}{
+		{
+			protocol:       "",
+			expectedResult: false,
+		},
+		{
+			protocol:       "NFS",
+			expectedResult: true,
+		},
+		{
+			protocol:       "nfs",
+			expectedResult: true,
+		},
+		{
+			protocol:       "Nfs",
+			expectedResult: true,
+		},
+		{
+			protocol:       "NFSv3",
+			expectedResult: false,
+		},
+		{
+			protocol:       "aznfs",
+			expectedResult: true,
+		},
+		{
+			protocol:       "azNfs",
+			expectedResult: true,
+		},
+	}
+
+	for _, test := range tests {
+		result := isNFSProtocol(test.protocol)
+		if result != test.expectedResult {
+			t.Errorf("isNFSVolume(%s) returned with %v, not equal to %v", test.protocol, result, test.expectedResult)
+		}
+	}
+}

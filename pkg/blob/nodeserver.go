@@ -318,7 +318,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		serverAddress = fmt.Sprintf("%s.blob.%s", accountName, storageEndpointSuffix)
 	}
 
-	if protocol == NFS {
+	if isNFSProtocol(protocol) {
 		klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nserverAddress %v",
 			targetPath, protocol, volumeID, attrib, mountFlags, serverAddress)
 
