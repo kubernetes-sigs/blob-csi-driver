@@ -44,6 +44,16 @@ else \
   wget -O aznfs.tar.gz https://github.com/Azure/AZNFS-mount/releases/download/1.0.8/aznfs-1.0.8-1.arm64.tar.gz;fi
 RUN tar xvzf aznfs.tar.gz -C / && rm aznfs.tar.gz
 
+# install azcopy
+ARG azcopyURL=https://azcopyvnext.azureedge.net/releases/release-10.21.2-20231106/azcopy_linux_amd64_10.21.2.tar.gz
+RUN if [ "$ARCH" == "arm64" ] ; then \
+  azcopyURL=https://azcopyvnext.azureedge.net/releases/release-10.21.2-20231106/azcopy_linux_arm64_10.21.2.tar.gz; fi
+RUN wget -O azcopy.tar.gz ${azcopyURL} && \
+  tar xvzf azcopy.tar.gz -C . && rm azcopy.tar.gz && \
+  mv ./azcopy_linux_$ARCH_*/azcopy /usr/local/bin/azcopy && \
+  rm -rf ./azcopy_linux_$ARCH_*
+RUN chmod +x /usr/local/bin/azcopy
+
 RUN if [ "$ARCH" = "amd64" ] ; then \
   clean-install libcurl4-gnutls-dev && \
   wget -O /blobfuse-proxy/packages-microsoft-prod-22.04.deb https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb && \

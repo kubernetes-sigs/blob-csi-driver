@@ -19,12 +19,18 @@ package blob
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
+	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -42,6 +48,9 @@ import (
 
 const (
 	privateEndpoint = "privateendpoint"
+
+	waitForCopyInterval = 5 * time.Second
+	waitForCopyTimeout  = 3 * time.Minute
 )
 
 // CreateVolume provisions a volume
@@ -61,6 +70,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if acquired := d.volumeLocks.TryAcquire(volName); !acquired {
+		// logging the job status if it's volume cloning
+		if req.GetVolumeContentSource() != nil {
+			jobState, percent, err := d.azcopy.GetAzcopyJob(volName)
+			klog.V(2).Infof("azcopy job status: %s, copy percent: %s%%, error: %v", jobState, percent, err)
+		}
 		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, volName)
 	}
 	defer d.volumeLocks.Release(volName)
@@ -313,7 +327,16 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	var volumeID string
-	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_create_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
+	requestName := "controller_create_volume"
+	if req.GetVolumeContentSource() != nil {
+		switch req.VolumeContentSource.Type.(type) {
+		case *csi.VolumeContentSource_Snapshot:
+			requestName = "controller_create_volume_from_snapshot"
+		case *csi.VolumeContentSource_Volume:
+			requestName = "controller_create_volume_from_volume"
+		}
+	}
+	mc := metrics.NewMetricContext(blobCSIDriverName, requestName, d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
 	isOperationSucceeded := false
 	defer func() {
 		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
@@ -387,9 +410,20 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		setKeyValueInMap(parameters, containerNameField, validContainerName)
 	}
 
-	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) subsID(%s) rg(%s) location(%s) size(%d)", validContainerName, accountName, storageAccountType, subsID, resourceGroup, location, requestGiB)
-	if err := d.CreateBlobContainer(ctx, subsID, resourceGroup, accountName, validContainerName, secrets); err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
+	if req.GetVolumeContentSource() != nil {
+		if accountKey == "" {
+			if _, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, secrets, secretName, secretNamespace); err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to GetStorageAccesskey on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
+			}
+		}
+		if err := d.copyVolume(ctx, req, accountKey, validContainerName, storageEndpointSuffix); err != nil {
+			return nil, err
+		}
+	} else {
+		klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) subsID(%s) rg(%s) location(%s) size(%d)", validContainerName, accountName, storageAccountType, subsID, resourceGroup, location, requestGiB)
+		if err := d.CreateBlobContainer(ctx, subsID, resourceGroup, accountName, validContainerName, secrets); err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
+		}
 	}
 
 	if storeAccountKey && len(req.GetSecrets()) == 0 {
@@ -430,6 +464,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			VolumeId:      volumeID,
 			CapacityBytes: req.GetCapacityRange().GetRequiredBytes(),
 			VolumeContext: parameters,
+			ContentSource: req.GetVolumeContentSource(),
 		},
 	}, nil
 }
@@ -675,6 +710,75 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 	})
 }
 
+// CopyBlobContainer copies a blob container in the same storage account
+func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeRequest, accountKey, dstContainerName, storageEndpointSuffix string) error {
+	var sourceVolumeID string
+	if req.GetVolumeContentSource() != nil && req.GetVolumeContentSource().GetVolume() != nil {
+		sourceVolumeID = req.GetVolumeContentSource().GetVolume().GetVolumeId()
+
+	}
+	resourceGroupName, accountName, srcContainerName, _, _, err := GetContainerInfo(sourceVolumeID) //nolint:dogsled
+	if err != nil {
+		return status.Error(codes.NotFound, err.Error())
+	}
+	if srcContainerName == "" || dstContainerName == "" {
+		return fmt.Errorf("srcContainerName(%s) or dstContainerName(%s) is empty", srcContainerName, dstContainerName)
+	}
+
+	klog.V(2).Infof("generate sas token for account(%s)", accountName)
+	accountSasToken, genErr := generateSASToken(accountName, accountKey, storageEndpointSuffix, d.sasTokenExpirationMinutes)
+	if genErr != nil {
+		return genErr
+	}
+
+	timeAfter := time.After(waitForCopyTimeout)
+	timeTick := time.Tick(waitForCopyInterval)
+	srcPath := fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, storageEndpointSuffix, srcContainerName, accountSasToken)
+	dstPath := fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, storageEndpointSuffix, dstContainerName, accountSasToken)
+
+	jobState, percent, err := d.azcopy.GetAzcopyJob(dstContainerName)
+	klog.V(2).Infof("azcopy job status: %s, copy percent: %s%%, error: %v", jobState, percent, err)
+	if jobState == util.AzcopyJobError || jobState == util.AzcopyJobCompleted {
+		return err
+	}
+	klog.V(2).Infof("begin to copy blob container %s to %s", srcContainerName, dstContainerName)
+	for {
+		select {
+		case <-timeTick:
+			jobState, percent, err := d.azcopy.GetAzcopyJob(dstContainerName)
+			klog.V(2).Infof("azcopy job status: %s, copy percent: %s%%, error: %v", jobState, percent, err)
+			switch jobState {
+			case util.AzcopyJobError, util.AzcopyJobCompleted:
+				return err
+			case util.AzcopyJobNotFound:
+				klog.V(2).Infof("copy blob container %s to %s", srcContainerName, dstContainerName)
+				out, copyErr := exec.Command("azcopy", "copy", srcPath, dstPath, "--recursive", "--check-length=false").CombinedOutput()
+				if copyErr != nil {
+					klog.Warningf("CopyBlobContainer(%s, %s, %s) failed with error(%v): %v", resourceGroupName, accountName, dstPath, copyErr, string(out))
+				} else {
+					klog.V(2).Infof("copied blob container %s to %s successfully", srcContainerName, dstContainerName)
+				}
+				return copyErr
+			}
+		case <-timeAfter:
+			return fmt.Errorf("timeout waiting for copy blob container %s to %s succeed", srcContainerName, dstContainerName)
+		}
+	}
+}
+
+// copyVolume copies a volume form volume or snapshot, snapshot is not supported now
+func (d *Driver) copyVolume(ctx context.Context, req *csi.CreateVolumeRequest, accountKey, dstContainerName, storageEndpointSuffix string) error {
+	vs := req.VolumeContentSource
+	switch vs.Type.(type) {
+	case *csi.VolumeContentSource_Snapshot:
+		return status.Errorf(codes.InvalidArgument, "copy volume from volumeSnapshot is not supported")
+	case *csi.VolumeContentSource_Volume:
+		return d.copyBlobContainer(ctx, req, accountKey, dstContainerName, storageEndpointSuffix)
+	default:
+		return status.Errorf(codes.InvalidArgument, "%v is not a proper volume source", vs)
+	}
+}
+
 // isValidVolumeCapabilities validates the given VolumeCapability array is valid
 func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) error {
 	if len(volCaps) == 0 {
@@ -698,4 +802,28 @@ func parseDays(dayStr string) (int32, error) {
 	}
 
 	return int32(days), nil
+}
+
+// generateSASToken generate a sas token for storage account
+func generateSASToken(accountName, accountKey, storageEndpointSuffix string, expiryTime int) (string, error) {
+	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
+	if err != nil {
+		return "", status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", accountName, err.Error()))
+	}
+	serviceClient, err := service.NewClientWithSharedKeyCredential(fmt.Sprintf("https://%s.blob.%s/", accountName, storageEndpointSuffix), credential, nil)
+	if err != nil {
+		return "", status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new client with shared key credential, accountName: %s, err: %s", accountName, err.Error()))
+	}
+	sasURL, err := serviceClient.GetSASURL(
+		sas.AccountResourceTypes{Object: true, Service: false, Container: true},
+		sas.AccountPermissions{Read: true, List: true, Write: true},
+		sas.AccountServices{Blob: true}, time.Now(), time.Now().Add(time.Duration(expiryTime)*time.Minute))
+	if err != nil {
+		return "", err
+	}
+	u, err := url.Parse(sasURL)
+	if err != nil {
+		return "", err
+	}
+	return "?" + u.RawQuery, nil
 }

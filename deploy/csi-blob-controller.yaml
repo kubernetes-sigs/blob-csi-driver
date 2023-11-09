@@ -40,7 +40,7 @@ spec:
             - "--csi-address=$(ADDRESS)"
             - "--leader-election"
             - "--leader-election-namespace=kube-system"
-            - "--timeout=1200s"
+            - "--timeout=600s"
             - "--extra-create-metadata=true"
             - "--kube-api-qps=50"
             - "--kube-api-burst=100"

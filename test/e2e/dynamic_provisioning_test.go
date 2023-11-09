@@ -841,4 +841,132 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		}
 		test.Run(ctx, cs, ns)
 	})
+
+	ginkgo.It("should clone a volume from an existing NFSv3 volume [nfs]", func(ctx ginkgo.SpecContext) {
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "10Gi",
+					MountOptions: []string{
+						"nconnect=8",
+					},
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+		podWithClonedVolume := testsuites.PodDetails{
+			Cmd: "grep 'hello world' /mnt/test-1/data",
+		}
+		test := testsuites.DynamicallyProvisionedVolumeCloningTest{
+			CSIDriver:           testDriver,
+			Pod:                 pod,
+			PodWithClonedVolume: podWithClonedVolume,
+			StorageClassParameters: map[string]string{
+				"skuName":          "Premium_LRS",
+				"protocol":         "nfs",
+				"mountPermissions": "0755",
+			},
+		}
+		test.Run(ctx, cs, ns)
+	})
+
+	ginkgo.It("should clone a large size volume from an existing NFSv3 volume [nfs]", func(ctx ginkgo.SpecContext) {
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data && dd if=/dev/zero of=/mnt/test-1/test bs=99G count=5",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "100Gi",
+					MountOptions: []string{
+						"nconnect=8",
+					},
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+		podWithClonedVolume := testsuites.PodDetails{
+			Cmd: "grep 'hello world' /mnt/test-1/data",
+		}
+		test := testsuites.DynamicallyProvisionedVolumeCloningTest{
+			CSIDriver:           testDriver,
+			Pod:                 pod,
+			PodWithClonedVolume: podWithClonedVolume,
+			StorageClassParameters: map[string]string{
+				"skuName":          "Premium_LRS",
+				"protocol":         "nfs",
+				"mountPermissions": "0755",
+			},
+		}
+		test.Run(ctx, cs, ns)
+	})
+
+	ginkgo.It("should clone a volume from an existing blobfuse2 volume [fuse2]", func(ctx ginkgo.SpecContext) {
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "10Gi",
+					MountOptions: []string{
+						"-o allow_other",
+						"--virtual-directory=true", // blobfuse2 mount options
+					},
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+		podWithClonedVolume := testsuites.PodDetails{
+			Cmd: "grep 'hello world' /mnt/test-1/data",
+		}
+		test := testsuites.DynamicallyProvisionedVolumeCloningTest{
+			CSIDriver:           testDriver,
+			Pod:                 pod,
+			PodWithClonedVolume: podWithClonedVolume,
+			StorageClassParameters: map[string]string{
+				"skuName":  "Standard_LRS",
+				"protocol": "fuse2",
+			},
+		}
+		test.Run(ctx, cs, ns)
+	})
+
+	ginkgo.It("should clone a large size volume from an existing blobfuse2 volume [fuse2]", func(ctx ginkgo.SpecContext) {
+		pod := testsuites.PodDetails{
+			Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data && dd if=/dev/zero of=/mnt/test-1/test bs=99G count=5",
+			Volumes: []testsuites.VolumeDetails{
+				{
+					ClaimSize: "100Gi",
+					MountOptions: []string{
+						"-o allow_other",
+						"--virtual-directory=true", // blobfuse2 mount options
+					},
+					VolumeMount: testsuites.VolumeMountDetails{
+						NameGenerate:      "test-volume-",
+						MountPathGenerate: "/mnt/test-",
+					},
+				},
+			},
+		}
+		podWithClonedVolume := testsuites.PodDetails{
+			Cmd: "grep 'hello world' /mnt/test-1/data",
+		}
+		test := testsuites.DynamicallyProvisionedVolumeCloningTest{
+			CSIDriver:           testDriver,
+			Pod:                 pod,
+			PodWithClonedVolume: podWithClonedVolume,
+			StorageClassParameters: map[string]string{
+				"skuName":  "Standard_LRS",
+				"protocol": "fuse2",
+			},
+		}
+		test.Run(ctx, cs, ns)
+	})
 })

@@ -32,9 +32,20 @@ if [[ "$#" -gt 0 ]] && [[ -n "$1" ]]; then
   nodeid="$1"
 fi
 
+azcopyPath="/usr/local/bin/azcopy"
+if [ ! -f "$azcopyPath" ]; then
+  azcopyVersion=azcopy_linux_amd64_10.18.1
+  echo 'Downloading azcopy...'
+  wget -c https://azcopyvnext.azureedge.net/release20230420/$azcopyVersion.tar.gz
+  tar -zxvf $azcopyVersion.tar.gz
+  mv ./$azcopyVersion/azcopy /usr/local/bin/azcopy
+  rm -rf ./$azcopyVersion*
+  chmod +x /usr/local/bin/azcopy
+fi
+
 _output/amd64/blobplugin --endpoint "$controllerendpoint" -v=5 &
 _output/amd64/blobplugin --endpoint "$nodeendpoint" --nodeid "$nodeid" --enable-blob-mock-mount -v=5 &
 
 echo "Begin to run sanity test..."
 readonly CSI_SANITY_BIN='csi-sanity'
-"$CSI_SANITY_BIN" --ginkgo.v --csi.endpoint=$nodeendpoint --csi.controllerendpoint=$controllerendpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity"
+"$CSI_SANITY_BIN" --ginkgo.v --csi.endpoint=$nodeendpoint --csi.controllerendpoint=$controllerendpoint -ginkgo.skip="should fail when requesting to create a volume with already existing name and different capacity|should create volume from an existing source snapshot"

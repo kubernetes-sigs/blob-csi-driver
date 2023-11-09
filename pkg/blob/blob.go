@@ -171,6 +171,7 @@ type DriverOptions struct {
 	KubeAPIBurst                           int
 	EnableAznfsMount                       bool
 	VolStatsCacheExpireInMinutes           int
+	SasTokenExpirationMinutes              int
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -211,6 +212,10 @@ type Driver struct {
 	accountSearchCache azcache.Resource
 	// a timed cache storing volume stats <volumeID, volumeStats>
 	volStatsCache azcache.Resource
+	// sas expiry time for azcopy in volume clone
+	sasTokenExpirationMinutes int
+	// azcopy for provide exec mock for ut
+	azcopy *util.Azcopy
 }
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
@@ -236,6 +241,8 @@ func NewDriver(options *DriverOptions) *Driver {
 		kubeAPIQPS:                             options.KubeAPIQPS,
 		kubeAPIBurst:                           options.KubeAPIBurst,
 		enableAznfsMount:                       options.EnableAznfsMount,
+		sasTokenExpirationMinutes:              options.SasTokenExpirationMinutes,
+		azcopy:                                 &util.Azcopy{},
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion
@@ -288,6 +295,7 @@ func (d *Driver) Run(endpoint, kubeconfig string, testBool bool) {
 			//csi.ControllerServiceCapability_RPC_LIST_SNAPSHOTS,
 			csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
 			csi.ControllerServiceCapability_RPC_SINGLE_NODE_MULTI_WRITER,
+			csi.ControllerServiceCapability_RPC_CLONE_VOLUME,
 		})
 	d.AddVolumeCapabilityAccessModes([]csi.VolumeCapability_AccessMode_Mode{
 		csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
