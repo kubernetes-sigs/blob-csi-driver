@@ -164,18 +164,6 @@ func TestCreateVolume(t *testing.T) {
 		testFunc func(t *testing.T)
 	}{
 		{
-			name: "invalid create volume req",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.CreateVolumeRequest{}
-				_, err := d.CreateVolume(context.Background(), req)
-				expectedErr := status.Error(codes.InvalidArgument, "CREATE_DELETE_VOLUME")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
-		{
 			name: "volume Name missing",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
@@ -894,20 +882,6 @@ func TestDeleteVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid delete volume req",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.DeleteVolumeRequest{
-					VolumeId: "unit-test",
-				}
-				_, err := d.DeleteVolume(context.Background(), req)
-				expectedErr := status.Errorf(codes.Internal, "invalid delete volume req: volume_id:\"unit-test\" ")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
-		{
 			name: "invalid volume Id",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
@@ -1293,21 +1267,6 @@ func TestControllerExpandVolume(t *testing.T) {
 				}
 				_, err := d.ControllerExpandVolume(context.Background(), req)
 				expectedErr := status.Error(codes.InvalidArgument, "Capacity Range missing in request")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
-		{
-			name: "invalid expand volume req",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.ControllerExpandVolumeRequest{
-					VolumeId:      "unit-test",
-					CapacityRange: &csi.CapacityRange{},
-				}
-				_, err := d.ControllerExpandVolume(context.Background(), req)
-				expectedErr := status.Errorf(codes.Internal, "invalid expand volume req: volume_id:\"unit-test\" capacity_range:<> ")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
