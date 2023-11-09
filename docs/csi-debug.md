@@ -157,7 +157,7 @@ kubectl debug node/node-name --image=nginx
 findmnt -t nfs
 ```
 
-The `SOURCE` of the mount point should have prefix with an ip address ranther than domain namon e.g, **10.161.100.100**:/nfs02a796c105814dbebc4e/pvc-ca149059-6872-4d6f-a806-48402648110c.
+The `SOURCE` of the mount point should have prefix with an ip address rather than domain name. e.g, **10.161.100.100**:/nfs02a796c105814dbebc4e/pvc-ca149059-6872-4d6f-a806-48402648110c.
 
 </details>
 
