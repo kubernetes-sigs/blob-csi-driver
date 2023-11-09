@@ -192,7 +192,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if pointer.BoolDeref(enableBlobVersioning, false) {
-		if protocol == NFS || pointer.BoolDeref(isHnsEnabled, false) {
+		if isNFSProtocol(protocol) || pointer.BoolDeref(isHnsEnabled, false) {
 			return nil, status.Errorf(codes.InvalidArgument, "enableBlobVersioning is not supported for NFS protocol or HNS enabled account")
 		}
 	}
@@ -202,7 +202,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if subsID != "" && subsID != d.cloud.SubscriptionID {
-		if protocol == NFS {
+		if isNFSProtocol(protocol) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("NFS protocol is not supported in cross subscription(%s)", subsID))
 		}
 		if !storeAccountKey {
@@ -249,7 +249,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		vnetResourceIDs []string
 		enableNfsV3     *bool
 	)
-	if protocol == NFS {
+	if isNFSProtocol(protocol) {
 		isHnsEnabled = pointer.Bool(true)
 		enableNfsV3 = pointer.Bool(true)
 		// NFS protocol does not need account key
@@ -359,7 +359,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	if createPrivateEndpoint && protocol == NFS {
+	if createPrivateEndpoint && isNFSProtocol(protocol) {
 		// As for blobfuse/blobfuse2, serverName, i.e.,AZURE_STORAGE_BLOB_ENDPOINT env variable can't include
 		// "privatelink", issue: https://github.com/Azure/azure-storage-fuse/issues/1014
 		//
