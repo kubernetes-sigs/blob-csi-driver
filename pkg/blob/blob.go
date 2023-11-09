@@ -728,6 +728,12 @@ func isSupportedContainerNamePrefix(prefix string) bool {
 	return true
 }
 
+// isNFSProtocol checks if the protocol is NFS or AZNFS
+func isNFSProtocol(protocol string) bool {
+	protocol = strings.ToLower(protocol)
+	return protocol == NFS || protocol == AZNFS
+}
+
 // get storage account from secrets map
 func getStorageAccount(secrets map[string]string) (string, string, error) {
 	if secrets == nil {
