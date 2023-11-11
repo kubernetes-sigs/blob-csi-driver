@@ -6,7 +6,7 @@ image:
     pullPolicy: IfNotPresent
   csiProvisioner:
     repository: /oss/kubernetes-csi/csi-provisioner
-    tag: v3.6.1
+    tag: v3.6.2
     pullPolicy: IfNotPresent
   livenessProbe:
     repository: /oss/kubernetes-csi/livenessprobe
@@ -14,11 +14,11 @@ image:
     pullPolicy: IfNotPresent
   nodeDriverRegistrar:
     repository: /oss/kubernetes-csi/csi-node-driver-registrar
-    tag: v2.9.0
+    tag: v2.9.1
     pullPolicy: IfNotPresent
   csiResizer:
     repository: /oss/kubernetes-csi/csi-resizer
-    tag: v1.9.1
+    tag: v1.9.2
     pullPolicy: IfNotPresent
 
 cloud: AzurePublicCloud
