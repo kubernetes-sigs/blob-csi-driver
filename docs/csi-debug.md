@@ -81,7 +81,7 @@ change below deployment config, e.g.
 blobfuse2 -v
 ```
 <pre>
-blobfuse2 version 2.1.1
+blobfuse2 version 2.1.2
 </pre>
 
 ### check blobfuse mount on the agent node
