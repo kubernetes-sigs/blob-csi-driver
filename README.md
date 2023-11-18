@@ -47,7 +47,7 @@ This option does not depend on cloud provider config file, supports cross subscr
 >
 > To install specific blobfuse v2 version, run following command directly after driver is running on the agent node:
 > ```console
-> kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.1.1"}],"name":"install-blobfuse-proxy"}]}}}}'
+> kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.1.2"}],"name":"install-blobfuse-proxy"}]}}}}'
 > ```
 >
  - install by [helm charts](./charts)
