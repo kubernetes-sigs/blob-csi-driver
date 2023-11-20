@@ -77,7 +77,7 @@ func TestConcurrentLockEntry(t *testing.T) {
 	testLockMap.UnlockEntry("entry1")
 }
 
-func (lm *LockMap) lockAndCallback(t *testing.T, entry string, callbackChan chan<- interface{}) {
+func (lm *LockMap) lockAndCallback(_ *testing.T, entry string, callbackChan chan<- interface{}) {
 	lm.LockEntry(entry)
 	callbackChan <- true
 }
@@ -486,8 +486,7 @@ func TestParseAzcopyJobList(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		dstBlobContainer := "dstBlobContainer"
-		jobid, jobState, err := parseAzcopyJobList(test.str, dstBlobContainer)
+		jobid, jobState, err := parseAzcopyJobList(test.str)
 		if jobid != test.expectedJobid || jobState != test.expectedJobState || !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test[%s]: unexpected jobid: %v, jobState: %v, err: %v, expected jobid: %v, jobState: %v, err: %v", test.desc, jobid, jobState, err, test.expectedJobid, test.expectedJobState, test.expectedErr)
 		}
