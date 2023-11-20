@@ -41,7 +41,7 @@ func (t *DynamicallyProvisionedInlineVolumeTest) Run(ctx context.Context, client
 	for _, pod := range t.Pods {
 		var tpod *TestPod
 		var cleanup []func(context.Context)
-		tpod, cleanup = pod.SetupWithCSIInlineVolumes(client, namespace, t.CSIDriver, t.SecretName, t.ContainerName, t.ReadOnly)
+		tpod, cleanup = pod.SetupWithCSIInlineVolumes(client, namespace, t.SecretName, t.ContainerName, t.ReadOnly)
 
 		// defer must be called here for resources not get removed before using them
 		for i := range cleanup {
