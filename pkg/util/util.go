@@ -239,7 +239,7 @@ func (ac *Azcopy) GetAzcopyJob(dstBlobContainer string) (AzcopyJobState, string,
 		klog.Warningf("failed to get azcopy job with error: %v, jobState: %v", err, AzcopyJobError)
 		return AzcopyJobError, "", fmt.Errorf("couldn't list jobs in azcopy %v", err)
 	}
-	jobid, jobState, err := parseAzcopyJobList(out, dstBlobContainer)
+	jobid, jobState, err := parseAzcopyJobList(out)
 	if err != nil || jobState == AzcopyJobError {
 		klog.Warningf("failed to get azcopy job with error: %v, jobState: %v", err, jobState)
 		return AzcopyJobError, "", fmt.Errorf("couldn't parse azcopy job list in azcopy %v", err)
@@ -266,8 +266,8 @@ func (ac *Azcopy) GetAzcopyJob(dstBlobContainer string) (AzcopyJobState, string,
 	return jobState, percent, nil
 }
 
-// parseAzcopyJobList parse command azcopy jobs list, get jobid and state from joblist containing dstBlobContainer
-func parseAzcopyJobList(joblist string, dstBlobContainer string) (string, AzcopyJobState, error) {
+// parseAzcopyJobList parse command azcopy jobs list, get jobid and state from joblist
+func parseAzcopyJobList(joblist string) (string, AzcopyJobState, error) {
 	jobid := ""
 	jobSegments := strings.Split(joblist, "JobId: ")
 	if len(jobSegments) < 2 {
