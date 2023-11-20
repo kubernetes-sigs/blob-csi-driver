@@ -63,7 +63,7 @@ func TestNewFakeDriver(t *testing.T) {
 	assert.Nil(t, d)
 }
 
-func TestAddControllerServiceCapabilities(t *testing.T) {
+func TestAddControllerServiceCapabilities(_ *testing.T) {
 	d := NewFakeDriver()
 	var cl []csi.ControllerServiceCapability_RPC_Type
 	cl = append(cl, csi.ControllerServiceCapability_RPC_UNKNOWN)
