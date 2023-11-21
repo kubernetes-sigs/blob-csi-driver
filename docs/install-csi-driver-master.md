@@ -1,5 +1,5 @@
 # Install Azure Blob Storage CSI driver master version on a kubernetes cluster
-> `blobfuse-proxy` is only available for debian based agent nodes, remove `blobfuse-proxy` parameter in installation steps if it's not applicable.
+> `blobfuse-proxy` is supported on CoreOS(OpenShift) from v1.23.2
 > 
 If you have already installed Helm, you can also use it to install this driver. Please check [Installation with Helm](../charts/README.md).
 
