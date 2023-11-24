@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: pvc-blob-clone
+  name: pvc-blob-cloning
   namespace: default
 spec:
   accessModes:
