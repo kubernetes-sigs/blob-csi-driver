@@ -1,0 +1,21 @@
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-blob-restored-cloning
+spec:
+  nodeSelector:
+    kubernetes.io/os: linux
+  containers:
+    - image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
+      name: nginx-blob-restored-cloning
+      args:
+        - sleep
+        - "3600"
+      volumeMounts:
+        - name: blob-cloning
+          mountPath: "/mnt/blob"
+  volumes:
+    - name: blob-cloning
+      persistentVolumeClaim:
+        claimName: pvc-blob-cloning
