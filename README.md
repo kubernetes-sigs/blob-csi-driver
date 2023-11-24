@@ -62,6 +62,7 @@ This option does not depend on cloud provider config file, supports cross subscr
  - [Basic usage](./deploy/example/e2e_usage.md)
  - [NFSv3](./deploy/example/nfs)
  - [fsGroupPolicy](./deploy/example/fsgroup)
+ - [Volume cloning](./deploy/example/cloning)
  - [Workload identity](./docs/workload-identity.md)
 
 ### Troubleshooting
