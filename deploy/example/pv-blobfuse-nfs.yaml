@@ -12,6 +12,8 @@ spec:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
   storageClassName: blob-nfs
+  mountOptions:
+    - nconnect=4
   csi:
     driver: blob.csi.azure.com
     readOnly: false
