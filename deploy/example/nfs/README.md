@@ -19,8 +19,11 @@ kind: StorageClass
 metadata:
   name: blob-nfs
 provisioner: blob.csi.azure.com
+allowVolumeExpansion: true
 parameters:
   protocol: nfs
+mountOptions:
+  - nconnect=4
 ```
 
 run following command to create a storage class:
