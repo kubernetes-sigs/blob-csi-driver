@@ -29,6 +29,7 @@ spec:
           volumeMounts:
             - name: persistent-storage
               mountPath: /mnt/blob
+              readOnly: false
   updateStrategy:
     type: RollingUpdate
   selector:
