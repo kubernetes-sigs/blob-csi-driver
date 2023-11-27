@@ -129,7 +129,7 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
    - with blobfuse-proxy deployment (default on AKS), user could set `--tmp-path=` mount option to specify a different cache directory
  - [Mount an azure blob storage with a dedicated user-assigned managed identity](https://github.com/qxsch/Azure-Aks/tree/master/aks-blobfuse-mi)
  - [Blobfuse Performance and caching](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#performance-and-caching)
-   - `--disable-writeback-cache=true`: Disallow libfuse to buffer write requests if you must strictly open files in O_WRONLY or O_APPEND mode
+   - `--disable-writeback-cache=true`: disallow libfuse to buffer write requests if you must strictly open files in O_WRONLY or O_APPEND mode
  - [Blobfuse CLI Flag Options v1 & v2](https://github.com/Azure/azure-storage-fuse/blob/main/MIGRATION.md#blobfuse-cli-flag-options)
 
 #### `containerName` parameter supports following pv/pvc metadata conversion
