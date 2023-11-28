@@ -93,7 +93,6 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   csi:
     driver: blob.csi.azure.com
-    readOnly: false
     # make sure volumeid is unique for every storage blob container in the cluster
     # the # character is reserved for internal use, the / character is not allowed
     volumeHandle: account-name_container-name

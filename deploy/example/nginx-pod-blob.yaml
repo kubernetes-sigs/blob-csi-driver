@@ -16,6 +16,7 @@ spec:
       volumeMounts:
         - name: blob01
           mountPath: "/mnt/blob"
+          readOnly: false
   volumes:
     - name: blob01
       persistentVolumeClaim:
