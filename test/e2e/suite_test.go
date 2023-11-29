@@ -152,7 +152,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 		BlobfuseProxyConnTimout: 5,
 		EnableBlobMockMount:     false,
 	}
-	cloud, err := blob.GetCloudProvider(kubeconfig, driverOptions.NodeID, "", "", "", false, 0, 0)
+	cloud, err := blob.GetCloudProvider(context.Background(), kubeconfig, driverOptions.NodeID, "", "", "", false, 0, 0)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	blobDriver = blob.NewDriver(&driverOptions, cloud)
 	go func() {
