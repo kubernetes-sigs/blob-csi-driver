@@ -35,7 +35,7 @@ RUN chmod +x /blobfuse-proxy/init.sh && \
  chmod +x /blobfuse-proxy/blobfuse-proxy
 
 # packages that are only needed by aznfs: procps conntrack iptables bind9-host iproute2 bash netcat sysvinit-utils.
-RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase procps conntrack iptables bind9-host iproute2 bash netcat-traditional sysvinit-utils
+RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase procps conntrack iptables bind9-host iproute2 bash netcat-traditional sysvinit-utils kmod
 
 # install aznfs
 RUN if [ "$ARCH" = "amd64" ] ; then \
