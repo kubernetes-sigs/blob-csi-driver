@@ -246,6 +246,7 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context, vnetResourceG
 		serviceEndpoints = append(serviceEndpoints, storageServiceEndpoint)
 		subnet.SubnetPropertiesFormat.ServiceEndpoints = &serviceEndpoints
 
+		klog.V(2).Infof("begin to update the subnet %s under vnet %s rg %s", subnetName, vnetName, vnetResourceGroup)
 		if err := d.cloud.SubnetsClient.CreateOrUpdate(ctx, vnetResourceGroup, vnetName, subnetName, subnet); err != nil {
 			return fmt.Errorf("failed to update the subnet %s under vnet %s: %v", subnetName, vnetName, err)
 		}
