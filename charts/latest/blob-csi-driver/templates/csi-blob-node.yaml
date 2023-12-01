@@ -244,6 +244,9 @@ spec:
             {{- if .Values.node.enableAznfsMount }}
             - mountPath: /opt/microsoft/aznfs/data
               name: aznfs-data
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
             {{- end }}
           resources: {{- toYaml .Values.node.resources.blob | nindent 12 }}
 {{- if .Values.node.enableAznfsMount }}
@@ -313,6 +316,10 @@ spec:
             path: /opt/microsoft/aznfs/data
             type: DirectoryOrCreate
           name: aznfs-data
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+            type: DirectoryOrCreate
         {{- end }}
       {{- if .Values.securityContext }}
       securityContext: {{- toYaml .Values.securityContext | nindent 8 }}
