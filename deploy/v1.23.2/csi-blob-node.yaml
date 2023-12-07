@@ -129,6 +129,7 @@ spec:
             - "--blobfuse-proxy-endpoint=$(BLOBFUSE_PROXY_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
             - "--user-agent-suffix=OSS-kubectl"
+            - "--enable-aznfs-mount=true"
           ports:
             - containerPort: 29633
               name: healthz
@@ -169,12 +170,36 @@ spec:
               name: azure-cred
             - mountPath: /mnt
               name: blob-cache
+            - mountPath: /opt/microsoft/aznfs/data
+              name: aznfs-data
+            - mountPath: /lib/modules
+              name: lib-modules
+              readOnly: true
           resources:
             limits:
               memory: 2100Mi
             requests:
               cpu: 10m
               memory: 20Mi
+        - name: aznfswatchdog
+          image: mcr.microsoft.com/k8s/csi/blob-csi:latest
+          command:
+            - "aznfswatchdog"
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          resources:
+            limits:
+              memory: 100Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+          volumeMounts:
+            - mountPath: /opt/microsoft/aznfs/data
+              name: aznfs-data
+            - mountPath: /var/lib/kubelet/
+              mountPropagation: Bidirectional
+              name: mountpoint-dir
       volumes:
         - name: host-usr
           hostPath:
@@ -205,4 +230,12 @@ spec:
             path: /mnt
             type: DirectoryOrCreate
           name: blob-cache
+        - hostPath:
+            path: /opt/microsoft/aznfs/data
+            type: DirectoryOrCreate
+          name: aznfs-data
+        - name: lib-modules
+          hostPath:
+            path: /lib/modules
+            type: DirectoryOrCreate
 ---
