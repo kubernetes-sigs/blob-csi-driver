@@ -520,7 +520,7 @@ func TestCreateVolume(t *testing.T) {
 				mp[containerNameField] = "unit-test"
 				mp[mountPermissionsField] = "0750"
 				mp[storageAuthTypeField] = "msi"
-				mp[storageIentityClientIDField] = "msi"
+				mp[storageIdentityClientIDField] = "msi"
 				mp[storageIdentityObjectIDField] = "msi"
 				mp[storageIdentityResourceIDField] = "msi"
 				mp[msiEndpointField] = "msi"

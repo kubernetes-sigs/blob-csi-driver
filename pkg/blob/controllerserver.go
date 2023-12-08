@@ -174,7 +174,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			containerNameReplaceMap[pvNameMetadata] = v
 		case serverNameField:
 		case storageAuthTypeField:
-		case storageIentityClientIDField:
+		case storageIdentityClientIDField:
 		case storageIdentityObjectIDField:
 		case storageIdentityResourceIDField:
 		case msiEndpointField:

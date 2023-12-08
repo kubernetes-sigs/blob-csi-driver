@@ -80,7 +80,7 @@ const (
 	storageSPNClientIDField        = "azurestoragespnclientid"
 	storageSPNTenantIDField        = "azurestoragespntenantid"
 	storageAuthTypeField           = "azurestorageauthtype"
-	storageIentityClientIDField    = "azurestorageidentityclientid"
+	storageIdentityClientIDField   = "azurestorageidentityclientid"
 	storageIdentityObjectIDField   = "azurestorageidentityobjectid"
 	storageIdentityResourceIDField = "azurestorageidentityresourceid"
 	msiEndpointField               = "msiendpoint"
@@ -415,7 +415,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		case storageAuthTypeField:
 			azureStorageAuthType = v
 			authEnv = append(authEnv, "AZURE_STORAGE_AUTH_TYPE="+v)
-		case storageIentityClientIDField:
+		case storageIdentityClientIDField:
 			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_CLIENT_ID="+v)
 		case storageIdentityObjectIDField:
 			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_OBJECT_ID="+v)
