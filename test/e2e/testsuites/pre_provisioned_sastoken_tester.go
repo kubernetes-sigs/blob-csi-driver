@@ -99,7 +99,7 @@ func GenerateSASToken(accountName, accountKey string) string {
 	sasURL, err := serviceClient.GetSASURL(
 		sas.AccountResourceTypes{Object: true, Service: true, Container: true},
 		sas.AccountPermissions{Read: true, List: true, Write: true, Delete: true, Add: true, Create: true, Update: true},
-		sas.AccountServices{Blob: true}, time.Now(), time.Now().Add(10*time.Hour))
+		time.Now().Add(10*time.Hour), nil)
 	framework.ExpectNoError(err)
 	u, err := url.Parse(sasURL)
 	framework.ExpectNoError(err)
