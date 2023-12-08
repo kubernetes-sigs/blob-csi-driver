@@ -33,9 +33,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/blobclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
+	"sigs.k8s.io/cloud-provider-azure/pkg/provider/config"
 	"sigs.k8s.io/cloud-provider-azure/pkg/retry"
 )
 
@@ -756,6 +758,7 @@ func TestCreateVolume(t *testing.T) {
 					Value:   &fakeValue,
 				})
 				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
+				d.cloud.Config.AzureAuthConfig.UseManagedIdentityExtension = true
 
 				errorType := NULL
 				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
@@ -789,6 +792,15 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				m := util.NewMockEXEC(ctrl)
+				listStr := "no error"
+				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, nil)
+
+				d.azcopy.ExecCmd = m
+
 				expectedErr := status.Errorf(codes.InvalidArgument, "copy volume from volumeSnapshot is not supported")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -812,6 +824,7 @@ func TestCreateVolume(t *testing.T) {
 					Value:   &fakeValue,
 				})
 				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
+				d.cloud.Config.AzureAuthConfig.UseManagedIdentityExtension = true
 
 				errorType := NULL
 				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
@@ -844,6 +857,15 @@ func TestCreateVolume(t *testing.T) {
 				d.Cap = []*csi.ControllerServiceCapability{
 					controllerServiceCapability,
 				}
+
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				m := util.NewMockEXEC(ctrl)
+				listStr := "no error"
+				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, nil)
+
+				d.azcopy.ExecCmd = m
 
 				expectedErr := status.Errorf(codes.NotFound, "error parsing volume id: \"unit-test\", should at least contain two #")
 				_, err := d.CreateVolume(context.Background(), req)
@@ -1599,6 +1621,38 @@ func TestCopyVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "AADClientSecret shouldn't be nil or useManagedIdentityExtension must be set to true when accountSASToken is empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				mp := map[string]string{}
+
+				volumeSource := &csi.VolumeContentSource_VolumeSource{
+					VolumeId: "vol_1#f5713de20cde511e8ba4900#fileshare#",
+				}
+				volumeContentSourceVolumeSource := &csi.VolumeContentSource_Volume{
+					Volume: volumeSource,
+				}
+				volumecontensource := csi.VolumeContentSource{
+					Type: volumeContentSourceVolumeSource,
+				}
+
+				req := &csi.CreateVolumeRequest{
+					Name:                "unit-test",
+					VolumeCapabilities:  stdVolumeCapabilities,
+					Parameters:          mp,
+					VolumeContentSource: &volumecontensource,
+				}
+
+				ctx := context.Background()
+
+				expectedErr := fmt.Errorf("service principle or managed identity are both not set")
+				err := d.copyVolume(ctx, req, "", "dstContainer", "core.windows.net")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
 			name: "azcopy job is already completed",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
@@ -1626,7 +1680,7 @@ func TestCopyVolume(t *testing.T) {
 
 				m := util.NewMockEXEC(ctrl)
 				listStr := "JobId: ed1c3833-eaff-fe42-71d7-513fb065a9d9\nStart Time: Monday, 07-Aug-23 03:29:54 UTC\nStatus: Completed\nCommand: copy https://{accountName}.file.core.windows.net/{srcFileshare}{SAStoken} https://{accountName}.file.core.windows.net/{dstFileshare}{SAStoken} --recursive --check-length=false"
-				m.EXPECT().RunCommand(gomock.Eq("azcopy jobs list | grep dstContainer -B 3")).Return(listStr, nil)
+				m.EXPECT().RunCommand(gomock.Eq("azcopy jobs list | grep dstContainer -B 3"), gomock.Any()).Return(listStr, nil)
 				// if test.enableShow {
 				// 	m.EXPECT().RunCommand(gomock.Not("azcopy jobs list | grep dstContainer -B 3")).Return(test.showStr, test.showErr)
 				// }
@@ -1636,7 +1690,7 @@ func TestCopyVolume(t *testing.T) {
 				ctx := context.Background()
 
 				var expectedErr error
-				err := d.copyVolume(ctx, req, "", "dstContainer", "core.windows.net")
+				err := d.copyVolume(ctx, req, "sastoken", "dstContainer", "core.windows.net")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1671,9 +1725,9 @@ func TestCopyVolume(t *testing.T) {
 				m := util.NewMockEXEC(ctrl)
 				listStr1 := "JobId: ed1c3833-eaff-fe42-71d7-513fb065a9d9\nStart Time: Monday, 07-Aug-23 03:29:54 UTC\nStatus: InProgress\nCommand: copy https://{accountName}.file.core.windows.net/{srcFileshare}{SAStoken} https://{accountName}.file.core.windows.net/{dstFileshare}{SAStoken} --recursive --check-length=false"
 				listStr2 := "JobId: ed1c3833-eaff-fe42-71d7-513fb065a9d9\nStart Time: Monday, 07-Aug-23 03:29:54 UTC\nStatus: Completed\nCommand: copy https://{accountName}.file.core.windows.net/{srcFileshare}{SAStoken} https://{accountName}.file.core.windows.net/{dstFileshare}{SAStoken} --recursive --check-length=false"
-				o1 := m.EXPECT().RunCommand(gomock.Eq("azcopy jobs list | grep dstContainer -B 3")).Return(listStr1, nil).Times(1)
-				m.EXPECT().RunCommand(gomock.Not("azcopy jobs list | grep dstBlobContainer -B 3")).Return("Percent Complete (approx): 50.0", nil)
-				o2 := m.EXPECT().RunCommand(gomock.Eq("azcopy jobs list | grep dstContainer -B 3")).Return(listStr2, nil)
+				o1 := m.EXPECT().RunCommand(gomock.Eq("azcopy jobs list | grep dstContainer -B 3"), gomock.Any()).Return(listStr1, nil).Times(1)
+				m.EXPECT().RunCommand(gomock.Not("azcopy jobs list | grep dstBlobContainer -B 3"), gomock.Any()).Return("Percent Complete (approx): 50.0", nil)
+				o2 := m.EXPECT().RunCommand(gomock.Eq("azcopy jobs list | grep dstContainer -B 3"), gomock.Any()).Return(listStr2, nil)
 				gomock.InOrder(o1, o2)
 
 				d.azcopy.ExecCmd = m
@@ -1681,7 +1735,7 @@ func TestCopyVolume(t *testing.T) {
 				ctx := context.Background()
 
 				var expectedErr error
-				err := d.copyVolume(ctx, req, "", "dstContainer", "core.windows.net")
+				err := d.copyVolume(ctx, req, "sastoken", "dstContainer", "core.windows.net")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1778,5 +1832,258 @@ func Test_generateSASToken(t *testing.T) {
 				t.Errorf("sas token = %v, want %v", sas, tt.want)
 			}
 		})
+	}
+}
+
+func Test_authorizeAzcopyWithIdentity(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "use service principal to authorize azcopy",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{
+					Config: azure.Config{
+						AzureAuthConfig: config.AzureAuthConfig{
+							ARMClientConfig: azclient.ARMClientConfig{
+								TenantID: "TenantID",
+							},
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								AADClientID:     "AADClientID",
+								AADClientSecret: "AADClientSecret",
+							},
+						},
+					},
+				}
+				expectedAuthAzcopyEnv := []string{
+					fmt.Sprintf(azcopyAutoLoginType + "=SPN"),
+					fmt.Sprintf(azcopySPAApplicationID + "=AADClientID"),
+					fmt.Sprintf(azcopySPAClientSecret + "=AADClientSecret"),
+					fmt.Sprintf(azcopyTenantID + "=TenantID"),
+				}
+				var expectedErr error
+				authAzcopyEnv, err := d.authorizeAzcopyWithIdentity()
+				if !reflect.DeepEqual(authAzcopyEnv, expectedAuthAzcopyEnv) || !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected authAzcopyEnv: %v, Unexpected error: %v", authAzcopyEnv, err)
+				}
+			},
+		},
+		{
+			name: "use service principal to authorize azcopy but client id is empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{
+					Config: azure.Config{
+						AzureAuthConfig: config.AzureAuthConfig{
+							ARMClientConfig: azclient.ARMClientConfig{
+								TenantID: "TenantID",
+							},
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								AADClientSecret: "AADClientSecret",
+							},
+						},
+					},
+				}
+				expectedAuthAzcopyEnv := []string{}
+				expectedErr := fmt.Errorf("AADClientID and TenantID must be set when use service principal")
+				authAzcopyEnv, err := d.authorizeAzcopyWithIdentity()
+				if !reflect.DeepEqual(authAzcopyEnv, expectedAuthAzcopyEnv) || !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected authAzcopyEnv: %v, Unexpected error: %v", authAzcopyEnv, err)
+				}
+			},
+		},
+		{
+			name: "use user assigned managed identity to authorize azcopy",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{
+					Config: azure.Config{
+						AzureAuthConfig: config.AzureAuthConfig{
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+								UserAssignedIdentityID:      "UserAssignedIdentityID",
+							},
+						},
+					},
+				}
+				expectedAuthAzcopyEnv := []string{
+					fmt.Sprintf(azcopyAutoLoginType + "=MSI"),
+					fmt.Sprintf(azcopyMSIClientID + "=UserAssignedIdentityID"),
+				}
+				var expectedErr error
+				authAzcopyEnv, err := d.authorizeAzcopyWithIdentity()
+				if !reflect.DeepEqual(authAzcopyEnv, expectedAuthAzcopyEnv) || !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected authAzcopyEnv: %v, Unexpected error: %v", authAzcopyEnv, err)
+				}
+			},
+		},
+		{
+			name: "use system assigned managed identity to authorize azcopy",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{
+					Config: azure.Config{
+						AzureAuthConfig: config.AzureAuthConfig{
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+							},
+						},
+					},
+				}
+				expectedAuthAzcopyEnv := []string{
+					fmt.Sprintf(azcopyAutoLoginType + "=MSI"),
+				}
+				var expectedErr error
+				authAzcopyEnv, err := d.authorizeAzcopyWithIdentity()
+				if !reflect.DeepEqual(authAzcopyEnv, expectedAuthAzcopyEnv) || !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected authAzcopyEnv: %v, Unexpected error: %v", authAzcopyEnv, err)
+				}
+			},
+		},
+		{
+			name: "AADClientSecret be nil and useManagedIdentityExtension is false",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{
+					Config: azure.Config{
+						AzureAuthConfig: config.AzureAuthConfig{},
+					},
+				}
+				expectedAuthAzcopyEnv := []string{}
+				expectedErr := fmt.Errorf("service principle or managed identity are both not set")
+				authAzcopyEnv, err := d.authorizeAzcopyWithIdentity()
+				if !reflect.DeepEqual(authAzcopyEnv, expectedAuthAzcopyEnv) || !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected authAzcopyEnv: %v, Unexpected error: %v", authAzcopyEnv, err)
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func Test_getSASToken(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "failed to get accountKey in secrets",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{
+					Config: azure.Config{},
+				}
+				secrets := map[string]string{
+					defaultSecretAccountName: "accountName",
+				}
+
+				ctx := context.Background()
+				expectedAccountSASToken := ""
+				expectedErr := fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets")
+				accountSASToken, err := d.getSASToken(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
+					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
+				}
+			},
+		},
+		{
+			name: "failed to test azcopy list command",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{
+					Config: azure.Config{
+						AzureAuthConfig: config.AzureAuthConfig{
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+							},
+						},
+					},
+				}
+				secrets := map[string]string{
+					defaultSecretAccountName: "accountName",
+				}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				m := util.NewMockEXEC(ctrl)
+				listStr := "error"
+				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, fmt.Errorf("error"))
+
+				d.azcopy.ExecCmd = m
+
+				ctx := context.Background()
+				expectedAccountSASToken := ""
+				expectedErr := fmt.Errorf("azcopy list command failed with error(%v): %v", fmt.Errorf("error"), "error")
+				accountSASToken, err := d.getSASToken(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
+					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
+				}
+			},
+		},
+		{
+			name: "fall back to generate SAS token failed for illegal account key",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{
+					Config: azure.Config{
+						AzureAuthConfig: config.AzureAuthConfig{
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+							},
+						},
+					},
+				}
+				secrets := map[string]string{
+					defaultSecretAccountName: "accountName",
+					defaultSecretAccountKey:  "fakeValue",
+				}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				m := util.NewMockEXEC(ctrl)
+				listStr := "RESPONSE 403: 403 This request is not authorized to perform this operation using this permission.\nERROR CODE: AuthorizationPermissionMismatch"
+				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, nil)
+
+				d.azcopy.ExecCmd = m
+
+				ctx := context.Background()
+				expectedAccountSASToken := ""
+				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
+				accountSASToken, err := d.getSASToken(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
+					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
+				}
+			},
+		},
+		{
+			name: "generate SAS token failed for illegal account key",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{
+					Config: azure.Config{},
+				}
+				secrets := map[string]string{
+					defaultSecretAccountName: "accountName",
+					defaultSecretAccountKey:  "fakeValue",
+				}
+
+				ctx := context.Background()
+				expectedAccountSASToken := ""
+				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
+				accountSASToken, err := d.getSASToken(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
+					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
 	}
 }
