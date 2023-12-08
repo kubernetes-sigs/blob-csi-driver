@@ -21,7 +21,7 @@ outfile
 ## Create a PVC from an existing PVC
 >  Make sure application is not writing data to source blob container
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/cloning/pvc-blob-cloning.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/cloning/pvc-blob-csi-cloning.yaml
 ```
 ### Check the Creation Status
 
