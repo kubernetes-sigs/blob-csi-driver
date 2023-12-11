@@ -18,3 +18,5 @@ DriverInfo:
     volumeLimits: false
     snapshotDataSource: false
     pvcDataSource: true
+    multiplePVsSameID: true
+    readWriteOncePod: true
