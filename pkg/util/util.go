@@ -26,6 +26,9 @@ import (
 
 	"github.com/go-ini/ini"
 	"github.com/pkg/errors"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 )
 
@@ -304,4 +307,24 @@ func parseAzcopyJobShow(jobshow string) (AzcopyJobState, string, error) {
 		return AzcopyJobError, "", fmt.Errorf("error parsing jobs summary: %s in Percent Complete (approx)", jobshow)
 	}
 	return AzcopyJobRunning, strings.ReplaceAll(segments[1], "\n", ""), nil
+}
+
+func GetKubeClient(kubeconfig string, kubeAPIQPS float64, kubeAPIBurst int, userAgent string) (kubernetes.Interface, error) {
+	var err error
+	var kubeCfg *rest.Config
+	if kubeCfg, err = clientcmd.BuildConfigFromFlags("", kubeconfig); err != nil {
+		return nil, err
+	}
+	if kubeCfg == nil {
+		if kubeCfg, err = rest.InClusterConfig(); err != nil {
+			return nil, err
+		}
+	}
+	//kubeCfg should not be nil
+	// set QPS and QPS Burst as higher values
+	klog.V(2).Infof("set QPS(%f) and QPS Burst(%d) for driver kubeClient", float32(kubeAPIQPS), kubeAPIBurst)
+	kubeCfg.QPS = float32(kubeAPIQPS)
+	kubeCfg.Burst = kubeAPIBurst
+	kubeCfg.UserAgent = userAgent
+	return kubernetes.NewForConfig(kubeCfg)
 }

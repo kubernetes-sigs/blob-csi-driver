@@ -17,6 +17,8 @@ limitations under the License.
 package blob
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"os"
 	"strconv"
@@ -29,8 +31,6 @@ import (
 	az "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pborman/uuid"
-	"golang.org/x/net/context"
-
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,6 +43,7 @@ import (
 	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
+	"sigs.k8s.io/cloud-provider-azure/pkg/provider"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 )
 
@@ -167,11 +168,29 @@ type DriverOptions struct {
 	SasTokenExpirationMinutes              int
 }
 
+func (option *DriverOptions) AddFlags() {
+	flag.StringVar(&option.BlobfuseProxyEndpoint, "blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
+	flag.StringVar(&option.NodeID, "nodeid", "", "node id")
+	flag.StringVar(&option.DriverName, "drivername", DefaultDriverName, "name of the driver")
+	flag.BoolVar(&option.EnableBlobfuseProxy, "enable-blobfuse-proxy", false, "using blobfuse proxy for mounts")
+	flag.IntVar(&option.BlobfuseProxyConnTimout, "blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
+	flag.BoolVar(&option.EnableBlobMockMount, "enable-blob-mock-mount", false, "enable mock mount(only for testing)")
+	flag.BoolVar(&option.EnableGetVolumeStats, "enable-get-volume-stats", false, "allow GET_VOLUME_STATS on agent node")
+	flag.BoolVar(&option.AppendTimeStampInCacheDir, "append-timestamp-cache-dir", false, "append timestamp into cache directory on agent node")
+	flag.Uint64Var(&option.MountPermissions, "mount-permissions", 0777, "mounted folder permissions")
+	flag.BoolVar(&option.AllowInlineVolumeKeyAccessWithIdentity, "allow-inline-volume-key-access-with-idenitity", false, "allow accessing storage account key using cluster identity for inline volume")
+	flag.BoolVar(&option.AppendMountErrorHelpLink, "append-mount-error-help-link", true, "Whether to include a link for help with mount errors when a mount error occurs.")
+	flag.BoolVar(&option.EnableAznfsMount, "enable-aznfs-mount", false, "replace nfs mount with aznfs mount")
+	flag.IntVar(&option.VolStatsCacheExpireInMinutes, "vol-stats-cache-expire-in-minutes", 10, "The cache expire time in minutes for volume stats cache")
+	flag.IntVar(&option.SasTokenExpirationMinutes, "sas-token-expiration-minutes", 1440, "sas token expiration minutes during volume cloning")
+}
+
 // Driver implements all interfaces of CSI drivers
 type Driver struct {
 	csicommon.CSIDriver
 
 	cloud                 *azure.Cloud
+	KubeClient            kubernetes.Interface
 	blobfuseProxyEndpoint string
 	// enableBlobMockMount is only for testing, DO NOT set as true in non-testing scenario
 	enableBlobMockMount                    bool
@@ -206,7 +225,8 @@ type Driver struct {
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
 // does not support optional driver plugin info manifest field. Refer to CSI spec for more details.
-func NewDriver(options *DriverOptions, cloud *azure.Cloud) *Driver {
+func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *provider.Cloud) *Driver {
+	var err error
 	d := Driver{
 		volLockMap:                             util.NewLockMap(),
 		subnetLockMap:                          util.NewLockMap(),
@@ -222,12 +242,13 @@ func NewDriver(options *DriverOptions, cloud *azure.Cloud) *Driver {
 		enableAznfsMount:                       options.EnableAznfsMount,
 		sasTokenExpirationMinutes:              options.SasTokenExpirationMinutes,
 		azcopy:                                 &util.Azcopy{},
+		KubeClient:                             kubeClient,
+		cloud:                                  cloud,
 	}
 	d.Name = options.DriverName
 	d.Version = driverVersion
 	d.NodeID = options.NodeID
 
-	var err error
 	getter := func(key string) (interface{}, error) { return nil, nil }
 	if d.accountSearchCache, err = azcache.NewTimedCache(time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
@@ -242,7 +263,6 @@ func NewDriver(options *DriverOptions, cloud *azure.Cloud) *Driver {
 	if d.volStatsCache, err = azcache.NewTimedCache(time.Duration(options.VolStatsCacheExpireInMinutes)*time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
-	d.cloud = cloud
 	d.mounter = &mount.SafeFormatAndMount{
 		Interface: mount.New(""),
 		Exec:      utilexec.New(),
