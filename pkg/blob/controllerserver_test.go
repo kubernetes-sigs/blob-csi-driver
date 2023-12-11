@@ -547,8 +547,8 @@ func TestCreateVolume(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
-				d.cloud.Config.DisableAzureStackCloud = false
-				d.cloud.Config.Cloud = "AZURESTACKCLOUD"
+				d.cloud.DisableAzureStackCloud = false
+				d.cloud.Cloud = "AZURESTACKCLOUD"
 				d.cloud.SubscriptionID = "subID"
 				mp := make(map[string]string)
 				mp[storeAccountKeyField] = falseValue

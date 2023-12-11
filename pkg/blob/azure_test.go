@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
 
+	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/subnetclient/mocksubnetclient"
 	azureprovider "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 
@@ -114,7 +115,7 @@ users:
 			kubeconfig:            emptyKubeConfig,
 			nodeID:                "",
 			allowEmptyCloudConfig: true,
-			expectedErr:           fmt.Errorf("failed to get KubeClient: invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable"),
+			expectedErr:           fmt.Errorf("invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable"),
 		},
 		{
 			desc:                  "[failure] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
@@ -168,7 +169,14 @@ users:
 			}
 			os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 		}
-		cloud, err := GetCloudProvider(context.Background(), test.kubeconfig, test.nodeID, "", "", test.userAgent, test.allowEmptyCloudConfig, 25.0, 50)
+		kubeClient, err := util.GetKubeClient(test.kubeconfig, 25.0, 50, "")
+		if err != nil {
+			if !reflect.DeepEqual(err, test.expectedErr) && test.expectedErr != nil && !strings.Contains(err.Error(), test.expectedErr.Error()) {
+				t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
+			}
+			continue
+		}
+		cloud, err := GetCloudProvider(context.Background(), kubeClient, test.nodeID, "", "", test.userAgent, test.allowEmptyCloudConfig)
 		if !reflect.DeepEqual(err, test.expectedErr) && test.expectedErr != nil && !strings.Contains(err.Error(), test.expectedErr.Error()) {
 			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
 		}
@@ -372,88 +380,5 @@ func TestUpdateSubnetServiceEndpoints(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
-	}
-}
-
-func TestGetKubeConfig(t *testing.T) {
-	emptyKubeConfig := "empty-Kube-Config"
-	validKubeConfig := "valid-Kube-Config"
-	fakeContent := `
-apiVersion: v1
-clusters:
-- cluster:
-    server: https://localhost:8080
-  name: foo-cluster
-contexts:
-- context:
-    cluster: foo-cluster
-    user: foo-user
-    namespace: bar
-  name: foo-context
-current-context: foo-context
-kind: Config
-users:
-- name: foo-user
-  user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1beta1
-      args:
-      - arg-1
-      - arg-2
-      command: foo-command
-`
-	err := createTestFile(emptyKubeConfig)
-	if err != nil {
-		t.Error(err)
-	}
-	defer func() {
-		if err := os.Remove(emptyKubeConfig); err != nil {
-			t.Error(err)
-		}
-	}()
-
-	err = createTestFile(validKubeConfig)
-	if err != nil {
-		t.Error(err)
-	}
-	defer func() {
-		if err := os.Remove(validKubeConfig); err != nil {
-			t.Error(err)
-		}
-	}()
-
-	if err := os.WriteFile(validKubeConfig, []byte(fakeContent), 0666); err != nil {
-		t.Error(err)
-	}
-
-	tests := []struct {
-		desc                     string
-		kubeconfig               string
-		expectError              bool
-		envVariableHasConfig     bool
-		envVariableConfigIsValid bool
-	}{
-		{
-			desc:                     "[success] valid kube config passed",
-			kubeconfig:               validKubeConfig,
-			expectError:              false,
-			envVariableHasConfig:     false,
-			envVariableConfigIsValid: false,
-		},
-		{
-			desc:                     "[failure] invalid kube config passed",
-			kubeconfig:               emptyKubeConfig,
-			expectError:              true,
-			envVariableHasConfig:     false,
-			envVariableConfigIsValid: false,
-		},
-	}
-
-	for _, test := range tests {
-		_, err := getKubeConfig(test.kubeconfig)
-		receiveError := (err != nil)
-		if test.expectError != receiveError {
-			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectErr: %v", test.desc, test.kubeconfig, err, test.expectError)
-		}
 	}
 }

@@ -19,6 +19,7 @@ package blob
 import (
 	"context"
 	"errors"
+	"flag"
 	"fmt"
 	"os"
 	"reflect"
@@ -29,12 +30,10 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
 	v1api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
-
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
@@ -56,7 +55,7 @@ func NewFakeDriver() *Driver {
 		BlobfuseProxyConnTimout: 5,
 		EnableBlobMockMount:     false,
 	}
-	driver := NewDriver(&driverOptions, &azure.Cloud{})
+	driver := NewDriver(&driverOptions, nil, &azure.Cloud{})
 	driver.Name = fakeDriverName
 	driver.Version = vendorVersion
 	driver.subnetLockMap = util.NewLockMap()
@@ -72,7 +71,7 @@ func TestNewFakeDriver(t *testing.T) {
 		BlobfuseProxyConnTimout: 5,
 		EnableBlobMockMount:     false,
 	}
-	d := NewDriver(&driverOptions, &azure.Cloud{})
+	d := NewDriver(&driverOptions, nil, &azure.Cloud{})
 	assert.NotNil(t, d)
 }
 
@@ -85,7 +84,7 @@ func TestNewDriver(t *testing.T) {
 		BlobfuseProxyConnTimout: 5,
 		EnableBlobMockMount:     false,
 	}
-	driver := NewDriver(&driverOptions, &azure.Cloud{})
+	driver := NewDriver(&driverOptions, nil, &azure.Cloud{})
 	fakedriver := NewFakeDriver()
 	fakedriver.Name = DefaultDriverName
 	fakedriver.Version = driverVersion
@@ -1231,7 +1230,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 				d.cloud.VnetResourceGroup = "foo"
 				actualOutput := d.getSubnetResourceID("", "", "")
 				expectedOutput := fmt.Sprintf(subnetTemplate, d.cloud.SubscriptionID, "foo", d.cloud.VnetName, d.cloud.SubnetName)
-				assert.Equal(t, actualOutput, expectedOutput, "cloud.SubscriptionID should be used as the SubID")
+				assert.Equal(t, actualOutput, expectedOutput, "config.SubscriptionID should be used as the SubID")
 			},
 		},
 		{
@@ -1259,7 +1258,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 				d.cloud.VnetResourceGroup = ""
 				actualOutput := d.getSubnetResourceID("", "", "")
 				expectedOutput := fmt.Sprintf(subnetTemplate, "bar", d.cloud.ResourceGroup, d.cloud.VnetName, d.cloud.SubnetName)
-				assert.Equal(t, actualOutput, expectedOutput, "cloud.Resourcegroup should be used as the rg")
+				assert.Equal(t, actualOutput, expectedOutput, "config.ResourceGroup should be used as the rg")
 			},
 		},
 		{
@@ -1273,7 +1272,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 				d.cloud.VnetResourceGroup = "fakeVnetResourceGroup"
 				actualOutput := d.getSubnetResourceID("", "", "")
 				expectedOutput := fmt.Sprintf(subnetTemplate, "bar", d.cloud.VnetResourceGroup, d.cloud.VnetName, d.cloud.SubnetName)
-				assert.Equal(t, actualOutput, expectedOutput, "cloud.VnetResourceGroup should be used as the rg")
+				assert.Equal(t, actualOutput, expectedOutput, "config.VnetResourceGroup should be used as the rg")
 			},
 		},
 		{
@@ -1748,4 +1747,22 @@ func TestIsNFSProtocol(t *testing.T) {
 			t.Errorf("isNFSVolume(%s) returned with %v, not equal to %v", test.protocol, result, test.expectedResult)
 		}
 	}
+}
+
+func TestDriverOptions_AddFlags(t *testing.T) {
+	t.Run("test options", func(t *testing.T) {
+		option := DriverOptions{}
+		option.AddFlags()
+		typeInfo := reflect.TypeOf(option)
+		numOfExpectedOptions := typeInfo.NumField()
+		count := 0
+		flag.CommandLine.VisitAll(func(f *flag.Flag) {
+			if !strings.Contains(f.Name, "test") {
+				count++
+			}
+		})
+		if numOfExpectedOptions != count {
+			t.Errorf("expected %d flags, but found %d flag in DriverOptions", numOfExpectedOptions, count)
+		}
+	})
 }
