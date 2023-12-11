@@ -700,12 +700,12 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 			name: "Get storage access key error",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				attrib := make(map[string]string)
+				var attrib StorageAccountAttributes
 				secret := make(map[string]string)
-				attrib["containername"] = "unit-test"
-				attrib["keyvaultsecretname"] = "unit-test"
-				attrib["keyvaultsecretversion"] = "unit-test"
-				attrib["storageaccountname"] = "unit-test"
+				attrib.ContainerName = "unit-test"
+				attrib.KeyVaultSecretName = "unit-test"
+				attrib.KeyVaultSecretVersion = "unit-test"
+				attrib.StorageAccount = "unit-test"
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
 				d.cloud = &azure.Cloud{}
 				ctrl := gomock.NewController(t)
@@ -717,7 +717,7 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 					RawError: fmt.Errorf("test"),
 				}
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
-				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
+				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, &attrib, secret)
 				expectedErr := fmt.Errorf("no key for storage account(f5713de20cde511e8ba4900) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
 				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
@@ -728,7 +728,7 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 			name: "valid request",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				attrib := make(map[string]string)
+				var attrib StorageAccountAttributes
 				secret := make(map[string]string)
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
 				d.cloud = &azure.Cloud{}
@@ -746,39 +746,8 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 					Keys: &accountkeylist,
 				}
 				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
-				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
+				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, &attrib, secret)
 				expectedErr := error(nil)
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
-		{
-			name: "invalid getLatestAccountKey value",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				attrib := map[string]string{
-					getLatestAccountKeyField: "invalid",
-				}
-				secret := make(map[string]string)
-				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				d.cloud = &azure.Cloud{}
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
-				s := "unit-test"
-				accountkey := storage.AccountKey{
-					Value: &s,
-				}
-				accountkeylist := []storage.AccountKey{}
-				accountkeylist = append(accountkeylist, accountkey)
-				list := storage.AccountListKeysResult{
-					Keys: &accountkeylist,
-				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
-				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
-				expectedErr := fmt.Errorf("invalid getlatestaccountkey: %s in volume context", "invalid")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -1702,4 +1671,62 @@ func TestIsNFSProtocol(t *testing.T) {
 			t.Errorf("isNFSVolume(%s) returned with %v, not equal to %v", test.protocol, result, test.expectedResult)
 		}
 	}
+}
+
+// GetStorageAccountAndContainer get storage account and container info
+// returns <accountName, accountKey, accountSasToken, containerName>
+// only for e2e testing
+type StorageAccountAttributes struct {
+	SubsID                string `mapstructure:"subscriptionid"`
+	StorageAccount        string `mapstructure:"storageaccount"`
+	ContainerName         string `mapstructure:"containername"`
+	KeyVaultURL           string `mapstructure:"keyvaulturl"`
+	KeyVaultSecretName    string `mapstructure:"keyvaultsecretname"`
+	KeyVaultSecretVersion string `mapstructure:"keyvaultsecretversion"`
+	GetLatestAccountKey   bool   `mapstructure:"getlatestaccountkey"`
+}
+
+func GetStorageAccountAndContainer(ctx context.Context, d *Driver, volumeID string, attrib *StorageAccountAttributes, secrets map[string]string) (string, string, string, string, error) {
+	var (
+		accountKey      string
+		accountSasToken string
+		err             error
+	)
+	// 1. If keyVaultURL is not nil, preferentially use the key stored in key vault.
+	// 2. Then if secrets map is not nil, use the key stored in the secrets map.
+	// 3. Finally if both keyVaultURL and secrets map are nil, get the key from Azure.
+	if attrib.KeyVaultURL != "" {
+		key, err := d.getKeyVaultSecretContent(ctx, attrib.KeyVaultURL, attrib.KeyVaultSecretName, attrib.KeyVaultSecretVersion)
+		if err != nil {
+			return "", "", "", "", err
+		}
+		if isSASToken(key) {
+			accountSasToken = key
+		} else {
+			accountKey = key
+		}
+	} else {
+		if len(secrets) == 0 {
+			var rgName string
+			rgName, attrib.StorageAccount, attrib.ContainerName, _, _, err = GetContainerInfo(volumeID)
+			if err != nil {
+				return "", "", "", "", err
+			}
+
+			if rgName == "" {
+				rgName = d.cloud.ResourceGroup
+			}
+
+			accountKey, err = d.cloud.GetStorageAccesskey(ctx, attrib.SubsID, attrib.StorageAccount, rgName, attrib.GetLatestAccountKey)
+			if err != nil {
+				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", attrib.StorageAccount, rgName, err)
+			}
+		}
+	}
+
+	if attrib.ContainerName == "" {
+		return "", "", "", "", fmt.Errorf("could not find containerName from attributes(%v) or volumeID(%v)", attrib, volumeID)
+	}
+
+	return attrib.ContainerName, accountKey, accountSasToken, attrib.ContainerName, nil
 }
