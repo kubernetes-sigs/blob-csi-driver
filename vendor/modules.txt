@@ -1613,8 +1613,10 @@ sigs.k8s.io/cloud-provider-azure/pkg/version
 ## explicit; go 1.20
 sigs.k8s.io/cloud-provider-azure/pkg/azclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient
+sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient/mock_accountclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/availabilitysetclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/blobcontainerclient
+sigs.k8s.io/cloud-provider-azure/pkg/azclient/blobcontainerclient/mock_blobcontainerclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/blobservicepropertiesclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/deploymentclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/diskclient

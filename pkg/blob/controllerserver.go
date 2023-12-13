@@ -30,6 +30,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
@@ -42,6 +43,7 @@ import (
 	"k8s.io/utils/pointer"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/blobcontainerclient"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 	"sigs.k8s.io/cloud-provider-azure/pkg/metrics"
 	"sigs.k8s.io/cloud-provider-azure/pkg/provider"
@@ -261,7 +263,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "protocol(%s) is not supported, supported protocol list: %v", protocol, supportedProtocolList)
 	}
 	if !isSupportedAccessTier(accessTier) {
-		return nil, status.Errorf(codes.InvalidArgument, "accessTier(%s) is not supported, supported AccessTier list: %v", accessTier, storage.PossibleAccessTierValues())
+		return nil, status.Errorf(codes.InvalidArgument, "accessTier(%s) is not supported, supported AccessTier list: %v", accessTier, armstorage.PossibleAccessTierValues())
 	}
 
 	if containerName != "" && containerNamePrefix != "" {
@@ -275,7 +277,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if strings.EqualFold(networkEndpointType, privateEndpoint) {
 		createPrivateEndpoint = pointer.BoolPtr(true)
 	}
-	accountKind := string(storage.KindStorageV2)
+	accountKind := string(armstorage.KindStorageV2)
 	if isNFSProtocol(protocol) {
 		isHnsEnabled = pointer.Bool(true)
 		enableNfsV3 = pointer.Bool(true)
@@ -293,11 +295,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if strings.HasPrefix(strings.ToLower(storageAccountType), "premium") {
-		accountKind = string(storage.KindBlockBlobStorage)
+		accountKind = string(armstorage.KindBlockBlobStorage)
 	}
 	if IsAzureStackCloud(d.cloud) {
-		accountKind = string(storage.KindStorage)
-		if storageAccountType != "" && storageAccountType != string(storage.SkuNameStandardLRS) && storageAccountType != string(storage.SkuNamePremiumLRS) {
+		accountKind = string(armstorage.KindStorage)
+		if storageAccountType != "" && storageAccountType != string(armstorage.SKUNameStandardLRS) && storageAccountType != string(armstorage.SKUNamePremiumLRS) {
 			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", storageAccountType, storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS))
 		}
 	}
@@ -449,7 +451,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			}
 		}
 
-		secretName, err := setAzureCredentials(ctx, d.cloud.KubeClient, accountName, accountKey, secretNamespace)
+		secretName, err := setAzureCredentials(ctx, d.KubeClient, accountName, accountKey, secretNamespace)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to store storage account key: %v", err)
 		}
@@ -569,8 +571,12 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		if resourceGroupName == "" {
 			resourceGroupName = d.cloud.ResourceGroup
 		}
-		blobContainer, retryErr := d.cloud.BlobClient.GetContainer(ctx, subsID, resourceGroupName, accountName, containerName)
-		err = retryErr.Error()
+		blobClient, err := d.clientFactory.GetBlobContainerClientForSub(subsID)
+		if err != nil {
+			return nil, status.Error(codes.Internal, err.Error())
+		}
+
+		blobContainer, err := blobClient.Get(ctx, resourceGroupName, accountName, containerName)
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -678,12 +684,17 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 			}
 			_, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate})
 		} else {
-			blobContainer := storage.BlobContainer{
-				ContainerProperties: &storage.ContainerProperties{
-					PublicAccess: storage.PublicAccessNone,
+			blobContainer := armstorage.BlobContainer{
+				ContainerProperties: &armstorage.ContainerProperties{
+					PublicAccess: to.Ptr(armstorage.PublicAccessNone),
 				},
 			}
-			err = d.cloud.BlobClient.CreateContainer(ctx, subsID, resourceGroupName, accountName, containerName, blobContainer).Error()
+			var blobClient blobcontainerclient.Interface
+			blobClient, err = d.clientFactory.GetBlobContainerClientForSub(subsID)
+			if err != nil {
+				return true, err
+			}
+			_, err = blobClient.CreateContainer(ctx, resourceGroupName, accountName, containerName, blobContainer)
 		}
 		if err != nil {
 			if strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) ||
@@ -710,7 +721,12 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 			}
 			_, err = container.DeleteIfExists(nil)
 		} else {
-			err = d.cloud.BlobClient.DeleteContainer(ctx, subsID, resourceGroupName, accountName, containerName).Error()
+			var blobClient blobcontainerclient.Interface
+			blobClient, err = d.clientFactory.GetBlobContainerClientForSub(subsID)
+			if err != nil {
+				return true, err
+			}
+			err = blobClient.DeleteContainer(ctx, resourceGroupName, accountName, containerName)
 		}
 		if err != nil {
 			if strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) ||

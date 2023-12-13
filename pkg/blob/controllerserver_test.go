@@ -19,11 +19,11 @@ package blob
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
@@ -31,10 +31,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/utils/pointer"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
-	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/blobclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient/mock_accountclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/blobcontainerclient/mock_blobcontainerclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/mock_azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 	"sigs.k8s.io/cloud-provider-azure/pkg/provider/config"
@@ -49,63 +50,6 @@ const (
 	CUSTOM
 	NULL
 )
-
-var _ blobclient.Interface = &mockBlobClient{}
-
-// mock blobclient that returns the errortype for create/delete/get operations (default value nil)
-type mockBlobClient struct {
-	// type of error returned
-	errorType *errType
-	// custom string for error type CUSTOM
-	custom  *string
-	conProp *storage.ContainerProperties
-}
-
-func (c *mockBlobClient) CreateContainer(_ context.Context, _, _, _, _ string, _ storage.BlobContainer) *retry.Error {
-	switch *c.errorType {
-	case DATAPLANE:
-		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError))
-	case MANAGEMENT:
-		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
-	case CUSTOM:
-		return retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
-	}
-	return nil
-}
-func (c *mockBlobClient) DeleteContainer(_ context.Context, _, _, _, _ string) *retry.Error {
-	switch *c.errorType {
-	case DATAPLANE:
-		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError))
-	case MANAGEMENT:
-		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
-	case CUSTOM:
-		return retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
-	}
-	return nil
-}
-func (c *mockBlobClient) GetContainer(_ context.Context, _, _, _, _ string) (storage.BlobContainer, *retry.Error) {
-	switch *c.errorType {
-	case DATAPLANE:
-		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError))
-	case MANAGEMENT:
-		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
-	case CUSTOM:
-		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
-	}
-	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
-}
-
-func (c *mockBlobClient) GetServiceProperties(_ context.Context, _, _, _ string) (storage.BlobServiceProperties, error) {
-	return storage.BlobServiceProperties{}, nil
-}
-
-func (c *mockBlobClient) SetServiceProperties(_ context.Context, _, _, _ string, _ storage.BlobServiceProperties) (storage.BlobServiceProperties, error) {
-	return storage.BlobServiceProperties{}, nil
-}
-
-func newMockBlobClient(errorType *errType, custom *string, conProp *storage.ContainerProperties) blobclient.Interface {
-	return &mockBlobClient{errorType: errorType, custom: custom, conProp: conProp}
-}
 
 // creates and returns mock storage account client
 func NewMockSAClient(_ context.Context, ctrl *gomock.Controller, _, _, _ string, keyList *[]storage.AccountKey) *mockstorageaccountclient.MockInterface {
@@ -651,9 +595,13 @@ func TestCreateVolume(t *testing.T) {
 					Value:   &fakeValue,
 				})
 				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
+				controller := gomock.NewController(t)
 
-				errorType := DATAPLANE
-				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
+				clientFactoryMock := mock_azclient.NewMockClientFactory(controller)
+				blobClientMock := mock_blobcontainerclient.NewMockInterface(controller)
+				blobClientMock.EXPECT().CreateContainer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, fmt.Errorf("timed out waiting for the condition"))
+				clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil)
+				d.clientFactory = clientFactoryMock
 
 				mp := make(map[string]string)
 				mp[protocolField] = "fuse"
@@ -679,6 +627,7 @@ func TestCreateVolume(t *testing.T) {
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
+				controller.Finish()
 			},
 		},
 		{
@@ -687,12 +636,14 @@ func TestCreateVolume(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
 				d.cloud.SubscriptionID = "subID"
-
-				keyList := make([]storage.AccountKey, 0)
-				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
-
-				errorType := NULL
-				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
+				controller := gomock.NewController(t)
+				var mockKeyList []storage.AccountKey
+				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &mockKeyList)
+				clientFactoryMock := mock_azclient.NewMockClientFactory(controller)
+				blobClientMock := mock_blobcontainerclient.NewMockInterface(controller)
+				blobClientMock.EXPECT().CreateContainer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+				clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil)
+				d.clientFactory = clientFactoryMock
 
 				mp := make(map[string]string)
 				mp[storeAccountKeyField] = trueValue
@@ -719,6 +670,7 @@ func TestCreateVolume(t *testing.T) {
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v\nExpected error: %v", err, expectedErr)
 				}
+				controller.Finish()
 			},
 		},
 		{
@@ -735,10 +687,15 @@ func TestCreateVolume(t *testing.T) {
 					KeyName: &fakeKey,
 					Value:   &fakeValue,
 				})
-				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
+				controller := gomock.NewController(t)
 
-				errorType := NULL
-				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
+				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), controller, "subID", "unit-test", "unit-test", &keyList)
+
+				clientFactoryMock := mock_azclient.NewMockClientFactory(controller)
+				blobClientMock := mock_blobcontainerclient.NewMockInterface(controller)
+				blobClientMock.EXPECT().CreateContainer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
+				clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil)
+				d.clientFactory = clientFactoryMock
 
 				mp := make(map[string]string)
 				mp[protocolField] = "fuse"
@@ -763,6 +720,7 @@ func TestCreateVolume(t *testing.T) {
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
+				controller.Finish()
 			},
 		},
 		//nolint:dupl
@@ -783,8 +741,7 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
 				d.cloud.Config.AzureAuthConfig.UseManagedIdentityExtension = true
 
-				errorType := NULL
-				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
+				d.clientFactory = mock_azclient.NewMockClientFactory(gomock.NewController(t))
 
 				mp := make(map[string]string)
 				mp[protocolField] = "fuse"
@@ -849,8 +806,7 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
 				d.cloud.Config.AzureAuthConfig.UseManagedIdentityExtension = true
 
-				errorType := NULL
-				d.cloud.BlobClient = &mockBlobClient{errorType: &errorType}
+				d.clientFactory = mock_azclient.NewMockClientFactory(gomock.NewController(t))
 
 				mp := make(map[string]string)
 				mp[protocolField] = "fuse"
@@ -1068,7 +1024,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 		name          string
 		req           *csi.ValidateVolumeCapabilitiesRequest
 		clientErr     errType
-		containerProp *storage.ContainerProperties
+		containerProp *armstorage.ContainerProperties
 		expectedRes   *csi.ValidateVolumeCapabilitiesResponse
 		expectedErr   error
 	}{
@@ -1147,9 +1103,9 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				Secrets:            map[string]string{},
 			},
 			clientErr:     DATAPLANE,
-			containerProp: &storage.ContainerProperties{},
+			containerProp: &armstorage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)).Error().Error()),
+			expectedErr:   status.Errorf(codes.Internal, fmt.Errorf(containerBeingDeletedDataplaneAPIError).Error()),
 		},
 		{
 			name: "Requested Volume does not exist",
@@ -1159,7 +1115,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 				Secrets:            map[string]string{},
 			},
 			clientErr:     NULL,
-			containerProp: &storage.ContainerProperties{},
+			containerProp: &armstorage.ContainerProperties{},
 			expectedRes:   nil,
 			expectedErr:   status.Errorf(codes.NotFound, fmt.Sprintf("requested volume(%s) does not exist", "unit#test#test")),
 		},
@@ -1181,31 +1137,48 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			expectedErr: nil,
 		},*/
 	}
-	d := NewFakeDriver()
-	d.cloud = &azure.Cloud{}
-	d.Cap = []*csi.ControllerServiceCapability{
-		controllerServiceCapability,
-	}
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-	d.cloud.StorageAccountClient = mockStorageAccountsClient
-	s := "unit-test"
-	accountkey := storage.AccountKey{
-		Value: &s,
-	}
-	accountkeylist := []storage.AccountKey{}
-	accountkeylist = append(accountkeylist, accountkey)
-	list := storage.AccountListKeysResult{
-		Keys: &accountkeylist,
-	}
-	mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 
 	for _, test := range testCases {
+		d := NewFakeDriver()
+		d.cloud = &azure.Cloud{}
+		d.Cap = []*csi.ControllerServiceCapability{
+			controllerServiceCapability,
+		}
+		ctrl := gomock.NewController(t)
+
+		mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
+		d.cloud.StorageAccountClient = mockStorageAccountsClient
+		s := "unit-test"
+		accountkey := storage.AccountKey{
+			Value: &s,
+		}
+		accountkeylist := []storage.AccountKey{}
+		accountkeylist = append(accountkeylist, accountkey)
+		list := storage.AccountListKeysResult{
+			Keys: &accountkeylist,
+		}
+		mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+
+		clientFactoryMock := mock_azclient.NewMockClientFactory(ctrl)
+		blobClientMock := mock_blobcontainerclient.NewMockInterface(ctrl)
+		clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil).AnyTimes()
+		blobClientMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, resourceGroupName string, parentResourceName string, resourceName string) (result *armstorage.BlobContainer, rerr error) {
+				switch test.clientErr {
+				case DATAPLANE:
+					return nil, fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+				case MANAGEMENT:
+					return nil, fmt.Errorf(containerBeingDeletedManagementAPIError)
+				}
+				return &armstorage.BlobContainer{
+					ContainerProperties: test.containerProp,
+				}, nil
+			}).AnyTimes()
+		d.clientFactory = clientFactoryMock
 		res, err := d.ValidateVolumeCapabilities(context.Background(), test.req)
-		d.cloud.BlobClient = newMockBlobClient(&test.clientErr, pointer.String(""), test.containerProp)
 		assert.Equal(t, test.expectedErr, err, "Error in testcase (%s): Errors must match", test.name)
 		assert.Equal(t, test.expectedRes, res, "Error in testcase (%s): Response must match", test.name)
+		ctrl.Finish()
 	}
 }
 
@@ -1415,19 +1388,38 @@ func TestCreateBlobContainer(t *testing.T) {
 			secrets:       map[string]string{},
 			clientErr:     CUSTOM,
 			customErrStr:  "foobar",
-			expectedErr:   retry.GetError(&http.Response{}, fmt.Errorf("foobar")).Error(),
+			expectedErr:   fmt.Errorf("foobar"),
 		},
 	}
 
 	d := NewFakeDriver()
 	d.cloud = &azure.Cloud{}
-	conProp := &storage.ContainerProperties{}
 	for _, test := range tests {
-		d.cloud.BlobClient = newMockBlobClient(&test.clientErr, &test.customErrStr, conProp)
+		controller := gomock.NewController(t)
+		clientFactoryMock := mock_azclient.NewMockClientFactory(controller)
+		blobClientMock := mock_blobcontainerclient.NewMockInterface(controller)
+		accountClientMock := mock_accountclient.NewMockInterface(controller)
+		clientFactoryMock.EXPECT().GetAccountClientForSub(gomock.Any()).Return(accountClientMock, nil).AnyTimes()
+		clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil).AnyTimes()
+		d.clientFactory = clientFactoryMock
+		blobClientMock.EXPECT().CreateContainer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, resourceGroupName, accountName, containerName string, parameters armstorage.BlobContainer) (*armstorage.BlobContainer, error) {
+				if test.clientErr == DATAPLANE {
+					return nil, fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+				}
+				if test.clientErr == MANAGEMENT {
+					return nil, fmt.Errorf(containerBeingDeletedManagementAPIError)
+				}
+				if test.clientErr == CUSTOM {
+					return nil, fmt.Errorf(test.customErrStr)
+				}
+				return nil, nil
+			}).AnyTimes()
 		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
+		controller.Finish()
 	}
 }
 
@@ -1486,20 +1478,38 @@ func TestDeleteBlobContainer(t *testing.T) {
 			clientErr:     CUSTOM,
 			customErrStr:  "foobar",
 			expectedErr: fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", "containerName", "",
-				retry.GetError(&http.Response{}, fmt.Errorf("foobar")).Error()),
+				fmt.Errorf("foobar")),
 		},
 	}
 
 	d := NewFakeDriver()
-	d.cloud = &azure.Cloud{}
 
-	connProp := &storage.ContainerProperties{}
 	for _, test := range tests {
-		d.cloud.BlobClient = newMockBlobClient(&test.clientErr, &test.customErrStr, connProp)
+		controller := gomock.NewController(t)
+		clientFactoryMock := mock_azclient.NewMockClientFactory(controller)
+		blobClientMock := mock_blobcontainerclient.NewMockInterface(controller)
+		accountClientMock := mock_accountclient.NewMockInterface(controller)
+		clientFactoryMock.EXPECT().GetAccountClientForSub(gomock.Any()).Return(accountClientMock, nil).AnyTimes()
+		clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil).AnyTimes()
+		d.clientFactory = clientFactoryMock
+		blobClientMock.EXPECT().DeleteContainer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, resourceGroupName, accountName, containerName string) error {
+				if test.clientErr == DATAPLANE {
+					return fmt.Errorf(containerBeingDeletedDataplaneAPIError)
+				}
+				if test.clientErr == MANAGEMENT {
+					return fmt.Errorf(containerBeingDeletedManagementAPIError)
+				}
+				if test.clientErr == CUSTOM {
+					return fmt.Errorf(test.customErrStr)
+				}
+				return nil
+			}).AnyTimes()
 		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
+		controller.Finish()
 	}
 }
 
