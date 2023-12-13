@@ -524,3 +524,79 @@ func TestParseAzcopyJobShow(t *testing.T) {
 		}
 	}
 }
+
+func TestGetKubeConfig(t *testing.T) {
+	emptyKubeConfig := "empty-Kube-Config"
+	validKubeConfig := "valid-Kube-Config"
+	nonexistingConfig := "nonexisting-config"
+	fakeContent := `
+apiVersion: v1
+clusters:
+- cluster:
+    server: https://localhost:8080
+  name: foo-cluster
+contexts:
+- context:
+    cluster: foo-cluster
+    user: foo-user
+    namespace: bar
+  name: foo-context
+current-context: foo-context
+kind: Config
+users:
+- name: foo-user
+  user:
+    exec:
+      apiVersion: client.authentication.k8s.io/v1beta1
+      args:
+      - arg-1
+      - arg-2
+      command: foo-command
+`
+	if err := os.WriteFile(validKubeConfig, []byte(""), 0666); err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(emptyKubeConfig)
+	if err := os.WriteFile(validKubeConfig, []byte(fakeContent), 0666); err != nil {
+		t.Error(err)
+	}
+	defer os.Remove(validKubeConfig)
+
+	tests := []struct {
+		desc                     string
+		kubeconfig               string
+		expectError              bool
+		envVariableHasConfig     bool
+		envVariableConfigIsValid bool
+	}{
+		{
+			desc:                     "[success] valid kube config passed",
+			kubeconfig:               validKubeConfig,
+			expectError:              false,
+			envVariableHasConfig:     false,
+			envVariableConfigIsValid: false,
+		},
+		{
+			desc:                     "[failure] invalid kube config passed",
+			kubeconfig:               emptyKubeConfig,
+			expectError:              true,
+			envVariableHasConfig:     false,
+			envVariableConfigIsValid: false,
+		},
+		{
+			desc:                     "[failure] invalid kube config passed",
+			kubeconfig:               nonexistingConfig,
+			expectError:              true,
+			envVariableHasConfig:     false,
+			envVariableConfigIsValid: false,
+		},
+	}
+
+	for _, test := range tests {
+		_, err := GetKubeClient(test.kubeconfig, 25.0, 50, "")
+		receiveError := (err != nil)
+		if test.expectError != receiveError {
+			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectErr: %v", test.desc, test.kubeconfig, err, test.expectError)
+		}
+	}
+}
