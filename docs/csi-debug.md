@@ -42,6 +42,7 @@ kubectl logs csi-blob-node-cvgbs -c blob -n kube-system > csi-blob-node.log
 > ```console
 > journalctl -u blobfuse-proxy -l
 > ```
+> note: if there are no logs for blobfuse-proxy, you can check the status of the blobfuse-proxy service by running the command `systemctl status blobfuse-proxy`.
 
  - check blobfuse mount inside driver
 ```console
