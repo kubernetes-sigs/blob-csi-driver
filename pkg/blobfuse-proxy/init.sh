@@ -30,17 +30,11 @@ echo "Linux distribution: $DISTRIBUTION, Arch: $ARCH"
 
 # install blobfuse-proxy and blobfuse/blofuse2 if needed
 case "${DISTRIBUTION}" in
-  "ubuntu")
-    . ./blobfuse-proxy/install-proxy-ubuntu.sh
-    ;;
   "rhcos")
     . ./blobfuse-proxy/install-proxy-rhcos.sh
     ;;
-  "mariner")
-    . ./blobfuse-proxy/install-proxy-mariner.sh
-    ;;
   *)
-    echo "Unsupported distribution: ${DISTRIBUTION}"
+    . ./blobfuse-proxy/install-proxy.sh
     ;;
 esac
 
