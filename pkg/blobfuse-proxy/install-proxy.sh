@@ -17,7 +17,65 @@
 set -xe
 
 # install blobfuse/blobfuse2
-echo "skip install blobfuse/blobfuse2 for mariner...."
+if [ "${DISTRIBUTION}" != "ubuntu" ]
+then
+  echo "skip install blobfuse/blobfuse2 for ${DISTRIBUTION}...."
+elif [ "${ARCH}" = "aarch64" ]
+then
+  echo "skip install blobfuse/blobfuse2 for arm64...."
+elif [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
+then
+  echo "start to install blobfuse/blobfuse2...."
+
+  release=$($HOST_CMD lsb_release -rs)
+  echo "Ubuntu release: $release"
+  
+  if [ "$(expr "$release" \< "22.04")" -eq 1 ]
+  then
+    cp /blobfuse-proxy/packages-microsoft-prod-18.04.deb /host/etc/packages-microsoft-prod.deb
+  else
+    cp /blobfuse-proxy/packages-microsoft-prod-22.04.deb /host/etc/packages-microsoft-prod.deb
+  fi
+  # when running dpkg -i /etc/packages-microsoft-prod.deb, need to enter y to continue. 
+  # refer to https://stackoverflow.com/questions/45349571/how-to-install-deb-with-dpkg-non-interactively
+  yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt update
+
+  pkg_list=""
+  # blobfuse
+  if [ "${INSTALL_BLOBFUSE}" = "true" ] && [ "$(expr "$release" \< "22.04")" -eq 1 ]
+  then
+    pkg_list="${pkg_list} fuse"
+    if [ -z "${BLOBFUSE_VERSION}" ]; then
+      echo "install blobfuse with latest version"
+      pkg_list="${pkg_list} blobfuse"
+    else
+      pkg_list="${pkg_list} blobfuse=${BLOBFUSE_VERSION}"
+    fi
+  fi
+
+  # blobfuse2
+  if [ "${INSTALL_BLOBFUSE2}" = "true" ]
+  then
+    if [ "$(expr "$release" \< "22.04")" -eq 1 ]; then
+      echo "install fuse for blobfuse2"
+      pkg_list="${pkg_list} fuse"
+    else
+      echo "install fuse3 for blobfuse2, current release is $release"
+      pkg_list="${pkg_list} fuse3"
+    fi
+
+    if [ -z "${BLOBFUSE2_VERSION}" ]; then
+      echo "install blobfuse2 with latest version"
+      pkg_list="${pkg_list} blobfuse2"
+    else
+      pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
+    fi
+  fi
+
+  echo "begin to install ${pkg_list}"
+  $HOST_CMD apt-get install -y $pkg_list
+  $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
+fi
 
 # install blobfuse-proxy
 updateBlobfuseProxy="true"
