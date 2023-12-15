@@ -56,7 +56,7 @@ func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string) (
 		return nil, err
 	}
 
-	return getClient(env, subscriptionID, tenantID, cred, env.TokenAudience), nil
+	return getClient(env, subscriptionID, cred, env.TokenAudience), nil
 }
 
 func (az *Client) EnsureResourceGroup(ctx context.Context, name, location string, managedBy *string) (resourceGroup *resources.Group, err error) {
@@ -134,7 +134,7 @@ func getCloudConfig(env azure.Environment) cloud.Configuration {
 	}
 }
 
-func getClient(env azure.Environment, subscriptionID, tenantID string, cred *azidentity.ClientSecretCredential, scope string) *Client {
+func getClient(env azure.Environment, subscriptionID string, cred *azidentity.ClientSecretCredential, scope string) *Client {
 	c := &Client{
 		environment:    env,
 		subscriptionID: subscriptionID,

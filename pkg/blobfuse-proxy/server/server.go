@@ -55,7 +55,7 @@ func NewMountServiceServer() *MountServer {
 }
 
 // MountAzureBlob mounts an azure blob container to given location
-func (server *MountServer) MountAzureBlob(ctx context.Context,
+func (server *MountServer) MountAzureBlob(_ context.Context,
 	req *mount_azure_blob.MountAzureBlobRequest,
 ) (resp *mount_azure_blob.MountAzureBlobResponse, err error) {
 	mutex.Lock()

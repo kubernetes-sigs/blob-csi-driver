@@ -59,7 +59,7 @@ type mockBlobClient struct {
 	conProp *storage.ContainerProperties
 }
 
-func (c *mockBlobClient) CreateContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string, parameters storage.BlobContainer) *retry.Error {
+func (c *mockBlobClient) CreateContainer(_ context.Context, _, _, _, _ string, _ storage.BlobContainer) *retry.Error {
 	switch *c.errorType {
 	case DATAPLANE:
 		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError))
@@ -70,7 +70,7 @@ func (c *mockBlobClient) CreateContainer(ctx context.Context, subsID, resourceGr
 	}
 	return nil
 }
-func (c *mockBlobClient) DeleteContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string) *retry.Error {
+func (c *mockBlobClient) DeleteContainer(_ context.Context, _, _, _, _ string) *retry.Error {
 	switch *c.errorType {
 	case DATAPLANE:
 		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError))
@@ -81,7 +81,7 @@ func (c *mockBlobClient) DeleteContainer(ctx context.Context, subsID, resourceGr
 	}
 	return nil
 }
-func (c *mockBlobClient) GetContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string) (storage.BlobContainer, *retry.Error) {
+func (c *mockBlobClient) GetContainer(_ context.Context, _, _, _, _ string) (storage.BlobContainer, *retry.Error) {
 	switch *c.errorType {
 	case DATAPLANE:
 		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError))
@@ -93,11 +93,11 @@ func (c *mockBlobClient) GetContainer(ctx context.Context, subsID, resourceGroup
 	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
 
-func (c *mockBlobClient) GetServiceProperties(ctx context.Context, subsID, resourceGroupName, accountName string) (storage.BlobServiceProperties, error) {
+func (c *mockBlobClient) GetServiceProperties(_ context.Context, _, _, _ string) (storage.BlobServiceProperties, error) {
 	return storage.BlobServiceProperties{}, nil
 }
 
-func (c *mockBlobClient) SetServiceProperties(ctx context.Context, subsID, resourceGroupName, accountName string, parameters storage.BlobServiceProperties) (storage.BlobServiceProperties, error) {
+func (c *mockBlobClient) SetServiceProperties(_ context.Context, _, _, _ string, _ storage.BlobServiceProperties) (storage.BlobServiceProperties, error) {
 	return storage.BlobServiceProperties{}, nil
 }
 
@@ -106,7 +106,7 @@ func newMockBlobClient(errorType *errType, custom *string, conProp *storage.Cont
 }
 
 // creates and returns mock storage account client
-func NewMockSAClient(ctx context.Context, ctrl *gomock.Controller, subsID, rg, accName string, keyList *[]storage.AccountKey) *mockstorageaccountclient.MockInterface {
+func NewMockSAClient(_ context.Context, ctrl *gomock.Controller, _, _, _ string, keyList *[]storage.AccountKey) *mockstorageaccountclient.MockInterface {
 	cl := mockstorageaccountclient.NewMockInterface(ctrl)
 
 	cl.EXPECT().
@@ -752,6 +752,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
+		//nolint:dupl
 		{
 			name: "create volume from copy volumesnapshot is not supported",
 			testFunc: func(t *testing.T) {
@@ -807,6 +808,7 @@ func TestCreateVolume(t *testing.T) {
 				}
 			},
 		},
+		//nolint:dupl
 		{
 			name: "create volume from copy volume not found",
 			testFunc: func(t *testing.T) {
