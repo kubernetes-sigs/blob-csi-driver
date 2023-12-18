@@ -76,7 +76,7 @@ func TestConcurrentLockEntry(t *testing.T) {
 	testLockMap.UnlockEntry("entry1")
 }
 
-func (lm *LockMap) lockAndCallback(t *testing.T, entry string, callbackChan chan<- interface{}) {
+func (lm *LockMap) lockAndCallback(_ *testing.T, entry string, callbackChan chan<- interface{}) {
 	lm.LockEntry(entry)
 	callbackChan <- true
 }

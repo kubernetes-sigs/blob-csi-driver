@@ -134,7 +134,7 @@ func getCloudConfig(env azure.Environment) cloud.Configuration {
 	}
 }
 
-func getClient(env azure.Environment, subscriptionID, tenantID string, cred *azidentity.ClientSecretCredential, scope string) *Client {
+func getClient(env azure.Environment, subscriptionID, _ string, cred *azidentity.ClientSecretCredential, scope string) *Client {
 	c := &Client{
 		environment:    env,
 		subscriptionID: subscriptionID,
