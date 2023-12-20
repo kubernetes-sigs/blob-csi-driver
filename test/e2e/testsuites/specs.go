@@ -86,7 +86,7 @@ type DataSource struct {
 	Name string
 }
 
-func (pod *PodDetails) SetupWithCSIInlineVolumes(client clientset.Interface, namespace *v1.Namespace, csiDriver driver.DynamicPVTestDriver, secretName, shareName string, readOnly bool) (*TestPod, []func()) {
+func (pod *PodDetails) SetupWithCSIInlineVolumes(client clientset.Interface, namespace *v1.Namespace, secretName, shareName string, readOnly bool) (*TestPod, []func()) {
 	tpod := NewTestPod(client, namespace, pod.Cmd)
 	cleanupFuncs := make([]func(), 0)
 	for n, v := range pod.Volumes {
