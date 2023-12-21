@@ -88,7 +88,9 @@ func handle() {
 	if driver == nil {
 		klog.Fatalln("Failed to initialize Azure Blob Storage CSI driver")
 	}
-	driver.Run(*endpoint, false)
+	if err := driver.Run(context.Background(), *endpoint); err != nil {
+		klog.Fatalf("Failed to run Azure Blob Storage CSI driver: %v", err)
+	}
 }
 
 func exportMetrics() {
