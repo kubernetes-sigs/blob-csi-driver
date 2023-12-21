@@ -159,7 +159,8 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	blobDriver = blob.NewDriver(&driverOptions, kubeClient, cloud)
 	go func() {
-		blobDriver.Run(fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String()), false)
+		err := blobDriver.Run(context.Background(), fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String()))
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}()
 })
 

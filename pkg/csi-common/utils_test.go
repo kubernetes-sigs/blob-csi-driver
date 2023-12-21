@@ -22,6 +22,7 @@ import (
 	"flag"
 	"io"
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -123,7 +124,7 @@ func TestLogGRPC(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			// EXECUTE
-			_, _ = logGRPC(context.Background(), test.req, &info, handler)
+			_, _ = LogGRPC(context.Background(), test.req, &info, handler)
 			klog.Flush()
 
 			// ASSERT
@@ -233,4 +234,55 @@ func TestMain(m *testing.M) {
 	_ = flag.Set("v", "100")
 	klog.SetOutput(io.Discard)
 	os.Exit(m.Run())
+}
+
+func TestListen(t *testing.T) {
+	tests := []struct {
+		name     string
+		endpoint string
+		filePath string
+		wantErr  bool
+		skip     bool
+	}{
+		{
+			name:     "unix socket",
+			endpoint: "unix:///tmp/csi.sock",
+			filePath: "/tmp/csi.sock",
+			wantErr:  false,
+			skip:     runtime.GOOS == "windows",
+		},
+		{
+			name:     "tcp socket",
+			endpoint: "tcp://127.0.0.1:0",
+			wantErr:  false,
+		},
+		{
+			name:     "invalid endpoint",
+			endpoint: "invalid://",
+			wantErr:  true,
+		},
+		{
+			name:     "invalid unix socket",
+			endpoint: "unix://does/not/exist",
+			wantErr:  true,
+		},
+	}
+	for _, tt := range tests {
+		if tt.skip {
+			continue
+		}
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Listen(context.Background(), tt.endpoint)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Listen() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err == nil {
+				got.Close()
+				if tt.filePath != "" {
+					os.Remove(tt.filePath)
+				}
+			}
+		})
+	}
 }

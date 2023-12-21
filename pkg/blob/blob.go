@@ -18,6 +18,7 @@ package blob
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -31,8 +32,9 @@ import (
 	az "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/pborman/uuid"
+	"google.golang.org/grpc"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -306,17 +308,37 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 }
 
 // Run driver initialization
-func (d *Driver) Run(endpoint string, testBool bool) {
+func (d *Driver) Run(ctx context.Context, endpoint string) error {
 	versionMeta, err := GetVersionYAML(d.Name)
 	if err != nil {
 		klog.Fatalf("%v", err)
 	}
 	klog.Infof("\nDRIVER INFORMATION:\n-------------------\n%s\n\nStreaming logs below:", versionMeta)
+	grpcInterceptor := grpc.UnaryInterceptor(csicommon.LogGRPC)
+	opts := []grpc.ServerOption{
+		grpcInterceptor,
+	}
+	s := grpc.NewServer(opts...)
+	csi.RegisterIdentityServer(s, d)
+	csi.RegisterControllerServer(s, d)
+	csi.RegisterNodeServer(s, d)
 
-	s := csicommon.NewNonBlockingGRPCServer()
+	go func() {
+		//graceful shutdown
+		<-ctx.Done()
+		s.GracefulStop()
+	}()
 	// Driver d act as IdentityServer, ControllerServer and NodeServer
-	s.Start(endpoint, d, d, d, testBool)
-	s.Wait()
+	listener, err := csicommon.Listen(ctx, endpoint)
+	if err != nil {
+		klog.Fatalf("failed to listen to endpoint, error: %v", err)
+	}
+	err = s.Serve(listener)
+	if errors.Is(err, grpc.ErrServerStopped) {
+		klog.Infof("gRPC server stopped serving")
+		return nil
+	}
+	return err
 }
 
 // GetContainerInfo get container info according to volume id
@@ -802,7 +824,7 @@ func setAzureCredentials(ctx context.Context, kubeClient kubernetes.Interface, a
 		Type: "Opaque",
 	}
 	_, err := kubeClient.CoreV1().Secrets(secretNamespace).Create(ctx, secret, metav1.CreateOptions{})
-	if errors.IsAlreadyExists(err) {
+	if apierror.IsAlreadyExists(err) {
 		err = nil
 	}
 	if err != nil {

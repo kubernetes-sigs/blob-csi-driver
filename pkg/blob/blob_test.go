@@ -26,10 +26,12 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/sync/errgroup"
 	v1api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -132,7 +134,15 @@ func TestRun(t *testing.T) {
 				os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 
 				d := NewFakeDriver()
-				d.Run("tcp://127.0.0.1:0", true)
+
+				ctx, cancelFn := context.WithCancel(context.Background())
+				var routines errgroup.Group
+				routines.Go(func() error { return d.Run(ctx, "tcp://127.0.0.1:0") })
+				time.Sleep(time.Millisecond * 500)
+				cancelFn()
+				time.Sleep(time.Millisecond * 500)
+				err := routines.Wait()
+				assert.Nil(t, err)
 			},
 		},
 		{
@@ -159,7 +169,14 @@ func TestRun(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
 				d.NodeID = ""
-				d.Run("tcp://127.0.0.1:0", true)
+				ctx, cancelFn := context.WithCancel(context.Background())
+				var routines errgroup.Group
+				routines.Go(func() error { return d.Run(ctx, "tcp://127.0.0.1:0") })
+				time.Sleep(time.Millisecond * 500)
+				cancelFn()
+				time.Sleep(time.Millisecond * 500)
+				err := routines.Wait()
+				assert.Nil(t, err)
 			},
 		},
 	}
