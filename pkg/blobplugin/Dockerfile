@@ -43,9 +43,9 @@ else \
 RUN tar xvzf aznfs.tar.gz -C / --keep-directory-symlink && rm aznfs.tar.gz
 
 # install azcopy
-ARG azcopyURL=https://azcopyvnext.azureedge.net/releases/release-10.21.2-20231106/azcopy_linux_amd64_10.21.2.tar.gz
+ARG azcopyURL=https://azcopyvnext.azureedge.net/releases/release-10.22.1-20231220/azcopy_linux_amd64_10.22.1.tar.gz
 RUN if [ "$ARCH" == "arm64" ] ; then \
-  azcopyURL=https://azcopyvnext.azureedge.net/releases/release-10.21.2-20231106/azcopy_linux_arm64_10.21.2.tar.gz; fi
+  azcopyURL=https://azcopyvnext.azureedge.net/releases/release-10.22.1-20231220/azcopy_linux_arm64_10.22.1.tar.gz; fi
 RUN wget -O azcopy.tar.gz ${azcopyURL} && \
   tar xvzf azcopy.tar.gz -C . && rm azcopy.tar.gz && \
   mv ./azcopy_linux_$ARCH_*/azcopy /usr/local/bin/azcopy && \
