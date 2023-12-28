@@ -435,8 +435,8 @@ func TestNodeStageVolume(t *testing.T) {
 					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
 				}
 				d := NewFakeDriver()
-				d.volumeLocks.TryAcquire("unit-test")
-				defer d.volumeLocks.Release("unit-test")
+				d.volumeLocks.TryAcquire(fmt.Sprintf("%s-%s", "unit-test", "unit-test"))
+				defer d.volumeLocks.Release(fmt.Sprintf("%s-%s", "unit-test", "unit-test"))
 				_, err := d.NodeStageVolume(context.TODO(), req)
 				expectedErr := status.Error(codes.Aborted, fmt.Sprintf(volumeOperationAlreadyExistsFmt, "unit-test"))
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -606,8 +606,8 @@ func TestNodeUnstageVolume(t *testing.T) {
 					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
 				}
 				d := NewFakeDriver()
-				d.volumeLocks.TryAcquire("unit-test")
-				defer d.volumeLocks.Release("unit-test")
+				d.volumeLocks.TryAcquire(fmt.Sprintf("%s-%s", "unit-test", "unit-test"))
+				defer d.volumeLocks.Release(fmt.Sprintf("%s-%s", "unit-test", "unit-test"))
 				_, err := d.NodeStageVolume(context.TODO(), req)
 				expectedErr := status.Error(codes.Aborted, fmt.Sprintf(volumeOperationAlreadyExistsFmt, "unit-test"))
 				if !reflect.DeepEqual(err, expectedErr) {
