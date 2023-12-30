@@ -168,6 +168,7 @@ type DriverOptions struct {
 	EnableAznfsMount                       bool
 	VolStatsCacheExpireInMinutes           int
 	SasTokenExpirationMinutes              int
+	EnableVolumeMountGroup                 bool
 }
 
 func (option *DriverOptions) AddFlags() {
@@ -185,6 +186,7 @@ func (option *DriverOptions) AddFlags() {
 	flag.BoolVar(&option.EnableAznfsMount, "enable-aznfs-mount", false, "replace nfs mount with aznfs mount")
 	flag.IntVar(&option.VolStatsCacheExpireInMinutes, "vol-stats-cache-expire-in-minutes", 10, "The cache expire time in minutes for volume stats cache")
 	flag.IntVar(&option.SasTokenExpirationMinutes, "sas-token-expiration-minutes", 1440, "sas token expiration minutes during volume cloning")
+	flag.BoolVar(&option.EnableVolumeMountGroup, "enable-volume-mount-group", true, "indicates whether enabling VOLUME_MOUNT_GROUP")
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -204,6 +206,7 @@ type Driver struct {
 	blobfuseProxyConnTimout                int
 	mountPermissions                       uint64
 	enableAznfsMount                       bool
+	enableVolumeMountGroup                 bool
 	mounter                                *mount.SafeFormatAndMount
 	volLockMap                             *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
@@ -239,6 +242,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 		blobfuseProxyConnTimout:                options.BlobfuseProxyConnTimout,
 		enableBlobMockMount:                    options.EnableBlobMockMount,
 		enableGetVolumeStats:                   options.EnableGetVolumeStats,
+		enableVolumeMountGroup:                 options.EnableVolumeMountGroup,
 		appendMountErrorHelpLink:               options.AppendMountErrorHelpLink,
 		mountPermissions:                       options.MountPermissions,
 		enableAznfsMount:                       options.EnableAznfsMount,
@@ -296,6 +300,9 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 	}
 	if d.enableGetVolumeStats {
 		nodeCap = append(nodeCap, csi.NodeServiceCapability_RPC_GET_VOLUME_STATS)
+	}
+	if d.enableVolumeMountGroup {
+		nodeCap = append(nodeCap, csi.NodeServiceCapability_RPC_VOLUME_MOUNT_GROUP)
 	}
 	d.AddNodeServiceCapabilities(nodeCap)
 

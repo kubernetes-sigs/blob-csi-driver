@@ -812,3 +812,29 @@ func Test_waitForMount(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckGidPresentInMountFlags(t *testing.T) {
+	tests := []struct {
+		desc       string
+		MountFlags []string
+		result     bool
+	}{
+		{
+			desc:       "[Success] Gid present in mount flags",
+			MountFlags: []string{"gid=3000"},
+			result:     true,
+		},
+		{
+			desc:       "[Success] Gid not present in mount flags",
+			MountFlags: []string{},
+			result:     false,
+		},
+	}
+
+	for _, test := range tests {
+		gIDPresent := checkGidPresentInMountFlags(test.MountFlags)
+		if gIDPresent != test.result {
+			t.Errorf("[%s]: Expected result : %t, Actual result: %t", test.desc, test.result, gIDPresent)
+		}
+	}
+}
