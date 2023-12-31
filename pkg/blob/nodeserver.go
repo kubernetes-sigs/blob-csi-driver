@@ -379,7 +379,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	if !checkGidPresentInMountFlags(mountFlags) && volumeMountGroup != "" {
-		mountOptions = append(mountOptions, fmt.Sprintf("gid=%s", volumeMountGroup))
+		klog.V(2).Infof("append volumeMountGroup %s", volumeMountGroup)
+		mountOptions = append(mountOptions, fmt.Sprintf("-o gid=%s", volumeMountGroup))
 	}
 
 	tmpPath := fmt.Sprintf("%s/%s", "/mnt", volumeID)
@@ -677,7 +678,7 @@ func waitForMount(path string, intervel, timeout time.Duration) error {
 
 func checkGidPresentInMountFlags(mountFlags []string) bool {
 	for _, mountFlag := range mountFlags {
-		if strings.HasPrefix(mountFlag, "gid") {
+		if strings.Contains(mountFlag, "gid=") {
 			return true
 		}
 	}

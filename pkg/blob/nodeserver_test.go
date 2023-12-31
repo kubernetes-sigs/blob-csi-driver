@@ -844,6 +844,11 @@ func TestCheckGidPresentInMountFlags(t *testing.T) {
 			result:     true,
 		},
 		{
+			desc:       "[Success] Gid present in mount flags",
+			MountFlags: []string{"-o gid=3000"},
+			result:     true,
+		},
+		{
 			desc:       "[Success] Gid not present in mount flags",
 			MountFlags: []string{},
 			result:     false,
