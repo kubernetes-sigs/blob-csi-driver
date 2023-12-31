@@ -252,6 +252,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	containerNameReplaceMap := map[string]string{}
 
+	fsGroupChangePolicy := d.fsGroupChangePolicy
+
 	mountPermissions := d.mountPermissions
 	performChmodOp := (mountPermissions > 0)
 	for k, v := range attrib {
@@ -287,7 +289,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 					mountPermissions = perm
 				}
 			}
+		case fsGroupChangePolicyField:
+			fsGroupChangePolicy = v
 		}
+	}
+
+	if !isSupportedFSGroupChangePolicy(fsGroupChangePolicy) {
+		return nil, status.Errorf(codes.InvalidArgument, "fsGroupChangePolicy(%s) is not supported, supported fsGroupChangePolicy list: %v", fsGroupChangePolicy, supportedFSGroupChangePolicyList)
 	}
 
 	mnt, err := d.ensureMountPoint(targetPath, fs.FileMode(mountPermissions))
@@ -347,6 +355,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			}
 		} else {
 			klog.V(2).Infof("skip chmod on targetPath(%s) since mountPermissions is set as 0", targetPath)
+		}
+
+		if volumeMountGroup != "" && fsGroupChangePolicy != FSGroupChangeNone {
+			klog.V(2).Infof("set gid of volume(%s) as %s using fsGroupChangePolicy(%s)", volumeID, volumeMountGroup, fsGroupChangePolicy)
+			if err := volumehelper.SetVolumeOwnership(targetPath, volumeMountGroup, fsGroupChangePolicy); err != nil {
+				return nil, status.Error(codes.Internal, fmt.Sprintf("SetVolumeOwnership with volume(%s) on %s failed with %v", volumeID, targetPath, err))
+			}
 		}
 
 		isOperationSucceeded = true

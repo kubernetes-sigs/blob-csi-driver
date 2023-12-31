@@ -114,6 +114,7 @@ const (
 	accessTierField                = "accesstier"
 	networkEndpointTypeField       = "networkendpointtype"
 	mountPermissionsField          = "mountpermissions"
+	fsGroupChangePolicyField       = "fsgroupchangepolicy"
 	useDataPlaneAPIField           = "usedataplaneapi"
 
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
@@ -145,11 +146,14 @@ const (
 	VolumeID = "volumeid"
 
 	defaultStorageEndPointSuffix = "core.windows.net"
+
+	FSGroupChangeNone = "None"
 )
 
 var (
-	supportedProtocolList = []string{Fuse, Fuse2, NFS}
-	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, statusCodeNotFound, containerBeingDeletedDataplaneAPIError, containerBeingDeletedManagementAPIError, clientThrottled}
+	supportedProtocolList            = []string{Fuse, Fuse2, NFS}
+	retriableErrors                  = []string{accountNotProvisioned, tooManyRequests, statusCodeNotFound, containerBeingDeletedDataplaneAPIError, containerBeingDeletedManagementAPIError, clientThrottled}
+	supportedFSGroupChangePolicyList = []string{FSGroupChangeNone, string(v1.FSGroupChangeAlways), string(v1.FSGroupChangeOnRootMismatch)}
 )
 
 // DriverOptions defines driver parameters specified in driver deployment
@@ -169,6 +173,7 @@ type DriverOptions struct {
 	VolStatsCacheExpireInMinutes           int
 	SasTokenExpirationMinutes              int
 	EnableVolumeMountGroup                 bool
+	FSGroupChangePolicy                    string
 }
 
 func (option *DriverOptions) AddFlags() {
@@ -187,6 +192,7 @@ func (option *DriverOptions) AddFlags() {
 	flag.IntVar(&option.VolStatsCacheExpireInMinutes, "vol-stats-cache-expire-in-minutes", 10, "The cache expire time in minutes for volume stats cache")
 	flag.IntVar(&option.SasTokenExpirationMinutes, "sas-token-expiration-minutes", 1440, "sas token expiration minutes during volume cloning")
 	flag.BoolVar(&option.EnableVolumeMountGroup, "enable-volume-mount-group", true, "indicates whether enabling VOLUME_MOUNT_GROUP")
+	flag.StringVar(&option.FSGroupChangePolicy, "fsgroup-change-policy", "", "indicates how the volume's ownership will be changed by the driver, OnRootMismatch is the default value")
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -207,6 +213,7 @@ type Driver struct {
 	mountPermissions                       uint64
 	enableAznfsMount                       bool
 	enableVolumeMountGroup                 bool
+	fsGroupChangePolicy                    string
 	mounter                                *mount.SafeFormatAndMount
 	volLockMap                             *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
@@ -231,7 +238,6 @@ type Driver struct {
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
 // does not support optional driver plugin info manifest field. Refer to CSI spec for more details.
 func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *provider.Cloud) *Driver {
-	var err error
 	d := Driver{
 		volLockMap:                             util.NewLockMap(),
 		subnetLockMap:                          util.NewLockMap(),
@@ -247,6 +253,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 		mountPermissions:                       options.MountPermissions,
 		enableAznfsMount:                       options.EnableAznfsMount,
 		sasTokenExpirationMinutes:              options.SasTokenExpirationMinutes,
+		fsGroupChangePolicy:                    options.FSGroupChangePolicy,
 		azcopy:                                 &util.Azcopy{},
 		KubeClient:                             kubeClient,
 		cloud:                                  cloud,
@@ -255,6 +262,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 	d.Version = driverVersion
 	d.NodeID = options.NodeID
 
+	var err error
 	getter := func(key string) (interface{}, error) { return nil, nil }
 	if d.accountSearchCache, err = azcache.NewTimedCache(time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
@@ -1023,4 +1031,16 @@ func replaceWithMap(str string, m map[string]string) string {
 		}
 	}
 	return str
+}
+
+func isSupportedFSGroupChangePolicy(policy string) bool {
+	if policy == "" {
+		return true
+	}
+	for _, v := range supportedFSGroupChangePolicyList {
+		if policy == v {
+			return true
+		}
+	}
+	return false
 }

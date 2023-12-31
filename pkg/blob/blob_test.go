@@ -1783,3 +1783,42 @@ func TestDriverOptions_AddFlags(t *testing.T) {
 		}
 	})
 }
+
+func TestIsSupportedFSGroupChangePolicy(t *testing.T) {
+	tests := []struct {
+		policy         string
+		expectedResult bool
+	}{
+		{
+			policy:         "",
+			expectedResult: true,
+		},
+		{
+			policy:         "None",
+			expectedResult: true,
+		},
+		{
+			policy:         "Always",
+			expectedResult: true,
+		},
+		{
+			policy:         "OnRootMismatch",
+			expectedResult: true,
+		},
+		{
+			policy:         "onRootMismatch",
+			expectedResult: false,
+		},
+		{
+			policy:         "invalid",
+			expectedResult: false,
+		},
+	}
+
+	for _, test := range tests {
+		result := isSupportedFSGroupChangePolicy(test.policy)
+		if result != test.expectedResult {
+			t.Errorf("isSupportedFSGroupChangePolicy(%s) returned with %v, not equal to %v", test.policy, result, test.expectedResult)
+		}
+	}
+}

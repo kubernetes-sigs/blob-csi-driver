@@ -464,6 +464,25 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "[Error] Invalid fsGroupChangePolicy",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						fsGroupChangePolicyField: "test_fsGroupChangePolicy",
+					},
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "fsGroupChangePolicy(test_fsGroupChangePolicy) is not supported, supported fsGroupChangePolicy list: [None Always OnRootMismatch]")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
 			name: "[Error] Could not mount to target",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
