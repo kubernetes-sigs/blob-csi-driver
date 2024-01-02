@@ -1789,7 +1789,7 @@ func TestCopyVolume(t *testing.T) {
 	}
 }
 
-func Test_parseDays(t *testing.T) {
+func TestParseDays(t *testing.T) {
 	type args struct {
 		dayStr string
 	}
@@ -1838,7 +1838,7 @@ func Test_parseDays(t *testing.T) {
 	}
 }
 
-func Test_generateSASToken(t *testing.T) {
+func TestGenerateSASToken(t *testing.T) {
 	storageEndpointSuffix := "core.windows.net"
 	tests := []struct {
 		name        string
@@ -1876,7 +1876,7 @@ func Test_generateSASToken(t *testing.T) {
 	}
 }
 
-func Test_authorizeAzcopyWithIdentity(t *testing.T) {
+func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 	testCases := []struct {
 		name     string
 		testFunc func(t *testing.T)
@@ -1995,7 +1995,7 @@ func Test_authorizeAzcopyWithIdentity(t *testing.T) {
 	}
 }
 
-func Test_getSASToken(t *testing.T) {
+func TestGetSASToken(t *testing.T) {
 	testCases := []struct {
 		name     string
 		testFunc func(t *testing.T)

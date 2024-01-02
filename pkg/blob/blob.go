@@ -212,6 +212,8 @@ type Driver struct {
 	accountSearchCache azcache.Resource
 	// a timed cache storing volume stats <volumeID, volumeStats>
 	volStatsCache azcache.Resource
+	// a timed cache storing account which should use sastoken for azcopy based volume cloning
+	azcopySasTokenCache azcache.Resource
 	// sas expiry time for azcopy in volume clone
 	sasTokenExpirationMinutes int
 	// azcopy for provide exec mock for ut
@@ -254,6 +256,9 @@ func NewDriver(options *DriverOptions) *Driver {
 		klog.Fatalf("%v", err)
 	}
 	if d.dataPlaneAPIVolCache, err = azcache.NewTimedCache(10*time.Minute, getter, false); err != nil {
+		klog.Fatalf("%v", err)
+	}
+	if d.azcopySasTokenCache, err = azcache.NewTimedCache(15*time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
 
