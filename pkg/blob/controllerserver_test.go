@@ -33,7 +33,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
-	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/blobclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
@@ -1665,6 +1664,8 @@ func TestCopyVolume(t *testing.T) {
 			name: "AADClientSecret shouldn't be nil or useManagedIdentityExtension must be set to true when accountSASToken is empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.Config.AzureAuthConfig.UseManagedIdentityExtension = true
 				mp := map[string]string{}
 
 				volumeSource := &csi.VolumeContentSource_VolumeSource{
@@ -1888,13 +1889,9 @@ func Test_authorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							ARMClientConfig: azclient.ARMClientConfig{
-								TenantID: "TenantID",
-							},
-							AzureAuthConfig: azclient.AzureAuthConfig{
-								AADClientID:     "AADClientID",
-								AADClientSecret: "AADClientSecret",
-							},
+							TenantID:        "TenantID",
+							AADClientID:     "AADClientID",
+							AADClientSecret: "AADClientSecret",
 						},
 					},
 				}
@@ -1918,12 +1915,9 @@ func Test_authorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							ARMClientConfig: azclient.ARMClientConfig{
-								TenantID: "TenantID",
-							},
-							AzureAuthConfig: azclient.AzureAuthConfig{
-								AADClientSecret: "AADClientSecret",
-							},
+							TenantID:        "TenantID",
+							AADClientID:     "AADClientID",
+							AADClientSecret: "AADClientSecret",
 						},
 					},
 				}
@@ -1942,10 +1936,8 @@ func Test_authorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							AzureAuthConfig: azclient.AzureAuthConfig{
-								UseManagedIdentityExtension: true,
-								UserAssignedIdentityID:      "UserAssignedIdentityID",
-							},
+							UseManagedIdentityExtension: true,
+							UserAssignedIdentityID:      "UserAssignedIdentityID",
 						},
 					},
 				}
@@ -1967,9 +1959,7 @@ func Test_authorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							AzureAuthConfig: azclient.AzureAuthConfig{
-								UseManagedIdentityExtension: true,
-							},
+							UseManagedIdentityExtension: true,
 						},
 					},
 				}
@@ -2039,9 +2029,7 @@ func Test_getSASToken(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							AzureAuthConfig: azclient.AzureAuthConfig{
-								UseManagedIdentityExtension: true,
-							},
+							UseManagedIdentityExtension: true,
 						},
 					},
 				}
@@ -2073,9 +2061,7 @@ func Test_getSASToken(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							AzureAuthConfig: azclient.AzureAuthConfig{
-								UseManagedIdentityExtension: true,
-							},
+							UseManagedIdentityExtension: true,
 						},
 					},
 				}
