@@ -828,18 +828,29 @@ func (d *Driver) authorizeAzcopyWithIdentity() ([]string, error) {
 // 3. azcopy returns AuthorizationPermissionMismatch error when using service principal or managed identity
 func (d *Driver) getSASToken(ctx context.Context, accountName, accountKey, storageEndpointSuffix string, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, error) {
 	authAzcopyEnv, _ := d.authorizeAzcopyWithIdentity()
-	useSasTokenFallBack := false
+	useSasToken := false
 	if len(authAzcopyEnv) > 0 {
-		out, testErr := d.azcopy.TestListJobs(accountName, storageEndpointSuffix, authAzcopyEnv)
-		if testErr != nil {
-			return "", fmt.Errorf("azcopy list command failed with error(%v): %v", testErr, out)
+		// search in cache first
+		cache, err := d.azcopySasTokenCache.Get(accountName, azcache.CacheReadTypeDefault)
+		if err != nil {
+			return "", fmt.Errorf("get(%s) from azcopySasTokenCache failed with error: %v", accountName, err)
 		}
-		if strings.Contains(out, authorizationPermissionMismatch) {
-			klog.Warningf("azcopy list failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original output: %v", out)
-			useSasTokenFallBack = true
+		if cache != nil {
+			klog.V(2).Infof("use sas token for account(%s) since this account is found in azcopySasTokenCache", accountName)
+			useSasToken = true
+		} else {
+			out, testErr := d.azcopy.TestListJobs(accountName, storageEndpointSuffix, authAzcopyEnv)
+			if testErr != nil {
+				return "", fmt.Errorf("azcopy list command failed with error(%v): %v", testErr, out)
+			}
+			if strings.Contains(out, authorizationPermissionMismatch) {
+				klog.Warningf("azcopy list failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original output: %v", out)
+				d.azcopySasTokenCache.Set(accountName, "")
+				useSasToken = true
+			}
 		}
 	}
-	if len(secrets) > 0 || len(authAzcopyEnv) == 0 || useSasTokenFallBack {
+	if len(secrets) > 0 || len(authAzcopyEnv) == 0 || useSasToken {
 		var err error
 		if accountKey == "" {
 			if _, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, secrets, secretName, secretNamespace); err != nil {
