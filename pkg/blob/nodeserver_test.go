@@ -464,6 +464,25 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "[Error] Invalid fsGroupChangePolicy",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						fsGroupChangePolicyField: "test_fsGroupChangePolicy",
+					},
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "fsGroupChangePolicy(test_fsGroupChangePolicy) is not supported, supported fsGroupChangePolicy list: [None Always OnRootMismatch]")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
 			name: "[Error] Could not mount to target",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
@@ -863,5 +882,36 @@ func Test_getClientID(t *testing.T) {
 				t.Errorf("getClientID() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestCheckGidPresentInMountFlags(t *testing.T) {
+	tests := []struct {
+		desc       string
+		MountFlags []string
+		result     bool
+	}{
+		{
+			desc:       "[Success] Gid present in mount flags",
+			MountFlags: []string{"gid=3000"},
+			result:     true,
+		},
+		{
+			desc:       "[Success] Gid present in mount flags",
+			MountFlags: []string{"-o gid=3000"},
+			result:     true,
+		},
+		{
+			desc:       "[Success] Gid not present in mount flags",
+			MountFlags: []string{},
+			result:     false,
+		},
+	}
+
+	for _, test := range tests {
+		gIDPresent := checkGidPresentInMountFlags(test.MountFlags)
+		if gIDPresent != test.result {
+			t.Errorf("[%s]: Expected result : %t, Actual result: %t", test.desc, test.result, gIDPresent)
+		}
 	}
 }

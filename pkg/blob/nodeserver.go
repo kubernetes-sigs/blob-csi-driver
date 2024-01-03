@@ -250,6 +250,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	defer d.volumeLocks.Release(lockKey)
 
 	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
+	volumeMountGroup := req.GetVolumeCapability().GetMount().GetVolumeMountGroup()
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
 
@@ -268,6 +269,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	var ephemeralVol, isHnsEnabled bool
 
 	containerNameReplaceMap := map[string]string{}
+
+	fsGroupChangePolicy := d.fsGroupChangePolicy
 
 	mountPermissions := d.mountPermissions
 	performChmodOp := (mountPermissions > 0)
@@ -304,7 +307,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 					mountPermissions = perm
 				}
 			}
+		case fsGroupChangePolicyField:
+			fsGroupChangePolicy = v
 		}
+	}
+
+	if !isSupportedFSGroupChangePolicy(fsGroupChangePolicy) {
+		return nil, status.Errorf(codes.InvalidArgument, "fsGroupChangePolicy(%s) is not supported, supported fsGroupChangePolicy list: %v", fsGroupChangePolicy, supportedFSGroupChangePolicyList)
 	}
 
 	mnt, err := d.ensureMountPoint(targetPath, fs.FileMode(mountPermissions))
@@ -366,6 +375,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			klog.V(2).Infof("skip chmod on targetPath(%s) since mountPermissions is set as 0", targetPath)
 		}
 
+		if volumeMountGroup != "" && fsGroupChangePolicy != FSGroupChangeNone {
+			klog.V(2).Infof("set gid of volume(%s) as %s using fsGroupChangePolicy(%s)", volumeID, volumeMountGroup, fsGroupChangePolicy)
+			if err := volumehelper.SetVolumeOwnership(targetPath, volumeMountGroup, fsGroupChangePolicy); err != nil {
+				return nil, status.Error(codes.Internal, fmt.Sprintf("SetVolumeOwnership with volume(%s) on %s failed with %v", volumeID, targetPath, err))
+			}
+		}
+
 		isOperationSucceeded = true
 		klog.V(2).Infof("volume(%s) mount %s on %s succeeded", volumeID, source, targetPath)
 		return &csi.NodeStageVolumeResponse{}, nil
@@ -379,6 +395,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	if isHnsEnabled {
 		mountOptions = util.JoinMountOptions(mountOptions, []string{"--use-adls=true"})
 	}
+
+	if !checkGidPresentInMountFlags(mountFlags) && volumeMountGroup != "" {
+		klog.V(2).Infof("append volumeMountGroup %s", volumeMountGroup)
+		mountOptions = append(mountOptions, fmt.Sprintf("-o gid=%s", volumeMountGroup))
+	}
+
 	tmpPath := fmt.Sprintf("%s/%s", "/mnt", volumeID)
 	if d.appendTimeStampInCacheDir {
 		tmpPath += fmt.Sprintf("#%d", time.Now().Unix())
@@ -390,8 +412,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		args = args + " " + opt
 	}
 
-	klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nserverAddress %v",
-		targetPath, protocol, volumeID, attrib, mountFlags, mountOptions, args, serverAddress)
+	klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v mountOptions %v volumeMountGroup %s\nargs %v\nserverAddress %v",
+		targetPath, protocol, volumeID, attrib, mountFlags, mountOptions, volumeMountGroup, args, serverAddress)
 
 	authEnv = append(authEnv, "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
 	if d.enableBlobMockMount {
@@ -679,4 +701,13 @@ func getClientID(context map[string]string) string {
 		}
 	}
 	return ""
+}
+
+func checkGidPresentInMountFlags(mountFlags []string) bool {
+	for _, mountFlag := range mountFlags {
+		if strings.Contains(mountFlag, "gid=") {
+			return true
+		}
+	}
+	return false
 }
