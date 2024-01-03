@@ -800,6 +800,7 @@ func (d *Driver) copyVolume(ctx context.Context, req *csi.CreateVolumeRequest, a
 	}
 }
 
+// authorizeAzcopyWithIdentity returns auth env for azcopy using cluster identity
 func (d *Driver) authorizeAzcopyWithIdentity() ([]string, error) {
 	azureAuthConfig := d.cloud.Config.AzureAuthConfig
 	var authAzcopyEnv []string
@@ -834,30 +835,39 @@ func (d *Driver) authorizeAzcopyWithIdentity() ([]string, error) {
 // 2. driver is not using managed identity and service principal
 // 3. azcopy returns AuthorizationPermissionMismatch error when using service principal or managed identity
 func (d *Driver) getSASToken(ctx context.Context, accountName, accountKey, storageEndpointSuffix string, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, error) {
-	authAzcopyEnv, _ := d.authorizeAzcopyWithIdentity()
+	var authAzcopyEnv []string
 	useSasToken := false
-	if len(authAzcopyEnv) > 0 {
-		// search in cache first
-		cache, err := d.azcopySasTokenCache.Get(accountName, azcache.CacheReadTypeDefault)
+	if len(secrets) == 0 && len(secretName) == 0 {
+		var err error
+		authAzcopyEnv, err = d.authorizeAzcopyWithIdentity()
 		if err != nil {
-			return "", fmt.Errorf("get(%s) from azcopySasTokenCache failed with error: %v", accountName, err)
-		}
-		if cache != nil {
-			klog.V(2).Infof("use sas token for account(%s) since this account is found in azcopySasTokenCache", accountName)
-			useSasToken = true
+			klog.Warningf("failed to authorize azcopy with identity, error: %v", err)
 		} else {
-			out, testErr := d.azcopy.TestListJobs(accountName, storageEndpointSuffix, authAzcopyEnv)
-			if testErr != nil {
-				return "", fmt.Errorf("azcopy list command failed with error(%v): %v", testErr, out)
-			}
-			if strings.Contains(out, authorizationPermissionMismatch) {
-				klog.Warningf("azcopy list failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original output: %v", out)
-				d.azcopySasTokenCache.Set(accountName, "")
-				useSasToken = true
+			if len(authAzcopyEnv) > 0 {
+				// search in cache first
+				cache, err := d.azcopySasTokenCache.Get(accountName, azcache.CacheReadTypeDefault)
+				if err != nil {
+					return "", fmt.Errorf("get(%s) from azcopySasTokenCache failed with error: %v", accountName, err)
+				}
+				if cache != nil {
+					klog.V(2).Infof("use sas token for account(%s) since this account is found in azcopySasTokenCache", accountName)
+					useSasToken = true
+				} else {
+					out, testErr := d.azcopy.TestListJobs(accountName, storageEndpointSuffix, authAzcopyEnv)
+					if testErr != nil {
+						return "", fmt.Errorf("azcopy list command failed with error(%v): %v", testErr, out)
+					}
+					if strings.Contains(out, authorizationPermissionMismatch) {
+						klog.Warningf("azcopy list failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original output: %v", out)
+						d.azcopySasTokenCache.Set(accountName, "")
+						useSasToken = true
+					}
+				}
 			}
 		}
 	}
-	if len(secrets) > 0 || len(authAzcopyEnv) == 0 || useSasToken {
+
+	if len(secrets) > 0 || len(secretName) > 0 || len(authAzcopyEnv) == 0 || useSasToken {
 		var err error
 		if accountKey == "" {
 			if _, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, secrets, secretName, secretNamespace); err != nil {

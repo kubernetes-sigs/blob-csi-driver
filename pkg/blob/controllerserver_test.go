@@ -2015,7 +2015,7 @@ func TestGetSASToken(t *testing.T) {
 			},
 		},
 		{
-			name: "failed to test azcopy list command",
+			name: "generate sas token using account key",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
@@ -2029,21 +2029,10 @@ func TestGetSASToken(t *testing.T) {
 				}
 				secrets := map[string]string{
 					defaultSecretAccountName: "accountName",
+					defaultSecretAccountKey:  "YWNjb3VudGtleQo=",
 				}
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
-
-				m := util.NewMockEXEC(ctrl)
-				listStr := "error"
-				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, fmt.Errorf("error"))
-
-				d.azcopy.ExecCmd = m
-
-				ctx := context.Background()
-				expectedAccountSASToken := ""
-				expectedErr := fmt.Errorf("azcopy list command failed with error(%v): %v", fmt.Errorf("error"), "error")
-				accountSASToken, err := d.getSASToken(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
-				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
+				accountSASToken, err := d.getSASToken(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				if !reflect.DeepEqual(err, nil) || !strings.Contains(accountSASToken, "?se=") {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}
 			},
@@ -2065,19 +2054,10 @@ func TestGetSASToken(t *testing.T) {
 					defaultSecretAccountName: "accountName",
 					defaultSecretAccountKey:  "fakeValue",
 				}
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
 
-				m := util.NewMockEXEC(ctrl)
-				listStr := "RESPONSE 403: 403 This request is not authorized to perform this operation using this permission.\nERROR CODE: AuthorizationPermissionMismatch"
-				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, nil)
-
-				d.azcopy.ExecCmd = m
-
-				ctx := context.Background()
 				expectedAccountSASToken := ""
 				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
-				accountSASToken, err := d.getSASToken(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				accountSASToken, err := d.getSASToken(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}
