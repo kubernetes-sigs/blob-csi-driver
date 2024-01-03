@@ -81,6 +81,19 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	mountPermissions := d.mountPermissions
 	context := req.GetVolumeContext()
 	if context != nil {
+		// token request
+		if context[serviceAccountTokenField] != "" && getClientID(context) != "" {
+			klog.V(2).Infof("NodePublishVolume: volume(%s) mount on %s with service account token, clientID: %s", volumeID, target, getClientID(context))
+			_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
+				StagingTargetPath: target,
+				VolumeContext:     context,
+				VolumeCapability:  volCap,
+				VolumeId:          volumeID,
+			})
+			return &csi.NodePublishVolumeResponse{}, err
+		}
+
+		// ephemeral volume
 		if strings.EqualFold(context[ephemeralField], trueValue) {
 			setKeyValueInMap(context, secretNamespaceField, context[podNamespaceField])
 			if !d.allowInlineVolumeKeyAccessWithIdentity {
@@ -239,6 +252,11 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
+
+	if getClientID(attrib) != "" && attrib[serviceAccountTokenField] == "" {
+		klog.V(2).Infof("Skip NodeStageVolume for volume(%s) since clientID %s is provided but service account token is empty", volumeID, getClientID(attrib))
+		return &csi.NodeStageVolumeResponse{}, nil
+	}
 
 	mc := metrics.NewMetricContext(blobCSIDriverName, "node_stage_volume", d.cloud.ResourceGroup, "", d.Name)
 	isOperationSucceeded := false
@@ -652,4 +670,13 @@ func waitForMount(path string, intervel, timeout time.Duration) error {
 			return fmt.Errorf("timeout waiting for mount %s", path)
 		}
 	}
+}
+
+func getClientID(context map[string]string) string {
+	for k, v := range context {
+		if strings.EqualFold(k, clientIDField) && v != "" {
+			return v
+		}
+	}
+	return ""
 }

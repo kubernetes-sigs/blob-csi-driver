@@ -96,6 +96,9 @@ const (
 	requireInfraEncryptionField    = "requireinfraencryption"
 	ephemeralField                 = "csi.storage.k8s.io/ephemeral"
 	podNamespaceField              = "csi.storage.k8s.io/pod.namespace"
+	serviceAccountTokenField       = "csi.storage.k8s.io/serviceAccount.tokens"
+	clientIDField                  = "clientID"
+	tenantIDField                  = "tenantID"
 	mountOptionsField              = "mountoptions"
 	falseValue                     = "false"
 	trueValue                      = "true"
@@ -431,6 +434,9 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		authEnv                 []string
 		getAccountKeyFromSecret bool
 		getLatestAccountKey     bool
+		clientID                string
+		tenantID                string
+		serviceAccountToken     string
 	)
 
 	for k, v := range attrib {
@@ -480,6 +486,12 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			if getLatestAccountKey, err = strconv.ParseBool(v); err != nil {
 				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("invalid %s: %s in volume context", getLatestAccountKeyField, v)
 			}
+		case strings.ToLower(clientIDField):
+			clientID = v
+		case strings.ToLower(tenantIDField):
+			tenantID = v
+		case strings.ToLower(serviceAccountTokenField):
+			serviceAccountToken = v
 		}
 	}
 	klog.V(2).Infof("volumeID(%s) authEnv: %s", volumeID, authEnv)
@@ -499,6 +511,21 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 
 	if rgName == "" {
 		rgName = d.cloud.ResourceGroup
+	}
+
+	if tenantID == "" {
+		tenantID = d.cloud.TenantID
+	}
+
+	// if client id is specified, we only use service account token to get account key
+	if clientID != "" {
+		klog.V(2).Infof("clientID(%s) is specified, use service account token to get account key", clientID)
+		if subsID == "" {
+			subsID = d.cloud.SubscriptionID
+		}
+		accountKey, err := d.cloud.GetStorageAccesskeyFromServiceAccountToken(ctx, subsID, accountName, rgName, clientID, tenantID, serviceAccountToken)
+		authEnv = append(authEnv, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
+		return rgName, accountName, accountKey, containerName, authEnv, err
 	}
 
 	// 1. If keyVaultURL is not nil, preferentially use the key stored in key vault.
