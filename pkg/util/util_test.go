@@ -600,3 +600,59 @@ users:
 		}
 	}
 }
+
+func TestSetVolumeOwnership(t *testing.T) {
+	tmpVDir, err := os.MkdirTemp(os.TempDir(), "SetVolumeOwnership")
+	if err != nil {
+		t.Fatalf("can't make a temp dir: %v", err)
+	}
+	//deferred clean up
+	defer os.RemoveAll(tmpVDir)
+
+	tests := []struct {
+		path                string
+		gid                 string
+		fsGroupChangePolicy string
+		expectedError       error
+	}{
+		{
+			path:          "path",
+			gid:           "",
+			expectedError: fmt.Errorf("convert %s to int failed with %v", "", `strconv.Atoi: parsing "": invalid syntax`),
+		},
+		{
+			path:          "path",
+			gid:           "alpha",
+			expectedError: fmt.Errorf("convert %s to int failed with %v", "alpha", `strconv.Atoi: parsing "alpha": invalid syntax`),
+		},
+		{
+			path:          "not-exists",
+			gid:           "1000",
+			expectedError: fmt.Errorf("lstat not-exists: no such file or directory"),
+		},
+		{
+			path:          tmpVDir,
+			gid:           "1000",
+			expectedError: nil,
+		},
+		{
+			path:                tmpVDir,
+			gid:                 "1000",
+			fsGroupChangePolicy: "Always",
+			expectedError:       nil,
+		},
+		{
+			path:                tmpVDir,
+			gid:                 "1000",
+			fsGroupChangePolicy: "OnRootMismatch",
+			expectedError:       nil,
+		},
+	}
+
+	for _, test := range tests {
+		err := SetVolumeOwnership(test.path, test.gid, test.fsGroupChangePolicy)
+		if err != nil && (err.Error() != test.expectedError.Error()) {
+			t.Errorf("unexpected error: %v, expected error: %v", err, test.expectedError)
+		}
+	}
+}

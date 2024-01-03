@@ -20,3 +20,4 @@ DriverInfo:
     pvcDataSource: true
     multiplePVsSameID: true
     readWriteOncePod: true
+    volumeMountGroup: false

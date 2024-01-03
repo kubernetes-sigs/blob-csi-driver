@@ -65,6 +65,8 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 							"-o allow_other",
 							"--file-cache-timeout-in-seconds=120",
 							"--cancel-list-on-mount-seconds=0",
+							"-o uid=0",
+							"-o gid=0",
 						},
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
@@ -101,6 +103,8 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 							"-o allow_other",
 							"--file-cache-timeout-in-seconds=120",
 							"--cancel-list-on-mount-seconds=0",
+							"-o uid=0",
+							"-o gid=0",
 						},
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
@@ -516,9 +520,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 			StorageClassParameters: map[string]string{
-				"skuName":          "Premium_LRS",
-				"protocol":         "nfs",
-				"mountPermissions": "0755",
+				"skuName":             "Premium_LRS",
+				"protocol":            "nfs",
+				"mountPermissions":    "0755",
+				"fsGroupChangePolicy": "Always",
 			},
 		}
 		test.Run(ctx, cs, ns)

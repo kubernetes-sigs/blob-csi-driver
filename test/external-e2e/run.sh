@@ -75,7 +75,7 @@ if [ ! -z ${EXTERNAL_E2E_TEST_NFS} ]; then
     echo "begin to run NFSv3 tests ...."
     cp deploy/example/storageclass-blob-nfs.yaml /tmp/csi/storageclass.yaml
     ginkgo -p -v --fail-fast --flake-attempts 2 -focus="External.Storage.*$DRIVER.csi.azure.com" \
-        -skip='\[Disruptive\]|should concurrently access the single volume from pods on different node|pod created with an initial fsgroup, volume contents ownership changed via chgrp in first pod, new pod with same fsgroup skips ownership changes to the volume contents|should provision storage with any volume data source|should mount multiple PV pointing to the same storage on the same node|should access to two volumes with the same volume mode and retain data across pod recreation on different node' kubernetes/test/bin/e2e.test  -- \
+        -skip='\[Disruptive\]|should concurrently access the single volume from pods on different node|pod created with an initial fsgroup, volume contents ownership changed via chgrp in first pod, new pod with same fsgroup skips ownership changes to the volume contents|should provision storage with any volume data source|should mount multiple PV pointing to the same storage on the same node|should access to two volumes with the same volume mode and retain data across pod recreation on different node|pod created with an initial fsgroup, volume contents ownership changed via chgrp in first pod, new pod with same fsgroup applied to the volume contents' kubernetes/test/bin/e2e.test  -- \
         -storage.testdriver=$PROJECT_ROOT/test/external-e2e/testdriver-nfs.yaml \
         --kubeconfig=$KUBECONFIG
 fi

@@ -21,15 +21,18 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/go-ini/ini"
 	"github.com/pkg/errors"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
+	"k8s.io/kubernetes/pkg/volume"
 )
 
 const (
@@ -340,4 +343,47 @@ func GetKubeClient(kubeconfig string, kubeAPIQPS float64, kubeAPIBurst int, user
 	kubeCfg.Burst = kubeAPIBurst
 	kubeCfg.UserAgent = userAgent
 	return kubernetes.NewForConfig(kubeCfg)
+}
+
+type VolumeMounter struct {
+	path       string
+	attributes volume.Attributes
+}
+
+func (l *VolumeMounter) GetPath() string {
+	return l.path
+}
+
+func (l *VolumeMounter) GetAttributes() volume.Attributes {
+	return l.attributes
+}
+
+func (l *VolumeMounter) CanMount() error {
+	return nil
+}
+
+func (l *VolumeMounter) SetUp(_ volume.MounterArgs) error {
+	return nil
+}
+
+func (l *VolumeMounter) SetUpAt(_ string, _ volume.MounterArgs) error {
+	return nil
+}
+
+func (l *VolumeMounter) GetMetrics() (*volume.Metrics, error) {
+	return nil, nil
+}
+
+// SetVolumeOwnership would set gid for path recursively
+func SetVolumeOwnership(path, gid, policy string) error {
+	id, err := strconv.Atoi(gid)
+	if err != nil {
+		return fmt.Errorf("convert %s to int failed with %v", gid, err)
+	}
+	gidInt64 := int64(id)
+	fsGroupChangePolicy := v1.FSGroupChangeOnRootMismatch
+	if policy != "" {
+		fsGroupChangePolicy = v1.PodFSGroupChangePolicy(policy)
+	}
+	return volume.SetVolumeOwnership(&VolumeMounter{path: path}, path, &gidInt64, &fsGroupChangePolicy, nil)
 }
