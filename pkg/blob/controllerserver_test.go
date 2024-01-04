@@ -1538,10 +1538,8 @@ func TestCopyVolume(t *testing.T) {
 					VolumeContentSource: &volumecontensource,
 				}
 
-				ctx := context.Background()
-
 				expectedErr := status.Errorf(codes.InvalidArgument, "copy volume from volumeSnapshot is not supported")
-				err := d.copyVolume(ctx, req, "", "", "core.windows.net")
+				err := d.copyVolume(req, "", nil, "", "core.windows.net")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1570,10 +1568,8 @@ func TestCopyVolume(t *testing.T) {
 					VolumeContentSource: &volumecontensource,
 				}
 
-				ctx := context.Background()
-
 				expectedErr := status.Errorf(codes.NotFound, "error parsing volume id: \"unit-test\", should at least contain two #")
-				err := d.copyVolume(ctx, req, "", "dstContainer", "core.windows.net")
+				err := d.copyVolume(req, "", nil, "dstContainer", "core.windows.net")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1602,10 +1598,8 @@ func TestCopyVolume(t *testing.T) {
 					VolumeContentSource: &volumecontensource,
 				}
 
-				ctx := context.Background()
-
 				expectedErr := fmt.Errorf("srcContainerName() or dstContainerName(dstContainer) is empty")
-				err := d.copyVolume(ctx, req, "", "dstContainer", "core.windows.net")
+				err := d.copyVolume(req, "", nil, "dstContainer", "core.windows.net")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1634,42 +1628,8 @@ func TestCopyVolume(t *testing.T) {
 					VolumeContentSource: &volumecontensource,
 				}
 
-				ctx := context.Background()
-
 				expectedErr := fmt.Errorf("srcContainerName(fileshare) or dstContainerName() is empty")
-				err := d.copyVolume(ctx, req, "", "", "core.windows.net")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("Unexpected error: %v", err)
-				}
-			},
-		},
-		{
-			name: "AADClientSecret shouldn't be nil or useManagedIdentityExtension must be set to true when accountSASToken is empty",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				mp := map[string]string{}
-
-				volumeSource := &csi.VolumeContentSource_VolumeSource{
-					VolumeId: "vol_1#f5713de20cde511e8ba4900#fileshare#",
-				}
-				volumeContentSourceVolumeSource := &csi.VolumeContentSource_Volume{
-					Volume: volumeSource,
-				}
-				volumecontensource := csi.VolumeContentSource{
-					Type: volumeContentSourceVolumeSource,
-				}
-
-				req := &csi.CreateVolumeRequest{
-					Name:                "unit-test",
-					VolumeCapabilities:  stdVolumeCapabilities,
-					Parameters:          mp,
-					VolumeContentSource: &volumecontensource,
-				}
-
-				ctx := context.Background()
-
-				expectedErr := fmt.Errorf("service principle or managed identity are both not set")
-				err := d.copyVolume(ctx, req, "", "dstContainer", "core.windows.net")
+				err := d.copyVolume(req, "", nil, "", "core.windows.net")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1710,10 +1670,8 @@ func TestCopyVolume(t *testing.T) {
 
 				d.azcopy.ExecCmd = m
 
-				ctx := context.Background()
-
 				var expectedErr error
-				err := d.copyVolume(ctx, req, "sastoken", "dstContainer", "core.windows.net")
+				err := d.copyVolume(req, "sastoken", nil, "dstContainer", "core.windows.net")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1755,10 +1713,8 @@ func TestCopyVolume(t *testing.T) {
 
 				d.azcopy.ExecCmd = m
 
-				ctx := context.Background()
-
 				var expectedErr error
-				err := d.copyVolume(ctx, req, "sastoken", "dstContainer", "core.windows.net")
+				err := d.copyVolume(req, "sastoken", nil, "dstContainer", "core.windows.net")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1989,7 +1945,7 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 	}
 }
 
-func TestGetSASToken(t *testing.T) {
+func TestGetAzcopyAuth(t *testing.T) {
 	testCases := []struct {
 		name     string
 		testFunc func(t *testing.T)
@@ -2008,7 +1964,7 @@ func TestGetSASToken(t *testing.T) {
 				ctx := context.Background()
 				expectedAccountSASToken := ""
 				expectedErr := fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets")
-				accountSASToken, err := d.getSASToken(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				accountSASToken, _, err := d.getAzcopyAuth(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}
@@ -2031,7 +1987,7 @@ func TestGetSASToken(t *testing.T) {
 					defaultSecretAccountName: "accountName",
 					defaultSecretAccountKey:  "YWNjb3VudGtleQo=",
 				}
-				accountSASToken, err := d.getSASToken(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				accountSASToken, _, err := d.getAzcopyAuth(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
 				if !reflect.DeepEqual(err, nil) || !strings.Contains(accountSASToken, "?se=") {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}
@@ -2057,7 +2013,7 @@ func TestGetSASToken(t *testing.T) {
 
 				expectedAccountSASToken := ""
 				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
-				accountSASToken, err := d.getSASToken(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				accountSASToken, _, err := d.getAzcopyAuth(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}
@@ -2078,7 +2034,7 @@ func TestGetSASToken(t *testing.T) {
 				ctx := context.Background()
 				expectedAccountSASToken := ""
 				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
-				accountSASToken, err := d.getSASToken(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				accountSASToken, _, err := d.getAzcopyAuth(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}
