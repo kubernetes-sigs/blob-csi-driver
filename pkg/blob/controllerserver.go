@@ -428,11 +428,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if req.GetVolumeContentSource() != nil {
-		var accountSASToken string
-		if accountSASToken, err = d.getSASToken(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace); err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to getSASToken on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
+		accountSASToken, authAzcopyEnv, err := d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace)
+		if err != nil {
+			return nil, status.Errorf(codes.Internal, "failed to getAzcopyAuth on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
 		}
-		if err := d.copyVolume(ctx, req, accountSASToken, validContainerName, storageEndpointSuffix); err != nil {
+		if err := d.copyVolume(req, accountSASToken, authAzcopyEnv, validContainerName, storageEndpointSuffix); err != nil {
 			return nil, err
 		}
 	} else {
@@ -727,7 +727,7 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 }
 
 // CopyBlobContainer copies a blob container in the same storage account
-func (d *Driver) copyBlobContainer(_ context.Context, req *csi.CreateVolumeRequest, accountSasToken, dstContainerName, storageEndpointSuffix string) error {
+func (d *Driver) copyBlobContainer(req *csi.CreateVolumeRequest, accountSasToken string, authAzcopyEnv []string, dstContainerName, storageEndpointSuffix string) error {
 	var sourceVolumeID string
 	if req.GetVolumeContentSource() != nil && req.GetVolumeContentSource().GetVolume() != nil {
 		sourceVolumeID = req.GetVolumeContentSource().GetVolume().GetVolumeId()
@@ -739,13 +739,6 @@ func (d *Driver) copyBlobContainer(_ context.Context, req *csi.CreateVolumeReque
 	}
 	if srcContainerName == "" || dstContainerName == "" {
 		return fmt.Errorf("srcContainerName(%s) or dstContainerName(%s) is empty", srcContainerName, dstContainerName)
-	}
-
-	var authAzcopyEnv []string
-	if accountSasToken == "" {
-		if authAzcopyEnv, err = d.authorizeAzcopyWithIdentity(); err != nil {
-			return err
-		}
 	}
 
 	timeAfter := time.After(waitForCopyTimeout)
@@ -788,18 +781,19 @@ func (d *Driver) copyBlobContainer(_ context.Context, req *csi.CreateVolumeReque
 }
 
 // copyVolume copies a volume form volume or snapshot, snapshot is not supported now
-func (d *Driver) copyVolume(ctx context.Context, req *csi.CreateVolumeRequest, accountSASToken, dstContainerName, storageEndpointSuffix string) error {
+func (d *Driver) copyVolume(req *csi.CreateVolumeRequest, accountSASToken string, authAzcopyEnv []string, dstContainerName, storageEndpointSuffix string) error {
 	vs := req.VolumeContentSource
 	switch vs.Type.(type) {
 	case *csi.VolumeContentSource_Snapshot:
 		return status.Errorf(codes.InvalidArgument, "copy volume from volumeSnapshot is not supported")
 	case *csi.VolumeContentSource_Volume:
-		return d.copyBlobContainer(ctx, req, accountSASToken, dstContainerName, storageEndpointSuffix)
+		return d.copyBlobContainer(req, accountSASToken, authAzcopyEnv, dstContainerName, storageEndpointSuffix)
 	default:
 		return status.Errorf(codes.InvalidArgument, "%v is not a proper volume source", vs)
 	}
 }
 
+// authorizeAzcopyWithIdentity returns auth env for azcopy using cluster identity
 func (d *Driver) authorizeAzcopyWithIdentity() ([]string, error) {
 	azureAuthConfig := d.cloud.Config.AzureAuthConfig
 	var authAzcopyEnv []string
@@ -829,45 +823,55 @@ func (d *Driver) authorizeAzcopyWithIdentity() ([]string, error) {
 	return []string{}, fmt.Errorf("service principle or managed identity are both not set")
 }
 
-// getSASToken will only generate sas token for azcopy in following conditions:
+// getAzcopyAuth will only generate sas token for azcopy in following conditions:
 // 1. secrets is not empty
 // 2. driver is not using managed identity and service principal
 // 3. azcopy returns AuthorizationPermissionMismatch error when using service principal or managed identity
-func (d *Driver) getSASToken(ctx context.Context, accountName, accountKey, storageEndpointSuffix string, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, error) {
-	authAzcopyEnv, _ := d.authorizeAzcopyWithIdentity()
+func (d *Driver) getAzcopyAuth(ctx context.Context, accountName, accountKey, storageEndpointSuffix string, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, []string, error) {
+	var authAzcopyEnv []string
 	useSasToken := false
-	if len(authAzcopyEnv) > 0 {
-		// search in cache first
-		cache, err := d.azcopySasTokenCache.Get(accountName, azcache.CacheReadTypeDefault)
+	if len(secrets) == 0 && len(secretName) == 0 {
+		var err error
+		authAzcopyEnv, err = d.authorizeAzcopyWithIdentity()
 		if err != nil {
-			return "", fmt.Errorf("get(%s) from azcopySasTokenCache failed with error: %v", accountName, err)
-		}
-		if cache != nil {
-			klog.V(2).Infof("use sas token for account(%s) since this account is found in azcopySasTokenCache", accountName)
-			useSasToken = true
+			klog.Warningf("failed to authorize azcopy with identity, error: %v", err)
 		} else {
-			out, testErr := d.azcopy.TestListJobs(accountName, storageEndpointSuffix, authAzcopyEnv)
-			if testErr != nil {
-				return "", fmt.Errorf("azcopy list command failed with error(%v): %v", testErr, out)
-			}
-			if strings.Contains(out, authorizationPermissionMismatch) {
-				klog.Warningf("azcopy list failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original output: %v", out)
-				d.azcopySasTokenCache.Set(accountName, "")
-				useSasToken = true
+			if len(authAzcopyEnv) > 0 {
+				// search in cache first
+				cache, err := d.azcopySasTokenCache.Get(accountName, azcache.CacheReadTypeDefault)
+				if err != nil {
+					return "", nil, fmt.Errorf("get(%s) from azcopySasTokenCache failed with error: %v", accountName, err)
+				}
+				if cache != nil {
+					klog.V(2).Infof("use sas token for account(%s) since this account is found in azcopySasTokenCache", accountName)
+					useSasToken = true
+				} else {
+					out, testErr := d.azcopy.TestListJobs(accountName, storageEndpointSuffix, authAzcopyEnv)
+					if testErr != nil {
+						return "", nil, fmt.Errorf("azcopy list command failed with error(%v): %v", testErr, out)
+					}
+					if strings.Contains(out, authorizationPermissionMismatch) {
+						klog.Warningf("azcopy list failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original output: %v", out)
+						d.azcopySasTokenCache.Set(accountName, "")
+						useSasToken = true
+					}
+				}
 			}
 		}
 	}
-	if len(secrets) > 0 || len(authAzcopyEnv) == 0 || useSasToken {
+
+	if len(secrets) > 0 || len(secretName) > 0 || len(authAzcopyEnv) == 0 || useSasToken {
 		var err error
 		if accountKey == "" {
 			if _, accountKey, err = d.GetStorageAccesskey(ctx, accountOptions, secrets, secretName, secretNamespace); err != nil {
-				return "", err
+				return "", nil, err
 			}
 		}
 		klog.V(2).Infof("generate sas token for account(%s)", accountName)
-		return generateSASToken(accountName, accountKey, storageEndpointSuffix, d.sasTokenExpirationMinutes)
+		sasToken, err := generateSASToken(accountName, accountKey, storageEndpointSuffix, d.sasTokenExpirationMinutes)
+		return sasToken, nil, err
 	}
-	return "", nil
+	return "", authAzcopyEnv, nil
 }
 
 // isValidVolumeCapabilities validates the given VolumeCapability array is valid
