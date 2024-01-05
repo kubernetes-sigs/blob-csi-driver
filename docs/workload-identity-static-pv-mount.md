@@ -1,9 +1,8 @@
 # Example of static PV mount with workload identity
 
-> Note: 
-> - Available kubernetes version >= v1.20
+ - supported from v1.23.3
 
-## prerequisite
+## prerequisites
 
 
 ### 1. Create a cluster with oidc-issuer enabled and get the credential
