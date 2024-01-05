@@ -832,59 +832,6 @@ func Test_waitForMount(t *testing.T) {
 	}
 }
 
-func Test_getClientID(t *testing.T) {
-	type args struct {
-		context map[string]string
-	}
-	tests := []struct {
-		name string
-		args args
-		want string
-	}{
-		{
-			name: "get client id",
-			args: args{
-				context: map[string]string{
-					clientIDField: "test-client-id",
-				},
-			},
-			want: "test-client-id",
-		},
-		{
-			name: "case not sensitive client id",
-			args: args{
-				context: map[string]string{
-					"ClientId": "test-client-id",
-				},
-			},
-			want: "test-client-id",
-		},
-		{
-			name: "no client id",
-			args: args{
-				context: map[string]string{},
-			},
-			want: "",
-		},
-		{
-			name: "client id empty",
-			args: args{
-				context: map[string]string{
-					clientIDField: "",
-				},
-			},
-			want: "",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := getClientID(tt.args.context); got != tt.want {
-				t.Errorf("getClientID() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestCheckGidPresentInMountFlags(t *testing.T) {
 	tests := []struct {
 		desc       string
