@@ -16,7 +16,7 @@ export REGION=<your region>
 ```
 
 
-### 2. Create a new storage account and fileshare
+### 2. Create a new storage account and container
 
 Following the [documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-cli) to create a new storage account and container or use your own. And export following environment variables:
 ```
