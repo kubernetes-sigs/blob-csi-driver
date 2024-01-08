@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/blobclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
@@ -1802,9 +1803,13 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							TenantID:        "TenantID",
-							AADClientID:     "AADClientID",
-							AADClientSecret: "AADClientSecret",
+							ARMClientConfig: azclient.ARMClientConfig{
+								TenantID: "TenantID",
+							},
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								AADClientID:     "AADClientID",
+								AADClientSecret: "AADClientSecret",
+							},
 						},
 					},
 				}
@@ -1828,8 +1833,12 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							TenantID:        "TenantID",
-							AADClientSecret: "AADClientSecret",
+							ARMClientConfig: azclient.ARMClientConfig{
+								TenantID: "TenantID",
+							},
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								AADClientSecret: "AADClientSecret",
+							},
 						},
 					},
 				}
@@ -1848,8 +1857,10 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							UseManagedIdentityExtension: true,
-							UserAssignedIdentityID:      "UserAssignedIdentityID",
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+								UserAssignedIdentityID:      "UserAssignedIdentityID",
+							},
 						},
 					},
 				}
@@ -1871,7 +1882,9 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							UseManagedIdentityExtension: true,
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+							},
 						},
 					},
 				}
@@ -1941,7 +1954,9 @@ func TestGetAzcopyAuth(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							UseManagedIdentityExtension: true,
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+							},
 						},
 					},
 				}
@@ -1962,7 +1977,9 @@ func TestGetAzcopyAuth(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							UseManagedIdentityExtension: true,
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+							},
 						},
 					},
 				}
