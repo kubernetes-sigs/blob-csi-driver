@@ -54,8 +54,8 @@ func main() {
 
 	mountServer := server.NewMountServiceServer()
 
-	klog.V(2).Info("Listening for connections on address: %v\n", listener.Addr())
+	klog.V(2).Infof("Listening for connections on address: %v\n", listener.Addr())
 	if err = server.RunGRPCServer(mountServer, false, listener); err != nil {
-		klog.Fatalf("Error running grpc server. Error: %v", listener.Addr(), err)
+		klog.Fatalf("Error running grpc server %v. Error: %v", listener.Addr(), err)
 	}
 }

@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/blobclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
@@ -164,18 +165,6 @@ func TestCreateVolume(t *testing.T) {
 		name     string
 		testFunc func(t *testing.T)
 	}{
-		{
-			name: "invalid create volume req",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.CreateVolumeRequest{}
-				_, err := d.CreateVolume(context.Background(), req)
-				expectedErr := status.Error(codes.InvalidArgument, "CREATE_DELETE_VOLUME")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
 		{
 			name: "volume Name missing",
 			testFunc: func(t *testing.T) {
@@ -559,8 +548,8 @@ func TestCreateVolume(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
-				d.cloud.Config.DisableAzureStackCloud = false
-				d.cloud.Config.Cloud = "AZURESTACKCLOUD"
+				d.cloud.DisableAzureStackCloud = false
+				d.cloud.Cloud = "AZURESTACKCLOUD"
 				d.cloud.SubscriptionID = "subID"
 				mp := make(map[string]string)
 				mp[storeAccountKeyField] = falseValue
@@ -911,20 +900,6 @@ func TestDeleteVolume(t *testing.T) {
 				req := &csi.DeleteVolumeRequest{}
 				_, err := d.DeleteVolume(context.Background(), req)
 				expectedErr := status.Error(codes.InvalidArgument, "Volume ID missing in request")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
-		{
-			name: "invalid delete volume req",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.DeleteVolumeRequest{
-					VolumeId: "unit-test",
-				}
-				_, err := d.DeleteVolume(context.Background(), req)
-				expectedErr := status.Errorf(codes.Internal, "invalid delete volume req: volume_id:\"unit-test\" ")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -1316,21 +1291,6 @@ func TestControllerExpandVolume(t *testing.T) {
 				}
 				_, err := d.ControllerExpandVolume(context.Background(), req)
 				expectedErr := status.Error(codes.InvalidArgument, "Capacity Range missing in request")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
-				}
-			},
-		},
-		{
-			name: "invalid expand volume req",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				req := &csi.ControllerExpandVolumeRequest{
-					VolumeId:      "unit-test",
-					CapacityRange: &csi.CapacityRange{},
-				}
-				_, err := d.ControllerExpandVolume(context.Background(), req)
-				expectedErr := status.Errorf(codes.Internal, "invalid expand volume req: volume_id:\"unit-test\" capacity_range:<> ")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -1843,9 +1803,13 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							TenantID:        "TenantID",
-							AADClientID:     "AADClientID",
-							AADClientSecret: "AADClientSecret",
+							ARMClientConfig: azclient.ARMClientConfig{
+								TenantID: "TenantID",
+							},
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								AADClientID:     "AADClientID",
+								AADClientSecret: "AADClientSecret",
+							},
 						},
 					},
 				}
@@ -1869,8 +1833,12 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							TenantID:        "TenantID",
-							AADClientSecret: "AADClientSecret",
+							ARMClientConfig: azclient.ARMClientConfig{
+								TenantID: "TenantID",
+							},
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								AADClientSecret: "AADClientSecret",
+							},
 						},
 					},
 				}
@@ -1889,8 +1857,10 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							UseManagedIdentityExtension: true,
-							UserAssignedIdentityID:      "UserAssignedIdentityID",
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+								UserAssignedIdentityID:      "UserAssignedIdentityID",
+							},
 						},
 					},
 				}
@@ -1912,7 +1882,9 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							UseManagedIdentityExtension: true,
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+							},
 						},
 					},
 				}
@@ -1982,7 +1954,9 @@ func TestGetAzcopyAuth(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							UseManagedIdentityExtension: true,
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+							},
 						},
 					},
 				}
@@ -2003,7 +1977,9 @@ func TestGetAzcopyAuth(t *testing.T) {
 				d.cloud = &azure.Cloud{
 					Config: azure.Config{
 						AzureAuthConfig: config.AzureAuthConfig{
-							UseManagedIdentityExtension: true,
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+							},
 						},
 					},
 				}

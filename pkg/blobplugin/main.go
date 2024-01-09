@@ -26,45 +26,37 @@ import (
 	"strings"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
+	"sigs.k8s.io/blob-csi-driver/pkg/util"
 
 	"k8s.io/component-base/metrics/legacyregistry"
 	"k8s.io/klog/v2"
 )
 
+var driverOptions blob.DriverOptions
 var (
-	endpoint                               = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
-	blobfuseProxyEndpoint                  = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
-	nodeID                                 = flag.String("nodeid", "", "node id")
-	version                                = flag.Bool("version", false, "Print the version and exit.")
-	metricsAddress                         = flag.String("metrics-address", "", "export the metrics")
-	kubeconfig                             = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
-	driverName                             = flag.String("drivername", blob.DefaultDriverName, "name of the driver")
-	enableBlobfuseProxy                    = flag.Bool("enable-blobfuse-proxy", false, "using blobfuse proxy for mounts")
-	blobfuseProxyConnTimout                = flag.Int("blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
-	enableBlobMockMount                    = flag.Bool("enable-blob-mock-mount", false, "enable mock mount(only for testing)")
-	cloudConfigSecretName                  = flag.String("cloud-config-secret-name", "azure-cloud-provider", "secret name of cloud config")
-	cloudConfigSecretNamespace             = flag.String("cloud-config-secret-namespace", "kube-system", "secret namespace of cloud config")
-	customUserAgent                        = flag.String("custom-user-agent", "", "custom userAgent")
-	userAgentSuffix                        = flag.String("user-agent-suffix", "", "userAgent suffix")
-	allowEmptyCloudConfig                  = flag.Bool("allow-empty-cloud-config", true, "allow running driver without cloud config")
-	enableGetVolumeStats                   = flag.Bool("enable-get-volume-stats", false, "allow GET_VOLUME_STATS on agent node")
-	appendTimeStampInCacheDir              = flag.Bool("append-timestamp-cache-dir", false, "append timestamp into cache directory on agent node")
-	mountPermissions                       = flag.Uint64("mount-permissions", 0777, "mounted folder permissions")
-	allowInlineVolumeKeyAccessWithIdentity = flag.Bool("allow-inline-volume-key-access-with-idenitity", false, "allow accessing storage account key using cluster identity for inline volume")
-	kubeAPIQPS                             = flag.Float64("kube-api-qps", 25.0, "QPS to use while communicating with the kubernetes apiserver.")
-	kubeAPIBurst                           = flag.Int("kube-api-burst", 50, "Burst to use while communicating with the kubernetes apiserver.")
-	appendMountErrorHelpLink               = flag.Bool("append-mount-error-help-link", true, "Whether to include a link for help with mount errors when a mount error occurs.")
-	enableAznfsMount                       = flag.Bool("enable-aznfs-mount", false, "replace nfs mount with aznfs mount")
-	volStatsCacheExpireInMinutes           = flag.Int("vol-stats-cache-expire-in-minutes", 10, "The cache expire time in minutes for volume stats cache")
-	sasTokenExpirationMinutes              = flag.Int("sas-token-expiration-minutes", 1440, "sas token expiration minutes during volume cloning")
+	metricsAddress             = flag.String("metrics-address", "", "export the metrics")
+	version                    = flag.Bool("version", false, "Print the version and exit.")
+	endpoint                   = flag.String("endpoint", "unix://tmp/csi.sock", "CSI endpoint")
+	kubeconfig                 = flag.String("kubeconfig", "", "Absolute path to the kubeconfig file. Required only when running out of cluster.")
+	cloudConfigSecretName      = flag.String("cloud-config-secret-name", "azure-cloud-provider", "secret name of cloud config")
+	cloudConfigSecretNamespace = flag.String("cloud-config-secret-namespace", "kube-system", "secret namespace of cloud config")
+	customUserAgent            = flag.String("custom-user-agent", "", "custom userAgent")
+	userAgentSuffix            = flag.String("user-agent-suffix", "", "userAgent suffix")
+	allowEmptyCloudConfig      = flag.Bool("allow-empty-cloud-config", true, "allow running driver without cloud config")
+	kubeAPIQPS                 = flag.Float64("kube-api-qps", 25.0, "QPS to use while communicating with the kubernetes apiserver.")
+	kubeAPIBurst               = flag.Int("kube-api-burst", 50, "Burst to use while communicating with the kubernetes apiserver.")
 )
+
+func init() {
+	driverOptions.AddFlags()
+}
 
 func main() {
 	klog.InitFlags(nil)
 	_ = flag.Set("logtostderr", "true")
 	flag.Parse()
 	if *version {
-		info, err := blob.GetVersionYAML(*driverName)
+		info, err := blob.GetVersionYAML(driverOptions.DriverName)
 		if err != nil {
 			klog.Fatalln(err)
 		}
@@ -78,34 +70,27 @@ func main() {
 }
 
 func handle() {
-	driverOptions := blob.DriverOptions{
-		NodeID:                                 *nodeID,
-		DriverName:                             *driverName,
-		CloudConfigSecretName:                  *cloudConfigSecretName,
-		CloudConfigSecretNamespace:             *cloudConfigSecretNamespace,
-		BlobfuseProxyEndpoint:                  *blobfuseProxyEndpoint,
-		EnableBlobfuseProxy:                    *enableBlobfuseProxy,
-		BlobfuseProxyConnTimout:                *blobfuseProxyConnTimout,
-		EnableBlobMockMount:                    *enableBlobMockMount,
-		CustomUserAgent:                        *customUserAgent,
-		UserAgentSuffix:                        *userAgentSuffix,
-		AllowEmptyCloudConfig:                  *allowEmptyCloudConfig,
-		EnableGetVolumeStats:                   *enableGetVolumeStats,
-		AppendTimeStampInCacheDir:              *appendTimeStampInCacheDir,
-		MountPermissions:                       *mountPermissions,
-		AllowInlineVolumeKeyAccessWithIdentity: *allowInlineVolumeKeyAccessWithIdentity,
-		AppendMountErrorHelpLink:               *appendMountErrorHelpLink,
-		KubeAPIQPS:                             *kubeAPIQPS,
-		KubeAPIBurst:                           *kubeAPIBurst,
-		EnableAznfsMount:                       *enableAznfsMount,
-		VolStatsCacheExpireInMinutes:           *volStatsCacheExpireInMinutes,
-		SasTokenExpirationMinutes:              *sasTokenExpirationMinutes,
+	userAgent := blob.GetUserAgent(driverOptions.DriverName, *customUserAgent, *userAgentSuffix)
+	klog.V(2).Infof("driver userAgent: %s", userAgent)
+
+	kubeClient, err := util.GetKubeClient(*kubeconfig, *kubeAPIQPS, *kubeAPIBurst, userAgent)
+	if err != nil {
+		klog.Warningf("failed to get kubeClient, error: %v", err)
 	}
-	driver := blob.NewDriver(&driverOptions)
+
+	cloud, err := blob.GetCloudProvider(context.Background(), kubeClient, driverOptions.NodeID, *cloudConfigSecretName, *cloudConfigSecretNamespace, userAgent, *allowEmptyCloudConfig)
+	if err != nil {
+		klog.Fatalf("failed to get Azure Cloud Provider, error: %v", err)
+	}
+	klog.V(2).Infof("cloud: %s, location: %s, rg: %s, VnetName: %s, VnetResourceGroup: %s, SubnetName: %s", cloud.Cloud, cloud.Location, cloud.ResourceGroup, cloud.VnetName, cloud.VnetResourceGroup, cloud.SubnetName)
+
+	driver := blob.NewDriver(&driverOptions, kubeClient, cloud)
 	if driver == nil {
 		klog.Fatalln("Failed to initialize Azure Blob Storage CSI driver")
 	}
-	driver.Run(*endpoint, *kubeconfig, false)
+	if err := driver.Run(context.Background(), *endpoint); err != nil {
+		klog.Fatalf("Failed to run Azure Blob Storage CSI driver: %v", err)
+	}
 }
 
 func exportMetrics() {

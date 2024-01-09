@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/service"
@@ -905,7 +906,9 @@ func generateSASToken(accountName, accountKey, storageEndpointSuffix string, exp
 	sasURL, err := serviceClient.GetSASURL(
 		sas.AccountResourceTypes{Object: true, Service: false, Container: true},
 		sas.AccountPermissions{Read: true, List: true, Write: true},
-		sas.AccountServices{Blob: true}, time.Now(), time.Now().Add(time.Duration(expiryTime)*time.Minute))
+		time.Now().Add(time.Duration(expiryTime)*time.Minute),
+		&service.GetSASURLOptions{StartTime: to.Ptr(time.Now())},
+	)
 	if err != nil {
 		return "", err
 	}

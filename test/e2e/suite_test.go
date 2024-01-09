@@ -39,6 +39,7 @@ import (
 	"k8s.io/kubernetes/test/e2e/framework/config"
 	_ "k8s.io/kubernetes/test/e2e/framework/debug/init"
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
+	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
 	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
 	"sigs.k8s.io/blob-csi-driver/test/utils/testutil"
@@ -143,6 +144,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	// spin up a blob driver locally to make use of the azure client and controller service
 	kubeconfig := os.Getenv(kubeconfigEnvVar)
 	_, useBlobfuseProxy := os.LookupEnv("ENABLE_BLOBFUSE_PROXY")
+	os.Setenv("AZURE_CREDENTIAL_FILE", credentials.TempAzureCredentialFilePath)
 	driverOptions := blob.DriverOptions{
 		NodeID:                  os.Getenv("nodeid"),
 		DriverName:              blob.DefaultDriverName,
@@ -151,10 +153,14 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 		BlobfuseProxyConnTimout: 5,
 		EnableBlobMockMount:     false,
 	}
-	blobDriver = blob.NewDriver(&driverOptions)
+	kubeClient, err := util.GetKubeClient(kubeconfig, 25.0, 50, "")
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	cloud, err := blob.GetCloudProvider(context.Background(), kubeClient, driverOptions.NodeID, "", "", "", false)
+	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	blobDriver = blob.NewDriver(&driverOptions, kubeClient, cloud)
 	go func() {
-		os.Setenv("AZURE_CREDENTIAL_FILE", credentials.TempAzureCredentialFilePath)
-		blobDriver.Run(fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String()), kubeconfig, false)
+		err := blobDriver.Run(context.Background(), fmt.Sprintf("unix:///tmp/csi-%s.sock", uuid.NewUUID().String()))
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	}()
 })
 
