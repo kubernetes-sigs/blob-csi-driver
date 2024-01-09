@@ -58,8 +58,10 @@ This option does not depend on cloud provider config file, supports cross subscr
  - install managed CSI driver on following platforms:
    - [AKS](https://learn.microsoft.com/en-us/azure/aks/azure-blob-csi)
 
-### Usage
+### Examples
  - [Basic usage](./deploy/example/e2e_usage.md)
+
+### Usage
  - [NFSv3](./deploy/example/nfs)
  - [fsGroupPolicy](./deploy/example/fsgroup)
  - [Volume cloning](./deploy/example/cloning)

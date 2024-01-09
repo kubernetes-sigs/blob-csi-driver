@@ -26,11 +26,10 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/golang/mock/gomock"
-	"k8s.io/client-go/kubernetes"
-
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	"k8s.io/client-go/kubernetes"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/subnetclient/mocksubnetclient"
