@@ -63,8 +63,17 @@ type testCmd struct {
 }
 
 func TestMain(m *testing.M) {
-	handleFlags()
+	flag.StringVar(&projectRoot, "project-root", "", "path to the blob csi driver project root, used for script execution")
+	flag.Parse()
+	if projectRoot == "" {
+		klog.Fatal("project-root must be set")
+	}
 
+	config.CopyFlags(config.Flags, flag.CommandLine)
+	framework.RegisterCommonFlags(flag.CommandLine)
+	framework.RegisterClusterFlags(flag.CommandLine)
+	flag.Parse()
+	framework.AfterReadingAllFlags(&framework.TestContext)
 	os.Exit(m.Run())
 }
 
@@ -229,27 +238,5 @@ func checkAccountCreationLeak(ctx context.Context) {
 	ginkgo.By(fmt.Sprintf("GetAccountNumByResourceGroup(%s) returns %d accounts", creds.ResourceGroup, accountNum))
 
 	accountLimitInTest := 20
-	framework.ExpectEqual(accountNum >= accountLimitInTest, false, fmt.Sprintf("current account num %d should not exceed %d", accountNum, accountLimitInTest))
-}
-
-// handleFlags sets up all flags and parses the command line.
-func handleFlags() {
-	registerFlags()
-	handleFramworkFlags()
-}
-
-func registerFlags() {
-	flag.StringVar(&projectRoot, "project-root", "", "path to the blob csi driver project root, used for script execution")
-	flag.Parse()
-	if projectRoot == "" {
-		klog.Fatal("project-root must be set")
-	}
-}
-
-func handleFramworkFlags() {
-	config.CopyFlags(config.Flags, flag.CommandLine)
-	framework.RegisterCommonFlags(flag.CommandLine)
-	framework.RegisterClusterFlags(flag.CommandLine)
-	flag.Parse()
-	framework.AfterReadingAllFlags(&framework.TestContext)
+	gomega.Expect(accountNum >= accountLimitInTest).To(gomega.BeFalse())
 }
