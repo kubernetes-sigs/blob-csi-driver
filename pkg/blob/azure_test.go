@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
@@ -92,10 +93,16 @@ users:
 			expectedErr:           nil,
 		},
 		{
-			desc:                  "[failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
+			desc:                  "[linux][failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
 			nodeID:                "",
 			allowEmptyCloudConfig: false,
 			expectedErr:           syscall.ENOENT,
+		},
+		{
+			desc:                  "[windows][failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
+			nodeID:                "",
+			allowEmptyCloudConfig: false,
+			expectedErr:           syscall.ENOTDIR,
 		},
 		{
 			desc:                  "[success] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
@@ -117,6 +124,12 @@ users:
 
 	var kubeClient kubernetes.Interface
 	for _, test := range tests {
+		if strings.HasPrefix(test.desc, "[linux]") && runtime.GOOS == "windows" {
+			continue
+		}
+		if strings.HasPrefix(test.desc, "[windows]") && runtime.GOOS == "linux" {
+			continue
+		}
 		if test.createFakeKubeConfig {
 			if err := createTestFile(fakeKubeConfig); err != nil {
 				t.Error(err)
