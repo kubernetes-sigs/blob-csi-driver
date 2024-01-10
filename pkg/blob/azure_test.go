@@ -22,6 +22,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-07-01/network"
@@ -82,21 +83,19 @@ users:
 		nodeID                string
 		userAgent             string
 		allowEmptyCloudConfig bool
-		expectedErrorMessage  string
-		expectError           bool
+		expectedErr           error
 	}{
 		{
 			desc:                  "[success] out of cluster, no kubeconfig, no credential file",
 			nodeID:                "",
 			allowEmptyCloudConfig: true,
-			expectError:           false,
+			expectedErr:           nil,
 		},
 		{
 			desc:                  "[failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
 			nodeID:                "",
 			allowEmptyCloudConfig: false,
-			expectError:           true,
-			expectedErrorMessage:  "no cloud config provided, error: open /etc/kubernetes/azure.json: no such file or directory",
+			expectedErr:           syscall.ENOENT,
 		},
 		{
 			desc:                  "[success] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
@@ -104,7 +103,7 @@ users:
 			kubeconfig:            fakeKubeConfig,
 			nodeID:                "",
 			allowEmptyCloudConfig: true,
-			expectError:           false,
+			expectedErr:           nil,
 		},
 		{
 			desc:                  "[success] out of cluster & in cluster, no kubeconfig, a fake credential file",
@@ -112,7 +111,7 @@ users:
 			nodeID:                "",
 			userAgent:             "useragent",
 			allowEmptyCloudConfig: true,
-			expectError:           false,
+			expectedErr:           nil,
 		},
 	}
 
@@ -159,10 +158,7 @@ users:
 		}
 
 		cloud, err := GetCloudProvider(context.Background(), kubeClient, test.nodeID, "", "", test.userAgent, test.allowEmptyCloudConfig)
-		assert.Equal(t, test.expectError, err != nil)
-		if test.expectError {
-			assert.Equal(t, test.expectedErrorMessage, err.Error())
-		}
+		assert.ErrorIs(t, err, test.expectedErr)
 
 		if cloud == nil {
 			t.Errorf("return value of getCloudProvider should not be nil even there is error")
