@@ -21,15 +21,17 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/storage"
-	"go.uber.org/mock/gomock"
-
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/mock/gomock"
+	"k8s.io/client-go/kubernetes"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/subnetclient/mocksubnetclient"
@@ -61,12 +63,7 @@ kind: Config
 users:
 - name: foo-user
   user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1alpha1
-      args:
-      - arg-1
-      - arg-2
-      command: foo-command
+    token: 2fef7f7c64127579b48d61434c44ad46d87793169ee6a4199af3ce16a3cf5be3371
 `
 
 	err := createTestFile(emptyKubeConfig)
@@ -90,35 +87,25 @@ users:
 		expectedErr           error
 	}{
 		{
-			desc:                  "out of cluster, no kubeconfig, no credential file",
-			kubeconfig:            "",
+			desc:                  "[success] out of cluster, no kubeconfig, no credential file",
 			nodeID:                "",
 			allowEmptyCloudConfig: true,
 			expectedErr:           nil,
 		},
 		{
-			desc:                  "[failure][disallowEmptyCloudConfig]  out of cluster, no kubeconfig, no credential file",
-			kubeconfig:            "",
+			desc:                  "[linux][failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
 			nodeID:                "",
 			allowEmptyCloudConfig: false,
-			expectedErr:           nil,
+			expectedErr:           syscall.ENOENT,
 		},
 		{
-			desc:                  "[failure] out of cluster & in cluster, specify a non-exist kubeconfig, no credential file",
-			kubeconfig:            "/tmp/non-exist.json",
+			desc:                  "[windows][failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
 			nodeID:                "",
-			allowEmptyCloudConfig: true,
-			expectedErr:           nil,
+			allowEmptyCloudConfig: false,
+			expectedErr:           syscall.ENOTDIR,
 		},
 		{
-			desc:                  "[failure] out of cluster & in cluster, specify a empty kubeconfig, no credential file",
-			kubeconfig:            emptyKubeConfig,
-			nodeID:                "",
-			allowEmptyCloudConfig: true,
-			expectedErr:           fmt.Errorf("invalid configuration: no configuration has been provided, try setting KUBERNETES_MASTER environment variable"),
-		},
-		{
-			desc:                  "[failure] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
+			desc:                  "[success] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
 			createFakeKubeConfig:  true,
 			kubeconfig:            fakeKubeConfig,
 			nodeID:                "",
@@ -128,7 +115,6 @@ users:
 		{
 			desc:                  "[success] out of cluster & in cluster, no kubeconfig, a fake credential file",
 			createFakeCredFile:    true,
-			kubeconfig:            "",
 			nodeID:                "",
 			userAgent:             "useragent",
 			allowEmptyCloudConfig: true,
@@ -136,7 +122,14 @@ users:
 		},
 	}
 
+	var kubeClient kubernetes.Interface
 	for _, test := range tests {
+		if strings.HasPrefix(test.desc, "[linux]") && runtime.GOOS != "linux" {
+			continue
+		}
+		if strings.HasPrefix(test.desc, "[windows]") && runtime.GOOS != "windows" {
+			continue
+		}
 		if test.createFakeKubeConfig {
 			if err := createTestFile(fakeKubeConfig); err != nil {
 				t.Error(err)
@@ -150,6 +143,13 @@ users:
 			if err := os.WriteFile(fakeKubeConfig, []byte(fakeContent), 0666); err != nil {
 				t.Error(err)
 			}
+
+			kubeClient, err = util.GetKubeClient(test.kubeconfig, 25.0, 50, "")
+			if err != nil {
+				t.Error(err)
+			}
+		} else {
+			kubeClient = nil
 		}
 		if test.createFakeCredFile {
 			if err := createTestFile(fakeCredFile); err != nil {
@@ -169,17 +169,10 @@ users:
 			}
 			os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 		}
-		kubeClient, err := util.GetKubeClient(test.kubeconfig, 25.0, 50, "")
-		if err != nil {
-			if !reflect.DeepEqual(err, test.expectedErr) && test.expectedErr != nil && !strings.Contains(err.Error(), test.expectedErr.Error()) {
-				t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
-			}
-			continue
-		}
+
 		cloud, err := GetCloudProvider(context.Background(), kubeClient, test.nodeID, "", "", test.userAgent, test.allowEmptyCloudConfig)
-		if !reflect.DeepEqual(err, test.expectedErr) && test.expectedErr != nil && !strings.Contains(err.Error(), test.expectedErr.Error()) {
-			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectedErr: %v", test.desc, test.kubeconfig, err, test.expectedErr)
-		}
+		assert.ErrorIs(t, err, test.expectedErr)
+
 		if cloud == nil {
 			t.Errorf("return value of getCloudProvider should not be nil even there is error")
 		} else {
