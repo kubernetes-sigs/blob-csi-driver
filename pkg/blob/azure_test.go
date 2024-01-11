@@ -124,10 +124,10 @@ users:
 
 	var kubeClient kubernetes.Interface
 	for _, test := range tests {
-		if strings.HasPrefix(test.desc, "[linux]") && runtime.GOOS == "windows" {
+		if strings.HasPrefix(test.desc, "[linux]") && runtime.GOOS != "linux" {
 			continue
 		}
-		if strings.HasPrefix(test.desc, "[windows]") && runtime.GOOS == "linux" {
+		if strings.HasPrefix(test.desc, "[windows]") && runtime.GOOS != "windows" {
 			continue
 		}
 		if test.createFakeKubeConfig {
