@@ -126,7 +126,7 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
  - mounting blob storage NFSv3 does not need account key, NFS mount access is configured by following setting:
     - `Firewalls and virtual networks`: select `Enabled from selected virtual networks and IP addresses` with same vnet as agent node
  - blobfuse cache(`--tmp-path` [mount option](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#mount-options))
-   - blobfuse cache is on `/mnt` directory by default, `/mnt` is mounted on temp disk if VM sku provides temp disk, `/mnt` is mounted on os disk if VM sku does not provide temp disk
+   - By default, the blobfuse cache is located in the `/mnt` directory. If the VM SKU provides a temporary disk, the `/mnt` directory is mounted on the temporary disk. However, if the VM SKU does not provide a temporary disk, the `/mnt` directory is mounted on the OS disk. 
    - with blobfuse-proxy deployment (default on AKS), user could set `--tmp-path=` mount option to specify a different cache directory
  - [Mount an azure blob storage with a dedicated user-assigned managed identity](https://github.com/qxsch/Azure-Aks/tree/master/aks-blobfuse-mi)
  - [Blobfuse Performance and caching](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#performance-and-caching)
