@@ -18,7 +18,7 @@ Disclaimer: Deploying this driver manually is not an officially supported Micros
 |driver version  |Image                                                 | supported k8s version | built-in blobfuse v1 version | built-in blobfuse v2 version|
 |----------------|------------------------------------------------------|-----------------------|------------------------------| ----------------------------|
 |master branch   |mcr.microsoft.com/k8s/csi/blob-csi:latest             | 1.21+                 | 1.4.5                        | 2.0.3           |
-|v1.21.6         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.21.6 | 1.21+                 | 1.4.5                        | 2.0.3           |
+|v1.21.7         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.21.7 | 1.21+                 | 1.4.5                        | 2.0.3           |
 |v1.20.2         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.20.2 | 1.21+                 | 1.4.5                        | 2.0.2           |
 |v1.19.3         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.19.3 | 1.21+                 | 1.4.5                        | 2.0.2           |
 
