@@ -27,7 +27,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	az "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -44,6 +44,7 @@ import (
 
 	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 	"sigs.k8s.io/cloud-provider-azure/pkg/provider"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
@@ -203,6 +204,8 @@ type Driver struct {
 	csicommon.CSIDriver
 
 	cloud                 *azure.Cloud
+	clientFactory         azclient.ClientFactory
+	networkClientFactory  azclient.ClientFactory
 	KubeClient            kubernetes.Interface
 	blobfuseProxyEndpoint string
 	// enableBlobMockMount is only for testing, DO NOT set as true in non-testing scenario
@@ -266,6 +269,10 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 	d.Name = options.DriverName
 	d.Version = driverVersion
 	d.NodeID = options.NodeID
+	if d.cloud != nil {
+		d.clientFactory = d.cloud.ComputeClientFactory
+		d.networkClientFactory = d.cloud.NetworkClientFactory
+	}
 
 	var err error
 	getter := func(key string) (interface{}, error) { return nil, nil }
@@ -761,7 +768,7 @@ func isSupportedAccessTier(accessTier string) bool {
 	if accessTier == "" {
 		return true
 	}
-	for _, tier := range storage.PossibleAccessTierValues() {
+	for _, tier := range armstorage.PossibleAccessTierValues() {
 		if accessTier == string(tier) {
 			return true
 		}
@@ -899,11 +906,11 @@ func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.
 // GetInfoFromSecret get info from k8s secret
 // return <accountName, accountKey, accountSasToken, msiSecret, spnClientSecret, spnClientID, spnTenantID, error>
 func (d *Driver) GetInfoFromSecret(ctx context.Context, secretName, secretNamespace string) (string, string, string, string, string, string, string, error) {
-	if d.cloud.KubeClient == nil {
+	if d.KubeClient == nil {
 		return "", "", "", "", "", "", "", fmt.Errorf("could not get account key from secret(%s): KubeClient is nil", secretName)
 	}
 
-	secret, err := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
+	secret, err := d.KubeClient.CoreV1().Secrets(secretNamespace).Get(ctx, secretName, metav1.GetOptions{})
 	if err != nil {
 		return "", "", "", "", "", "", "", fmt.Errorf("could not get secret(%v): %w", secretName, err)
 	}

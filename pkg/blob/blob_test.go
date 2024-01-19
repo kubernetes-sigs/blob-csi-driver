@@ -957,7 +957,7 @@ func TestGetContainerReference(t *testing.T) {
 
 	d := NewFakeDriver()
 	d.cloud = azure.GetTestCloud(gomock.NewController(t))
-	d.cloud.KubeClient = fake.NewSimpleClientset()
+	d.KubeClient = fake.NewSimpleClientset()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -1076,8 +1076,7 @@ func TestGetStorageAccesskey(t *testing.T) {
 		},
 	}
 	d := NewFakeDriver()
-	d.cloud = &azure.Cloud{}
-	d.cloud.KubeClient = fake.NewSimpleClientset()
+	d.KubeClient = fake.NewSimpleClientset()
 	secret := &v1api.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: secretNamespace,
@@ -1090,7 +1089,7 @@ func TestGetStorageAccesskey(t *testing.T) {
 		Type: "Opaque",
 	}
 	secret.Namespace = secretNamespace
-	_, secretCreateErr := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+	_, secretCreateErr := d.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 	if secretCreateErr != nil {
 		t.Error("failed to create secret")
 	}
@@ -1120,7 +1119,7 @@ func TestGetInfoFromSecret(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
-				d.cloud.KubeClient = nil
+				d.KubeClient = nil
 				secretName := "foo"
 				secretNamespace := "bar"
 				_, _, _, _, _, _, _, err := d.GetInfoFromSecret(context.TODO(), secretName, secretNamespace)
@@ -1134,8 +1133,7 @@ func TestGetInfoFromSecret(t *testing.T) {
 			name: "Could not get secret",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
-				d.cloud.KubeClient = fakeClient
+				d.KubeClient = fakeClient
 				secretName := ""
 				secretNamespace := ""
 				_, _, _, _, _, _, _, err := d.GetInfoFromSecret(context.TODO(), secretName, secretNamespace)
@@ -1150,8 +1148,7 @@ func TestGetInfoFromSecret(t *testing.T) {
 			name: "get account name from secret",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
-				d.cloud.KubeClient = fakeClient
+				d.KubeClient = fakeClient
 				secretName := "store_account_name_key"
 				secretNamespace := "namespace"
 				accountName := "bar"
@@ -1167,7 +1164,7 @@ func TestGetInfoFromSecret(t *testing.T) {
 					},
 					Type: "Opaque",
 				}
-				_, secretCreateErr := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+				_, secretCreateErr := d.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 				if secretCreateErr != nil {
 					t.Error("failed to create secret")
 				}
@@ -1187,7 +1184,7 @@ func TestGetInfoFromSecret(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{}
-				d.cloud.KubeClient = fakeClient
+				d.KubeClient = fakeClient
 				secretName := "store_other_info"
 				secretNamespace := "namespace"
 				accountName := "bar"
@@ -1211,7 +1208,7 @@ func TestGetInfoFromSecret(t *testing.T) {
 					},
 					Type: "Opaque",
 				}
-				_, secretCreateErr := d.cloud.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
+				_, secretCreateErr := d.KubeClient.CoreV1().Secrets(secretNamespace).Create(context.TODO(), secret, metav1.CreateOptions{})
 				if secretCreateErr != nil {
 					t.Error("failed to create secret")
 				}
