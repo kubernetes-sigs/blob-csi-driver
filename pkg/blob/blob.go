@@ -176,6 +176,7 @@ type DriverOptions struct {
 	EnableAznfsMount                       bool
 	VolStatsCacheExpireInMinutes           int
 	SasTokenExpirationMinutes              int
+	WaitForAzCopyTimeoutMinutes            int
 	EnableVolumeMountGroup                 bool
 	FSGroupChangePolicy                    string
 }
@@ -195,6 +196,7 @@ func (option *DriverOptions) AddFlags() {
 	flag.BoolVar(&option.EnableAznfsMount, "enable-aznfs-mount", false, "replace nfs mount with aznfs mount")
 	flag.IntVar(&option.VolStatsCacheExpireInMinutes, "vol-stats-cache-expire-in-minutes", 10, "The cache expire time in minutes for volume stats cache")
 	flag.IntVar(&option.SasTokenExpirationMinutes, "sas-token-expiration-minutes", 1440, "sas token expiration minutes during volume cloning")
+	flag.IntVar(&option.WaitForAzCopyTimeoutMinutes, "wait-for-azcopy-timeout-minutes", 18, "timeout in minutes for waiting for azcopy to finish")
 	flag.BoolVar(&option.EnableVolumeMountGroup, "enable-volume-mount-group", true, "indicates whether enabling VOLUME_MOUNT_GROUP")
 	flag.StringVar(&option.FSGroupChangePolicy, "fsgroup-change-policy", "", "indicates how the volume's ownership will be changed by the driver, OnRootMismatch is the default value")
 }
@@ -239,6 +241,8 @@ type Driver struct {
 	azcopySasTokenCache azcache.Resource
 	// sas expiry time for azcopy in volume clone
 	sasTokenExpirationMinutes int
+	// timeout in minutes for waiting for azcopy to finish
+	waitForAzCopyTimeoutMinutes int
 	// azcopy for provide exec mock for ut
 	azcopy *util.Azcopy
 }
@@ -261,6 +265,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 		mountPermissions:                       options.MountPermissions,
 		enableAznfsMount:                       options.EnableAznfsMount,
 		sasTokenExpirationMinutes:              options.SasTokenExpirationMinutes,
+		waitForAzCopyTimeoutMinutes:            options.WaitForAzCopyTimeoutMinutes,
 		fsGroupChangePolicy:                    options.FSGroupChangePolicy,
 		azcopy:                                 &util.Azcopy{},
 		KubeClient:                             kubeClient,

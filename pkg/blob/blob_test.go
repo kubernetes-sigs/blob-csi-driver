@@ -50,12 +50,13 @@ const (
 
 func NewFakeDriver() *Driver {
 	driverOptions := DriverOptions{
-		NodeID:                  fakeNodeID,
-		DriverName:              DefaultDriverName,
-		BlobfuseProxyEndpoint:   "",
-		EnableBlobfuseProxy:     false,
-		BlobfuseProxyConnTimout: 5,
-		EnableBlobMockMount:     false,
+		NodeID:                      fakeNodeID,
+		DriverName:                  DefaultDriverName,
+		BlobfuseProxyEndpoint:       "",
+		EnableBlobfuseProxy:         false,
+		BlobfuseProxyConnTimout:     5,
+		WaitForAzCopyTimeoutMinutes: 1,
+		EnableBlobMockMount:         false,
 	}
 	driver := NewDriver(&driverOptions, nil, &azure.Cloud{})
 	driver.Name = fakeDriverName
@@ -79,12 +80,13 @@ func TestNewFakeDriver(t *testing.T) {
 
 func TestNewDriver(t *testing.T) {
 	driverOptions := DriverOptions{
-		NodeID:                  fakeNodeID,
-		DriverName:              DefaultDriverName,
-		BlobfuseProxyEndpoint:   "",
-		EnableBlobfuseProxy:     false,
-		BlobfuseProxyConnTimout: 5,
-		EnableBlobMockMount:     false,
+		NodeID:                      fakeNodeID,
+		DriverName:                  DefaultDriverName,
+		BlobfuseProxyEndpoint:       "",
+		EnableBlobfuseProxy:         false,
+		BlobfuseProxyConnTimout:     5,
+		WaitForAzCopyTimeoutMinutes: 1,
+		EnableBlobMockMount:         false,
 	}
 	driver := NewDriver(&driverOptions, nil, &azure.Cloud{})
 	fakedriver := NewFakeDriver()

@@ -62,8 +62,7 @@ const (
 	SPN                             = "SPN"
 	authorizationPermissionMismatch = "AuthorizationPermissionMismatch"
 
-	waitForCopyInterval = 5 * time.Second
-	waitForCopyTimeout  = 3 * time.Minute
+	waitForAzCopyInterval = 2 * time.Second
 )
 
 // CreateVolume provisions a volume
@@ -757,8 +756,8 @@ func (d *Driver) copyBlobContainer(req *csi.CreateVolumeRequest, accountSasToken
 		return fmt.Errorf("srcContainerName(%s) or dstContainerName(%s) is empty", srcContainerName, dstContainerName)
 	}
 
-	timeAfter := time.After(waitForCopyTimeout)
-	timeTick := time.Tick(waitForCopyInterval)
+	timeAfter := time.After(time.Duration(d.waitForAzCopyTimeoutMinutes) * time.Minute)
+	timeTick := time.Tick(waitForAzCopyInterval)
 	srcPath := fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, storageEndpointSuffix, srcContainerName, accountSasToken)
 	dstPath := fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, storageEndpointSuffix, dstContainerName, accountSasToken)
 
