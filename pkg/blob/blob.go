@@ -171,6 +171,7 @@ type DriverOptions struct {
 	EnableAznfsMount                       bool
 	VolStatsCacheExpireInMinutes           int
 	SasTokenExpirationMinutes              int
+	WaitForAzCopyTimeoutMinutes            int
 }
 
 func (option *DriverOptions) AddFlags() {
@@ -188,6 +189,7 @@ func (option *DriverOptions) AddFlags() {
 	flag.BoolVar(&option.EnableAznfsMount, "enable-aznfs-mount", false, "replace nfs mount with aznfs mount")
 	flag.IntVar(&option.VolStatsCacheExpireInMinutes, "vol-stats-cache-expire-in-minutes", 10, "The cache expire time in minutes for volume stats cache")
 	flag.IntVar(&option.SasTokenExpirationMinutes, "sas-token-expiration-minutes", 1440, "sas token expiration minutes during volume cloning")
+	flag.IntVar(&option.WaitForAzCopyTimeoutMinutes, "wait-for-azcopy-timeout-minutes", 18, "timeout in minutes for waiting for azcopy to finish")
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -226,6 +228,8 @@ type Driver struct {
 	azcopySasTokenCache azcache.Resource
 	// sas expiry time for azcopy in volume clone
 	sasTokenExpirationMinutes int
+	// timeout in minutes for waiting for azcopy to finish
+	waitForAzCopyTimeoutMinutes int
 	// azcopy for provide exec mock for ut
 	azcopy *util.Azcopy
 }
@@ -248,6 +252,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 		mountPermissions:                       options.MountPermissions,
 		enableAznfsMount:                       options.EnableAznfsMount,
 		sasTokenExpirationMinutes:              options.SasTokenExpirationMinutes,
+		waitForAzCopyTimeoutMinutes:            options.WaitForAzCopyTimeoutMinutes,
 		azcopy:                                 &util.Azcopy{},
 		KubeClient:                             kubeClient,
 		cloud:                                  cloud,
