@@ -71,10 +71,6 @@ unit-test:
 sanity-test: blob
 	go test -v -timeout=30m ./test/sanity
 
-.PHONY: integration-test
-integration-test: blob
-	go test -v -timeout=30m ./test/integration
-
 .PHONY: e2e-test
 e2e-test: install-ginkgo
 	if [ ! -z "$(EXTERNAL_E2E_TEST_BLOBFUSE)" ] || [ ! -z "$(EXTERNAL_E2E_TEST_BLOBFUSE_v2)" ] || [ ! -z "$(EXTERNAL_E2E_TEST_NFS)" ]; then \
