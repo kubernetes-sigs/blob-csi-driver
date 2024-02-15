@@ -25,7 +25,7 @@ jobs:
         sudo dpkg -i packages-microsoft-prod.deb
         sudo apt-get update
         sudo apt-get install blobfuse
-        go test -covermode=count -coverprofile=profile.cov ./pkg/...
+        go test -race -covermode=atomic -coverprofile=profile.cov ./pkg/...
 
     - name: Run build test
       run: |
@@ -42,9 +42,10 @@ jobs:
         export PATH=$PATH:$HOME/.local/bin
         make blobfuse-proxy
 
-    - name: Get code coverage
+    - name: Install goveralls
+      run: go install github.com/mattn/goveralls@latest
+
+    - name: Send coverage
       env:
-          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        GO111MODULE=off go get github.com/mattn/goveralls
-        $(go env GOPATH)/bin/goveralls -coverprofile=profile.cov -service=github
+        COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: goveralls -coverprofile=profile.cov -service=github
