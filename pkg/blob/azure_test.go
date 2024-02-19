@@ -375,3 +375,88 @@ func TestUpdateSubnetServiceEndpoints(t *testing.T) {
 		t.Run(tc.name, tc.testFunc)
 	}
 }
+
+func TestGetStorageEndPointSuffix(t *testing.T) {
+	d := NewFakeDriver()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name           string
+		cloud          *azureprovider.Cloud
+		expectedSuffix string
+	}{
+		{
+			name:           "nil cloud",
+			cloud:          nil,
+			expectedSuffix: "core.windows.net",
+		},
+		{
+			name:           "empty cloud",
+			cloud:          &azureprovider.Cloud{},
+			expectedSuffix: "core.windows.net",
+		},
+		{
+			name: "cloud with storage endpoint suffix",
+			cloud: &azureprovider.Cloud{
+				Environment: azure.Environment{
+					StorageEndpointSuffix: "suffix",
+				},
+			},
+			expectedSuffix: "suffix",
+		},
+		{
+			name: "public cloud",
+			cloud: &azureprovider.Cloud{
+				Environment: azure.PublicCloud,
+			},
+			expectedSuffix: "core.windows.net",
+		},
+		{
+			name: "china cloud",
+			cloud: &azureprovider.Cloud{
+				Environment: azure.ChinaCloud,
+			},
+			expectedSuffix: "core.chinacloudapi.cn",
+		},
+	}
+
+	for _, test := range tests {
+		d.cloud = test.cloud
+		suffix := d.getStorageEndPointSuffix()
+		assert.Equal(t, test.expectedSuffix, suffix, test.name)
+	}
+}
+
+func TestGetCloudEnvironment(t *testing.T) {
+	d := NewFakeDriver()
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	tests := []struct {
+		name        string
+		cloud       *azureprovider.Cloud
+		expectedEnv azure.Environment
+	}{
+		{
+			name:        "nil cloud",
+			cloud:       nil,
+			expectedEnv: azure.PublicCloud,
+		},
+		{
+			name: "cloud with environment",
+			cloud: &azureprovider.Cloud{
+				Environment: azure.ChinaCloud,
+			},
+			expectedEnv: azure.ChinaCloud,
+		},
+	}
+
+	for _, test := range tests {
+		d.cloud = test.cloud
+		env := d.getCloudEnvironment()
+		assert.Equal(t, test.expectedEnv, env, test.name)
+	}
+}

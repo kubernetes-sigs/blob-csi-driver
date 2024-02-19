@@ -309,11 +309,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if strings.TrimSpace(storageEndpointSuffix) == "" {
-		if d.cloud.Environment.StorageEndpointSuffix != "" {
-			storageEndpointSuffix = d.cloud.Environment.StorageEndpointSuffix
-		} else {
-			storageEndpointSuffix = defaultStorageEndPointSuffix
-		}
+		storageEndpointSuffix = d.getStorageEndPointSuffix()
 	}
 
 	accountOptions := &azure.AccountOptions{
@@ -558,7 +554,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	var exist bool
 	secrets := req.GetSecrets()
 	if len(secrets) > 0 {
-		container, err := getContainerReference(containerName, secrets, d.cloud.Environment)
+		container, err := getContainerReference(containerName, secrets, d.getCloudEnvironment())
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -677,7 +673,7 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 	return wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
-			container, getErr := getContainerReference(containerName, secrets, d.cloud.Environment)
+			container, getErr := getContainerReference(containerName, secrets, d.getCloudEnvironment())
 			if getErr != nil {
 				return true, getErr
 			}
@@ -714,7 +710,7 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 	return wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
-			container, getErr := getContainerReference(containerName, secrets, d.cloud.Environment)
+			container, getErr := getContainerReference(containerName, secrets, d.getCloudEnvironment())
 			if getErr != nil {
 				return true, getErr
 			}
