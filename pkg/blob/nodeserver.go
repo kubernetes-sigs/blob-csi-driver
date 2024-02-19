@@ -29,7 +29,6 @@ import (
 	volumehelper "sigs.k8s.io/blob-csi-driver/pkg/util"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 
-	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -299,11 +298,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	containerName = replaceWithMap(containerName, containerNameReplaceMap)
 
 	if strings.TrimSpace(storageEndpointSuffix) == "" {
-		if d.cloud.Environment.StorageEndpointSuffix != "" {
-			storageEndpointSuffix = d.cloud.Environment.StorageEndpointSuffix
-		} else {
-			storageEndpointSuffix = storage.DefaultBaseURL
-		}
+		storageEndpointSuffix = d.getStorageEndPointSuffix()
 	}
 
 	if strings.TrimSpace(serverAddress) == "" {

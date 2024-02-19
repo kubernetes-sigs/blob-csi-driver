@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/storage"
 
 	"github.com/Azure/go-autorest/autorest"
+	azure2 "github.com/Azure/go-autorest/autorest/azure"
 
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -184,7 +185,7 @@ func (d *Driver) initializeKvClient() (*kv.BaseClient, error) {
 
 // getKeyvaultToken retrieves a new service principal token to access keyvault
 func (d *Driver) getKeyvaultToken() (authorizer autorest.Authorizer, err error) {
-	env := d.cloud.Environment
+	env := d.getCloudEnvironment()
 	kvEndPoint := strings.TrimSuffix(env.KeyVaultEndpoint, "/")
 	servicePrincipalToken, err := providerconfig.GetServicePrincipalToken(&d.cloud.Config.AzureAuthConfig, &env, kvEndPoint)
 	if err != nil {
@@ -272,4 +273,18 @@ func getKubeConfig(kubeconfig string) (config *rest.Config, err error) {
 		}
 	}
 	return config, err
+}
+
+func (d *Driver) getStorageEndPointSuffix() string {
+	if d.cloud == nil || d.cloud.Environment.StorageEndpointSuffix == "" {
+		return defaultStorageEndPointSuffix
+	}
+	return d.cloud.Environment.StorageEndpointSuffix
+}
+
+func (d *Driver) getCloudEnvironment() azure2.Environment {
+	if d.cloud == nil {
+		return azure2.PublicCloud
+	}
+	return d.cloud.Environment
 }
