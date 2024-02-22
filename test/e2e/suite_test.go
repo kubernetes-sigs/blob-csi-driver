@@ -234,7 +234,7 @@ func checkAccountCreationLeak(ctx context.Context) {
 	ginkgo.By(fmt.Sprintf("GetAccountNumByResourceGroup(%s) returns %d accounts", creds.ResourceGroup, accountNum))
 
 	accountLimitInTest := 20
-	framework.ExpectEqual(accountNum >= accountLimitInTest, false, fmt.Sprintf("current account num %d should not exceed %d", accountNum, accountLimitInTest))
+	gomega.Expect(accountNum >= accountLimitInTest).To(gomega.BeFalse())
 }
 
 // handleFlags sets up all flags and parses the command line.
