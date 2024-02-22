@@ -19,9 +19,9 @@ Disclaimer: Deploying this driver manually is not an officially supported Micros
 |driver version  |Image                                                 | supported k8s version |
 |----------------|------------------------------------------------------|-----------------------|
 |master branch   |mcr.microsoft.com/k8s/csi/blob-csi:latest             | 1.21+                 |
+|v1.24.0         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.24.0 | 1.21+                 |
 |v1.23.3         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.23.3 | 1.21+                 |
 |v1.22.5         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.22.5 | 1.21+                 |
-|v1.21.7         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.21.7 | 1.21+                 |
 
 ### Driver parameters
 Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameters.md)
