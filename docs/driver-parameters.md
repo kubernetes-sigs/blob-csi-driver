@@ -1,14 +1,27 @@
 ## Driver Parameters
  > parameter names are case-insensitive
 
-<details><summary>required permissions for CSI driver</summary>
+<details><summary>required permissions for CSI driver controller</summary>
 <pre>
-    - Microsoft.Storage/storageAccounts/blobServices/read
-    - Microsoft.Storage/storageAccounts/blobServices/containers/write
-    - Microsoft.Storage/storageAccounts/listKeys/action
-    - Microsoft.Storage/storageAccounts/read
-    - Microsoft.Storage/storageAccounts/write
-    - Microsoft.Storage/storageAccounts/delete
+Microsoft.Storage/storageAccounts/write
+Microsoft.Storage/storageAccounts/read
+Microsoft.Storage/storageAccounts/listKeys/action
+Microsoft.Storage/storageAccounts/*/delete
+Microsoft.Storage/storageAccounts/blobServices/containers/write
+Microsoft.Storage/storageAccounts/blobServices/containers/read
+Microsoft.Storage/storageAccounts/blobServices/containers/delete
+Microsoft.Storage/operations/read
+Microsoft.Network/virtualNetworks/subnets/write
+Microsoft.Network/virtualNetworks/subnets/read
+Microsoft.Network/privateEndpoints/write
+Microsoft.Network/privateEndpoints/read
+Microsoft.Network/privateEndpoints/privateDnsZoneGroups/write
+Microsoft.Network/privateDnsZones/write
+Microsoft.Network/privateDnsZones/virtualNetworkLinks/write
+Microsoft.Network/privateDnsZones/virtualNetworkLinks/read
+Microsoft.Network/privateDnsZones/read
+Microsoft.Network/privateDnsOperationStatuses/read
+Microsoft.Network/locations/operations/read
 </pre>
 </details>
 
