@@ -408,6 +408,30 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid privateEndpoint and subnetName combination",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				mp := map[string]string{
+					networkEndpointTypeField: "privateendpoint",
+					subnetNameField:          "subnet1,subnet2",
+				}
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, "subnetName(subnet1,subnet2) can only contain one subnet for private endpoint")
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
 			name: "NFS not supported by cross subscription",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
