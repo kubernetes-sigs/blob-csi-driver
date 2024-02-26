@@ -1,5 +1,5 @@
 # workload identity support on static provisioning
- - supported from v1.23.3
+ - supported from v1.30.0
 
 This feature is specifically designed for blobfuse mount and is not available for NFS mount as NFS mount does not require credentials. There is a standalone blobfuse mount for every pod, it may cause performance issues when multiple pods are present on a single node.
 
