@@ -60,7 +60,7 @@ func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, node
 	if kubeClient != nil {
 		az.KubeClient = kubeClient
 		klog.V(2).Infof("reading cloud config from secret %s/%s", secretNamespace, secretName)
-		config, err := configloader.Load[azure.Config](ctx, &configloader.K8sSecretLoaderConfig{
+		config, err = configloader.Load[azure.Config](ctx, &configloader.K8sSecretLoaderConfig{
 			K8sSecretConfig: configloader.K8sSecretConfig{
 				SecretName:      secretName,
 				SecretNamespace: secretNamespace,
