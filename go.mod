@@ -6,7 +6,7 @@ toolchain go1.21.4
 
 require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.2
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.10.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.5.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault v1.4.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
@@ -32,13 +32,13 @@ require (
 	k8s.io/api v0.29.2
 	k8s.io/apimachinery v0.29.2
 	k8s.io/client-go v0.29.2
-	k8s.io/component-base v0.29.0
+	k8s.io/component-base v0.29.2
 	k8s.io/klog/v2 v2.120.1
 	k8s.io/kubernetes v1.29.0
 	k8s.io/mount-utils v0.29.0
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
-	sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240220055818-b76605c9c708
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.0-20240220055818-b76605c9c708
+	sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240308123135-28150a3f23d8
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.0-20240308123135-28150a3f23d8
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -146,14 +146,14 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.0.0 // indirect
-	k8s.io/apiserver v0.29.0
-	k8s.io/cloud-provider v0.29.0 // indirect
-	k8s.io/component-helpers v0.29.0 // indirect
-	k8s.io/controller-manager v0.29.0 // indirect
-	k8s.io/kms v0.29.0 // indirect
+	k8s.io/apiserver v0.29.2
+	k8s.io/cloud-provider v0.29.2 // indirect
+	k8s.io/component-helpers v0.29.2 // indirect
+	k8s.io/controller-manager v0.29.2 // indirect
+	k8s.io/kms v0.29.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/kubectl v0.0.0 // indirect
-	k8s.io/kubelet v0.29.0 // indirect
+	k8s.io/kubelet v0.29.2 // indirect
 	k8s.io/pod-security-admission v0.29.0
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
 	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.0-20240218020800-ba9f211f36bf
