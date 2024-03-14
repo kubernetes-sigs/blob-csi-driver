@@ -61,8 +61,6 @@ const (
 	MSI                             = "MSI"
 	SPN                             = "SPN"
 	authorizationPermissionMismatch = "AuthorizationPermissionMismatch"
-
-	waitForAzCopyInterval = 2 * time.Second
 )
 
 // CreateVolume provisions a volume
@@ -85,7 +83,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		// logging the job status if it's volume cloning
 		if req.GetVolumeContentSource() != nil {
 			jobState, percent, err := d.azcopy.GetAzcopyJob(volName, []string{})
-			klog.V(2).Infof("azcopy job status: %s, copy percent: %s%%, error: %v", jobState, percent, err)
+			return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsWithAzcopyFmt, volName, jobState, percent, err)
 		}
 		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, volName)
 	}
@@ -759,43 +757,41 @@ func (d *Driver) copyBlobContainer(req *csi.CreateVolumeRequest, accountSasToken
 		return fmt.Errorf("srcContainerName(%s) or dstContainerName(%s) is empty", srcContainerName, dstContainerName)
 	}
 
-	timeAfter := time.After(time.Duration(d.waitForAzCopyTimeoutMinutes) * time.Minute)
-	timeTick := time.Tick(waitForAzCopyInterval)
 	srcPath := fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, storageEndpointSuffix, srcContainerName, accountSasToken)
 	dstPath := fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, storageEndpointSuffix, dstContainerName, accountSasToken)
 
 	jobState, percent, err := d.azcopy.GetAzcopyJob(dstContainerName, authAzcopyEnv)
 	klog.V(2).Infof("azcopy job status: %s, copy percent: %s%%, error: %v", jobState, percent, err)
-	if jobState == util.AzcopyJobError || jobState == util.AzcopyJobCompleted {
+	switch jobState {
+	case util.AzcopyJobError, util.AzcopyJobCompleted:
 		return err
-	}
-	klog.V(2).Infof("begin to copy blob container %s to %s", srcContainerName, dstContainerName)
-	for {
-		select {
-		case <-timeTick:
-			jobState, percent, err := d.azcopy.GetAzcopyJob(dstContainerName, authAzcopyEnv)
-			klog.V(2).Infof("azcopy job status: %s, copy percent: %s%%, error: %v", jobState, percent, err)
-			switch jobState {
-			case util.AzcopyJobError, util.AzcopyJobCompleted:
-				return err
-			case util.AzcopyJobNotFound:
-				klog.V(2).Infof("copy blob container %s to %s", srcContainerName, dstContainerName)
-				cmd := exec.Command("azcopy", "copy", srcPath, dstPath, "--recursive", "--check-length=false")
-				if len(authAzcopyEnv) > 0 {
-					cmd.Env = append(os.Environ(), authAzcopyEnv...)
-				}
-				out, copyErr := cmd.CombinedOutput()
-				if copyErr != nil {
-					klog.Warningf("CopyBlobContainer(%s, %s, %s) failed with error(%v): %v", resourceGroupName, accountName, dstPath, copyErr, string(out))
-				} else {
-					klog.V(2).Infof("copied blob container %s to %s successfully", srcContainerName, dstContainerName)
-				}
-				return copyErr
+	case util.AzcopyJobRunning:
+		return fmt.Errorf("wait for the existing AzCopy job to complete, current copy percentage is %s%%", percent)
+	case util.AzcopyJobNotFound:
+		klog.V(2).Infof("copy blob container %s to %s", srcContainerName, dstContainerName)
+		execFunc := func() error {
+			cmd := exec.Command("azcopy", "copy", srcPath, dstPath, "--recursive", "--check-length=false")
+			if len(authAzcopyEnv) > 0 {
+				cmd.Env = append(os.Environ(), authAzcopyEnv...)
 			}
-		case <-timeAfter:
-			return fmt.Errorf("timeout waiting for copy blob container %s to %s succeed", srcContainerName, dstContainerName)
+			if out, err := cmd.CombinedOutput(); err != nil {
+				return fmt.Errorf("exec error: %v, output: %v", err, string(out))
+			}
+			return nil
 		}
+		timeoutFunc := func() error {
+			_, percent, _ := d.azcopy.GetAzcopyJob(dstContainerName, authAzcopyEnv)
+			return fmt.Errorf("timeout waiting for copy blob container %s to %s complete, current copy percent: %s%%", srcContainerName, dstContainerName, percent)
+		}
+		copyErr := util.WaitForExecCompletion(time.Duration(d.waitForAzCopyTimeoutMinutes)*time.Minute, execFunc, timeoutFunc)
+		if copyErr != nil {
+			klog.Warningf("CopyBlobContainer(%s, %s, %s) failed with error: %v", resourceGroupName, accountName, dstPath, copyErr)
+		} else {
+			klog.V(2).Infof("copied blob container %s to %s successfully", srcContainerName, dstContainerName)
+		}
+		return copyErr
 	}
+	return err
 }
 
 // copyVolume copies a volume form volume or snapshot, snapshot is not supported now
