@@ -111,6 +111,7 @@ const (
 	Fuse2                          = "fuse2"
 	NFS                            = "nfs"
 	AZNFS                          = "aznfs"
+	NFSv3                          = "nfsv3"
 	vnetResourceGroupField         = "vnetresourcegroup"
 	vnetNameField                  = "vnetname"
 	subnetNameField                = "subnetname"
@@ -151,7 +152,7 @@ const (
 )
 
 var (
-	supportedProtocolList = []string{Fuse, Fuse2, NFS}
+	supportedProtocolList = []string{Fuse, Fuse2, NFS, AZNFS}
 	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, statusCodeNotFound, containerBeingDeletedDataplaneAPIError, containerBeingDeletedManagementAPIError, clientThrottled}
 )
 
@@ -740,7 +741,7 @@ func isSupportedProtocol(protocol string) bool {
 		return true
 	}
 	for _, v := range supportedProtocolList {
-		if protocol == v {
+		if protocol == v || protocol == NFSv3 {
 			return true
 		}
 	}
@@ -782,7 +783,7 @@ func isSupportedContainerNamePrefix(prefix string) bool {
 // isNFSProtocol checks if the protocol is NFS or AZNFS
 func isNFSProtocol(protocol string) bool {
 	protocol = strings.ToLower(protocol)
-	return protocol == NFS || protocol == AZNFS
+	return protocol == NFS || protocol == AZNFS || protocol == NFSv3
 }
 
 // get storage account from secrets map

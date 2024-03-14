@@ -1747,8 +1747,8 @@ func TestIsNFSProtocol(t *testing.T) {
 			expectedResult: true,
 		},
 		{
-			protocol:       "NFSv3",
-			expectedResult: false,
+			protocol:       "nfsv3",
+			expectedResult: true,
 		},
 		{
 			protocol:       "aznfs",
