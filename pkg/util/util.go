@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-ini/ini"
 	"github.com/pkg/errors"
@@ -386,4 +387,31 @@ func SetVolumeOwnership(path, gid, policy string) error {
 		fsGroupChangePolicy = v1.PodFSGroupChangePolicy(policy)
 	}
 	return volume.SetVolumeOwnership(&VolumeMounter{path: path}, path, &gidInt64, &fsGroupChangePolicy, nil)
+}
+
+// ExecFunc returns a exec function's output and error
+type ExecFunc func() (err error)
+
+// TimeoutFunc returns output and error if an ExecFunc timeout
+type TimeoutFunc func() (err error)
+
+// WaitForExecCompletion waits for the exec function to complete or return timeout error
+func WaitForExecCompletion(timeout time.Duration, execFunc ExecFunc, timeoutFunc TimeoutFunc) error {
+	// Create a channel to receive the result of the azcopy exec function
+	done := make(chan bool)
+	var err error
+
+	// Start the azcopy exec function in a goroutine
+	go func() {
+		err = execFunc()
+		done <- true
+	}()
+
+	// Wait for the function to complete or time out
+	select {
+	case <-done:
+		return err
+	case <-time.After(timeout):
+		return timeoutFunc()
+	}
 }
