@@ -9,7 +9,6 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
 ```
 
 #### Option#2: bring your own storage account
- > only available from `v0.9.0`
  > This option does not depend on cloud provider config file, supports cross subscription and on-premise cluster scenario.
  - Use `kubectl create secret` to create `azure-secret` with existing storage account name and key
 ```console
@@ -133,7 +132,8 @@ blobfuse         14G   41M   13G   1% /mnt/blob
 In the above example, there is a `/mnt/blob` directory mounted as `blobfuse` filesystem.
 
 #### Option#3: Inline volume
- > to avoid performance issue, use persistent volume instead of inline volume when numerous pods are accessing the same volume.
+ > - inline volume does not support nfs protocol
+ > - to avoid performance issue, use persistent volume instead of inline volume when numerous pods are accessing the same volume.
  - in below blobfuse mount example, create `azure-secret` with existing storage account name and key in the same namespace as pod, both secret and pod are in `default` namespace
 ```console
 kubectl create secret generic azure-secret --from-literal azurestorageaccountname=NAME --from-literal azurestorageaccountkey="KEY" --type=Opaque
