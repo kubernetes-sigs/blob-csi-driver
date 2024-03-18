@@ -826,7 +826,7 @@ func (d *Driver) authorizeAzcopyWithIdentity() ([]string, error) {
 func (d *Driver) getAzcopyAuth(ctx context.Context, accountName, accountKey, storageEndpointSuffix string, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, []string, error) {
 	var authAzcopyEnv []string
 	useSasToken := false
-	if len(secrets) == 0 && len(secretName) == 0 {
+	if !d.useDataPlaneAPI("", accountName) && len(secrets) == 0 && len(secretName) == 0 {
 		var err error
 		authAzcopyEnv, err = d.authorizeAzcopyWithIdentity()
 		if err != nil {
