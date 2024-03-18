@@ -31,7 +31,6 @@ import (
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util"
@@ -336,9 +335,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 		source := fmt.Sprintf("%s:/%s/%s", serverAddress, accountName, containerName)
 		mountOptions := util.JoinMountOptions(mountFlags, []string{"sec=sys,vers=3,nolock"})
-		if err := wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
-			return true, d.mounter.MountSensitive(source, targetPath, mountType, mountOptions, []string{})
-		}); err != nil {
+		execFunc := func() error { return d.mounter.MountSensitive(source, targetPath, mountType, mountOptions, []string{}) }
+		timeoutFunc := func() error { return fmt.Errorf("time out") }
+		if err := volumehelper.WaitForExecCompletion(2*time.Minute, execFunc, timeoutFunc); err != nil {
 			var helpLinkMsg string
 			if d.appendMountErrorHelpLink {
 				helpLinkMsg = "\nPlease refer to http://aka.ms/blobmounterror for possible causes and solutions for mount errors."
