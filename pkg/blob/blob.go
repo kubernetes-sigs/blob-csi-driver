@@ -285,7 +285,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 	if d.accountSearchCache, err = azcache.NewTimedCache(time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
-	if d.dataPlaneAPIVolCache, err = azcache.NewTimedCache(10*time.Minute, getter, false); err != nil {
+	if d.dataPlaneAPIVolCache, err = azcache.NewTimedCache(24*30*time.Hour, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
 	if d.azcopySasTokenCache, err = azcache.NewTimedCache(15*time.Minute, getter, false); err != nil {
