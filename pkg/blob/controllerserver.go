@@ -783,7 +783,7 @@ func (d *Driver) copyBlobContainer(req *csi.CreateVolumeRequest, accountSasToken
 			_, percent, _ := d.azcopy.GetAzcopyJob(dstContainerName, authAzcopyEnv)
 			return fmt.Errorf("timeout waiting for copy blob container %s to %s complete, current copy percent: %s%%", srcContainerName, dstContainerName, percent)
 		}
-		copyErr := util.WaitForExecCompletion(time.Duration(d.waitForAzCopyTimeoutMinutes)*time.Minute, execFunc, timeoutFunc)
+		copyErr := util.WaitUntilTimeout(time.Duration(d.waitForAzCopyTimeoutMinutes)*time.Minute, execFunc, timeoutFunc)
 		if copyErr != nil {
 			klog.Warningf("CopyBlobContainer(%s, %s, %s) failed with error: %v", resourceGroupName, accountName, dstPath, copyErr)
 		} else {

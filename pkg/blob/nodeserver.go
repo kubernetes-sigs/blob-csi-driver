@@ -353,7 +353,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		mountOptions := util.JoinMountOptions(mountFlags, []string{"sec=sys,vers=3,nolock"})
 		execFunc := func() error { return d.mounter.MountSensitive(source, targetPath, mountType, mountOptions, []string{}) }
 		timeoutFunc := func() error { return fmt.Errorf("time out") }
-		if err := volumehelper.WaitForExecCompletion(2*time.Minute, execFunc, timeoutFunc); err != nil {
+		if err := volumehelper.WaitUntilTimeout(2*time.Minute, execFunc, timeoutFunc); err != nil {
 			var helpLinkMsg string
 			if d.appendMountErrorHelpLink {
 				helpLinkMsg = "\nPlease refer to http://aka.ms/blobmounterror for possible causes and solutions for mount errors."
