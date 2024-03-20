@@ -408,8 +408,8 @@ gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntNwaWcugrBjAiHlqqRiVk=
 gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c/go.mod h1:JHkPIbrfpd72SG/EVd6muEfDQjcINNoR0C8j2r3qZ4Q=
-gopkg.in/dnaeon/go-vcr.v3 v3.1.2 h1:F1smfXBqQqwpVifDfUBQG6zzaGjzT+EnVZakrOdr5wA=
-gopkg.in/dnaeon/go-vcr.v3 v3.1.2/go.mod h1:2IMOnnlx9I6u9x+YBsM3tAMx6AlOxnJ0pWxQAzZ79Ag=
+gopkg.in/dnaeon/go-vcr.v3 v3.2.0 h1:Rltp0Vf+Aq0u4rQXgmXgtgoRDStTnFN83cWgSGSoRzM=
+gopkg.in/dnaeon/go-vcr.v3 v3.2.0/go.mod h1:2IMOnnlx9I6u9x+YBsM3tAMx6AlOxnJ0pWxQAzZ79Ag=
 gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
 gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
 gopkg.in/natefinch/lumberjack.v2 v2.2.1 h1:bBRl1b0OH9s/DuPhuXpNl+VtCaJXFZ5/uEFST95x9zc=
@@ -464,8 +464,8 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 h1:TgtAeesdhpm2S
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0/go.mod h1:VHVDI/KrK4fjnV61bE2g3sA7tiETLn8sooImelsCx3Y=
 sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240319093822-58cad130d9dc h1:y/jDBU+4EcPiHGPMQeK6B4IKEhOp3CCts/ZaRH1sa3w=
 sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240319093822-58cad130d9dc/go.mod h1:nS6tUQgopFVyqFQW1P/luDXNNQfsQOg3WFs9GhzNjm8=
-sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.0-20240312050048-978ce44d3559 h1:F+99oLx87DQfrS4lstZ1Sp+88ADqzsmb9H383BhLFN0=
-sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.0-20240312050048-978ce44d3559/go.mod h1:JqLgOmF8R3ymzVYrSMXMssDVmbzSVrj7olvrQUffMkI=
+sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.2 h1:9Zp+uWnxdUOoy/FaQK1DjPfLrzw8TyMEf0aaQ0dtq6c=
+sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.2/go.mod h1:JKWYkoOyET3wsN0Kk9WxA+zpopkuCy+v4+mrnJ60Yyk=
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.0-20240319093822-58cad130d9dc h1:YHsVYAF6cioowCy+5vp4d3/GVHyypMhFkc6FgBF5E+g=
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.0-20240319093822-58cad130d9dc/go.mod h1:pPkJPx/eMVWP3R+LhPoOYGoY7lywcMJev5L2uSfH+Jo=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
