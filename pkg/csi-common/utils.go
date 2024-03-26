@@ -17,6 +17,7 @@ limitations under the License.
 package csicommon
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -101,7 +102,7 @@ func getLogLevel(method string) int32 {
 func LogGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	level := klog.Level(getLogLevel(info.FullMethod))
 	klog.V(level).Infof("GRPC call: %s", info.FullMethod)
-	klog.V(level).Infof("GRPC request: %s", protosanitizer.StripSecrets(req))
+	klog.V(level).Infof("GRPC request: %s", stripServiceAccountToken(protosanitizer.StripSecrets(req)))
 
 	resp, err := handler(ctx, req)
 	if err != nil {
@@ -110,4 +111,31 @@ func LogGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, h
 		klog.V(level).Infof("GRPC response: %s", protosanitizer.StripSecrets(resp))
 	}
 	return resp, err
+}
+
+func stripServiceAccountToken(req fmt.Stringer) string {
+	var parsed map[string]interface{}
+
+	err := json.Unmarshal([]byte(req.String()), &parsed)
+	if err != nil || parsed == nil {
+		return req.String()
+	}
+
+	volumeContext, ok := parsed["volume_context"].(map[string]interface{})
+	if !ok {
+		return req.String()
+	}
+
+	if _, ok := volumeContext["csi.storage.k8s.io/serviceAccount.tokens"]; !ok {
+		return req.String()
+	}
+
+	volumeContext["csi.storage.k8s.io/serviceAccount.tokens"] = "***stripped***"
+
+	b, err := json.Marshal(parsed)
+	if err != nil {
+		return req.String()
+	}
+
+	return string(b)
 }
