@@ -102,7 +102,7 @@ func getLogLevel(method string) int32 {
 func LogGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 	level := klog.Level(getLogLevel(info.FullMethod))
 	klog.V(level).Infof("GRPC call: %s", info.FullMethod)
-	klog.V(level).Infof("GRPC request: %s", stripServiceAccountToken(protosanitizer.StripSecrets(req)))
+	klog.V(level).Infof("GRPC request: %s", StripSensitiveValue(protosanitizer.StripSecrets(req), "csi.storage.k8s.io/serviceAccount.tokens"))
 
 	resp, err := handler(ctx, req)
 	if err != nil {
@@ -113,7 +113,25 @@ func LogGRPC(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, h
 	return resp, err
 }
 
-func stripServiceAccountToken(req fmt.Stringer) string {
+type stripSensitiveValue struct {
+	// volume_context[key] is the value to be stripped.
+	key string
+	// req is the csi grpc request stripped by `protosanitizer.StripSecrets`
+	req fmt.Stringer
+}
+
+func StripSensitiveValue(req fmt.Stringer, key string) fmt.Stringer {
+	return &stripSensitiveValue{
+		key: key,
+		req: req,
+	}
+}
+
+func (s *stripSensitiveValue) String() string {
+	return stripSensitiveValueByKey(s.req, s.key)
+}
+
+func stripSensitiveValueByKey(req fmt.Stringer, key string) string {
 	var parsed map[string]interface{}
 
 	err := json.Unmarshal([]byte(req.String()), &parsed)
@@ -126,11 +144,11 @@ func stripServiceAccountToken(req fmt.Stringer) string {
 		return req.String()
 	}
 
-	if _, ok := volumeContext["csi.storage.k8s.io/serviceAccount.tokens"]; !ok {
+	if _, ok := volumeContext[key]; !ok {
 		return req.String()
 	}
 
-	volumeContext["csi.storage.k8s.io/serviceAccount.tokens"] = "***stripped***"
+	volumeContext[key] = "***stripped***"
 
 	b, err := json.Marshal(parsed)
 	if err != nil {
