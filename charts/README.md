@@ -5,7 +5,7 @@
 
 ### Tips
  - configure with [blobfuse-proxy](../deploy/blobfuse-proxy) to make blobfuse mount still available after driver restart
- > Note: [blobfuse-proxy](../deploy/blobfuse-proxy) is supported on CoreOS(OpenShift) from v1.23.3
+ > Note: [blobfuse-proxy](../deploy/blobfuse-proxy) is supported on CoreOS(OpenShift) from v1.23.4
    - specify `node.enableBlobfuseProxy=true` together with [blobfuse-proxy](../deploy/blobfuse-proxy)
  - run controller on control plane node: `--set controller.runOnControlPlane=true`
  - set replica of controller as `1`: `--set controller.replicas=1`
