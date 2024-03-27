@@ -11,7 +11,7 @@ require (
 	github.com/container-storage-interface/spec v1.7.0
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
 	github.com/golang/mock v1.6.0
-	github.com/golang/protobuf v1.5.3
+	github.com/golang/protobuf v1.5.4
 	github.com/imdario/mergo v0.3.9 // indirect
 	github.com/kubernetes-csi/csi-lib-utils v0.9.1
 	github.com/onsi/gomega v1.27.4
@@ -20,7 +20,7 @@ require (
 	github.com/stretchr/testify v1.8.3
 	golang.org/x/net v0.17.0
 	google.golang.org/grpc v1.59.0
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.33.0
 	k8s.io/api v0.26.11
 	k8s.io/apimachinery v0.26.11
 	k8s.io/client-go v0.26.11
