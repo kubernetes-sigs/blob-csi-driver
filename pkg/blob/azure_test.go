@@ -146,7 +146,7 @@ users:
 			expectedErr:                           nil,
 		},
 		{
-			desc:                                  "",
+			desc:                                  "[success] get azure client with workload identity",
 			createFakeKubeConfig:                  true,
 			createFakeCredFile:                    true,
 			setFederatedWorkloadIdentityEnv:       true,
