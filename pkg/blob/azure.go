@@ -103,7 +103,18 @@ func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, node
 	} else {
 		config.UserAgent = userAgent
 		config.CloudProviderBackoff = true
-		if err = az.InitializeCloudFromConfig(context.TODO(), config, fromSecret, false); err != nil {
+		// these environment variables are injected by workload identity webhook
+		if tenantID := os.Getenv("AZURE_TENANT_ID"); tenantID != "" {
+			config.TenantID = tenantID
+		}
+		if clientID := os.Getenv("AZURE_CLIENT_ID"); clientID != "" {
+			config.AADClientID = clientID
+		}
+		if federatedTokenFile := os.Getenv("AZURE_FEDERATED_TOKEN_FILE"); federatedTokenFile != "" {
+			config.AADFederatedTokenFile = federatedTokenFile
+			config.UseFederatedWorkloadIdentityExtension = true
+		}
+		if err = az.InitializeCloudFromConfig(ctx, config, fromSecret, false); err != nil {
 			klog.Warningf("InitializeCloudFromConfig failed with error: %v", err)
 		}
 	}
