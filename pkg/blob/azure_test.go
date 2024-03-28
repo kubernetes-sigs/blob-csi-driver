@@ -77,48 +77,87 @@ users:
 	}()
 
 	tests := []struct {
-		desc                  string
-		createFakeCredFile    bool
-		createFakeKubeConfig  bool
-		kubeconfig            string
-		nodeID                string
-		userAgent             string
-		allowEmptyCloudConfig bool
-		expectedErr           error
+		desc                                  string
+		createFakeCredFile                    bool
+		createFakeKubeConfig                  bool
+		setFederatedWorkloadIdentityEnv       bool
+		kubeconfig                            string
+		nodeID                                string
+		userAgent                             string
+		allowEmptyCloudConfig                 bool
+		expectedErr                           error
+		aadFederatedTokenFile                 string
+		useFederatedWorkloadIdentityExtension bool
+		aadClientID                           string
+		tenantID                              string
 	}{
 		{
-			desc:                  "[success] out of cluster, no kubeconfig, no credential file",
-			nodeID:                "",
-			allowEmptyCloudConfig: true,
-			expectedErr:           nil,
+			desc:                                  "[success] out of cluster, no kubeconfig, no credential file",
+			nodeID:                                "",
+			allowEmptyCloudConfig:                 true,
+			aadFederatedTokenFile:                 "",
+			useFederatedWorkloadIdentityExtension: false,
+			aadClientID:                           "",
+			tenantID:                              "",
+			expectedErr:                           nil,
 		},
 		{
-			desc:                  "[linux][failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
-			nodeID:                "",
-			allowEmptyCloudConfig: false,
-			expectedErr:           syscall.ENOENT,
+			desc:                                  "[linux][failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
+			nodeID:                                "",
+			allowEmptyCloudConfig:                 false,
+			aadFederatedTokenFile:                 "",
+			useFederatedWorkloadIdentityExtension: false,
+			aadClientID:                           "",
+			tenantID:                              "",
+			expectedErr:                           syscall.ENOENT,
 		},
 		{
-			desc:                  "[windows][failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
-			nodeID:                "",
-			allowEmptyCloudConfig: false,
-			expectedErr:           syscall.ENOTDIR,
+			desc:                                  "[windows][failure][disallowEmptyCloudConfig] out of cluster, no kubeconfig, no credential file",
+			nodeID:                                "",
+			allowEmptyCloudConfig:                 false,
+			aadFederatedTokenFile:                 "",
+			useFederatedWorkloadIdentityExtension: false,
+			aadClientID:                           "",
+			tenantID:                              "",
+			expectedErr:                           syscall.ENOTDIR,
 		},
 		{
-			desc:                  "[success] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
-			createFakeKubeConfig:  true,
-			kubeconfig:            fakeKubeConfig,
-			nodeID:                "",
-			allowEmptyCloudConfig: true,
-			expectedErr:           nil,
+			desc:                                  "[success] out of cluster & in cluster, specify a fake kubeconfig, no credential file",
+			createFakeKubeConfig:                  true,
+			kubeconfig:                            fakeKubeConfig,
+			nodeID:                                "",
+			allowEmptyCloudConfig:                 true,
+			aadFederatedTokenFile:                 "",
+			useFederatedWorkloadIdentityExtension: false,
+			aadClientID:                           "",
+			tenantID:                              "",
+			expectedErr:                           nil,
 		},
 		{
-			desc:                  "[success] out of cluster & in cluster, no kubeconfig, a fake credential file",
-			createFakeCredFile:    true,
-			nodeID:                "",
-			userAgent:             "useragent",
-			allowEmptyCloudConfig: true,
-			expectedErr:           nil,
+			desc:                                  "[success] out of cluster & in cluster, no kubeconfig, a fake credential file",
+			createFakeCredFile:                    true,
+			nodeID:                                "",
+			userAgent:                             "useragent",
+			allowEmptyCloudConfig:                 true,
+			aadFederatedTokenFile:                 "",
+			useFederatedWorkloadIdentityExtension: false,
+			aadClientID:                           "",
+			tenantID:                              "",
+			expectedErr:                           nil,
+		},
+		{
+			desc:                                  "[success] get azure client with workload identity",
+			createFakeKubeConfig:                  true,
+			createFakeCredFile:                    true,
+			setFederatedWorkloadIdentityEnv:       true,
+			kubeconfig:                            fakeKubeConfig,
+			nodeID:                                "",
+			userAgent:                             "useragent",
+			useFederatedWorkloadIdentityExtension: true,
+			aadFederatedTokenFile:                 "fake-token-file",
+			aadClientID:                           "fake-client-id",
+			tenantID:                              "fake-tenant-id",
+			expectedErr:                           nil,
 		},
 	}
 
@@ -135,7 +174,7 @@ users:
 				t.Error(err)
 			}
 			defer func() {
-				if err := os.Remove(fakeKubeConfig); err != nil {
+				if err := os.Remove(fakeKubeConfig); err != nil && !os.IsNotExist(err) {
 					t.Error(err)
 				}
 			}()
@@ -156,7 +195,7 @@ users:
 				t.Error(err)
 			}
 			defer func() {
-				if err := os.Remove(fakeCredFile); err != nil {
+				if err := os.Remove(fakeCredFile); err != nil && !os.IsNotExist(err) {
 					t.Error(err)
 				}
 			}()
@@ -169,6 +208,11 @@ users:
 			}
 			os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 		}
+		if test.setFederatedWorkloadIdentityEnv {
+			t.Setenv("AZURE_TENANT_ID", test.tenantID)
+			t.Setenv("AZURE_CLIENT_ID", test.aadClientID)
+			t.Setenv("AZURE_FEDERATED_TOKEN_FILE", test.aadFederatedTokenFile)
+		}
 
 		cloud, err := GetCloudProvider(context.Background(), kubeClient, test.nodeID, "", "", test.userAgent, test.allowEmptyCloudConfig)
 		assert.ErrorIs(t, err, test.expectedErr)
@@ -178,6 +222,10 @@ users:
 		} else {
 			assert.Equal(t, cloud.Environment.StorageEndpointSuffix, storage.DefaultBaseURL)
 			assert.Equal(t, cloud.UserAgent, test.userAgent)
+			assert.Equal(t, cloud.AADFederatedTokenFile, test.aadFederatedTokenFile)
+			assert.Equal(t, cloud.UseFederatedWorkloadIdentityExtension, test.useFederatedWorkloadIdentityExtension)
+			assert.Equal(t, cloud.AADClientID, test.aadClientID)
+			assert.Equal(t, cloud.TenantID, test.tenantID)
 		}
 	}
 }
