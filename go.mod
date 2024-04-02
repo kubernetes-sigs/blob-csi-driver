@@ -6,7 +6,7 @@ toolchain go1.21.4
 
 require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.10.0
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.11.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.5.1
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault v1.4.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
@@ -38,7 +38,7 @@ require (
 	k8s.io/mount-utils v0.29.0
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240319093822-58cad130d9dc
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.2
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.3
 	sigs.k8s.io/yaml v1.4.0
 )
 
