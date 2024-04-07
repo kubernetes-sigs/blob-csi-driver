@@ -118,7 +118,7 @@ spec:
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s
-            - --health-port={{ .Values.node.livenessProbe.healthPort }}
+            - --http-endpoint=localhost:{{ .Values.controller.livenessProbe.healthPort }}
             - --v=2
           resources: {{- toYaml .Values.node.resources.livenessProbe | nindent 12 }}
         - name: node-driver-registrar
@@ -173,15 +173,12 @@ spec:
             - "--mount-permissions={{ .Values.node.mountPermissions }}"
             - "--allow-inline-volume-key-access-with-idenitity={{ .Values.node.allowInlineVolumeKeyAccessWithIdentity }}"
             - "--enable-aznfs-mount={{ .Values.node.enableAznfsMount }}"
-          ports:
-            - containerPort: {{ .Values.node.livenessProbe.healthPort }}
-              name: healthz
-              protocol: TCP
           livenessProbe:
             failureThreshold: 5
             httpGet:
+              host: localhost
               path: /healthz
-              port: healthz
+              port: {{ .Values.node.livenessProbe.healthPort }}
             initialDelaySeconds: 30
             timeoutSeconds: 10
             periodSeconds: 30

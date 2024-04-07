@@ -81,7 +81,7 @@ spec:
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s
-            - --health-port=29633
+            - --http-endpoint=localhost:29633
             - --v=2
           resources:
             limits:
@@ -129,15 +129,12 @@ spec:
             - "--blobfuse-proxy-endpoint=$(BLOBFUSE_PROXY_ENDPOINT)"
             - "--nodeid=$(KUBE_NODE_NAME)"
             - "--user-agent-suffix=OSS-kubectl"
-          ports:
-            - containerPort: 29633
-              name: healthz
-              protocol: TCP
           livenessProbe:
             failureThreshold: 5
             httpGet:
+              host: localhost
               path: /healthz
-              port: healthz
+              port: 29633
             initialDelaySeconds: 30
             timeoutSeconds: 10
             periodSeconds: 30

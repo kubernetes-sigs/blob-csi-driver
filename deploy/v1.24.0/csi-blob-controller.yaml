@@ -62,7 +62,7 @@ spec:
           args:
             - --csi-address=/csi/csi.sock
             - --probe-timeout=3s
-            - --health-port=29632
+            - --http-endpoint=localhost:29632
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
