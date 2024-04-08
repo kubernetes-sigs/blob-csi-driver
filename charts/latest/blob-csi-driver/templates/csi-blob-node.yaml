@@ -97,6 +97,8 @@ spec:
               value: "{{ .Values.node.blobfuseProxy.maxOpenFileNum }}"
             - name: DISABLE_UPDATEDB
               value: "{{ .Values.node.blobfuseProxy.disableUpdateDB }}"
+            - name: KUBELET_PATH
+              value: "{{ .Values.linux.kubelet }}"
           volumeMounts:
             - name: host-usr
               mountPath: /host/usr
