@@ -131,15 +131,12 @@ spec:
             - "--user-agent-suffix=OSS-kubectl"
             - "--metrics-address=0.0.0.0:29635"
             - "--enable-aznfs-mount=true"
-          ports:
-            - containerPort: 29633
-              name: healthz
-              protocol: TCP
           livenessProbe:
             failureThreshold: 5
             httpGet:
+              host: localhost
               path: /healthz
-              port: healthz
+              port: 29633
             initialDelaySeconds: 30
             timeoutSeconds: 10
             periodSeconds: 30
