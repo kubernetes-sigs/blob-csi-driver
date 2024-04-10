@@ -38,7 +38,7 @@ require (
 	k8s.io/mount-utils v0.29.0
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240319093822-58cad130d9dc
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.3
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.4
 	sigs.k8s.io/yaml v1.4.0
 )
 
