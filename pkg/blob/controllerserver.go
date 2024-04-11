@@ -923,7 +923,9 @@ func (d *Driver) generateSASToken(accountName, accountKey, storageEndpointSuffix
 	if err != nil {
 		return "", status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", accountName, err.Error()))
 	}
-	serviceClient, err := service.NewClientWithSharedKeyCredential(fmt.Sprintf("https://%s.blob.%s/", accountName, storageEndpointSuffix), credential, nil)
+	clientOptions := service.ClientOptions{}
+	clientOptions.InsecureAllowCredentialWithHTTP = true
+	serviceClient, err := service.NewClientWithSharedKeyCredential(fmt.Sprintf("https://%s.blob.%s/", accountName, storageEndpointSuffix), credential, &clientOptions)
 	if err != nil {
 		return "", status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new client with shared key credential, accountName: %s, err: %s", accountName, err.Error()))
 	}

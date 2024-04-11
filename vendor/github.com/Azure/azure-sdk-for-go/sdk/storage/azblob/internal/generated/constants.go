@@ -4,9 +4,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-package exported
+package generated
 
-const (
-	ModuleName    = "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	ModuleVersion = "v1.3.2"
-)
+const ServiceVersion = "2023-11-03"
