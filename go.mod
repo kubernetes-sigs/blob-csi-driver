@@ -156,7 +156,7 @@ require (
 	k8s.io/kubelet v0.29.3 // indirect
 	k8s.io/pod-security-admission v0.29.0
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.13
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.14
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
