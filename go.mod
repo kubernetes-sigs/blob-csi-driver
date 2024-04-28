@@ -25,12 +25,12 @@ require (
 	k8s.io/api v0.29.2
 	k8s.io/apimachinery v0.29.2
 	k8s.io/client-go v0.29.2
-	k8s.io/component-base v0.29.0
-	k8s.io/klog/v2 v2.110.1
+	k8s.io/component-base v0.29.2
+	k8s.io/klog/v2 v2.120.1
 	k8s.io/kubernetes v1.29.0
 	k8s.io/mount-utils v0.29.0
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
-	sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240220055818-b76605c9c708
+	sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240312050048-978ce44d3559
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -39,10 +39,10 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault v1.4.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.1.0
 	github.com/go-ini/ini v1.67.0
-	github.com/onsi/ginkgo/v2 v2.15.0
+	github.com/onsi/ginkgo/v2 v2.16.0
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
-	k8s.io/apiserver v0.29.0
+	k8s.io/apiserver v0.29.2
 	k8s.io/pod-security-admission v0.29.0
 	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.0-20240218020800-ba9f211f36bf
 )
@@ -147,7 +147,7 @@ require (
 	golang.org/x/term v0.19.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.16.1 // indirect
+	golang.org/x/tools v0.17.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20231030173426-d783a09b4405 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
@@ -157,13 +157,13 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.0.0 // indirect
-	k8s.io/cloud-provider v0.29.0 // indirect
-	k8s.io/component-helpers v0.29.0 // indirect
-	k8s.io/controller-manager v0.29.0 // indirect
-	k8s.io/kms v0.29.0 // indirect
+	k8s.io/cloud-provider v0.29.2 // indirect
+	k8s.io/component-helpers v0.29.2 // indirect
+	k8s.io/controller-manager v0.29.2 // indirect
+	k8s.io/kms v0.29.2 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/kubectl v0.0.0 // indirect
-	k8s.io/kubelet v0.29.0 // indirect
+	k8s.io/kubelet v0.29.2 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
 	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.0-20240218020800-ba9f211f36bf
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect

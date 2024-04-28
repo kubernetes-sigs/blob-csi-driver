@@ -194,7 +194,6 @@ github.com/go-ini/ini
 ## explicit; go 1.18
 github.com/go-logr/logr
 github.com/go-logr/logr/funcr
-github.com/go-logr/logr/slogr
 # github.com/go-logr/stdr v1.2.2
 ## explicit; go 1.16
 github.com/go-logr/stdr
@@ -345,7 +344,7 @@ github.com/munnerz/goautoneg
 # github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f
 ## explicit
 github.com/mxk/go-flowrate/flowrate
-# github.com/onsi/ginkgo/v2 v2.15.0
+# github.com/onsi/ginkgo/v2 v2.16.0
 ## explicit; go 1.20
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
@@ -625,8 +624,9 @@ golang.org/x/text/width
 # golang.org/x/time v0.5.0
 ## explicit; go 1.18
 golang.org/x/time/rate
-# golang.org/x/tools v0.16.1
+# golang.org/x/tools v0.17.0
 ## explicit; go 1.18
+golang.org/x/tools/cover
 golang.org/x/tools/go/ast/inspector
 # google.golang.org/appengine v1.6.7
 ## explicit; go 1.11
@@ -881,7 +881,7 @@ k8s.io/apimachinery/pkg/watch
 k8s.io/apimachinery/third_party/forked/golang/json
 k8s.io/apimachinery/third_party/forked/golang/netutil
 k8s.io/apimachinery/third_party/forked/golang/reflect
-# k8s.io/apiserver v0.29.0 => k8s.io/apiserver v0.29.0
+# k8s.io/apiserver v0.29.2 => k8s.io/apiserver v0.29.0
 ## explicit; go 1.21
 k8s.io/apiserver/pkg/admission
 k8s.io/apiserver/pkg/admission/cel
@@ -1352,7 +1352,7 @@ k8s.io/client-go/util/homedir
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/retry
 k8s.io/client-go/util/workqueue
-# k8s.io/cloud-provider v0.29.0 => k8s.io/cloud-provider v0.29.0
+# k8s.io/cloud-provider v0.29.2 => k8s.io/cloud-provider v0.29.0
 ## explicit; go 1.21
 k8s.io/cloud-provider
 k8s.io/cloud-provider/api
@@ -1368,7 +1368,7 @@ k8s.io/cloud-provider/names
 k8s.io/cloud-provider/node/helpers
 k8s.io/cloud-provider/options
 k8s.io/cloud-provider/service/helpers
-# k8s.io/component-base v0.29.0 => k8s.io/component-base v0.29.0
+# k8s.io/component-base v0.29.2 => k8s.io/component-base v0.29.0
 ## explicit; go 1.21
 k8s.io/component-base/cli/flag
 k8s.io/component-base/config
@@ -1390,14 +1390,14 @@ k8s.io/component-base/metrics/testutil
 k8s.io/component-base/tracing
 k8s.io/component-base/tracing/api/v1
 k8s.io/component-base/version
-# k8s.io/component-helpers v0.29.0 => k8s.io/component-helpers v0.29.0
+# k8s.io/component-helpers v0.29.2 => k8s.io/component-helpers v0.29.0
 ## explicit; go 1.21
 k8s.io/component-helpers/node/util
 k8s.io/component-helpers/node/util/sysctl
 k8s.io/component-helpers/scheduling/corev1
 k8s.io/component-helpers/scheduling/corev1/nodeaffinity
 k8s.io/component-helpers/storage/volume
-# k8s.io/controller-manager v0.29.0 => k8s.io/controller-manager v0.29.0
+# k8s.io/controller-manager v0.29.2 => k8s.io/controller-manager v0.29.0
 ## explicit; go 1.21
 k8s.io/controller-manager/config
 k8s.io/controller-manager/config/v1
@@ -1409,8 +1409,8 @@ k8s.io/controller-manager/pkg/features
 k8s.io/controller-manager/pkg/features/register
 k8s.io/controller-manager/pkg/leadermigration/config
 k8s.io/controller-manager/pkg/leadermigration/options
-# k8s.io/klog/v2 v2.110.1
-## explicit; go 1.13
+# k8s.io/klog/v2 v2.120.1
+## explicit; go 1.18
 k8s.io/klog/v2
 k8s.io/klog/v2/internal/buffer
 k8s.io/klog/v2/internal/clock
@@ -1418,7 +1418,7 @@ k8s.io/klog/v2/internal/dbg
 k8s.io/klog/v2/internal/serialize
 k8s.io/klog/v2/internal/severity
 k8s.io/klog/v2/internal/sloghandler
-# k8s.io/kms v0.29.0
+# k8s.io/kms v0.29.2
 ## explicit; go 1.21
 k8s.io/kms/apis/v1beta1
 k8s.io/kms/apis/v2
@@ -1449,7 +1449,7 @@ k8s.io/kube-openapi/pkg/validation/strfmt/bson
 ## explicit; go 1.21
 k8s.io/kubectl/pkg/scale
 k8s.io/kubectl/pkg/util/podutils
-# k8s.io/kubelet v0.29.0 => k8s.io/kubelet v0.29.0
+# k8s.io/kubelet v0.29.2 => k8s.io/kubelet v0.29.0
 ## explicit; go 1.21
 k8s.io/kubelet/pkg/apis
 k8s.io/kubelet/pkg/apis/stats/v1alpha1
@@ -1555,7 +1555,7 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client/metrics
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/common/metrics
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/proto/client
-# sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240220055818-b76605c9c708
+# sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240312050048-978ce44d3559
 ## explicit; go 1.21
 sigs.k8s.io/cloud-provider-azure/pkg/azureclients
 sigs.k8s.io/cloud-provider-azure/pkg/azureclients/armclient

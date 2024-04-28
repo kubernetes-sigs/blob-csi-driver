@@ -117,6 +117,7 @@ func (az *Cloud) getStorageAccounts(ctx context.Context, accountOptions *Account
 				isTaggedWithSkip(acct) &&
 				isHnsPropertyEqual(acct, accountOptions) &&
 				isEnableNfsV3PropertyEqual(acct, accountOptions) &&
+				isEnableHTTPSTrafficOnlyEqual(acct, accountOptions) &&
 				isAllowBlobPublicAccessEqual(acct, accountOptions) &&
 				isRequireInfrastructureEncryptionEqual(acct, accountOptions) &&
 				isAllowSharedKeyAccessEqual(acct, accountOptions) &&
@@ -717,22 +718,20 @@ func (az *Cloud) AddStorageAccountTags(ctx context.Context, subsID, resourceGrou
 		return rerr
 	}
 
-	originalLen := len(result.Tags)
-	newTags := result.Tags
-	if newTags == nil {
-		newTags = make(map[string]*string)
-	}
-
-	// merge two tag map
+	// merge two tag map into one
+	newTags := make(map[string]*string)
 	for k, v := range tags {
 		newTags[k] = v
 	}
+	for k, v := range result.Tags {
+		newTags[k] = v
+	}
 
-	if len(newTags) > originalLen {
+	if len(newTags) > len(result.Tags) {
 		// only update when newTags is different from old tags
 		_ = az.storageAccountCache.Delete(account) // clean cache
 		updateParams := storage.AccountUpdateParameters{Tags: newTags}
-		klog.V(2).Infof("update storage account(%s) with tags(%+v)", account, newTags)
+		klog.V(2).Infof("add storage account(%s) with tags(%+v)", account, newTags)
 		return az.StorageAccountClient.Update(ctx, subsID, resourceGroup, account, updateParams)
 	}
 	return nil
@@ -759,6 +758,7 @@ func (az *Cloud) RemoveStorageAccountTag(ctx context.Context, subsID, resourceGr
 		// only update when newTags is different from old tags
 		_ = az.storageAccountCache.Delete(account) // clean cache
 		updateParams := storage.AccountUpdateParameters{Tags: result.Tags}
+		klog.V(2).Infof("remove tag(%s) from storage account(%s)", key, account)
 		return az.StorageAccountClient.Update(ctx, subsID, resourceGroup, account, updateParams)
 	}
 	return nil
@@ -859,6 +859,10 @@ func isHnsPropertyEqual(account storage.Account, accountOptions *AccountOptions)
 
 func isEnableNfsV3PropertyEqual(account storage.Account, accountOptions *AccountOptions) bool {
 	return pointer.BoolDeref(accountOptions.EnableNfsV3, false) == pointer.BoolDeref(account.EnableNfsV3, false)
+}
+
+func isEnableHTTPSTrafficOnlyEqual(account storage.Account, accountOptions *AccountOptions) bool {
+	return accountOptions.EnableHTTPSTrafficOnly == pointer.BoolDeref(account.EnableHTTPSTrafficOnly, true)
 }
 
 func isPrivateEndpointAsExpected(account storage.Account, accountOptions *AccountOptions) bool {
