@@ -226,15 +226,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("matchTags must set as false when storageAccount(%s) is provided", account))
 	}
 
-	if subsID != "" && subsID != d.cloud.SubscriptionID {
-		if isNFSProtocol(protocol) {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("NFS protocol is not supported in cross subscription(%s)", subsID))
-		}
-		if !storeAccountKey {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("storeAccountKey must set as true in cross subscription(%s)", subsID))
-		}
-	}
-
 	if resourceGroup == "" {
 		resourceGroup = d.cloud.ResourceGroup
 	}
