@@ -164,7 +164,7 @@ github.com/cenkalti/backoff/v4
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
-# github.com/container-storage-interface/spec v1.8.0
+# github.com/container-storage-interface/spec v1.9.0
 ## explicit; go 1.18
 github.com/container-storage-interface/spec/lib/go/csi
 # github.com/coreos/go-semver v0.3.1
@@ -316,8 +316,8 @@ github.com/josharian/intern
 # github.com/json-iterator/go v1.1.12
 ## explicit; go 1.12
 github.com/json-iterator/go
-# github.com/kubernetes-csi/csi-lib-utils v0.16.0
-## explicit; go 1.18
+# github.com/kubernetes-csi/csi-lib-utils v0.18.0
+## explicit; go 1.22.0
 github.com/kubernetes-csi/csi-lib-utils/protosanitizer
 # github.com/kylelemons/godebug v1.1.0
 ## explicit; go 1.11
@@ -1375,7 +1375,7 @@ k8s.io/cloud-provider/names
 k8s.io/cloud-provider/node/helpers
 k8s.io/cloud-provider/options
 k8s.io/cloud-provider/service/helpers
-# k8s.io/component-base v0.29.4 => k8s.io/component-base v0.29.4
+# k8s.io/component-base v0.30.0 => k8s.io/component-base v0.29.4
 ## explicit; go 1.21
 k8s.io/component-base/cli/flag
 k8s.io/component-base/config
