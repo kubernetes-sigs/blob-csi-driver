@@ -18,7 +18,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang/protobuf v1.5.4
 	github.com/kubernetes-csi/csi-lib-utils v0.16.0
-	github.com/onsi/ginkgo/v2 v2.17.3
+	github.com/onsi/ginkgo/v2 v2.18.0
 	github.com/onsi/gomega v1.33.1
 	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.9.5
@@ -38,7 +38,7 @@ require (
 	k8s.io/mount-utils v0.29.4
 	k8s.io/utils v0.0.0-20231127182322-b307cd553661
 	sigs.k8s.io/cloud-provider-azure v1.27.1-0.20240418020948-86cfc443b48c
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.11
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.12
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -135,7 +135,7 @@ require (
 	golang.org/x/term v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
-	golang.org/x/tools v0.20.0 // indirect
+	golang.org/x/tools v0.21.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20231030173426-d783a09b4405 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20231016165738-49dd2c1f3d0b // indirect
