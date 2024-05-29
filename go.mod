@@ -18,7 +18,7 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang/protobuf v1.5.4
 	github.com/kubernetes-csi/csi-lib-utils v0.16.0
-	github.com/onsi/ginkgo/v2 v2.18.0
+	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
 	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.9.5
@@ -155,7 +155,7 @@ require (
 	k8s.io/kubelet v0.29.3 // indirect
 	k8s.io/pod-security-admission v0.29.4
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.28.0 // indirect
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.21
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.23
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.1 // indirect
 )
