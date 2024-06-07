@@ -1,5 +1,5 @@
 # workload identity support on static provisioning
- - supported from v1.24.0
+ - supported from v1.24.0 (from AKS 1.29 with `tokenRequests` field support in `CSIDriver`)
 
 The feature is intended for blobfuse mount and is not supported for NFS mount since NFS mount does not need credentials. Each pod has its own standalone blobfuse mount, but if multiple pods are present on a single node, it may lead to performance problems.
 
