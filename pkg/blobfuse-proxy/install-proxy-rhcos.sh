@@ -20,7 +20,11 @@ set -xe
 if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
   echo "copy blobfuse2...."
-  cp /usr/bin/blobfuse2 /host/usr/local/bin/blobfuse2
+  old=$(sha256sum /host/usr/local/bin/blobfuse2 | awk '{print $1}')
+  new=$(sha256sum /usr/bin/blobfuse2 | awk '{print $1}')
+  if [ "$old" != "$new" ];then
+    cp /usr/bin/blobfuse2 /host/usr/local/bin/blobfuse2 --force
+  fi
 fi
 
 # install blobfuse-proxy
@@ -36,8 +40,7 @@ fi
 if [ "$updateBlobfuseProxy" = "true" ];then
   echo "copy blobfuse-proxy...."
   rm -rf /host/"$KUBELET_PATH"/plugins/blob.csi.azure.com/blobfuse-proxy.sock
-  rm -rf /host/usr/local/bin/blobfuse-proxy
-  cp /blobfuse-proxy/blobfuse-proxy /host/usr/local/bin/blobfuse-proxy
+  cp /blobfuse-proxy/blobfuse-proxy /host/usr/local/bin/blobfuse-proxy --force
   chmod 755 /host/usr/local/bin/blobfuse-proxy
 fi
 
