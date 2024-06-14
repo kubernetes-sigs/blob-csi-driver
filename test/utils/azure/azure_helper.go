@@ -124,53 +124,5 @@ func (az *Client) GetAccountNumByResourceGroup(ctx context.Context, groupName st
 	if err != nil {
 		return -1, err
 	}
-	return len(result.Values()), nil
-}
-
-func getCloudConfig(env azure.Environment) cloud.Configuration {
-	switch env.Name {
-	case azure.USGovernmentCloud.Name:
-		return cloud.AzureGovernment
-	case azure.ChinaCloud.Name:
-		return cloud.AzureChina
-	case azure.PublicCloud.Name:
-		return cloud.AzurePublic
-	default:
-		return cloud.Configuration{
-			ActiveDirectoryAuthorityHost: env.ActiveDirectoryEndpoint,
-			Services: map[cloud.ServiceName]cloud.ServiceConfiguration{
-				cloud.ResourceManager: {
-					Audience: env.TokenAudience,
-					Endpoint: env.ResourceManagerEndpoint,
-				},
-			},
-		}
-	}
-}
-
-func getClient(env azure.Environment, subscriptionID, _ string, cred *azidentity.ClientSecretCredential, scope string) *Client {
-	c := &Client{
-		environment:    env,
-		subscriptionID: subscriptionID,
-		groupsClient:   resources.NewGroupsClientWithBaseURI(env.ResourceManagerEndpoint, subscriptionID),
-		accountsClient: storage.NewAccountsClient(subscriptionID),
-	}
-
-	if !strings.HasSuffix(scope, "/.default") {
-		scope += "/.default"
-	}
-	// Use an adapter so azidentity in the Azure SDK can be used as Authorizer
-	// when calling the Azure Management Packages, which we currently use. Once
-	// the Azure SDK clients (found in /sdk) move to stable, we can update our
-	// clients and they will be able to use the creds directly without the
-	// authorizer.
-	authorizer := azidext.NewTokenCredentialAdapter(cred, []string{scope})
-	c.groupsClient.Authorizer = authorizer
-	c.accountsClient.Authorizer = authorizer
-
-	return c
-}
-
-func stringPointer(s string) *string {
-	return &s
+	return len(result), nil
 }
