@@ -303,7 +303,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		VNetName:                        vnetName,
 		SubnetName:                      subnetName,
 		AccessTier:                      accessTier,
-		CreatePrivateEndpoint:           createPrivateEndpoint,
+		CreatePrivateEndpoint:           pointer.BoolPtr(createPrivateEndpoint),
 		StorageType:                     provider.StorageTypeBlob,
 		StorageEndpointSuffix:           storageEndpointSuffix,
 		EnableBlobVersioning:            enableBlobVersioning,
