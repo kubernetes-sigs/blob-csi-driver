@@ -19,10 +19,10 @@ set -xe
 # in coreos, we could just copy the blobfuse2 binary to /usr/local/bin/blobfuse2
 if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
-  echo "copy blobfuse2...."
   old=$(sha256sum /host/usr/local/bin/blobfuse2 | awk '{print $1}')
   new=$(sha256sum /usr/bin/blobfuse2 | awk '{print $1}')
   if [ "$old" != "$new" ];then
+    echo "copy blobfuse2...."
     cp /usr/bin/blobfuse2 /host/usr/local/bin/blobfuse2 --force
   fi
 fi
