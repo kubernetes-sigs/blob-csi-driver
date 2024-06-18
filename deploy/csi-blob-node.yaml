@@ -46,6 +46,9 @@ spec:
             - "/blobfuse-proxy/init.sh"
           securityContext:
             privileged: true
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: DEBIAN_FRONTEND
               value: "noninteractive"
@@ -89,6 +92,10 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
         - name: node-driver-registrar
           image: mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar:v2.10.1
           args:
@@ -119,6 +126,10 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
         - name: blob
           image: mcr.microsoft.com/k8s/csi/blob-csi:latest
           imagePullPolicy: IfNotPresent
@@ -158,6 +169,9 @@ spec:
                   fieldPath: spec.nodeName
           securityContext:
             privileged: true
+            capabilities:
+              drop:
+                - ALL
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -186,6 +200,9 @@ spec:
           imagePullPolicy: IfNotPresent
           securityContext:
             privileged: true
+            capabilities:
+              drop:
+                - ALL
           resources:
             limits:
               memory: 100Mi
