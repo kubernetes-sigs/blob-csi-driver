@@ -78,6 +78,9 @@ spec:
             - "/blobfuse-proxy/init.sh"
           securityContext:
             privileged: true
+            capabilities:
+              drop:
+              - ALL
           env:
             - name: DEBIAN_FRONTEND
               value: "noninteractive"
@@ -123,6 +126,10 @@ spec:
             - --health-port={{ .Values.node.livenessProbe.healthPort }}
             - --v=2
           resources: {{- toYaml .Values.node.resources.livenessProbe | nindent 12 }}
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
         - name: node-driver-registrar
 {{- if hasPrefix "/" .Values.image.nodeDriverRegistrar.repository }}
           image: "{{ .Values.image.baseRepo }}{{ .Values.image.nodeDriverRegistrar.repository }}:{{ .Values.image.nodeDriverRegistrar.tag }}"
@@ -152,6 +159,10 @@ spec:
             - name: registration-dir
               mountPath: /registration
           resources: {{- toYaml .Values.node.resources.nodeDriverRegistrar | nindent 12 }}
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
         - name: blob
 {{- if hasPrefix "/" .Values.image.blob.repository }}
           image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
@@ -218,6 +229,9 @@ spec:
           imagePullPolicy: {{ .Values.image.blob.pullPolicy }}
           securityContext:
             privileged: true
+            capabilities:
+              drop:
+              - ALL
           volumeMounts:
             - mountPath: /csi
               name: socket-dir
@@ -261,6 +275,9 @@ spec:
           imagePullPolicy: {{ .Values.image.blob.pullPolicy }}
           securityContext:
             privileged: true
+            capabilities:
+              drop:
+              - ALL
           resources: {{- toYaml .Values.node.resources.aznfswatchdog | nindent 12 }}
           volumeMounts:
             - mountPath: /opt/microsoft/aznfs/data
