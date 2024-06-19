@@ -36,7 +36,7 @@ RUN chmod +x /blobfuse-proxy/init.sh && \
 RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev wget e2fsprogs nfs-common netbase procps conntrack iptables bind9-host iproute2 bash netcat-traditional sysvinit-utils kmod
 
 # install aznfs
-ARG aznfsVer=2.0.4
+ARG aznfsVer=2.0.7
 RUN if [ "$ARCH" = "amd64" ] ; then \
   wget -O aznfs.tar.gz https://github.com/Azure/AZNFS-mount/releases/download/${aznfsVer}/aznfs-${aznfsVer}-1.x86_64.tar.gz; \
 else \
