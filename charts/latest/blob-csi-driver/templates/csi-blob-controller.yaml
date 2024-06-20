@@ -82,6 +82,10 @@ spec:
             - mountPath: /csi
               name: socket-dir
           resources: {{- toYaml .Values.controller.resources.csiProvisioner | nindent 12 }}
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
         - name: liveness-probe
 {{- if hasPrefix "/" .Values.image.livenessProbe.repository }}
           image: "{{ .Values.image.baseRepo }}{{ .Values.image.livenessProbe.repository }}:{{ .Values.image.livenessProbe.tag }}"
@@ -97,6 +101,10 @@ spec:
             - name: socket-dir
               mountPath: /csi
           resources: {{- toYaml .Values.controller.resources.livenessProbe | nindent 12 }}
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
         - name: blob
 {{- if hasPrefix "/" .Values.image.blob.repository }}
           image: "{{ .Values.image.baseRepo }}{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
@@ -169,6 +177,10 @@ spec:
               readOnly: true
             {{- end }}
           resources: {{- toYaml .Values.controller.resources.blob | nindent 12 }}
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
         - name: csi-resizer
 {{- if hasPrefix "/" .Values.image.csiResizer.repository }}
           image: "{{ .Values.image.baseRepo }}{{ .Values.image.csiResizer.repository }}:{{ .Values.image.csiResizer.tag }}"
@@ -189,6 +201,10 @@ spec:
             - name: socket-dir
               mountPath: /csi
           resources: {{- toYaml .Values.controller.resources.csiResizer | nindent 12 }}
+          securityContext:
+            capabilities:
+              drop:
+              - ALL
       volumes:
         - name: socket-dir
           emptyDir: {}
