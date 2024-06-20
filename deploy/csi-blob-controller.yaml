@@ -57,6 +57,10 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
         - name: liveness-probe
           image: mcr.microsoft.com/oss/kubernetes-csi/livenessprobe:v2.10.0
           args:
@@ -72,6 +76,10 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
         - name: blob
           image: mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.23.5
           imagePullPolicy: IfNotPresent
@@ -113,6 +121,10 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
         - name: csi-resizer
           image: mcr.microsoft.com/oss/kubernetes-csi/csi-resizer:v1.8.0
           args:
@@ -133,6 +145,10 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
       volumes:
         - name: socket-dir
           emptyDir: {}
