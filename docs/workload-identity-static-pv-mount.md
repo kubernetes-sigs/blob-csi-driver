@@ -59,7 +59,96 @@ az identity federated-credential create --name $FEDERATED_IDENTITY_NAME \
 --issuer $AKS_OIDC_ISSUER \
 --subject system:serviceaccount:${SERVICE_ACCOUNT_NAMESPACE}:${SERVICE_ACCOUNT_NAME}
 ```
-## Pod with ephemeral inline volume
+
+## option#1: static provision with PV
+```
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    pv.kubernetes.io/provisioned-by: blob.csi.azure.com
+  name: pv-blob
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: blob-fuse
+  mountOptions:
+    - -o allow_other
+    - --file-cache-timeout-in-seconds=120
+  csi:
+    driver: blob.csi.azure.com
+    # make sure volumeid is unique for every storage blob container in the cluster
+    # the # character is reserved for internal use, the / character is not allowed
+    volumeHandle: unique_volume_id
+    volumeAttributes:
+      storageaccount: $ACCOUNT # required
+      containerName: $CONTAINER  # required
+      clientID: $USER_ASSIGNED_CLIENT_ID # required
+      resourcegroup: $STORAGE_RESOURCE_GROUP # optional, specified when the storage account is not under AKS node resource group(which is prefixed with "MC_")
+      # tenantID: $IDENTITY_TENANT  #optional, only specified when workload identity and AKS cluster are in different tenant
+      # subscriptionid: $SUBSCRIPTION #optional, only specified when workload identity and AKS cluster are in different subscription
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: pvc-blob
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  volumeName: pv-blob
+  storageClassName: blob-fuse
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: deployment-blob
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+      name: deployment-blob
+    spec:
+      serviceAccountName: $SERVICE_ACCOUNT_NAME  #required, Pod has no permission to mount the volume without this field
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+        - name: deployment-blob
+          image: mcr.microsoft.com/oss/nginx/nginx:1.17.3-alpine
+          command:
+            - "/bin/sh"
+            - "-c"
+            - while true; do echo $(date) >> /mnt/blob/outfile; sleep 1; done
+          volumeMounts:
+            - name: blob
+              mountPath: "/mnt/blob"
+              readOnly: false
+      volumes:
+        - name: blob
+          persistentVolumeClaim:
+            claimName: pvc-blob
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+EOF
+```
+
+## option#2: Pod with ephemeral inline volume
 ```
 cat <<EOF | kubectl apply -f -
 kind: Pod
