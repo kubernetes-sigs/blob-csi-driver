@@ -17,10 +17,25 @@
 set -xe
 
 # in coreos, we could just copy the blobfuse2 binary to /usr/local/bin/blobfuse2
+updateBlobfuse2="true"
 if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
+  if [ -f "/host/usr/local/bin/blobfuse2" ];then
+    old=$(sha256sum /host/usr/local/bin/blobfuse2 | awk '{print $1}')
+    new=$(sha256sum /usr/bin/blobfuse2 | awk '{print $1}')
+    if [ "$old" = "$new" ];then
+      updateBlobfuse2="false"
+      echo "no need to update blobfuse2 since no change"
+    fi
+  fi
+else
+  echo "no need to install blobfuse2"
+  updateBlobfuse2="false"
+fi
+if [ "$updateBlobfuse2" = "true" ];then
   echo "copy blobfuse2...."
-  cp /usr/bin/blobfuse2 /host/usr/local/bin/blobfuse2
+  cp /usr/bin/blobfuse2 /host/usr/local/bin/blobfuse2 --force
+  chmod 755 /host/usr/local/bin/blobfuse2
 fi
 
 # install blobfuse-proxy
@@ -35,9 +50,8 @@ if [ -f "/host/usr/local/bin/blobfuse-proxy" ];then
 fi
 if [ "$updateBlobfuseProxy" = "true" ];then
   echo "copy blobfuse-proxy...."
-  rm -rf /host/var/lib/kubelet/plugins/blob.csi.azure.com/blobfuse-proxy.sock
-  rm -rf /host/usr/local/bin/blobfuse-proxy
-  cp /blobfuse-proxy/blobfuse-proxy /host/usr/local/bin/blobfuse-proxy
+  rm -rf /host/"$KUBELET_PATH"/plugins/blob.csi.azure.com/blobfuse-proxy.sock
+  cp /blobfuse-proxy/blobfuse-proxy /host/usr/local/bin/blobfuse-proxy --force
   chmod 755 /host/usr/local/bin/blobfuse-proxy
 fi
 
