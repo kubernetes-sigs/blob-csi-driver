@@ -90,8 +90,7 @@ fi
 if [ "$updateBlobfuseProxy" = "true" ];then
   echo "copy blobfuse-proxy...."
   rm -rf /host/"$KUBELET_PATH"/plugins/blob.csi.azure.com/blobfuse-proxy.sock
-  rm -rf /host/usr/bin/blobfuse-proxy
-  cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy
+  cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy --force
   chmod 755 /host/usr/bin/blobfuse-proxy
 fi
 
