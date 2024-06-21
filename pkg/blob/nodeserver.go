@@ -334,6 +334,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			mountType = NFS
 		}
 
+		if storageEndpointSuffix != "" && mountType == AZNFS {
+			aznfsEndpoint := strings.Replace(storageEndpointSuffix, "core.", "", 1)
+			klog.V(2).Infof("set AZURE_ENDPOINT_OVERRIDE to %s", aznfsEndpoint)
+			os.Setenv("AZURE_ENDPOINT_OVERRIDE", aznfsEndpoint)
+		}
+
 		source := fmt.Sprintf("%s:/%s/%s", serverAddress, accountName, containerName)
 		mountOptions := util.JoinMountOptions(mountFlags, []string{"sec=sys,vers=3,nolock"})
 		if err := wait.PollImmediate(1*time.Second, 2*time.Minute, func() (bool, error) {
