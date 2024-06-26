@@ -5,7 +5,8 @@
 - NFSv3 protocol is not supported
 
 ## Prerequisites
-- ensure that the virtual network on which the driver controller pod is running is included in the allowed list of the storage account VNet setting.
+- Make sure that the virtual network, where the driver controller pod is deployed, is added to the allowed list of the storage account's VNet setting.
+- Before proceeding, ensure that the application is not writing data to the source volume.
 
 ## Create a Source PVC
 
