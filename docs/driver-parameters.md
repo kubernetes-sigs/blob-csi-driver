@@ -117,7 +117,7 @@ fsGroupChangePolicy | indicates how volume's ownership will be changed by the dr
 --- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#environment-variables)** | --- | --- |
 volumeAttributes.AzureStorageAuthType | Authentication Type | `Key`, `SAS`, `MSI`, `SPN` | No | `Key`
 volumeAttributes.AzureStorageIdentityClientID | Identity Client ID |  | No |
-volumeAttributes.AzureStorageIdentityObjectID | Identity Object ID |  | No |
+volumeAttributes.AzureStorageIdentityObjectID | Identity Object ID (deprecated) |  | No |
 volumeAttributes.AzureStorageIdentityResourceID | Identity Resource ID |  | No |
 volumeAttributes.MSIEndpoint | MSI Endpoint |  | No |
 volumeAttributes.AzureStorageSPNClientID | SPN Client ID |  | No |
