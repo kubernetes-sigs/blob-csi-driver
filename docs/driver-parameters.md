@@ -1,5 +1,7 @@
 ## Driver Parameters
  > parameter names are case-insensitive
+ > 
+ > make sure the identity used by CSI driver has `Storage Blob Data Contributor` on the storage account 
 
 <details><summary>required permissions for CSI driver controller</summary>
 <pre>
