@@ -153,6 +153,8 @@ const (
 	defaultStorageEndPointSuffix = "core.windows.net"
 
 	FSGroupChangeNone = "None"
+	// define tag value delimiter and default is comma
+	tagValueDelimiterField = "tagValueDelimiter"
 )
 
 var (
