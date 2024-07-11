@@ -105,6 +105,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var err error
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := pointer.Bool(false)
+	// set allowBlobPublicAccess as true by default
+	allowSharedKeyAccess := pointer.Bool(true)
 
 	containerNameReplaceMap := map[string]string{}
 
@@ -170,6 +172,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case allowBlobPublicAccessField:
 			if strings.EqualFold(v, trueValue) {
 				allowBlobPublicAccess = pointer.Bool(true)
+			}
+		case allowSharedKeyAccessField:
+			if strings.EqualFold(v, falseValue) {
+				allowSharedKeyAccess = pointer.Bool(false)
 			}
 		case requireInfraEncryptionField:
 			if strings.EqualFold(v, trueValue) {
@@ -302,6 +308,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		storageEndpointSuffix = d.getStorageEndPointSuffix()
 	}
 
+	if storeAccountKey && !pointer.BoolDeref(allowSharedKeyAccess, false) {
+		return nil, status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
+	}
+
 	accountOptions := &azure.AccountOptions{
 		Name:                            account,
 		Type:                            storageAccountType,
@@ -316,6 +326,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		IsHnsEnabled:                    isHnsEnabled,
 		EnableNfsV3:                     enableNfsV3,
 		AllowBlobPublicAccess:           allowBlobPublicAccess,
+		AllowSharedKeyAccess:            allowSharedKeyAccess,
 		RequireInfrastructureEncryption: requireInfraEncryption,
 		VNetResourceGroup:               vnetResourceGroup,
 		VNetName:                        vnetName,
