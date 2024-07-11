@@ -176,33 +176,57 @@ func TestMakeDir(t *testing.T) {
 
 func TestConvertTagsToMap(t *testing.T) {
 	tests := []struct {
-		desc        string
-		tags        string
-		expectedOut map[string]string
-		expectedErr error
+		desc          string
+		tags          string
+		tagsDelimiter string
+		expectedOut   map[string]string
+		expectedErr   error
 	}{
 		{
-			desc:        "Improper KeyValuePair",
-			tags:        "foo=bar=gar,lorem=ipsum",
-			expectedOut: nil,
-			expectedErr: fmt.Errorf("Tags '%s' are invalid, the format should like: 'key1=value1,key2=value2'", "foo=bar=gar,lorem=ipsum"),
+			desc:          "Improper KeyValuePair",
+			tags:          "foo,lorem=ipsum",
+			tagsDelimiter: ",",
+			expectedOut:   nil,
+			expectedErr:   fmt.Errorf("Tags '%s' are invalid, the format should like: 'key1=value1,key2=value2'", "foo,lorem=ipsum"),
 		},
 		{
-			desc:        "Missing Key",
-			tags:        "=bar,lorem=ipsum",
-			expectedOut: nil,
-			expectedErr: fmt.Errorf("Tags '%s' are invalid, the format should like: 'key1=value1,key2=value2'", "=bar,lorem=ipsum"),
+			desc:          "Missing Key",
+			tags:          "=bar,lorem=ipsum",
+			tagsDelimiter: ",",
+			expectedOut:   nil,
+			expectedErr:   fmt.Errorf("Tags '%s' are invalid, the format should like: 'key1=value1,key2=value2'", "=bar,lorem=ipsum"),
 		},
 		{
-			desc:        "Successful Input/Output",
-			tags:        "foo=bar,lorem=ipsum",
-			expectedOut: map[string]string{"foo": "bar", "lorem": "ipsum"},
+			desc:          "Successful Input/Output",
+			tags:          "foo=bar,lorem=ipsum",
+			tagsDelimiter: ",",
+			expectedOut:   map[string]string{"foo": "bar", "lorem": "ipsum"},
+			expectedErr:   nil,
+		},
+		{
+			desc:          "should return success for empty tagsDelimiter",
+			tags:          "key1=value1,key2=value2",
+			tagsDelimiter: "",
+			expectedOut: map[string]string{
+				"key1": "value1",
+				"key2": "value2",
+			},
+			expectedErr: nil,
+		},
+		{
+			desc:          "should return success for special tagsDelimiter and tag values containing commas and equal sign",
+			tags:          "key1=aGVsbG8=;key2=value-2, value-3",
+			tagsDelimiter: ";",
+			expectedOut: map[string]string{
+				"key1": "aGVsbG8=",
+				"key2": "value-2, value-3",
+			},
 			expectedErr: nil,
 		},
 	}
 
 	for _, test := range tests {
-		output, err := ConvertTagsToMap(test.tags)
+		output, err := ConvertTagsToMap(test.tags, test.tagsDelimiter)
 		assert.Equal(t, test.expectedOut, output, test.desc)
 		assert.Equal(t, test.expectedErr, err, test.desc)
 	}
@@ -241,7 +265,7 @@ func TestConvertTagsToMap2(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		result, err := ConvertTagsToMap(test.tags)
+		result, err := ConvertTagsToMap(test.tags, "")
 		if test.err {
 			assert.NotNil(t, err)
 		} else {
