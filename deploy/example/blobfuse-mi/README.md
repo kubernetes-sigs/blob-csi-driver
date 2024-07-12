@@ -6,16 +6,16 @@ This article demonstrates the process of utilizing blobfuse mount with either a 
  - Make sure the managed identity has `Storage Blob Data Owner` role to the storage account
  > here is an example that uses Azure CLI commands to assign the `Storage Blob Data Owner` role to the managed identity for the storage account. If the storage account is created by the driver(dynamic provisoning), then you need to grant `Storage Blob Data Owner` role to the resource group where the storage account is located
 
-    ```bash
-    kloid="$(az identity list -g "$resourcegroup" --query "[?name == 'managedIdentityName'].principalId" -o tsv)"
-    said="$(az storage account list -g "$resourcegroup" --query "[?name == '$storageaccountname'].id" -o tsv)"
-    az role assignment create --assignee-object-id "$kloid" --role "Storage Blob Data Owner" --scope "$said"
-    ```
+```bash
+mid="$(az identity list -g "$resourcegroup" --query "[?name == 'managedIdentityName'].principalId" -o tsv)"
+said="$(az storage account list -g "$resourcegroup" --query "[?name == '$storageaccountname'].id" -o tsv)"
+az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Owner" --scope "$said"
+```
 
  - Retrieve the clientID for `AzureStorageIdentityClientID`. If you are using kubelet identity, the identity will be named {aks-cluster-name}-agentpool and located in the node resource group.
-    ```bash
-    AzureStorageIdentityClientID=`az identity list -g "$resourcegroup" --query "[?name == '$identityname'].clientId" -o tsv`
-    ```
+```bash
+AzureStorageIdentityClientID=`az identity list -g "$resourcegroup" --query "[?name == '$identityname'].clientId" -o tsv`
+```
     
 ## Dynamic Provisioning
 - Ensure that the system-assigned identity of your cluster control plane has the `Storage Account Contributor role` for the storage account.
@@ -54,9 +54,9 @@ This article demonstrates the process of utilizing blobfuse mount with either a 
     ```
 
 1. create a statefulset with blobfuse volume mount
-      ```console
-      kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
-      ```
+```bash
+kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
+```
 
 ## Static Provisioning
 
