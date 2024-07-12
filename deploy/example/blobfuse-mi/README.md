@@ -1,4 +1,4 @@
-# blobfuse mount with managed identity
+# Mount Azure blob storage with managed identity
 
 This article demonstrates the process of utilizing blobfuse mount with either a dedicated user-assigned managed identity or kubelet identity.
 
