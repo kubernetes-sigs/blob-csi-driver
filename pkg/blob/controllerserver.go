@@ -97,7 +97,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		parameters = make(map[string]string)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace string
-	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning, createPrivateEndpoint, enableNfsV3 *bool
+	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning, createPrivateEndpoint, enableNfsV3, allowSharedKeyAccess *bool
 	var vnetResourceGroup, vnetName, subnetName, accessTier, networkEndpointType, storageEndpointSuffix string
 	var matchTags, useDataPlaneAPI, getLatestAccountKey bool
 	var softDeleteBlobs, softDeleteContainers int32
@@ -105,8 +105,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var err error
 	// set allowBlobPublicAccess as false by default
 	allowBlobPublicAccess := pointer.Bool(false)
-	// set allowBlobPublicAccess as true by default
-	allowSharedKeyAccess := pointer.Bool(true)
 
 	containerNameReplaceMap := map[string]string{}
 
@@ -174,9 +172,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 				allowBlobPublicAccess = pointer.Bool(true)
 			}
 		case allowSharedKeyAccessField:
-			if strings.EqualFold(v, falseValue) {
-				allowSharedKeyAccess = pointer.Bool(false)
+			var boolValue bool
+			if boolValue, err = strconv.ParseBool(v); err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "invalid %s: %s in volume context", allowSharedKeyAccessField, v)
 			}
+			allowSharedKeyAccess = pointer.Bool(boolValue)
 		case requireInfraEncryptionField:
 			if strings.EqualFold(v, trueValue) {
 				requireInfraEncryption = pointer.Bool(true)
@@ -308,7 +308,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		storageEndpointSuffix = d.getStorageEndPointSuffix()
 	}
 
-	if storeAccountKey && !pointer.BoolDeref(allowSharedKeyAccess, false) {
+	if storeAccountKey && !pointer.BoolDeref(allowSharedKeyAccess, true) {
 		return nil, status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
 	}
 
