@@ -12,13 +12,12 @@ This article demonstrates the process of utilizing blobfuse mount with either a 
     az role assignment create --assignee-object-id "$kloid" --role "Storage Blob Data Owner" --scope "$said"
     ```
 
-
  - Retrieve the clientID for `AzureStorageIdentityClientID`. If you are using kubelet identity, the identity will be named {aks-cluster-name}-agentpool and located in the node resource group.
     ```bash
     AzureStorageIdentityClientID=`az identity list -g "$resourcegroup" --query "[?name == '$identityname'].clientId" -o tsv`
     ```
     
-## dynamic provisioning
+## Dynamic Provisioning
 - Ensure that the system-assigned identity of your cluster control plane has the `Storage Account Contributor role` for the storage account.
  > if the storage account is created by the driver, then you need to grant `Storage Account Contributor` role to the resource group where the storage account is located
 
@@ -59,8 +58,11 @@ This article demonstrates the process of utilizing blobfuse mount with either a 
       kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
       ```
 
-## static provisioning(bring your own storage account and blob container)
-1. Create PV with specified account name, blob container and AzureStorageIdentityClientID
+## Static Provisioning
+
+> bring your own storage account and blob container
+
+1. create PV with specified account name, blob container and AzureStorageIdentityClientID
     ```yml
     apiVersion: v1
     kind: PersistentVolume
