@@ -1,0 +1,27 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blob-fuse
+provisioner: blob.csi.azure.com
+parameters:
+  skuName: Premium_LRS 
+  protocol: fuse
+  resourceGroup: EXISTING_RESOURCE_GROUP_NAME
+  storageAccount: EXISTING_STORAGE_ACCOUNT_NAME # optional, if use existing storage account
+  containerName: EXISTING_CONTAINER_NAME # optional, if use existing container
+  AzureStorageAuthType: MSI
+  AzureStorageIdentityClientID: "xxxxx-xxxx-xxx-xxx-xxxxxxx"
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+mountOptions:
+  - -o allow_other
+  - --file-cache-timeout-in-seconds=120
+  - --use-attr-cache=true
+  - --cancel-list-on-mount-seconds=10  # prevent billing charges on mounting
+  - -o attr_timeout=120
+  - -o entry_timeout=120
+  - -o negative_timeout=120
+  - --log-level=LOG_WARNING  # LOG_WARNING, LOG_INFO, LOG_DEBUG
+  - --cache-size-mb=1000  # Default will be 80% of available memory, eviction will happen beyond that.
