@@ -383,8 +383,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		args = args + " " + opt
 	}
 
-	klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nmountOptions %v\nargs %v\nserverAddress %v",
-		targetPath, protocol, volumeID, attrib, mountFlags, mountOptions, args, serverAddress)
+	klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\nmountflags %v\nmountOptions %v\nargs %v\nserverAddress %v",
+		targetPath, protocol, volumeID, mountFlags, mountOptions, args, serverAddress)
 
 	authEnv = append(authEnv, "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
 	if d.enableBlobMockMount {
