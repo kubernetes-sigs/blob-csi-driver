@@ -99,7 +99,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 				setKeyValueInMap(context, getAccountKeyFromSecretField, trueValue)
 				setKeyValueInMap(context, storageAccountField, "")
 			}
-			klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) mount on %s, VolumeContext: %v", volumeID, target, context)
+			klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) mount on %s", volumeID, target)
 			_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
 				StagingTargetPath: target,
 				VolumeContext:     context,
@@ -341,8 +341,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	if isNFSProtocol(protocol) {
-		klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\ncontext %v\nmountflags %v\nserverAddress %v",
-			targetPath, protocol, volumeID, attrib, mountFlags, serverAddress)
+		klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\nmountflags %v\nserverAddress %v",
+			targetPath, protocol, volumeID, mountFlags, serverAddress)
 
 		mountType := AZNFS
 		if !d.enableAznfsMount || protocol == NFSv3 {
