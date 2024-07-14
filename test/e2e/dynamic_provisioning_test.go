@@ -90,40 +90,6 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a volume on demand with storage account having shared access key disabled", func(ctx ginkgo.SpecContext) {
-		pods := []testsuites.PodDetails{
-			{
-				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
-				Volumes: []testsuites.VolumeDetails{
-					{
-						ClaimSize: "10Gi",
-						MountOptions: []string{
-							"-o allow_other",
-							"--file-cache-timeout-in-seconds=120",
-							"--cancel-list-on-mount-seconds=0",
-						},
-						VolumeMount: testsuites.VolumeMountDetails{
-							NameGenerate:      "test-volume-",
-							MountPathGenerate: "/mnt/test-",
-						},
-					},
-				},
-			},
-		}
-		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
-			CSIDriver: testDriver,
-			Pods:      pods,
-			StorageClassParameters: map[string]string{
-				"skuName":                      "Standard_GRS",
-				"storeAccountKey":              "false",
-				"allowSharedKeyAccess":         "false",
-				"AzureStorageAuthType":         "msi",
-				"AzureStorageIdentityClientID": "dummy",
-			},
-		}
-		test.Run(ctx, cs, ns)
-	})
-
 	ginkgo.It("should create a volume on demand with mount options", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
@@ -614,9 +580,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 			StorageClassParameters: map[string]string{
-				"skuName":          "Premium_LRS",
-				"protocol":         "nfs",
-				"mountPermissions": "0",
+				"skuName":              "Premium_LRS",
+				"protocol":             "nfs",
+				"mountPermissions":     "0",
+				"allowSharedKeyAccess": "false",
 			},
 		}
 		test.Run(ctx, cs, ns)
