@@ -633,6 +633,64 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "Failed with invalid allowSharedKeyAccess value",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "subID"
+
+				mp := make(map[string]string)
+				mp[allowSharedKeyAccessField] = "invalid"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, "invalid %s: invalid in volume context", allowSharedKeyAccessField)
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v\nExpected error: %v", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "Failed with storeAccountKey is not supported for account with shared access key disabled",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &azure.Cloud{}
+				d.cloud.SubscriptionID = "subID"
+
+				mp := make(map[string]string)
+				mp[protocolField] = "fuse"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unittest"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountPermissionsField] = "0750"
+				mp[allowSharedKeyAccessField] = falseValue
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v\nExpected error: %v", err, expectedErr)
+				}
+			},
+		},
+		{
 			name: "Successful I/O",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
