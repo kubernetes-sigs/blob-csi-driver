@@ -97,7 +97,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		parameters = make(map[string]string)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace, tagValueDelimiter string
-	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning, createPrivateEndpoint, enableNfsV3 *bool
+	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning, createPrivateEndpoint, enableNfsV3, allowSharedKeyAccess *bool
 	var vnetResourceGroup, vnetName, subnetName, accessTier, networkEndpointType, storageEndpointSuffix, fsGroupChangePolicy string
 	var matchTags, useDataPlaneAPI, getLatestAccountKey bool
 	var softDeleteBlobs, softDeleteContainers int32
@@ -171,6 +171,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			if strings.EqualFold(v, trueValue) {
 				allowBlobPublicAccess = pointer.Bool(true)
 			}
+		case allowSharedKeyAccessField:
+			var boolValue bool
+			if boolValue, err = strconv.ParseBool(v); err != nil {
+				return nil, status.Errorf(codes.InvalidArgument, "invalid %s: %s in volume context", allowSharedKeyAccessField, v)
+			}
+			allowSharedKeyAccess = pointer.Bool(boolValue)
 		case requireInfraEncryptionField:
 			if strings.EqualFold(v, trueValue) {
 				requireInfraEncryption = pointer.Bool(true)
@@ -310,6 +316,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		storageEndpointSuffix = d.getStorageEndPointSuffix()
 	}
 
+	if storeAccountKey && !pointer.BoolDeref(allowSharedKeyAccess, true) {
+		return nil, status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
+	}
+
 	accountOptions := &azure.AccountOptions{
 		Name:                            account,
 		Type:                            storageAccountType,
@@ -324,6 +334,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		IsHnsEnabled:                    isHnsEnabled,
 		EnableNfsV3:                     enableNfsV3,
 		AllowBlobPublicAccess:           allowBlobPublicAccess,
+		AllowSharedKeyAccess:            allowSharedKeyAccess,
 		RequireInfrastructureEncryption: requireInfraEncryption,
 		VNetResourceGroup:               vnetResourceGroup,
 		VNetName:                        vnetName,
