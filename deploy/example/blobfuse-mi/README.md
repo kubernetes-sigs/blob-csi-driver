@@ -33,9 +33,9 @@ AzureStorageIdentityClientID=`az identity list -g "$resourcegroup" --query "[?na
     parameters:
       skuName: Premium_LRS 
       protocol: fuse
-      resourceGroup: EXISTING_RESOURCE_GROUP_NAME   # optional, node resource group if it's not provided
-      storageAccount: EXISTING_STORAGE_ACCOUNT_NAME # optional, driver will create a new account if it's not provided
-      containerName: EXISTING_CONTAINER_NAME # optional, driver will create a new container if it's not provided
+      resourceGroup: EXISTING_RESOURCE_GROUP_NAME   # optional, node resource group by default if it's not provided
+      storageAccount: EXISTING_STORAGE_ACCOUNT_NAME # optional, a new account will be created if it's not provided
+      containerName: EXISTING_CONTAINER_NAME  # optional, a new container will be created if it's not provided
       AzureStorageAuthType: MSI
       AzureStorageIdentityClientID: "xxxxx-xxxx-xxx-xxx-xxxxxxx"
     reclaimPolicy: Delete
