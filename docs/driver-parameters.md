@@ -116,7 +116,7 @@ nodeStageSecretRef.name | secret name that stores(check below examples):<br>`azu
 nodeStageSecretRef.namespace | secret namespace | k8s namespace  |  Yes  |
 --- | **Following parameters are only for NFS protocol** | --- | --- |
 volumeAttributes.mountPermissions | mounted folder permissions | `0777` | No |
-fsGroupChangePolicy | indicates how volume's ownership will be changed by the driver, pod `securityContext.fsGroupChangePolicy` is ignored  | `OnRootMismatch`(by default), `Always`, `None` | No | `OnRootMismatch`
+volumeAttributes.fsGroupChangePolicy | indicates how volume's ownership will be changed by the driver, pod `securityContext.fsGroupChangePolicy` is ignored  | `OnRootMismatch`(by default), `Always`, `None` | No | `OnRootMismatch`
 --- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#environment-variables)** | --- | --- |
 volumeAttributes.AzureStorageAuthType | Authentication Type | `Key`, `SAS`, `MSI`, `SPN` | No | `Key`
 volumeAttributes.AzureStorageIdentityClientID | Identity Client ID |  | No |
