@@ -61,6 +61,8 @@ const (
 	MSI                             = "MSI"
 	SPN                             = "SPN"
 	authorizationPermissionMismatch = "AuthorizationPermissionMismatch"
+
+	createdByMetadata = "createdBy"
 )
 
 // CreateVolume provisions a volume
@@ -686,11 +688,13 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 			if getErr != nil {
 				return true, getErr
 			}
+			container.Metadata = map[string]string{createdByMetadata: d.Name}
 			_, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate})
 		} else {
 			blobContainer := armstorage.BlobContainer{
 				ContainerProperties: &armstorage.ContainerProperties{
 					PublicAccess: to.Ptr(armstorage.PublicAccessNone),
+					Metadata:     map[string]*string{createdByMetadata: to.Ptr(d.Name)},
 				},
 			}
 			var blobClient blobcontainerclient.Interface
