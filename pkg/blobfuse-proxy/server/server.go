@@ -121,8 +121,8 @@ func getBlobfuseVersion() BlobfuseVersion {
 		return BlobfuseV1
 	}
 
-	if strings.EqualFold(osinfo.Distro, "mariner") && osinfo.Version >= "2.0" {
-		klog.V(2).Info("proxy default using blobfuse V2 for mounting on Mariner 2.0+")
+	if (strings.EqualFold(osinfo.Distro, "mariner") || strings.EqualFold(osinfo.Distro, "azurelinux")) && osinfo.Version >= "2.0" {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on azurelinux(mariner) 2.0+")
 		return BlobfuseV2
 	}
 
