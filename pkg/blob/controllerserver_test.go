@@ -735,12 +735,9 @@ func TestCreateVolume(t *testing.T) {
 				defer ctrl.Finish()
 
 				m := util.NewMockEXEC(ctrl)
-				listStr := "no error"
-				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, nil)
-
 				d.azcopy.ExecCmd = m
 
-				expectedErr := status.Errorf(codes.InvalidArgument, "copy volume from volumeSnapshot is not supported")
+				expectedErr := status.Errorf(codes.InvalidArgument, "VolumeContentSource Snapshot is not yet implemented")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -800,9 +797,6 @@ func TestCreateVolume(t *testing.T) {
 				defer ctrl.Finish()
 
 				m := util.NewMockEXEC(ctrl)
-				listStr := "no error"
-				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, nil)
-
 				d.azcopy.ExecCmd = m
 
 				expectedErr := status.Errorf(codes.NotFound, "error parsing volume id: \"unit-test\", should at least contain two #")
@@ -1473,132 +1467,38 @@ func TestDeleteBlobContainer(t *testing.T) {
 }
 
 func TestCopyVolume(t *testing.T) {
-	stdVolumeCapability := &csi.VolumeCapability{
-		AccessType: &csi.VolumeCapability_Mount{
-			Mount: &csi.VolumeCapability_MountVolume{},
-		},
-	}
-	stdVolumeCapabilities := []*csi.VolumeCapability{
-		stdVolumeCapability,
-	}
 	testCases := []struct {
 		name     string
 		testFunc func(t *testing.T)
 	}{
 		{
-			name: "copy volume from volumeSnapshot is not supported",
+			name: "src path is empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				mp := map[string]string{}
-
-				volumeSnapshotSource := &csi.VolumeContentSource_SnapshotSource{
-					SnapshotId: "unit-test",
-				}
-				volumeContentSourceSnapshotSource := &csi.VolumeContentSource_Snapshot{
-					Snapshot: volumeSnapshotSource,
-				}
-				volumecontensource := csi.VolumeContentSource{
-					Type: volumeContentSourceSnapshotSource,
-				}
-				req := &csi.CreateVolumeRequest{
-					Name:                "unit-test",
-					VolumeCapabilities:  stdVolumeCapabilities,
-					Parameters:          mp,
-					VolumeContentSource: &volumecontensource,
-				}
-
-				expectedErr := status.Errorf(codes.InvalidArgument, "copy volume from volumeSnapshot is not supported")
-				err := d.copyVolume(req, "", nil, "", "core.windows.net")
+				expectedErr := fmt.Errorf("srcPath() or dstPath(dstPath) or dstContainerName(dstContainer) is empty")
+				err := d.copyBlobContainer([]string{}, "", "", "dstPath", "", "dstContainer")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
 			},
 		},
 		{
-			name: "copy volume from volume not found",
+			name: "dst path is empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				mp := map[string]string{}
-
-				volumeSource := &csi.VolumeContentSource_VolumeSource{
-					VolumeId: "unit-test",
-				}
-				volumeContentSourceVolumeSource := &csi.VolumeContentSource_Volume{
-					Volume: volumeSource,
-				}
-				volumecontensource := csi.VolumeContentSource{
-					Type: volumeContentSourceVolumeSource,
-				}
-
-				req := &csi.CreateVolumeRequest{
-					Name:                "unit-test",
-					VolumeCapabilities:  stdVolumeCapabilities,
-					Parameters:          mp,
-					VolumeContentSource: &volumecontensource,
-				}
-
-				expectedErr := status.Errorf(codes.NotFound, "error parsing volume id: \"unit-test\", should at least contain two #")
-				err := d.copyVolume(req, "", nil, "dstContainer", "core.windows.net")
+				expectedErr := fmt.Errorf("srcPath(srcPath) or dstPath() or dstContainerName(dstContainer) is empty")
+				err := d.copyBlobContainer([]string{}, "srcPath", "", "", "", "dstContainer")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
 			},
 		},
 		{
-			name: "src blob container is empty",
+			name: "dst container is empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				mp := map[string]string{}
-
-				volumeSource := &csi.VolumeContentSource_VolumeSource{
-					VolumeId: "rg#unit-test##",
-				}
-				volumeContentSourceVolumeSource := &csi.VolumeContentSource_Volume{
-					Volume: volumeSource,
-				}
-				volumecontensource := csi.VolumeContentSource{
-					Type: volumeContentSourceVolumeSource,
-				}
-
-				req := &csi.CreateVolumeRequest{
-					Name:                "unit-test",
-					VolumeCapabilities:  stdVolumeCapabilities,
-					Parameters:          mp,
-					VolumeContentSource: &volumecontensource,
-				}
-
-				expectedErr := fmt.Errorf("srcContainerName() or dstContainerName(dstContainer) is empty")
-				err := d.copyVolume(req, "", nil, "dstContainer", "core.windows.net")
-				if !reflect.DeepEqual(err, expectedErr) {
-					t.Errorf("Unexpected error: %v", err)
-				}
-			},
-		},
-		{
-			name: "dst blob container is empty",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				mp := map[string]string{}
-
-				volumeSource := &csi.VolumeContentSource_VolumeSource{
-					VolumeId: "vol_1#f5713de20cde511e8ba4900#fileshare#",
-				}
-				volumeContentSourceVolumeSource := &csi.VolumeContentSource_Volume{
-					Volume: volumeSource,
-				}
-				volumecontensource := csi.VolumeContentSource{
-					Type: volumeContentSourceVolumeSource,
-				}
-
-				req := &csi.CreateVolumeRequest{
-					Name:                "unit-test",
-					VolumeCapabilities:  stdVolumeCapabilities,
-					Parameters:          mp,
-					VolumeContentSource: &volumecontensource,
-				}
-
-				expectedErr := fmt.Errorf("srcContainerName(fileshare) or dstContainerName() is empty")
-				err := d.copyVolume(req, "", nil, "", "core.windows.net")
+				expectedErr := fmt.Errorf("srcPath(srcPath) or dstPath(dstPath) or dstContainerName() is empty")
+				err := d.copyBlobContainer([]string{}, "srcPath", "", "dstPath", "", "")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1608,25 +1508,6 @@ func TestCopyVolume(t *testing.T) {
 			name: "azcopy job is already completed",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				mp := map[string]string{}
-
-				volumeSource := &csi.VolumeContentSource_VolumeSource{
-					VolumeId: "vol_1#f5713de20cde511e8ba4900#fileshare#",
-				}
-				volumeContentSourceVolumeSource := &csi.VolumeContentSource_Volume{
-					Volume: volumeSource,
-				}
-				volumecontensource := csi.VolumeContentSource{
-					Type: volumeContentSourceVolumeSource,
-				}
-
-				req := &csi.CreateVolumeRequest{
-					Name:                "unit-test",
-					VolumeCapabilities:  stdVolumeCapabilities,
-					Parameters:          mp,
-					VolumeContentSource: &volumecontensource,
-				}
-
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
@@ -1634,13 +1515,13 @@ func TestCopyVolume(t *testing.T) {
 				listStr := "JobId: ed1c3833-eaff-fe42-71d7-513fb065a9d9\nStart Time: Monday, 07-Aug-23 03:29:54 UTC\nStatus: Completed\nCommand: copy https://{accountName}.file.core.windows.net/{srcFileshare}{SAStoken} https://{accountName}.file.core.windows.net/{dstFileshare}{SAStoken} --recursive --check-length=false"
 				m.EXPECT().RunCommand(gomock.Eq("azcopy jobs list | grep dstContainer -B 3"), gomock.Any()).Return(listStr, nil)
 				// if test.enableShow {
-				// 	m.EXPECT().RunCommand(gomock.Not("azcopy jobs list | grep dstContainer -B 3")).Return(test.showStr, test.showErr)
+				//     m.EXPECT().RunCommand(gomock.Not("azcopy jobs list | grep dstContainer -B 3")).Return(test.showStr, test.showErr)
 				// }
 
 				d.azcopy.ExecCmd = m
 
 				var expectedErr error
-				err := d.copyVolume(req, "sastoken", nil, "dstContainer", "core.windows.net")
+				err := d.copyBlobContainer([]string{}, "srcPath", "", "dstPath", "", "dstContainer")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
@@ -1650,25 +1531,6 @@ func TestCopyVolume(t *testing.T) {
 			name: "azcopy job is in progress",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				mp := map[string]string{}
-
-				volumeSource := &csi.VolumeContentSource_VolumeSource{
-					VolumeId: "vol_1#f5713de20cde511e8ba4900#fileshare#",
-				}
-				volumeContentSourceVolumeSource := &csi.VolumeContentSource_Volume{
-					Volume: volumeSource,
-				}
-				volumecontensource := csi.VolumeContentSource{
-					Type: volumeContentSourceVolumeSource,
-				}
-
-				req := &csi.CreateVolumeRequest{
-					Name:                "unit-test",
-					VolumeCapabilities:  stdVolumeCapabilities,
-					Parameters:          mp,
-					VolumeContentSource: &volumecontensource,
-				}
-
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
@@ -1680,7 +1542,7 @@ func TestCopyVolume(t *testing.T) {
 				d.azcopy.ExecCmd = m
 
 				expectedErr := fmt.Errorf("wait for the existing AzCopy job to complete, current copy percentage is 50.0%%")
-				err := d.copyVolume(req, "sastoken", nil, "dstContainer", "core.windows.net")
+				err := d.copyBlobContainer([]string{}, "srcPath", "", "dstPath", "", "dstContainer")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
 				}
