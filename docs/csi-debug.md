@@ -135,11 +135,9 @@ Get client-side logs on Linux node if there is mount error
 
 ```console
 kubectl debug node/node-name --image=nginx
-# get blobfuse logs
-kubectl cp node-debugger-node-name-xxxx:/host/var/log/blobfuse.log /tmp/blobfuse.log
 # get blobfuse2 logs
 kubectl cp node-debugger-node-name-xxxx:/host/var/log/blobfuse2.log /tmp/blobfuse2.log
-#after log collected, delete the debug pod by:
+# after the logs have been collected, you can delete the debug pod
 kubectl delete po node-debugger-node-name-xxxx
 ```
  
