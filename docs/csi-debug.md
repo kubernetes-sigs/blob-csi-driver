@@ -82,7 +82,7 @@ change below deployment config, e.g.
 blobfuse2 -v
 ```
 <pre>
-blobfuse2 version 2.1.2
+blobfuse2 version 2.3.0
 </pre>
 
 ### check blobfuse mount on the agent node
@@ -115,28 +115,15 @@ mount -v -t nfs -o sec=sys,vers=3,nolock accountname.blob.core.windows.net:/acco
 ```
 
 <details><summary>
-Get client-side logs on AKS Linux node if there is mount error 
-</summary>
-
-```console
-# get ama-logs pod which is running on the AKS Linux node
-kubectl get po -n kube-system -o wide | grep ama-logs
-# get blobfuse2 logs
-kubectl -n kube-system cp ama-logs-xxxx:/var/log/blobfuse2.log /tmp/blobfuse2.log
-```
-
-</details>
-
-<details><summary>
 Get client-side logs on Linux node if there is mount error 
 </summary>
 
 ```console
-kubectl debug node/node-name --image=nginx
+kubectl debug node/{node-name} --image=nginx
 # get blobfuse2 logs
-kubectl cp node-debugger-node-name-xxxx:/host/var/log/blobfuse2.log /tmp/blobfuse2.log
+kubectl cp node-debugger-{node-name-xxxx}:/host/var/log/blobfuse2.log /tmp/blobfuse2.log
 # after the logs have been collected, you can delete the debug pod
-kubectl delete po node-debugger-node-name-xxxx
+kubectl delete po node-debugger-{node-name-xxxx}
 ```
  
 </details>
