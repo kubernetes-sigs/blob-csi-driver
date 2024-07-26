@@ -365,21 +365,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	defer d.volumeLocks.Release(volName)
 
-	var volumeID string
 	requestName := "controller_create_volume"
-	if volContentSource != nil {
-		switch volContentSource.Type.(type) {
-		case *csi.VolumeContentSource_Snapshot:
-			requestName = "controller_create_volume_from_snapshot"
-		case *csi.VolumeContentSource_Volume:
-			requestName = "controller_create_volume_from_volume"
-		}
-	}
-	mc := metrics.NewMetricContext(blobCSIDriverName, requestName, d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
-	isOperationSucceeded := false
-	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
-	}()
 
 	var srcAzcopyAuthEnv []string
 	var srcSubscriptionID, srcResourceGroupName, srcAccountName, srcContainerName, srcPath, srcAccountSASToken string
@@ -388,6 +374,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case *csi.VolumeContentSource_Snapshot:
 			return nil, status.Errorf(codes.InvalidArgument, "VolumeContentSource Snapshot is not yet implemented")
 		case *csi.VolumeContentSource_Volume:
+			requestName = "controller_create_volume_from_volume"
 			var srcVolumeID string
 			if volContentSource.GetVolume() != nil {
 				srcVolumeID = volContentSource.GetVolume().GetVolumeId()
@@ -411,6 +398,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			return nil, status.Errorf(codes.InvalidArgument, "VolumeContentSource is not recognized: %v", volContentSource)
 		}
 	}
+
+	var volumeID string
+	mc := metrics.NewMetricContext(blobCSIDriverName, requestName, d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+	}()
 
 	var accountKey string
 	accountName := account
@@ -467,22 +461,19 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		secrets = createStorageAccountSecret(accountName, accountKey)
 	}
 
-	dstAzcopyAuthEnv := srcAzcopyAuthEnv
-	dstAccountSASToken := srcAccountSASToken
-	if volContentSource != nil {
-		if srcSubscriptionID != subsID || srcResourceGroupName != resourceGroup || srcAccountName != accountName {
-			if dstAccountSASToken, dstAzcopyAuthEnv, err = d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace); err != nil {
-				return nil, status.Errorf(codes.Internal, "failed to getAzcopyAuth on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
-			}
-		}
-	}
-
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) subsID(%s) rg(%s) location(%s) size(%d)", validContainerName, accountName, storageAccountType, subsID, resourceGroup, location, requestGiB)
 	if err := d.CreateBlobContainer(ctx, subsID, resourceGroup, accountName, validContainerName, secrets); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
 	}
-
 	if volContentSource != nil {
+		dstAzcopyAuthEnv := srcAzcopyAuthEnv
+		dstAccountSASToken := srcAccountSASToken
+		if srcAccountName != accountName {
+			if dstAccountSASToken, dstAzcopyAuthEnv, err = d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace); err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to getAzcopyAuth on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
+			}
+		}
+
 		dstPath := fmt.Sprintf("https://%s.blob.%s/%s", accountName, storageEndpointSuffix, validContainerName)
 		if err := d.copyBlobContainer(dstAzcopyAuthEnv, srcPath, srcAccountSASToken, dstPath, dstAccountSASToken, validContainerName); err != nil {
 			return nil, err
