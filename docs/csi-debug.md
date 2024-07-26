@@ -121,8 +121,6 @@ Get client-side logs on AKS Linux node if there is mount error
 ```console
 # get ama-logs pod which is running on the AKS Linux node
 kubectl get po -n kube-system -o wide | grep ama-logs
-# get blobfuse logs
-kubectl -n kube-system cp ama-logs-xxxx:/var/log/blobfuse.log /tmp/blobfuse.log
 # get blobfuse2 logs
 kubectl -n kube-system cp ama-logs-xxxx:/var/log/blobfuse2.log /tmp/blobfuse2.log
 ```
