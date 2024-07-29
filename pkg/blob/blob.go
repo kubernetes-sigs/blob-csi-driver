@@ -155,6 +155,10 @@ const (
 var (
 	supportedProtocolList = []string{Fuse, Fuse2, NFS, AZNFS}
 	retriableErrors       = []string{accountNotProvisioned, tooManyRequests, statusCodeNotFound, containerBeingDeletedDataplaneAPIError, containerBeingDeletedManagementAPIError, clientThrottled}
+
+	// azcopyCloneVolumeOptions used in volume cloning between different storage account and --check-length to false because volume data may be in changing state, copy volume is not same as current source volume,
+	// set --s2s-preserve-access-tier=false to avoid BlobAccessTierNotSupportedForAccountType error in azcopy
+	azcopyCloneVolumeOptions = []string{"--recursive", "--check-length=false", "--s2s-preserve-access-tier=false"}
 )
 
 // DriverOptions defines driver parameters specified in driver deployment
