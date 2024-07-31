@@ -89,6 +89,6 @@ This option does not depend on cloud provider config file, supports cross subscr
  - [Kubernetes CSI Documentation](https://kubernetes-csi.github.io/docs/)
  - [CSI Drivers](https://github.com/kubernetes-csi/drivers)
  - [Container Storage Interface (CSI) Specification](https://github.com/container-storage-interface/spec)
- - [Blobfuse FlexVolume driver](https://github.com/Azure/kubernetes-volume-drivers/tree/master/flexvolume/blobfuse)
+ - [Blobfuse2 Known issues](https://github.com/Azure/azure-storage-fuse/wiki/Blobfuse2-Known-issues)
 
 [support-policy]: support.md
