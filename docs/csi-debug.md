@@ -1,6 +1,6 @@
 ## CSI driver troubleshooting guide
 ### Case#1: volume create/delete issue
-> This step is not applicable if you are using [managed CSI driver on AKS](https://docs.microsoft.com/en-us/azure/aks/azure-csi-blob-storage-dynamic).
+> If you are using [managed CSI driver on AKS](https://docs.microsoft.com/en-us/azure/aks/azure-csi-blob-storage-dynamic), this step does not apply since the driver controller is not visible.
  - find csi driver controller pod
 > There could be multiple controller pods (only one pod is the leader), if there are no helpful logs, try to get logs from the leader controller pod.
 ```console
@@ -85,6 +85,10 @@ blobfuse2 -v
 blobfuse2 version 2.3.0
 </pre>
 
+### get os version on the node
+```console
+uname -a
+```
 ### check blobfuse mount on the agent node
 ```console
 mount | grep blobfuse | uniq
