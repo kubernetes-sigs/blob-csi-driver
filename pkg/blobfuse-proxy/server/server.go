@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
@@ -105,7 +106,12 @@ func RunGRPCServer(
 	enableTLS bool,
 	listener net.Listener,
 ) error {
-	serverOptions := []grpc.ServerOption{}
+	serverOptions := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(
+			grpcprom.NewServerMetrics().UnaryServerInterceptor(),
+		),
+	}
+
 	grpcServer := grpc.NewServer(serverOptions...)
 
 	mount_azure_blob.RegisterMountServiceServer(grpcServer, mountServer)

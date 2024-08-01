@@ -31,6 +31,7 @@ import (
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	az "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/pborman/uuid"
 	"google.golang.org/grpc"
 	v1 "k8s.io/api/core/v1"
@@ -348,9 +349,11 @@ func (d *Driver) Run(ctx context.Context, endpoint string) error {
 		klog.Fatalf("%v", err)
 	}
 	klog.Infof("\nDRIVER INFORMATION:\n-------------------\n%s\n\nStreaming logs below:", versionMeta)
-	grpcInterceptor := grpc.UnaryInterceptor(csicommon.LogGRPC)
 	opts := []grpc.ServerOption{
-		grpcInterceptor,
+		grpc.ChainUnaryInterceptor(
+			grpcprom.NewServerMetrics().UnaryServerInterceptor(),
+			csicommon.LogGRPC,
+		),
 	}
 	s := grpc.NewServer(opts...)
 	csi.RegisterIdentityServer(s, d)
