@@ -59,8 +59,6 @@ const (
 	MSI                             = "MSI"
 	SPN                             = "SPN"
 	authorizationPermissionMismatch = "AuthorizationPermissionMismatch"
-
-	waitForAzCopyInterval = 2 * time.Second
 )
 
 // CreateVolume provisions a volume
