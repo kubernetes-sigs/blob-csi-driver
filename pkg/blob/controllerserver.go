@@ -797,7 +797,7 @@ func (d *Driver) copyBlobContainer(authAzcopyEnv []string, srcPath string, srcAc
 	case util.AzcopyJobNotFound:
 		klog.V(2).Infof("copy blob container %s to %s", srcPath, dstContainerName)
 		execFunc := func() error {
-			cmd := exec.Command("azcopy", "copy", srcPath+srcAccountSASToken, dstPath+dstAccountSASToken, "--recursive", "--check-length=false")
+			cmd := exec.Command("azcopy", "copy", srcPath+srcAccountSASToken, dstPath+dstAccountSASToken, "--recursive", "--check-length=false", "--s2s-preserve-access-tier=false")
 			if len(authAzcopyEnv) > 0 {
 				cmd.Env = append(os.Environ(), authAzcopyEnv...)
 			}
