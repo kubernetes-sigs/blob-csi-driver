@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"golang.org/x/sync/errgroup"
@@ -1819,6 +1820,62 @@ func TestIsSupportedFSGroupChangePolicy(t *testing.T) {
 		result := isSupportedFSGroupChangePolicy(test.policy)
 		if result != test.expectedResult {
 			t.Errorf("isSupportedFSGroupChangePolicy(%s) returned with %v, not equal to %v", test.policy, result, test.expectedResult)
+		}
+	}
+}
+
+func TestIsReadOnlyFromCapability(t *testing.T) {
+	testCases := []struct {
+		name           string
+		vc             *csi.VolumeCapability
+		expectedResult bool
+	}{
+		{
+			name:           "false with empty capabilities",
+			vc:             &csi.VolumeCapability{},
+			expectedResult: false,
+		},
+		{
+			name: "fail with capabilities no access mode",
+			vc: &csi.VolumeCapability{
+				AccessType: &csi.VolumeCapability_Mount{
+					Mount: &csi.VolumeCapability_MountVolume{},
+				},
+			},
+		},
+		{
+			name: "false with SINGLE_NODE_WRITER capabilities",
+			vc: &csi.VolumeCapability{
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name: "true with MULTI_NODE_READER_ONLY capabilities",
+			vc: &csi.VolumeCapability{
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY,
+				},
+			},
+			expectedResult: true,
+		},
+		{
+			name: "true with SINGLE_NODE_READER_ONLY capabilities",
+			vc: &csi.VolumeCapability{
+				AccessMode: &csi.VolumeCapability_AccessMode{
+					Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY,
+				},
+			},
+			expectedResult: true,
+		},
+	}
+
+	for _, test := range testCases {
+		result := isReadOnlyFromCapability(test.vc)
+		if result != test.expectedResult {
+			t.Errorf("case(%s): isReadOnlyFromCapability returned with %v, not equal to %v", test.name, result, test.expectedResult)
 		}
 	}
 }
