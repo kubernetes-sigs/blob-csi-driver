@@ -205,7 +205,6 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				Cmd: "touch /mnt/test-1/data",
 				Volumes: []testsuites.VolumeDetails{
 					{
-						FSType:    "ext4",
 						ClaimSize: "10Gi",
 						VolumeMount: testsuites.VolumeMountDetails{
 							NameGenerate:      "test-volume-",
@@ -223,6 +222,66 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		}
 		if isAzureStackCloud {
 			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
+		}
+		test.Run(ctx, cs, ns)
+	})
+
+	ginkgo.It("should create a blobfuse volume on demand and mount it as readOnly when volume access mode is readonly", func(ctx ginkgo.SpecContext) {
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "touch /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+						AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadOnlyMany},
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedReadOnlyVolumeTest{
+			CSIDriver:              testDriver,
+			Pods:                   pods,
+			StorageClassParameters: map[string]string{"skuName": "Standard_GRS"},
+		}
+		if isAzureStackCloud {
+			test.StorageClassParameters = map[string]string{"skuName": "Standard_LRS"}
+		}
+		test.Run(ctx, cs, ns)
+	})
+
+	ginkgo.It("should create a nfs volume on demand and mount it as readOnly when volume access mode is readonly", func(ctx ginkgo.SpecContext) {
+		if isAzureStackCloud {
+			ginkgo.Skip("test case is not available for Azure Stack")
+		}
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "touch /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"nconnect=8",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+						AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadOnlyMany},
+					},
+				},
+			},
+		}
+		test := testsuites.DynamicallyProvisionedReadOnlyVolumeTest{
+			CSIDriver: testDriver,
+			Pods:      pods,
+			StorageClassParameters: map[string]string{
+				"skuName":  "Premium_LRS",
+				"protocol": "nfs",
+			},
 		}
 		test.Run(ctx, cs, ns)
 	})

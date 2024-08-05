@@ -340,6 +340,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		serverAddress = fmt.Sprintf("%s.blob.%s", accountName, storageEndpointSuffix)
 	}
 
+	if isReadOnlyFromCapability(volumeCapability) {
+		if isNFSProtocol(protocol) {
+			mountFlags = util.JoinMountOptions(mountFlags, []string{"ro"})
+		} else {
+			mountFlags = util.JoinMountOptions(mountFlags, []string{"-o ro"})
+		}
+		klog.V(2).Infof("CSI volume is read-only, mounting with extra option ro")
+	}
+
 	if isNFSProtocol(protocol) {
 		klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\nmountflags %v\nserverAddress %v",
 			targetPath, protocol, volumeID, mountFlags, serverAddress)
@@ -412,7 +421,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		args = args + " " + opt
 	}
 
-	klog.V(2).Infof("target %v\nprotocol %v\n\nvolumeId %v\nountflags %v mountOptions %v volumeMountGroup %s\nargs %v\nserverAddress %v",
+	klog.V(2).Infof("target %v protocol %v volumeId %v\nmountflags %v\nmountOptions %v volumeMountGroup %s\nargs %v\nserverAddress %v",
 		targetPath, protocol, volumeID, mountFlags, mountOptions, volumeMountGroup, args, serverAddress)
 
 	authEnv = append(authEnv, "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
