@@ -1099,3 +1099,12 @@ func isSupportedFSGroupChangePolicy(policy string) bool {
 	}
 	return false
 }
+
+func isReadOnlyFromCapability(vc *csi.VolumeCapability) bool {
+	if vc.GetAccessMode() == nil {
+		return false
+	}
+	mode := vc.GetAccessMode().GetMode()
+	return (mode == csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY ||
+		mode == csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY)
+}
