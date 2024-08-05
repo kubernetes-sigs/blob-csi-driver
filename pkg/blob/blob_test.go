@@ -97,6 +97,7 @@ func TestNewDriver(t *testing.T) {
 	fakedriver.dataPlaneAPIVolCache = driver.dataPlaneAPIVolCache
 	fakedriver.azcopySasTokenCache = driver.azcopySasTokenCache
 	fakedriver.volStatsCache = driver.volStatsCache
+	fakedriver.subnetCache = driver.subnetCache
 	fakedriver.cloud = driver.cloud
 	assert.Equal(t, driver, fakedriver)
 }
