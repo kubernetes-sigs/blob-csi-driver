@@ -247,6 +247,8 @@ type Driver struct {
 	volStatsCache azcache.Resource
 	// a timed cache storing account which should use sastoken for azcopy based volume cloning
 	azcopySasTokenCache azcache.Resource
+	// a timed cache storing subnet operations
+	subnetCache azcache.Resource
 	// sas expiry time for azcopy in volume clone
 	sasTokenExpirationMinutes int
 	// timeout in minutes for waiting for azcopy to finish
@@ -305,6 +307,10 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 	if d.volStatsCache, err = azcache.NewTimedCache(time.Duration(options.VolStatsCacheExpireInMinutes)*time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
+	if d.subnetCache, err = azcache.NewTimedCache(10*time.Minute, getter, false); err != nil {
+		klog.Fatalf("%v", err)
+	}
+
 	d.mounter = &mount.SafeFormatAndMount{
 		Interface: mount.New(""),
 		Exec:      utilexec.New(),
