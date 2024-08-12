@@ -95,7 +95,7 @@ mount | grep blobfuse | uniq
 ```
 
  - Troubleshooting blobfuse mount failure on the agent node
-   - collect log files: `/var/log/messages`, `/var/log/syslog`, `/var/log/blobfuse*.log`
+   - collect log files: `/var/log/messages`, `/var/log/syslog`, `/var/log/blobfuse*.log*`
 
 ### troubleshooting connection failure on agent node
  - blobfuse
