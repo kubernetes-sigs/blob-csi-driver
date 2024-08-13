@@ -5,7 +5,7 @@
 
 ### Tips
  - configure with [blobfuse-proxy](../deploy/blobfuse-proxy) to make blobfuse mount still available after driver restart
- > Note: [blobfuse-proxy](../deploy/blobfuse-proxy) is supported on CoreOS(OpenShift) from v1.23.3
+ > Note: [blobfuse-proxy](../deploy/blobfuse-proxy) is supported on CoreOS(OpenShift) from v1.23.2
    - specify `node.enableBlobfuseProxy=true` together with [blobfuse-proxy](../deploy/blobfuse-proxy)
  - run controller on control plane node: `--set controller.runOnControlPlane=true`
  - set replica of controller as `1`: `--set controller.replicas=1`
@@ -19,7 +19,7 @@
 ### install a specific version
 ```console
 helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --set node.enableBlobfuseProxy=true --namespace kube-system --version v1.24.2
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --set node.enableBlobfuseProxy=true --namespace kube-system --version v1.24.3
 ```
 
 ## install on Azure Stack
