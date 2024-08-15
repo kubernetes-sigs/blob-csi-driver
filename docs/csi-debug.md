@@ -98,9 +98,11 @@ mount | grep blobfuse | uniq
    - collect log files: `/var/log/messages`, `/var/log/syslog`, `/var/log/blobfuse*.log*`
 
 ### troubleshooting connection failure on agent node
- - blobfuse
+> You can verify if the mount will work on the agent node by running the following commands to check if the storage account name, key, and container name are correct. If any of these details are incorrect, the blobfuse mount will not be successful.
+> 
+> You can find more detailed information about blobfuse environment variables at https://github.com/Azure/azure-storage-fuse#environment-variables.
 
-To check if blobfuse mount would work on the agent node, run the following commands to verify that the storage account name, key, and container name are correct. If any of these are incorrect, the blobfuse mount will fail:
+ - blobfuse mount with account key authentication
 ```console
 mkdir test
 export AZURE_STORAGE_ACCOUNT=
@@ -109,7 +111,17 @@ export AZURE_STORAGE_ACCESS_KEY=
 # export AZURE_STORAGE_BLOB_ENDPOINT=accountname.blob.core.chinacloudapi.cn
 blobfuse2 test --container-name=CONTAINER-NAME --tmp-path=/tmp/blobfuse -o allow_other --file-cache-timeout-in-seconds=120
 ```
-> You can find more detailed information about environment variables at https://github.com/Azure/azure-storage-fuse#environment-variables.
+
+ - blobfuse mount with managed identity authentication
+ ```console
+mkdir test
+export AZURE_STORAGE_ACCOUNT=
+export AZURE_STORAGE_AUTH_TYPE=MSI
+export AZURE_STORAGE_IDENTITY_CLIENT_ID=
+# only for sovereign cloud
+# export AZURE_STORAGE_BLOB_ENDPOINT=accountname.blob.core.chinacloudapi.cn
+blobfuse2 test --container-name=CONTAINER-NAME --tmp-path=/tmp/blobfuse -o allow_other --file-cache-timeout-in-seconds=120
+```
 
  - NFSv3
  
