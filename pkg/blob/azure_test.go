@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/subnetclient/mocksubnetclient"
@@ -344,7 +344,7 @@ func TestUpdateSubnetServiceEndpoints(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				fakeSubnet := network.Subnet{
 					SubnetPropertiesFormat: &network.SubnetPropertiesFormat{},
-					Name:                   pointer.String("subnetName"),
+					Name:                   ptr.To("subnetName"),
 				}
 
 				mockSubnetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeSubnet, nil).Times(1)
@@ -361,7 +361,7 @@ func TestUpdateSubnetServiceEndpoints(t *testing.T) {
 					SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
 						ServiceEndpoints: &[]network.ServiceEndpointPropertiesFormat{},
 					},
-					Name: pointer.String("subnetName"),
+					Name: ptr.To("subnetName"),
 				}
 
 				mockSubnetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeSubnet, nil).AnyTimes()
@@ -383,7 +383,7 @@ func TestUpdateSubnetServiceEndpoints(t *testing.T) {
 							},
 						},
 					},
-					Name: pointer.String("subnetName"),
+					Name: ptr.To("subnetName"),
 				}
 
 				mockSubnetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(fakeSubnet, nil).AnyTimes()

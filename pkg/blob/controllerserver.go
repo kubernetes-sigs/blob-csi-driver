@@ -40,7 +40,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/blobcontainerclient"
@@ -99,7 +99,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	var vnetResourceIDs []string
 	var err error
 	// set allowBlobPublicAccess as false by default
-	allowBlobPublicAccess := pointer.Bool(false)
+	allowBlobPublicAccess := ptr.To(false)
 
 	containerNameReplaceMap := map[string]string{}
 
@@ -138,7 +138,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			secretNamespace = v
 		case isHnsEnabledField:
 			if strings.EqualFold(v, trueValue) {
-				isHnsEnabled = pointer.Bool(true)
+				isHnsEnabled = ptr.To(true)
 			}
 		case softDeleteBlobsField:
 			days, err := parseDays(v)
@@ -153,7 +153,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			}
 			softDeleteContainers = days
 		case enableBlobVersioningField:
-			enableBlobVersioning = pointer.Bool(strings.EqualFold(v, trueValue))
+			enableBlobVersioning = ptr.To(strings.EqualFold(v, trueValue))
 		case storeAccountKeyField:
 			if strings.EqualFold(v, falseValue) {
 				storeAccountKey = false
@@ -164,17 +164,17 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			}
 		case allowBlobPublicAccessField:
 			if strings.EqualFold(v, trueValue) {
-				allowBlobPublicAccess = pointer.Bool(true)
+				allowBlobPublicAccess = ptr.To(true)
 			}
 		case allowSharedKeyAccessField:
 			var boolValue bool
 			if boolValue, err = strconv.ParseBool(v); err != nil {
 				return nil, status.Errorf(codes.InvalidArgument, "invalid %s: %s in volume context", allowSharedKeyAccessField, v)
 			}
-			allowSharedKeyAccess = pointer.Bool(boolValue)
+			allowSharedKeyAccess = ptr.To(boolValue)
 		case requireInfraEncryptionField:
 			if strings.EqualFold(v, trueValue) {
-				requireInfraEncryption = pointer.Bool(true)
+				requireInfraEncryption = ptr.To(true)
 			}
 		case pvcNamespaceKey:
 			pvcNamespace = v
@@ -221,8 +221,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	if pointer.BoolDeref(enableBlobVersioning, false) {
-		if isNFSProtocol(protocol) || pointer.BoolDeref(isHnsEnabled, false) {
+	if ptr.Deref(enableBlobVersioning, false) {
+		if isNFSProtocol(protocol) || ptr.Deref(isHnsEnabled, false) {
 			return nil, status.Errorf(codes.InvalidArgument, "enableBlobVersioning is not supported for NFS protocol or HNS enabled account")
 		}
 	}
@@ -269,15 +269,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if strings.Contains(subnetName, ",") {
 			return nil, status.Errorf(codes.InvalidArgument, "subnetName(%s) can only contain one subnet for private endpoint", subnetName)
 		}
-		createPrivateEndpoint = pointer.BoolPtr(true)
+		createPrivateEndpoint = ptr.To(true)
 	}
 	accountKind := string(armstorage.KindStorageV2)
 	if isNFSProtocol(protocol) {
-		isHnsEnabled = pointer.Bool(true)
-		enableNfsV3 = pointer.Bool(true)
+		isHnsEnabled = ptr.To(true)
+		enableNfsV3 = ptr.To(true)
 		// NFS protocol does not need account key
 		storeAccountKey = false
-		if !pointer.BoolDeref(createPrivateEndpoint, false) {
+		if !ptr.Deref(createPrivateEndpoint, false) {
 			// set VirtualNetworkResourceIDs for storage account firewall setting
 			var err error
 			if vnetResourceIDs, err = d.updateSubnetServiceEndpoints(ctx, vnetResourceGroup, vnetName, subnetName); err != nil {
@@ -305,7 +305,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		storageEndpointSuffix = d.getStorageEndPointSuffix()
 	}
 
-	if storeAccountKey && !pointer.BoolDeref(allowSharedKeyAccess, true) {
+	if storeAccountKey && !ptr.Deref(allowSharedKeyAccess, true) {
 		return nil, status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
 	}
 
@@ -382,7 +382,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if v, ok := d.volMap.Load(volName); ok {
 			accountName = v.(string)
 		} else {
-			lockKey := fmt.Sprintf("%s%s%s%s%s%v", storageAccountType, accountKind, resourceGroup, location, protocol, pointer.BoolDeref(createPrivateEndpoint, false))
+			lockKey := fmt.Sprintf("%s%s%s%s%s%v", storageAccountType, accountKind, resourceGroup, location, protocol, ptr.Deref(createPrivateEndpoint, false))
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
@@ -411,7 +411,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	if pointer.BoolDeref(createPrivateEndpoint, false) && isNFSProtocol(protocol) {
+	if ptr.Deref(createPrivateEndpoint, false) && isNFSProtocol(protocol) {
 		// As for blobfuse/blobfuse2, serverName, i.e.,AZURE_STORAGE_BLOB_ENDPOINT env variable can't include
 		// "privatelink", issue: https://github.com/Azure/azure-storage-fuse/issues/1014
 		//

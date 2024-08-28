@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
 
 	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2020-04-01-preview/authorization"
@@ -65,8 +65,8 @@ func (a *AuthorizationClient) AssignRole(ctx context.Context, resourceID, princi
 		uuid.NewV1().String(),
 		authorization.RoleAssignmentCreateParameters{
 			RoleAssignmentProperties: &authorization.RoleAssignmentProperties{
-				PrincipalID:      pointer.String(principalID),
-				RoleDefinitionID: pointer.String(roleDefID),
+				PrincipalID:      ptr.To(principalID),
+				RoleDefinitionID: ptr.To(roleDefID),
 			},
 		})
 }
