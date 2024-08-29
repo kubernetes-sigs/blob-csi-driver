@@ -30,10 +30,15 @@ setup_e2e_binaries() {
         export EXTRA_HELM_OPTIONS=$EXTRA_HELM_OPTIONS" --set feature.fsGroupPolicy=File"
     fi
 
-     # test on alternative driver name
+    # test on alternative driver name
     sed -i "s/blob.csi.azure.com/$DRIVER.csi.azure.com/g" deploy/example/storageclass-blobfuse.yaml
     sed -i "s/blob.csi.azure.com/$DRIVER.csi.azure.com/g" deploy/example/storageclass-blobfuse2.yaml
     sed -i "s/blob.csi.azure.com/$DRIVER.csi.azure.com/g" deploy/example/storageclass-blob-nfs.yaml
+    # workaround: use useDataPlaneAPI as true for blobfuse and nfs copy volume tests
+    sed -i "s/\"false\"/\"true\"/g" deploy/example/storageclass-blobfuse.yaml
+    sed -i "s/\"false\"/\"true\"/g" deploy/example/storageclass-blobfuse2.yaml
+    sed -i "s/\"false\"/\"true\"/g" deploy/example/storageclass-blob-nfs.yaml
+
     make e2e-bootstrap
     sed -i "s/csi-blob-controller/csi-$DRIVER-controller/g" deploy/example/metrics/csi-blob-controller-svc.yaml
     make create-metrics-svc
