@@ -219,6 +219,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 	})
 
 	ginkgo.It("should use Key Vault", func(ctx ginkgo.SpecContext) {
+		ginkgo.Skip("test case is not available currently due to test-infra migration")
 		volumeSize := fmt.Sprintf("%dGi", defaultVolumeSize)
 		reclaimPolicy := v1.PersistentVolumeReclaimRetain
 		volumeBindingMode := storagev1.VolumeBindingImmediate
@@ -252,6 +253,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Pre-Provisioned", func() {
 	})
 
 	ginkgo.It("should use SAS token", func(ctx ginkgo.SpecContext) {
+		ginkgo.Skip("test case is not available currently due to test-infra migration")
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
