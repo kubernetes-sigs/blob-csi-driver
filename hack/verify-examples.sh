@@ -28,6 +28,9 @@ rollout_and_wait() {
 }
 
 echo "begin to create deployment examples ..."
+
+kubectl config set-context --current --namespace=default
+
 if [ -v EXTERNAL_E2E_TEST_BLOBFUSE_v2 ]; then
     echo "create blobfuse2 storage class ..."
     kubectl apply -f deploy/example/storageclass-blobfuse2.yaml

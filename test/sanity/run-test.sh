@@ -32,8 +32,8 @@ if [[ "$#" -gt 0 ]] && [[ -n "$1" ]]; then
   nodeid="$1"
 fi
 
-_output/amd64/blobplugin --endpoint "$controllerendpoint" -v=5 &
-_output/amd64/blobplugin --endpoint "$nodeendpoint" --nodeid "$nodeid" --enable-blob-mock-mount -v=5 &
+_output/amd64/blobplugin --endpoint "$controllerendpoint" -v=5 --kubeconfig "no-need-kubeconfig" &
+_output/amd64/blobplugin --endpoint "$nodeendpoint" --nodeid "$nodeid" --enable-blob-mock-mount -v=5 --kubeconfig "no-need-kubeconfig" &
 
 echo "Begin to run sanity test..."
 readonly CSI_SANITY_BIN='csi-sanity'

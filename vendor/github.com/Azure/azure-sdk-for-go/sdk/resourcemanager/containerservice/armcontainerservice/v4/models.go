@@ -81,6 +81,18 @@ type AgentPoolListResult struct {
 	NextLink *string
 }
 
+// AgentPoolNetworkProfile - Network settings of an agent pool.
+type AgentPoolNetworkProfile struct {
+	// The port ranges that are allowed to access. The specified ranges are allowed to overlap.
+	AllowedHostPorts []*PortRange
+
+	// The IDs of the application security groups which agent pool will associate when created.
+	ApplicationSecurityGroups []*string
+
+	// IPTags of instance-level public IPs.
+	NodePublicIPTags []*IPTag
+}
+
 // AgentPoolUpgradeProfile - The list of available upgrades for an agent pool.
 type AgentPoolUpgradeProfile struct {
 	// REQUIRED; The properties of the agent pool upgrade profile.
@@ -132,6 +144,10 @@ type AgentPoolUpgradeSettings struct {
 	// practices, see:
 	// https://docs.microsoft.com/azure/aks/upgrade-cluster#customize-node-surge-upgrade
 	MaxSurge *string
+
+	// The amount of time (in minutes) to wait after draining a node and before reimaging it and moving on to next node. If not
+	// specified, the default is 0 minutes.
+	NodeSoakDurationInMinutes *int32
 }
 
 // AzureKeyVaultKms - Azure Key Vault key management service settings for the security profile.
@@ -273,6 +289,15 @@ type ExtendedLocation struct {
 
 	// The type of the extended location.
 	Type *ExtendedLocationTypes
+}
+
+// IPTag - Contains the IPTag associated with the object.
+type IPTag struct {
+	// The IP tag type. Example: RoutingPreference.
+	IPTagType *string
+
+	// The value of the IP tag associated with the public IP. Example: Internet.
+	Tag *string
 }
 
 // IstioCertificateAuthority - Istio Service Mesh Certificate Authority (CA) configuration. For now, we only support plugin
@@ -534,7 +559,7 @@ type ManagedCluster struct {
 	// Resource tags.
 	Tags map[string]*string
 
-	// READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string
 
 	// READ-ONLY; The name of the resource
@@ -603,7 +628,7 @@ type ManagedClusterAccessProfile struct {
 	// Resource tags.
 	Tags map[string]*string
 
-	// READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string
 
 	// READ-ONLY; The name of the resource
@@ -647,6 +672,9 @@ type ManagedClusterAgentPoolProfile struct {
 
 	// The list of Availability zones to use for nodes. This can only be specified if the AgentPoolType property is 'VirtualMachineScaleSets'.
 	AvailabilityZones []*string
+
+	// AKS will associate the specified agent pool with the Capacity Reservation Group.
+	CapacityReservationGroupID *string
 
 	// Number of agents (VMs) to host docker containers. Allowed values must be in the range of 0 to 1000 (inclusive) for user
 	// pools and in the range of 1 to 1000 (inclusive) for system pools. The default
@@ -705,6 +733,9 @@ type ManagedClusterAgentPoolProfile struct {
 	// A cluster must have at least one 'System' Agent Pool at all times. For additional information on agent pool restrictions
 	// and best practices, see: https://docs.microsoft.com/azure/aks/use-system-pools
 	Mode *AgentPoolMode
+
+	// Network-related settings of an agent pool.
+	NetworkProfile *AgentPoolNetworkProfile
 
 	// The node labels to be persisted across all nodes in agent pool.
 	NodeLabels map[string]*string
@@ -804,6 +835,9 @@ type ManagedClusterAgentPoolProfileProperties struct {
 	// The list of Availability zones to use for nodes. This can only be specified if the AgentPoolType property is 'VirtualMachineScaleSets'.
 	AvailabilityZones []*string
 
+	// AKS will associate the specified agent pool with the Capacity Reservation Group.
+	CapacityReservationGroupID *string
+
 	// Number of agents (VMs) to host docker containers. Allowed values must be in the range of 0 to 1000 (inclusive) for user
 	// pools and in the range of 1 to 1000 (inclusive) for system pools. The default
 	// value is 1.
@@ -861,6 +895,9 @@ type ManagedClusterAgentPoolProfileProperties struct {
 	// A cluster must have at least one 'System' Agent Pool at all times. For additional information on agent pool restrictions
 	// and best practices, see: https://docs.microsoft.com/azure/aks/use-system-pools
 	Mode *AgentPoolMode
+
+	// Network-related settings of an agent pool.
+	NetworkProfile *AgentPoolNetworkProfile
 
 	// The node labels to be persisted across all nodes in agent pool.
 	NodeLabels map[string]*string
@@ -1036,6 +1073,31 @@ type ManagedClusterIdentity struct {
 	TenantID *string
 }
 
+// ManagedClusterIngressProfile - Ingress profile for the container service cluster.
+type ManagedClusterIngressProfile struct {
+	// App Routing settings for the ingress profile. You can find an overview and onboarding guide for this feature at
+	// https://learn.microsoft.com/en-us/azure/aks/app-routing?tabs=default%2Cdeploy-app-default.
+	WebAppRouting *ManagedClusterIngressProfileWebAppRouting
+}
+
+// ManagedClusterIngressProfileWebAppRouting - Application Routing add-on settings for the ingress profile.
+type ManagedClusterIngressProfileWebAppRouting struct {
+	// Resource IDs of the DNS zones to be associated with the Application Routing add-on. Used only when Application Routing
+	// add-on is enabled. Public and private DNS zones can be in different resource
+	// groups, but all public DNS zones must be in the same resource group and all private DNS zones must be in the same resource
+	// group.
+	DNSZoneResourceIDs []*string
+
+	// Whether to enable the Application Routing add-on.
+	Enabled *bool
+
+	// READ-ONLY; Managed identity of the Application Routing add-on. This is the identity that should be granted permissions,
+	// for example, to manage the associated Azure DNS resource and get certificates from Azure
+	// Key Vault. See this overview of the add-on [https://learn.microsoft.com/en-us/azure/aks/web-app-routing?tabs=with-osm]
+	// for more instructions.
+	Identity *UserAssignedIdentity
+}
+
 // ManagedClusterListResult - The response from the List Managed Clusters operation.
 type ManagedClusterListResult struct {
 	// The list of managed clusters.
@@ -1050,6 +1112,9 @@ type ManagedClusterLoadBalancerProfile struct {
 	// The desired number of allocated SNAT ports per VM. Allowed values are in the range of 0 to 64000 (inclusive). The default
 	// value is 0 which results in Azure dynamically allocating ports.
 	AllocatedOutboundPorts *int32
+
+	// The type of the managed inbound Load Balancer BackendPool.
+	BackendPoolType *BackendPoolType
 
 	// The effective outbound IP resources of the cluster load balancer.
 	EffectiveOutboundIPs []*ResourceReference
@@ -1276,6 +1341,9 @@ type ManagedClusterProperties struct {
 
 	// Identities associated with the cluster.
 	IdentityProfile map[string]*UserAssignedIdentity
+
+	// Ingress profile for the managed cluster.
+	IngressProfile *ManagedClusterIngressProfile
 
 	// Both patch version (e.g. 1.20.13) and (e.g. 1.20) are supported. When is specified, the latest supported GA patch version
 	// is chosen automatically. Updating the cluster with the same once it has been
@@ -1636,7 +1704,7 @@ type MeshRevisionProfile struct {
 	// Mesh revision profile properties for a mesh
 	Properties *MeshRevisionProfileProperties
 
-	// READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string
 
 	// READ-ONLY; The name of the resource
@@ -1668,7 +1736,7 @@ type MeshUpgradeProfile struct {
 	// Mesh upgrade profile properties for a major.minor release.
 	Properties *MeshUpgradeProfileProperties
 
-	// READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string
 
 	// READ-ONLY; The name of the resource
@@ -1835,6 +1903,18 @@ type OutboundEnvironmentEndpointCollection struct {
 
 	// READ-ONLY; Link to next page of resources.
 	NextLink *string
+}
+
+// PortRange - The port range.
+type PortRange struct {
+	// The maximum port that is included in the range. It should be ranged from 1 to 65535, and be greater than or equal to portStart.
+	PortEnd *int32
+
+	// The minimum port that is included in the range. It should be ranged from 1 to 65535, and be less than or equal to portEnd.
+	PortStart *int32
+
+	// The network protocol of the port.
+	Protocol *Protocol
 }
 
 // PowerState - Describes the Power State of the cluster
@@ -2007,7 +2087,7 @@ type Snapshot struct {
 	// Resource tags.
 	Tags map[string]*string
 
-	// READ-ONLY; Fully qualified resource ID for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	// READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
 	ID *string
 
 	// READ-ONLY; The name of the resource
@@ -2189,6 +2269,84 @@ type TimeSpan struct {
 
 	// The start of a time span
 	Start *time.Time
+}
+
+// TrustedAccessRole - Trusted access role definition.
+type TrustedAccessRole struct {
+	// READ-ONLY; Name of role, name is unique under a source resource type
+	Name *string
+
+	// READ-ONLY; List of rules for the role. This maps to 'rules' property of Kubernetes Cluster Role [https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-v1/#ClusterRole].
+	Rules []*TrustedAccessRoleRule
+
+	// READ-ONLY; Resource type of Azure resource
+	SourceResourceType *string
+}
+
+// TrustedAccessRoleBinding - Defines binding between a resource and role
+type TrustedAccessRoleBinding struct {
+	// REQUIRED; Properties for trusted access role binding
+	Properties *TrustedAccessRoleBindingProperties
+
+	// READ-ONLY; Fully qualified resource ID for the resource. E.g. "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}"
+	ID *string
+
+	// READ-ONLY; The name of the resource
+	Name *string
+
+	// READ-ONLY; Azure Resource Manager metadata containing createdBy and modifiedBy information.
+	SystemData *SystemData
+
+	// READ-ONLY; The type of the resource. E.g. "Microsoft.Compute/virtualMachines" or "Microsoft.Storage/storageAccounts"
+	Type *string
+}
+
+// TrustedAccessRoleBindingListResult - List of trusted access role bindings
+type TrustedAccessRoleBindingListResult struct {
+	// Role binding list
+	Value []*TrustedAccessRoleBinding
+
+	// READ-ONLY; Link to next page of resources.
+	NextLink *string
+}
+
+// TrustedAccessRoleBindingProperties - Properties for trusted access role binding
+type TrustedAccessRoleBindingProperties struct {
+	// REQUIRED; A list of roles to bind, each item is a resource type qualified role name. For example: 'Microsoft.MachineLearningServices/workspaces/reader'.
+	Roles []*string
+
+	// REQUIRED; The ARM resource ID of source resource that trusted access is configured for.
+	SourceResourceID *string
+
+	// READ-ONLY; The current provisioning state of trusted access role binding.
+	ProvisioningState *TrustedAccessRoleBindingProvisioningState
+}
+
+// TrustedAccessRoleListResult - List of trusted access roles
+type TrustedAccessRoleListResult struct {
+	// READ-ONLY; Link to next page of resources.
+	NextLink *string
+
+	// READ-ONLY; Role list
+	Value []*TrustedAccessRole
+}
+
+// TrustedAccessRoleRule - Rule for trusted access role
+type TrustedAccessRoleRule struct {
+	// READ-ONLY; List of allowed apiGroups
+	APIGroups []*string
+
+	// READ-ONLY; List of allowed nonResourceURLs
+	NonResourceURLs []*string
+
+	// READ-ONLY; List of allowed names
+	ResourceNames []*string
+
+	// READ-ONLY; List of allowed resources
+	Resources []*string
+
+	// READ-ONLY; List of allowed verbs
+	Verbs []*string
 }
 
 // UpgradeOverrideSettings - Settings for overrides when upgrading a cluster.
