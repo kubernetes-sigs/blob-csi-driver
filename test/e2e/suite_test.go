@@ -18,7 +18,6 @@ package e2e
 
 import (
 	"context"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -42,7 +41,6 @@ import (
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
 	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
-	"sigs.k8s.io/blob-csi-driver/test/utils/testutil"
 )
 
 const (
@@ -82,23 +80,10 @@ func TestE2E(t *testing.T) {
 var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	creds, err := credentials.CreateAzureCredentialFile()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret)
+	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret, creds.AADFederatedTokenFile)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	_, err = azureClient.EnsureResourceGroup(ctx, creds.ResourceGroup, creds.Location, nil)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-
-	if testutil.IsRunningInProw() {
-		// Need to login to ACR using SP credential if we are running in Prow so we can push test images.
-		// If running locally, user should run 'docker login' before running E2E tests
-		registry := os.Getenv("REGISTRY")
-		gomega.Expect(registry).NotTo(gomega.Equal(""))
-
-		log.Println("Attempting docker login with Azure service principal")
-		cmd := exec.Command("docker", "login", fmt.Sprintf("--username=%s", creds.AADClientID), fmt.Sprintf("--password=%s", creds.AADClientSecret), registry)
-		err = cmd.Run()
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		log.Println("docker login is successful")
-	}
 
 	// Install Azure Blob Storage CSI driver on cluster from project root
 	e2eBootstrap := testCmd{
@@ -115,25 +100,8 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 		endLog:   "metrics service created",
 	}
 	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
-
-	if testutil.IsRunningInProw() {
-		data, err := json.Marshal(creds)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		return data
-	}
-
 	return nil
 }, func(ctx ginkgo.SpecContext, data []byte) {
-	if testutil.IsRunningInProw() {
-		creds := &credentials.Credentials{}
-		err := json.Unmarshal(data, creds)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		// set env for azidentity.EnvironmentCredential
-		os.Setenv("AZURE_TENANT_ID", creds.TenantID)
-		os.Setenv("AZURE_CLIENT_ID", creds.AADClientID)
-		os.Setenv("AZURE_CLIENT_SECRET", creds.AADClientSecret)
-	}
-
 	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
 	// it does not fall back to defaults
 	if os.Getenv(kubeconfigEnvVar) == "" {
@@ -226,7 +194,7 @@ func execTestCmd(cmds []testCmd) {
 func checkAccountCreationLeak(ctx context.Context) {
 	creds, err := credentials.CreateAzureCredentialFile()
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret)
+	azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret, creds.AADFederatedTokenFile)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	accountNum, err := azureClient.GetAccountNumByResourceGroup(ctx, creds.ResourceGroup)
