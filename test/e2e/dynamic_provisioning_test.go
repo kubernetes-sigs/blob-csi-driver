@@ -965,6 +965,8 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"skuName":          "Premium_LRS",
 				"protocol":         "nfs",
 				"mountPermissions": "0755",
+				"secretNamespace":  "kube-system",
+				"secretName":       fmt.Sprintf("secret-%d", time.Now().Unix()),
 			},
 		}
 		test.Run(ctx, cs, ns)
@@ -997,6 +999,8 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"skuName":          "Premium_LRS",
 				"protocol":         "nfs",
 				"mountPermissions": "0755",
+				"secretNamespace":  "kube-system",
+				"secretName":       fmt.Sprintf("secret-%d", time.Now().Unix()),
 			},
 		}
 		test.Run(ctx, cs, ns)
@@ -1027,8 +1031,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName":  "Standard_LRS",
-				"protocol": "fuse2",
+				"skuName":         "Standard_LRS",
+				"protocol":        "fuse2",
+				"secretNamespace": "kube-system",
+				"secretName":      fmt.Sprintf("secret-%d", time.Now().Unix()),
 			},
 		}
 		test.Run(ctx, cs, ns)
@@ -1059,8 +1065,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName":  "Standard_LRS",
-				"protocol": "fuse2",
+				"skuName":         "Standard_LRS",
+				"protocol":        "fuse2",
+				"secretNamespace": "kube-system",
+				"secretName":      fmt.Sprintf("secret-%d", time.Now().Unix()),
 			},
 		}
 		test.Run(ctx, cs, ns)
@@ -1094,6 +1102,8 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"protocol":             "nfs",
 				"mountPermissions":     "0755",
 				"allowsharedkeyaccess": "true",
+				"secretNamespace":      "kube-system",
+				"secretName":           fmt.Sprintf("secret-%d", time.Now().Unix()),
 			},
 			ClonedStorageClassParameters: map[string]string{
 				"skuName":              "Standard_LRS",
@@ -1130,8 +1140,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName":  "Standard_LRS",
-				"protocol": "fuse2",
+				"skuName":         "Standard_LRS",
+				"protocol":        "fuse2",
+				"secretNamespace": "kube-system",
+				"secretName":      fmt.Sprintf("secret-%d", time.Now().Unix()),
 			},
 			ClonedStorageClassParameters: map[string]string{
 				"skuName":  "Premium_LRS",
