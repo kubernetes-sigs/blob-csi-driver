@@ -1037,6 +1037,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"allowsharedkeyaccess": "true",
 			},
 			ClonedStorageClassParameters: map[string]string{
+				"useDataPlaneAPI":      "true",
 				"skuName":              "Standard_LRS",
 				"protocol":             "nfs",
 				"mountPermissions":     "0755",
@@ -1076,8 +1077,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"protocol":        "fuse2",
 			},
 			ClonedStorageClassParameters: map[string]string{
-				"skuName":  "Premium_LRS",
-				"protocol": "fuse2",
+				"useDataPlaneAPI": "true",
+				"skuName":         "Premium_LRS",
+				"protocol":        "fuse2",
 			},
 		}
 		test.Run(ctx, cs, ns)
