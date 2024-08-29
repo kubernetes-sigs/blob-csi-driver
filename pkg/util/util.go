@@ -331,6 +331,10 @@ func parseAzcopyJobShow(jobshow string) (AzcopyJobState, string, error) {
 func GetKubeClient(kubeconfig string, kubeAPIQPS float64, kubeAPIBurst int, userAgent string) (kubernetes.Interface, error) {
 	var err error
 	var kubeCfg *rest.Config
+	if kubeconfig == "no-need-kubeconfig" {
+		klog.V(2).Infof("kubeconfig is set as no-need-kubeconfig, kubeClient will be nil")
+		return nil, nil
+	}
 	if kubeCfg, err = clientcmd.BuildConfigFromFlags("", kubeconfig); err != nil {
 		return nil, err
 	}
