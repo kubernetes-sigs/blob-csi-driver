@@ -32,7 +32,7 @@ type TableClient struct {
 //   - credential - used to authorize requests. Usually a credential from azidentity.
 //   - options - pass nil to accept the default values.
 func NewTableClient(subscriptionID string, credential azcore.TokenCredential, options *arm.ClientOptions) (*TableClient, error) {
-	cl, err := arm.NewClient(moduleName+".TableClient", moduleVersion, credential, options)
+	cl, err := arm.NewClient(moduleName, moduleVersion, credential, options)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func NewTableClient(subscriptionID string, credential azcore.TokenCredential, op
 // Create - Creates a new table with the specified table name, under the specified account.
 // If the operation fails it returns an *azcore.ResponseError type.
 //
-// Generated from API version 2023-01-01
+// Generated from API version 2023-05-01
 //   - resourceGroupName - The name of the resource group within the user's subscription. The name is case insensitive.
 //   - accountName - The name of the storage account within the specified resource group. Storage account names must be between
 //     3 and 24 characters in length and use numbers and lower-case letters only.
@@ -55,6 +55,10 @@ func NewTableClient(subscriptionID string, credential azcore.TokenCredential, op
 //   - options - TableClientCreateOptions contains the optional parameters for the TableClient.Create method.
 func (client *TableClient) Create(ctx context.Context, resourceGroupName string, accountName string, tableName string, options *TableClientCreateOptions) (TableClientCreateResponse, error) {
 	var err error
+	const operationName = "TableClient.Create"
+	ctx = context.WithValue(ctx, runtime.CtxAPINameKey{}, operationName)
+	ctx, endSpan := runtime.StartSpan(ctx, operationName, client.internal.Tracer(), nil)
+	defer func() { endSpan(err) }()
 	req, err := client.createCreateRequest(ctx, resourceGroupName, accountName, tableName, options)
 	if err != nil {
 		return TableClientCreateResponse{}, err
@@ -95,7 +99,7 @@ func (client *TableClient) createCreateRequest(ctx context.Context, resourceGrou
 		return nil, err
 	}
 	reqQP := req.Raw().URL.Query()
-	reqQP.Set("api-version", "2023-01-01")
+	reqQP.Set("api-version", "2023-05-01")
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	req.Raw().Header["Accept"] = []string{"application/json"}
 	if options != nil && options.Parameters != nil {
@@ -119,7 +123,7 @@ func (client *TableClient) createHandleResponse(resp *http.Response) (TableClien
 // Delete - Deletes the table with the specified table name, under the specified account if it exists.
 // If the operation fails it returns an *azcore.ResponseError type.
 //
-// Generated from API version 2023-01-01
+// Generated from API version 2023-05-01
 //   - resourceGroupName - The name of the resource group within the user's subscription. The name is case insensitive.
 //   - accountName - The name of the storage account within the specified resource group. Storage account names must be between
 //     3 and 24 characters in length and use numbers and lower-case letters only.
@@ -128,6 +132,10 @@ func (client *TableClient) createHandleResponse(resp *http.Response) (TableClien
 //   - options - TableClientDeleteOptions contains the optional parameters for the TableClient.Delete method.
 func (client *TableClient) Delete(ctx context.Context, resourceGroupName string, accountName string, tableName string, options *TableClientDeleteOptions) (TableClientDeleteResponse, error) {
 	var err error
+	const operationName = "TableClient.Delete"
+	ctx = context.WithValue(ctx, runtime.CtxAPINameKey{}, operationName)
+	ctx, endSpan := runtime.StartSpan(ctx, operationName, client.internal.Tracer(), nil)
+	defer func() { endSpan(err) }()
 	req, err := client.deleteCreateRequest(ctx, resourceGroupName, accountName, tableName, options)
 	if err != nil {
 		return TableClientDeleteResponse{}, err
@@ -167,7 +175,7 @@ func (client *TableClient) deleteCreateRequest(ctx context.Context, resourceGrou
 		return nil, err
 	}
 	reqQP := req.Raw().URL.Query()
-	reqQP.Set("api-version", "2023-01-01")
+	reqQP.Set("api-version", "2023-05-01")
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	req.Raw().Header["Accept"] = []string{"application/json"}
 	return req, nil
@@ -176,7 +184,7 @@ func (client *TableClient) deleteCreateRequest(ctx context.Context, resourceGrou
 // Get - Gets the table with the specified table name, under the specified account if it exists.
 // If the operation fails it returns an *azcore.ResponseError type.
 //
-// Generated from API version 2023-01-01
+// Generated from API version 2023-05-01
 //   - resourceGroupName - The name of the resource group within the user's subscription. The name is case insensitive.
 //   - accountName - The name of the storage account within the specified resource group. Storage account names must be between
 //     3 and 24 characters in length and use numbers and lower-case letters only.
@@ -185,6 +193,10 @@ func (client *TableClient) deleteCreateRequest(ctx context.Context, resourceGrou
 //   - options - TableClientGetOptions contains the optional parameters for the TableClient.Get method.
 func (client *TableClient) Get(ctx context.Context, resourceGroupName string, accountName string, tableName string, options *TableClientGetOptions) (TableClientGetResponse, error) {
 	var err error
+	const operationName = "TableClient.Get"
+	ctx = context.WithValue(ctx, runtime.CtxAPINameKey{}, operationName)
+	ctx, endSpan := runtime.StartSpan(ctx, operationName, client.internal.Tracer(), nil)
+	defer func() { endSpan(err) }()
 	req, err := client.getCreateRequest(ctx, resourceGroupName, accountName, tableName, options)
 	if err != nil {
 		return TableClientGetResponse{}, err
@@ -225,7 +237,7 @@ func (client *TableClient) getCreateRequest(ctx context.Context, resourceGroupNa
 		return nil, err
 	}
 	reqQP := req.Raw().URL.Query()
-	reqQP.Set("api-version", "2023-01-01")
+	reqQP.Set("api-version", "2023-05-01")
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	req.Raw().Header["Accept"] = []string{"application/json"}
 	return req, nil
@@ -242,7 +254,7 @@ func (client *TableClient) getHandleResponse(resp *http.Response) (TableClientGe
 
 // NewListPager - Gets a list of all the tables under the specified storage account
 //
-// Generated from API version 2023-01-01
+// Generated from API version 2023-05-01
 //   - resourceGroupName - The name of the resource group within the user's subscription. The name is case insensitive.
 //   - accountName - The name of the storage account within the specified resource group. Storage account names must be between
 //     3 and 24 characters in length and use numbers and lower-case letters only.
@@ -253,25 +265,20 @@ func (client *TableClient) NewListPager(resourceGroupName string, accountName st
 			return page.NextLink != nil && len(*page.NextLink) > 0
 		},
 		Fetcher: func(ctx context.Context, page *TableClientListResponse) (TableClientListResponse, error) {
-			var req *policy.Request
-			var err error
-			if page == nil {
-				req, err = client.listCreateRequest(ctx, resourceGroupName, accountName, options)
-			} else {
-				req, err = runtime.NewRequest(ctx, http.MethodGet, *page.NextLink)
+			ctx = context.WithValue(ctx, runtime.CtxAPINameKey{}, "TableClient.NewListPager")
+			nextLink := ""
+			if page != nil {
+				nextLink = *page.NextLink
 			}
+			resp, err := runtime.FetcherForNextLink(ctx, client.internal.Pipeline(), nextLink, func(ctx context.Context) (*policy.Request, error) {
+				return client.listCreateRequest(ctx, resourceGroupName, accountName, options)
+			}, nil)
 			if err != nil {
 				return TableClientListResponse{}, err
-			}
-			resp, err := client.internal.Pipeline().Do(req)
-			if err != nil {
-				return TableClientListResponse{}, err
-			}
-			if !runtime.HasStatusCode(resp, http.StatusOK) {
-				return TableClientListResponse{}, runtime.NewResponseError(resp)
 			}
 			return client.listHandleResponse(resp)
 		},
+		Tracer: client.internal.Tracer(),
 	})
 }
 
@@ -295,7 +302,7 @@ func (client *TableClient) listCreateRequest(ctx context.Context, resourceGroupN
 		return nil, err
 	}
 	reqQP := req.Raw().URL.Query()
-	reqQP.Set("api-version", "2023-01-01")
+	reqQP.Set("api-version", "2023-05-01")
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	req.Raw().Header["Accept"] = []string{"application/json"}
 	return req, nil
@@ -313,7 +320,7 @@ func (client *TableClient) listHandleResponse(resp *http.Response) (TableClientL
 // Update - Creates a new table with the specified table name, under the specified account.
 // If the operation fails it returns an *azcore.ResponseError type.
 //
-// Generated from API version 2023-01-01
+// Generated from API version 2023-05-01
 //   - resourceGroupName - The name of the resource group within the user's subscription. The name is case insensitive.
 //   - accountName - The name of the storage account within the specified resource group. Storage account names must be between
 //     3 and 24 characters in length and use numbers and lower-case letters only.
@@ -322,6 +329,10 @@ func (client *TableClient) listHandleResponse(resp *http.Response) (TableClientL
 //   - options - TableClientUpdateOptions contains the optional parameters for the TableClient.Update method.
 func (client *TableClient) Update(ctx context.Context, resourceGroupName string, accountName string, tableName string, options *TableClientUpdateOptions) (TableClientUpdateResponse, error) {
 	var err error
+	const operationName = "TableClient.Update"
+	ctx = context.WithValue(ctx, runtime.CtxAPINameKey{}, operationName)
+	ctx, endSpan := runtime.StartSpan(ctx, operationName, client.internal.Tracer(), nil)
+	defer func() { endSpan(err) }()
 	req, err := client.updateCreateRequest(ctx, resourceGroupName, accountName, tableName, options)
 	if err != nil {
 		return TableClientUpdateResponse{}, err
@@ -362,7 +373,7 @@ func (client *TableClient) updateCreateRequest(ctx context.Context, resourceGrou
 		return nil, err
 	}
 	reqQP := req.Raw().URL.Query()
-	reqQP.Set("api-version", "2023-01-01")
+	reqQP.Set("api-version", "2023-05-01")
 	req.Raw().URL.RawQuery = reqQP.Encode()
 	req.Raw().Header["Accept"] = []string{"application/json"}
 	if options != nil && options.Parameters != nil {

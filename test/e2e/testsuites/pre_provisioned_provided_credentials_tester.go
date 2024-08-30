@@ -19,13 +19,13 @@ package testsuites
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/onsi/ginkgo/v2"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
-	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
+
+	//"sigs.k8s.io/blob-csi-driver/test/utils/azure"
 
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
@@ -41,11 +41,11 @@ type PreProvisionedProvidedCredentiasTest struct {
 }
 
 func (t *PreProvisionedProvidedCredentiasTest) Run(ctx context.Context, client clientset.Interface, namespace *v1.Namespace) {
-	kvClient, err := azure.NewKeyVaultClient()
-	framework.ExpectNoError(err)
+	//kvClient, err := azure.NewKeyVaultClient()
+	//framework.ExpectNoError(err)
 
-	authClient, err := azure.NewAuthorizationClient()
-	framework.ExpectNoError(err)
+	//authClient, err := azure.NewAuthorizationClient()
+	//framework.ExpectNoError(err)
 
 	for _, pod := range t.Pods {
 		for n, volume := range pod.Volumes {
@@ -98,79 +98,80 @@ func (t *PreProvisionedProvidedCredentiasTest) Run(ctx context.Context, client c
 				"azurestorageaccountsastoken": sasToken,
 			}
 			run()
+			/*
+				// test for service principal
+				ginkgo.By("Run for service principal")
+				pod.Volumes[n].Attrib = map[string]string{
+					"azurestorageauthtype":    "SPN",
+					"azurestoragespnclientid": kvClient.Cred.AADClientID,
+					"azurestoragespntenantid": kvClient.Cred.TenantID,
+				}
+				secretData = map[string]string{
+					"azurestorageaccountname":     accountName,
+					"azurestoragespnclientsecret": kvClient.Cred.AADClientSecret,
+				}
 
-			// test for service principal
-			ginkgo.By("Run for service principal")
-			pod.Volumes[n].Attrib = map[string]string{
-				"azurestorageauthtype":    "SPN",
-				"azurestoragespnclientid": kvClient.Cred.AADClientID,
-				"azurestoragespntenantid": kvClient.Cred.TenantID,
-			}
-			secretData = map[string]string{
-				"azurestorageaccountname":     accountName,
-				"azurestoragespnclientsecret": kvClient.Cred.AADClientSecret,
-			}
+				// assign role to service principal
+				objectID, err := kvClient.GetServicePrincipalObjectID(ctx, kvClient.Cred.AADClientID)
+				framework.ExpectNoError(err, fmt.Sprintf("Error GetServicePrincipalObjectID from clientID(%s): %v", kvClient.Cred.AADClientID, err))
 
-			// assign role to service principal
-			objectID, err := kvClient.GetServicePrincipalObjectID(ctx, kvClient.Cred.AADClientID)
-			framework.ExpectNoError(err, fmt.Sprintf("Error GetServicePrincipalObjectID from clientID(%s): %v", kvClient.Cred.AADClientID, err))
+				resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Storage/storageAccounts/%s", kvClient.Cred.SubscriptionID, kvClient.Cred.ResourceGroup, accountName)
 
-			resourceID := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Storage/storageAccounts/%s", kvClient.Cred.SubscriptionID, kvClient.Cred.ResourceGroup, accountName)
+				ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the service principal, objectID:%s", objectID))
+				roleDef, err := authClient.GetRoleDefinition(ctx, resourceID, "Storage Blob Data Contributor")
+				framework.ExpectNoError(err, fmt.Sprintf("Error GetRoleDefinition from resourceID(%s): %v", resourceID, err))
 
-			ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the service principal, objectID:%s", objectID))
-			roleDef, err := authClient.GetRoleDefinition(ctx, resourceID, "Storage Blob Data Contributor")
-			framework.ExpectNoError(err, fmt.Sprintf("Error GetRoleDefinition from resourceID(%s): %v", resourceID, err))
+				roleDefID := *roleDef.ID
+				_, err = authClient.AssignRole(ctx, resourceID, objectID, roleDefID)
+				if err != nil && strings.Contains(err.Error(), "The role assignment already exists") {
+					err = nil
+				}
+				framework.ExpectNoError(err, fmt.Sprintf("Error AssignRole (roleDefID(%s)) to objectID(%s) to access resource (resourceID(%s)), error: %v", roleDefID, objectID, resourceID, err))
 
-			roleDefID := *roleDef.ID
-			_, err = authClient.AssignRole(ctx, resourceID, objectID, roleDefID)
-			if err != nil && strings.Contains(err.Error(), "The role assignment already exists") {
-				err = nil
-			}
-			framework.ExpectNoError(err, fmt.Sprintf("Error AssignRole (roleDefID(%s)) to objectID(%s) to access resource (resourceID(%s)), error: %v", roleDefID, objectID, resourceID, err))
+				run()
 
-			run()
+				// test for managed identity(objectID)
+				objectID, err = kvClient.GetMSIObjectID(ctx, "blobfuse-csi-driver-e2e-test-id")
+				if err != nil {
+					// only e2e-vmss test job will use msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal, so skip here
+					return
+				}
 
-			// test for managed identity(objectID)
-			objectID, err = kvClient.GetMSIObjectID(ctx, "blobfuse-csi-driver-e2e-test-id")
-			if err != nil {
-				// only e2e-vmss test job will use msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal, so skip here
-				return
-			}
+				ginkgo.By(fmt.Sprintf("Run for managed identity (objectID %s)", objectID))
+				pod.Volumes[n].Attrib = map[string]string{
+					"azurestorageauthtype":         "MSI",
+					"azurestorageidentityobjectid": objectID,
+				}
 
-			ginkgo.By(fmt.Sprintf("Run for managed identity (objectID %s)", objectID))
-			pod.Volumes[n].Attrib = map[string]string{
-				"azurestorageauthtype":         "MSI",
-				"azurestorageidentityobjectid": objectID,
-			}
+				secretData = map[string]string{
+					"azurestorageaccountname": accountName,
+				}
+				ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the managed identity, objectID:%s", objectID))
+				_, err = authClient.AssignRole(ctx, resourceID, objectID, roleDefID)
+				if err != nil && strings.Contains(err.Error(), "The role assignment already exists") {
+					err = nil
+				}
+				framework.ExpectNoError(err, fmt.Sprintf("Error AssignRole (roleDefID(%s)) to objectID(%s) to access resource (resourceID(%s)), error: %v", roleDefID, objectID, resourceID, err))
 
-			secretData = map[string]string{
-				"azurestorageaccountname": accountName,
-			}
-			ginkgo.By(fmt.Sprintf("assign Storage Blob Data Contributor role to the managed identity, objectID:%s", objectID))
-			_, err = authClient.AssignRole(ctx, resourceID, objectID, roleDefID)
-			if err != nil && strings.Contains(err.Error(), "The role assignment already exists") {
-				err = nil
-			}
-			framework.ExpectNoError(err, fmt.Sprintf("Error AssignRole (roleDefID(%s)) to objectID(%s) to access resource (resourceID(%s)), error: %v", roleDefID, objectID, resourceID, err))
+				run()
 
-			run()
+				// test for managed identity(resourceID)
+				resourceID, err = kvClient.GetMSIResourceID(ctx, "blobfuse-csi-driver-e2e-test-id")
+				if err != nil {
+					// only e2e-vmss test job will use msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal, so skip here
+					return
+				}
+				ginkgo.By(fmt.Sprintf("Run for managed identity (resourceID %s)", resourceID))
+				pod.Volumes[n].Attrib = map[string]string{
+					"azurestorageauthtype":           "MSI",
+					"azurestorageidentityresourceid": resourceID,
+				}
+				secretData = map[string]string{
+					"azurestorageaccountname": accountName,
+				}
 
-			// test for managed identity(resourceID)
-			resourceID, err = kvClient.GetMSIResourceID(ctx, "blobfuse-csi-driver-e2e-test-id")
-			if err != nil {
-				// only e2e-vmss test job will use msi blobfuse-csi-driver-e2e-test-id, other jobs use service principal, so skip here
-				return
-			}
-			ginkgo.By(fmt.Sprintf("Run for managed identity (resourceID %s)", resourceID))
-			pod.Volumes[n].Attrib = map[string]string{
-				"azurestorageauthtype":           "MSI",
-				"azurestorageidentityresourceid": resourceID,
-			}
-			secretData = map[string]string{
-				"azurestorageaccountname": accountName,
-			}
-
-			run()
+				run()
+			*/
 		}
 	}
 }

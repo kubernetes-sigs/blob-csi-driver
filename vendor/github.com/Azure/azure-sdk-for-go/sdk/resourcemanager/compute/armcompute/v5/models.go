@@ -101,6 +101,15 @@ type ApplicationProfile struct {
 	GalleryApplications []*VMGalleryApplication
 }
 
+// AttachDetachDataDisksRequest - Specifies the input for attaching and detaching a list of managed data disks.
+type AttachDetachDataDisksRequest struct {
+	// The list of managed data disks to be attached.
+	DataDisksToAttach []*DataDisksToAttach
+
+	// The list of managed data disks to be detached.
+	DataDisksToDetach []*DataDisksToDetach
+}
+
 // AutomaticOSUpgradePolicy - The configuration parameters used for performing automatic OS upgrade.
 type AutomaticOSUpgradePolicy struct {
 	// Whether OS image rollback feature should be disabled. Default value is false.
@@ -112,6 +121,11 @@ type AutomaticOSUpgradePolicy struct {
 	// [https://docs.microsoft.com/dotnet/api/microsoft.azure.management.compute.models.windowsconfiguration.enableautomaticupdates?view=azure-dotnet]
 	// is automatically set to false and cannot be set to true.
 	EnableAutomaticOSUpgrade *bool
+
+	// Indicates whether Auto OS Upgrade should undergo deferral. Deferred OS upgrades will send advanced notifications on a per-VM
+	// basis that an OS upgrade from rolling upgrades is incoming, via the IMDS
+	// tag 'Platform.PendingOSUpgrade'. The upgrade then defers until the upgrade is approved via an ApproveRollingUpgrade call.
+	OSRollingUpgradeDeferral *bool
 
 	// Indicates whether rolling upgrade policy should be used during Auto OS Upgrade. Default value is false. Auto OS Upgrade
 	// will fallback to the default policy if no policy is defined on the VMSS.
@@ -353,6 +367,10 @@ type CapacityReservationGroup struct {
 type CapacityReservationGroupInstanceView struct {
 	// READ-ONLY; List of instance view of the capacity reservations under the capacity reservation group.
 	CapacityReservations []*CapacityReservationInstanceViewWithName
+
+	// READ-ONLY; List of the subscriptions that the capacity reservation group is shared with. Note: Minimum api-version: 2024-03-01.
+	// Please refer to https://aka.ms/computereservationsharing for more details.
+	SharedSubscriptionIDs []*SubResourceReadOnly
 }
 
 // CapacityReservationGroupListResult - The List capacity reservation group with resource group response.
@@ -367,6 +385,13 @@ type CapacityReservationGroupListResult struct {
 
 // CapacityReservationGroupProperties - capacity reservation group Properties.
 type CapacityReservationGroupProperties struct {
+	// Specifies the settings to enable sharing across subscriptions for the capacity reservation group resource. Pls. keep in
+	// mind the capacity reservation group resource generally can be shared across
+	// subscriptions belonging to a single azure AAD tenant or cross AAD tenant if there is a trust relationship established between
+	// the AAD tenants. Note: Minimum api-version: 2024-03-01. Please refer to
+	// https://aka.ms/computereservationsharing for more details.
+	SharingProfile *ResourceSharingProfile
+
 	// READ-ONLY; A list of all capacity reservation resource ids that belong to capacity reservation group.
 	CapacityReservations []*SubResourceReadOnly
 
@@ -769,6 +794,9 @@ type CommunityGallery struct {
 	// The identifier information of community gallery.
 	Identifier *CommunityGalleryIdentifier
 
+	// Describes the properties of a community gallery.
+	Properties *CommunityGalleryProperties
+
 	// READ-ONLY; Resource location
 	Location *string
 
@@ -820,7 +848,7 @@ type CommunityGalleryImageList struct {
 	// REQUIRED; A list of community gallery images.
 	Value []*CommunityGalleryImage
 
-	// The uri to fetch the next page of community gallery images. Call ListNext() with this to fetch the next page of community
+	// The URI to fetch the next page of community gallery images. Call ListNext() with this to fetch the next page of community
 	// gallery images.
 	NextLink *string
 }
@@ -835,23 +863,26 @@ type CommunityGalleryImageProperties struct {
 	OSState *OperatingSystemStateTypes
 
 	// REQUIRED; This property allows you to specify the type of the OS that is included in the disk when creating a VM from a
-	// managed image.
-	// Possible values are:
-	// Windows
-	// Linux
+	// managed image. Possible values are: Windows, Linux.
 	OSType *OperatingSystemTypes
 
 	// The architecture of the image. Applicable to OS disks only.
 	Architecture *Architecture
 
+	// The artifact tags of a community gallery resource.
+	ArtifactTags map[string]*string
+
 	// Describes the disallowed disk types.
 	Disallowed *Disallowed
+
+	// The disclaimer for a community gallery resource.
+	Disclaimer *string
 
 	// The end of life date of the gallery image definition. This property can be used for decommissioning purposes. This property
 	// is updatable.
 	EndOfLifeDate *time.Time
 
-	// End-user license agreement for the current community gallery image.
+	// The end-user license agreement for the current community gallery image.
 	Eula *string
 
 	// A list of gallery image features.
@@ -860,7 +891,7 @@ type CommunityGalleryImageProperties struct {
 	// The hypervisor generation of the Virtual Machine. Applicable to OS disks only.
 	HyperVGeneration *HyperVGeneration
 
-	// Privacy statement uri for the current community gallery image.
+	// Privacy statement URI for the current community gallery image.
 	PrivacyStatementURI *string
 
 	// Describes the gallery image definition purchase plan. This is used by marketplace images.
@@ -893,13 +924,19 @@ type CommunityGalleryImageVersionList struct {
 	// REQUIRED; A list of community gallery image versions.
 	Value []*CommunityGalleryImageVersion
 
-	// The uri to fetch the next page of community gallery image versions. Call ListNext() with this to fetch the next page of
+	// The URI to fetch the next page of community gallery image versions. Call ListNext() with this to fetch the next page of
 	// community gallery image versions.
 	NextLink *string
 }
 
 // CommunityGalleryImageVersionProperties - Describes the properties of a gallery image version.
 type CommunityGalleryImageVersionProperties struct {
+	// The artifact tags of a community gallery resource.
+	ArtifactTags map[string]*string
+
+	// The disclaimer for a community gallery resource.
+	Disclaimer *string
+
 	// The end of life date of the gallery image version Definition. This property can be used for decommissioning purposes. This
 	// property is updatable.
 	EndOfLifeDate *time.Time
@@ -936,6 +973,36 @@ type CommunityGalleryInfo struct {
 	PublicNames []*string
 }
 
+// CommunityGalleryMetadata - The metadata of community gallery.
+type CommunityGalleryMetadata struct {
+	// REQUIRED; A list of public names the gallery has.
+	PublicNames []*string
+
+	// REQUIRED; The publisher email id of this community gallery.
+	PublisherContact *string
+
+	// The end-user license agreement for this community gallery.
+	Eula *string
+
+	// The link for the privacy statement of this community gallery from the gallery publisher.
+	PrivacyStatementURI *string
+
+	// The publisher URI of this community gallery.
+	PublisherURI *string
+}
+
+// CommunityGalleryProperties - Describes the properties of a community gallery.
+type CommunityGalleryProperties struct {
+	// The artifact tags of a community gallery resource.
+	ArtifactTags map[string]*string
+
+	// The metadata of community gallery.
+	CommunityMetadata *CommunityGalleryMetadata
+
+	// The disclaimer for a community gallery resource.
+	Disclaimer *string
+}
+
 // CopyCompletionError - Indicates the error details if the background copy of a resource created via the CopyStart operation
 // fails.
 type CopyCompletionError struct {
@@ -970,6 +1037,9 @@ type CreationData struct {
 	// disabled after enabled.
 	PerformancePlus *bool
 
+	// If this field is set on a snapshot and createOption is CopyStart, the snapshot will be copied at a quicker speed.
+	ProvisionedBandwidthCopySpeed *ProvisionedBandwidthCopyOption
+
 	// If createOption is ImportSecure, this is the URI of a blob to be imported into VM guest state.
 	SecurityDataURI *string
 
@@ -994,11 +1064,13 @@ type CreationData struct {
 
 // DataDisk - Describes a data disk.
 type DataDisk struct {
-	// REQUIRED; Specifies how the virtual machine should be created. Possible values are: Attach. This value is used when you
-	// are using a specialized disk to create the virtual machine. FromImage. This value is used
-	// when you are using an image to create the virtual machine. If you are using a platform image, you should also use the imageReference
-	// element described above. If you are using a marketplace image, you
-	// should also use the plan element previously described.
+	// REQUIRED; Specifies how the virtual machine disk should be created. Possible values are Attach: This value is used when
+	// you are using a specialized disk to create the virtual machine. FromImage: This value is
+	// used when you are using an image to create the virtual machine data disk. If you are using a platform image, you should
+	// also use the imageReference element described above. If you are using a
+	// marketplace image, you should also use the plan element previously described. Empty: This value is used when creating an
+	// empty data disk. Copy: This value is used to create a data disk from a snapshot
+	// or another disk. Restore: This value is used to create a data disk from a disk restore point.
 	CreateOption *DiskCreateOptionTypes
 
 	// REQUIRED; Specifies the logical unit number of the data disk. This value is used to identify data disks within the VM and
@@ -1040,6 +1112,9 @@ type DataDisk struct {
 	// The disk name.
 	Name *string
 
+	// The source resource identifier. It can be a snapshot, or disk restore point from which to create a disk.
+	SourceResource *APIEntityReference
+
 	// Specifies whether the data disk is in process of detachment from the VirtualMachine/VirtualMachineScaleset
 	ToBeDetached *bool
 
@@ -1076,6 +1151,41 @@ type DataDiskImageEncryption struct {
 
 	// A relative URI containing the resource ID of the disk encryption set.
 	DiskEncryptionSetID *string
+}
+
+// DataDisksToAttach - Describes the data disk to be attached.
+type DataDisksToAttach struct {
+	// REQUIRED; ID of the managed data disk.
+	DiskID *string
+
+	// Specifies the caching requirements. Possible values are: None, ReadOnly, ReadWrite. The defaulting behavior is: None for
+	// Standard storage. ReadOnly for Premium storage.
+	Caching *CachingTypes
+
+	// Specifies whether data disk should be deleted or detached upon VM deletion. Possible values are: Delete. If this value
+	// is used, the data disk is deleted when VM is deleted. Detach. If this value is
+	// used, the data disk is retained after VM is deleted. The default value is set to Detach.
+	DeleteOption *DiskDeleteOptionTypes
+
+	// Specifies the customer managed disk encryption set resource id for the managed disk.
+	DiskEncryptionSet *DiskEncryptionSetParameters
+
+	// The logical unit number of the data disk. This value is used to identify data disks within the VM and therefore must be
+	// unique for each data disk attached to a VM. If not specified, lun would be auto
+	// assigned.
+	Lun *int32
+
+	// Specifies whether writeAccelerator should be enabled or disabled on the disk.
+	WriteAcceleratorEnabled *bool
+}
+
+// DataDisksToDetach - Describes the data disk to be detached.
+type DataDisksToDetach struct {
+	// REQUIRED; ID of the managed data disk.
+	DiskID *string
+
+	// Supported options available for Detach of a disk from a VM. Refer to DetachOption object reference for more details.
+	DetachOption *DiskDetachOptionTypes
 }
 
 // DedicatedHost - Specifies information about the Dedicated host.
@@ -1318,11 +1428,12 @@ type DiffDiskSettings struct {
 	// Specifies the ephemeral disk settings for operating system disk.
 	Option *DiffDiskOptions
 
-	// Specifies the ephemeral disk placement for operating system disk. Possible values are: CacheDisk, ResourceDisk. The defaulting
-	// behavior is: CacheDisk if one is configured for the VM size otherwise
-	// ResourceDisk is used. Refer to the VM size documentation for Windows VM at https://docs.microsoft.com/azure/virtual-machines/windows/sizes
+	// Specifies the ephemeral disk placement for operating system disk. Possible values are: CacheDisk, ResourceDisk, NvmeDisk.
+	// The defaulting behavior is: CacheDisk if one is configured for the VM size
+	// otherwise ResourceDisk or NvmeDisk is used. Refer to the VM size documentation for Windows VM at https://docs.microsoft.com/azure/virtual-machines/windows/sizes
 	// and Linux VM at
-	// https://docs.microsoft.com/azure/virtual-machines/linux/sizes to check which VM sizes exposes a cache disk.
+	// https://docs.microsoft.com/azure/virtual-machines/linux/sizes to check which VM sizes exposes a cache disk. Minimum api-version
+	// for NvmeDisk: 2024-03-01.
 	Placement *DiffDiskPlacement
 }
 
@@ -1891,6 +2002,12 @@ type Encryption struct {
 	Type *EncryptionType
 }
 
+// EncryptionIdentity - Specifies the Managed Identity used by ADE to get access token for keyvault operations.
+type EncryptionIdentity struct {
+	// Specifies ARM Resource ID of one of the user identities associated with the VM.
+	UserAssignedIdentityResourceID *string
+}
+
 // EncryptionImages - Optional. Allows users to provide customer managed keys for encrypting the OS and data disks in the
 // gallery artifact.
 type EncryptionImages struct {
@@ -1977,6 +2094,12 @@ type EncryptionSettingsElement struct {
 	// Key Vault Key Url and vault id of the key encryption key. KeyEncryptionKey is optional and when provided is used to unwrap
 	// the disk encryption key.
 	KeyEncryptionKey *KeyVaultAndKeyReference
+}
+
+// EventGridAndResourceGraph - Specifies eventGridAndResourceGraph related Scheduled Event related configurations.
+type EventGridAndResourceGraph struct {
+	// Specifies if event grid and resource graph is enabled for Scheduled event related configurations.
+	Enable *bool
 }
 
 // ExtendedLocation - The complex type of the extended location.
@@ -2085,10 +2208,8 @@ type GalleryApplicationList struct {
 
 // GalleryApplicationProperties - Describes the properties of a gallery Application Definition.
 type GalleryApplicationProperties struct {
-	// REQUIRED; This property allows you to specify the supported type of the OS that application is built for.
-	// Possible values are:
-	// Windows
-	// Linux
+	// REQUIRED; This property allows you to specify the supported type of the OS that application is built for. Possible values
+	// are: Windows, Linux.
 	SupportedOSType *OperatingSystemTypes
 
 	// A list of custom actions that can be performed with all of the Gallery Application Versions within this Gallery Application.
@@ -2291,13 +2412,17 @@ type GalleryArtifactVersionFullSource struct {
 	// The resource Id of the source Community Gallery Image. Only required when using Community Gallery Image as a source.
 	CommunityGalleryImageID *string
 
-	// The id of the gallery artifact version source. Can specify a disk uri, snapshot uri, user image or storage account resource.
+	// The id of the gallery artifact version source.
 	ID *string
+
+	// The resource Id of the source virtual machine. Only required when capturing a virtual machine to source this Gallery Image
+	// Version.
+	VirtualMachineID *string
 }
 
 // GalleryArtifactVersionSource - The gallery artifact version source.
 type GalleryArtifactVersionSource struct {
-	// The id of the gallery artifact version source. Can specify a disk uri, snapshot uri, user image or storage account resource.
+	// The id of the gallery artifact version source.
 	ID *string
 }
 
@@ -2332,7 +2457,7 @@ type GalleryDiskImage struct {
 
 // GalleryDiskImageSource - The source for the disk image.
 type GalleryDiskImageSource struct {
-	// The id of the gallery artifact version source. Can specify a disk uri, snapshot uri, user image or storage account resource.
+	// The id of the gallery artifact version source.
 	ID *string
 
 	// The Storage Account Id that contains the vhd blob being used as a source for this artifact version.
@@ -2418,10 +2543,7 @@ type GalleryImageProperties struct {
 	OSState *OperatingSystemStateTypes
 
 	// REQUIRED; This property allows you to specify the type of the OS that is included in the disk when creating a VM from a
-	// managed image.
-	// Possible values are:
-	// Windows
-	// Linux
+	// managed image. Possible values are: Windows, Linux.
 	OSType *OperatingSystemTypes
 
 	// The architecture of the image. Applicable to OS disks only.
@@ -2522,6 +2644,9 @@ type GalleryImageVersionProperties struct {
 	// This is the safety profile of the Gallery Image Version.
 	SafetyProfile *GalleryImageVersionSafetyProfile
 
+	// The security profile of a gallery image version
+	SecurityProfile *ImageVersionSecurityProfile
+
 	// READ-ONLY; The provisioning state, which only appears in the response.
 	ProvisioningState *GalleryProvisioningState
 
@@ -2580,6 +2705,15 @@ type GalleryImageVersionStorageProfile struct {
 
 	// The source of the gallery artifact version.
 	Source *GalleryArtifactVersionFullSource
+}
+
+// GalleryImageVersionUefiSettings - Contains UEFI settings for the image version.
+type GalleryImageVersionUefiSettings struct {
+	// Additional UEFI key signatures that will be added to the image in addition to the signature templates
+	AdditionalSignatures *UefiKeySignatures
+
+	// The name of the template(s) that contains default UEFI key signatures that will be added to the image.
+	SignatureTemplateNames []*UefiSignatureTemplateName
 }
 
 // GalleryImageVersionUpdate - Specifies information about the gallery image version that you want to update.
@@ -2959,6 +3093,12 @@ type ImageUpdate struct {
 	Tags map[string]*string
 }
 
+// ImageVersionSecurityProfile - The security profile of a gallery image version
+type ImageVersionSecurityProfile struct {
+	// Contains UEFI settings for the image version.
+	UefiSettings *GalleryImageVersionUefiSettings
+}
+
 // InnerError - Inner error details.
 type InnerError struct {
 	// The internal error message or exception dump.
@@ -3336,11 +3476,11 @@ type NetworkProfile struct {
 // disks, see About disks and VHDs for Azure virtual machines
 // [https://docs.microsoft.com/azure/virtual-machines/managed-disks-overview].
 type OSDisk struct {
-	// REQUIRED; Specifies how the virtual machine should be created. Possible values are: Attach. This value is used when you
-	// are using a specialized disk to create the virtual machine. FromImage. This value is used
-	// when you are using an image to create the virtual machine. If you are using a platform image, you should also use the imageReference
-	// element described above. If you are using a marketplace image, you
-	// should also use the plan element previously described.
+	// REQUIRED; Specifies how the virtual machine disk should be created. Possible values are Attach: This value is used when
+	// you are using a specialized disk to create the virtual machine. FromImage: This value is
+	// used when you are using an image to create the virtual machine. If you are using a platform image, you should also use
+	// the imageReference element described above. If you are using a marketplace image,
+	// you should also use the plan element previously described.
 	CreateOption *DiskCreateOptionTypes
 
 	// Specifies the caching requirements. Possible values are: None, ReadOnly, ReadWrite. The defaulting behavior is: None for
@@ -3722,7 +3862,7 @@ type PatchSettings struct {
 	PatchMode *WindowsVMGuestPatchMode
 }
 
-// PirCommunityGalleryResource - Base information about the community gallery resource in pir.
+// PirCommunityGalleryResource - Base information about the community gallery resource in azure compute gallery.
 type PirCommunityGalleryResource struct {
 	// The identifier information of community gallery.
 	Identifier *CommunityGalleryIdentifier
@@ -3961,6 +4101,21 @@ type ProximityPlacementGroupUpdate struct {
 	Tags map[string]*string
 }
 
+// ProxyAgentSettings - Specifies ProxyAgent settings while creating the virtual machine. Minimum api-version: 2024-03-01.
+type ProxyAgentSettings struct {
+	// Specifies whether ProxyAgent feature should be enabled on the virtual machine or virtual machine scale set.
+	Enabled *bool
+
+	// Increase the value of this property allows user to reset the key used for securing communication channel between guest
+	// and host.
+	KeyIncarnationID *int32
+
+	// Specifies the mode that ProxyAgent will execute on if the feature is enabled. ProxyAgent will start to audit or monitor
+	// but not enforce access control over requests to host endpoints in Audit mode,
+	// while in Enforce mode it will enforce access control. The default value is Enforce mode.
+	Mode *Mode
+}
+
 // ProxyOnlyResource - The ProxyOnly Resource model definition.
 type ProxyOnlyResource struct {
 	// READ-ONLY; Resource Id
@@ -4091,6 +4246,27 @@ type RequestRateByIntervalInput struct {
 
 	// Group query result by User Agent.
 	GroupByUserAgent *bool
+}
+
+// ResiliencyPolicy - Describes an resiliency policy - resilientVMCreationPolicy and/or resilientVMDeletionPolicy.
+type ResiliencyPolicy struct {
+	// The configuration parameters used while performing resilient VM creation.
+	ResilientVMCreationPolicy *ResilientVMCreationPolicy
+
+	// The configuration parameters used while performing resilient VM deletion.
+	ResilientVMDeletionPolicy *ResilientVMDeletionPolicy
+}
+
+// ResilientVMCreationPolicy - The configuration parameters used while performing resilient VM creation.
+type ResilientVMCreationPolicy struct {
+	// Specifies whether resilient VM creation should be enabled on the virtual machine scale set. The default value is false.
+	Enabled *bool
+}
+
+// ResilientVMDeletionPolicy - The configuration parameters used while performing resilient VM deletion.
+type ResilientVMDeletionPolicy struct {
+	// Specifies whether resilient VM deletion should be enabled on the virtual machine scale set. The default value is false.
+	Enabled *bool
 }
 
 // Resource - The Resource model definition.
@@ -4278,6 +4454,13 @@ type ResourceSKUsResult struct {
 
 	// The URI to fetch the next page of Resource Skus. Call ListNext() with this URI to fetch the next page of Resource Skus
 	NextLink *string
+}
+
+type ResourceSharingProfile struct {
+	// Specifies an array of subscription resource IDs that capacity reservation group is shared with. Note: Minimum api-version:
+	// 2024-03-01. Please refer to https://aka.ms/computereservationsharing for more
+	// details.
+	SubscriptionIDs []*SubResource
 }
 
 // ResourceURIList - The List resources which are encrypted with the disk encryption set.
@@ -4527,6 +4710,9 @@ type RestorePointSourceVMStorageProfile struct {
 
 	// Gets the OS disk of the VM captured at the time of the restore point creation.
 	OSDisk *RestorePointSourceVMOSDisk
+
+	// READ-ONLY; Gets the disk controller type of the VM captured at the time of the restore point creation.
+	DiskControllerType *DiskControllerTypes
 }
 
 // RetrieveBootDiagnosticsDataResult - The SAS URIs of the console screenshot and serial log blobs.
@@ -4858,6 +5044,13 @@ type SSHConfiguration struct {
 	PublicKeys []*SSHPublicKey
 }
 
+// SSHGenerateKeyPairInputParameters - Parameters for GenerateSshKeyPair.
+type SSHGenerateKeyPairInputParameters struct {
+	// The encryption type of the SSH keys to be generated. See SshEncryptionTypes for possible set of values. If not provided,
+	// will default to RSA
+	EncryptionType *SSHEncryptionTypes
+}
+
 // SSHPublicKey - Contains information about SSH certificate public key and the path on the Linux VM where the public key
 // is placed.
 type SSHPublicKey struct {
@@ -4955,6 +5148,24 @@ type ScaleInPolicy struct {
 	Rules []*VirtualMachineScaleSetScaleInRules
 }
 
+type ScheduledEventsAdditionalPublishingTargets struct {
+	// The configuration parameters used while creating eventGridAndResourceGraph Scheduled Event setting.
+	EventGridAndResourceGraph *EventGridAndResourceGraph
+}
+
+// ScheduledEventsPolicy - Specifies Redeploy, Reboot and ScheduledEventsAdditionalPublishingTargets Scheduled Event related
+// configurations.
+type ScheduledEventsPolicy struct {
+	// The configuration parameters used while publishing scheduledEventsAdditionalPublishingTargets.
+	ScheduledEventsAdditionalPublishingTargets *ScheduledEventsAdditionalPublishingTargets
+
+	// The configuration parameters used while creating userInitiatedReboot scheduled event setting creation.
+	UserInitiatedReboot *UserInitiatedReboot
+
+	// The configuration parameters used while creating userInitiatedRedeploy scheduled event setting creation.
+	UserInitiatedRedeploy *UserInitiatedRedeploy
+}
+
 type ScheduledEventsProfile struct {
 	// Specifies OS Image Scheduled Event related configurations.
 	OSImageNotificationProfile *OSImageNotificationProfile
@@ -4980,6 +5191,12 @@ type SecurityProfile struct {
 	// including Resource/Temp disk at host itself. The default behavior is: The Encryption at host will be disabled unless this
 	// property is set to true for the resource.
 	EncryptionAtHost *bool
+
+	// Specifies the Managed Identity used by ADE to get access token for keyvault operations.
+	EncryptionIdentity *EncryptionIdentity
+
+	// Specifies ProxyAgent settings while creating the virtual machine. Minimum api-version: 2024-03-01.
+	ProxyAgentSettings *ProxyAgentSettings
 
 	// Specifies the SecurityType of the virtual machine. It has to be set to any specified value to enable UefiSettings. The
 	// default behavior is: UefiSettings will not be enabled unless this property is
@@ -5008,6 +5225,9 @@ type ShareInfoElement struct {
 type SharedGallery struct {
 	// The identifier information of shared gallery.
 	Identifier *SharedGalleryIdentifier
+
+	// Specifies the properties of a shared gallery
+	Properties *SharedGalleryProperties
 
 	// READ-ONLY; Resource location
 	Location *string
@@ -5080,14 +5300,14 @@ type SharedGalleryImageProperties struct {
 	OSState *OperatingSystemStateTypes
 
 	// REQUIRED; This property allows you to specify the type of the OS that is included in the disk when creating a VM from a
-	// managed image.
-	// Possible values are:
-	// Windows
-	// Linux
+	// managed image. Possible values are: Windows, Linux.
 	OSType *OperatingSystemTypes
 
 	// The architecture of the image. Applicable to OS disks only.
 	Architecture *Architecture
+
+	// The artifact tags of a shared gallery resource.
+	ArtifactTags map[string]*string
 
 	// Describes the disallowed disk types.
 	Disallowed *Disallowed
@@ -5142,6 +5362,9 @@ type SharedGalleryImageVersionList struct {
 
 // SharedGalleryImageVersionProperties - Describes the properties of a gallery image version.
 type SharedGalleryImageVersionProperties struct {
+	// The artifact tags of a shared gallery resource.
+	ArtifactTags map[string]*string
+
 	// The end of life date of the gallery image version Definition. This property can be used for decommissioning purposes. This
 	// property is updatable.
 	EndOfLifeDate *time.Time
@@ -5184,16 +5407,18 @@ type SharedGalleryOSDiskImage struct {
 	DiskSizeGB *int32
 }
 
+// SharedGalleryProperties - Specifies the properties of a shared gallery
+type SharedGalleryProperties struct {
+	// READ-ONLY; The artifact tags of a shared gallery resource.
+	ArtifactTags map[string]*string
+}
+
 // SharingProfile - Profile for gallery sharing to subscription or tenant
 type SharingProfile struct {
 	// Information of community gallery if current gallery is shared to community.
 	CommunityGalleryInfo *CommunityGalleryInfo
 
-	// This property allows you to specify the permission of sharing gallery.
-	// Possible values are:
-	// Private
-	// Groups
-	// Community
+	// This property allows you to specify the permission of sharing gallery. Possible values are: Private, Groups, Community.
 	Permissions *GallerySharingPermissionTypes
 
 	// READ-ONLY; A list of sharing profile groups.
@@ -5205,10 +5430,7 @@ type SharingProfileGroup struct {
 	// A list of subscription/tenant ids the gallery is aimed to be shared to.
 	IDs []*string
 
-	// This property allows you to specify the type of sharing group.
-	// Possible values are:
-	// Subscriptions
-	// AADTenants
+	// This property allows you to specify the type of sharing group. Possible values are: Subscriptions, AADTenants.
 	Type *SharingProfileGroupTypes
 }
 
@@ -5223,11 +5445,8 @@ type SharingStatus struct {
 
 // SharingUpdate - Specifies information about the gallery sharing profile update.
 type SharingUpdate struct {
-	// REQUIRED; This property allows you to specify the operation type of gallery sharing update.
-	// Possible values are:
-	// Add
-	// Remove
-	// Reset
+	// REQUIRED; This property allows you to specify the operation type of gallery sharing update. Possible values are: Add, Remove,
+	// Reset.
 	OperationType *SharingUpdateOperationTypes
 
 	// A list of sharing profile groups.
@@ -5566,6 +5785,30 @@ type ThrottledRequestsInput struct {
 	GroupByUserAgent *bool
 }
 
+// UefiKey - A UEFI key signature.
+type UefiKey struct {
+	// The type of key signature.
+	Type *UefiKeyType
+
+	// The value of the key signature.
+	Value []*string
+}
+
+// UefiKeySignatures - Additional UEFI key signatures that will be added to the image in addition to the signature templates
+type UefiKeySignatures struct {
+	// The database of UEFI keys for this image version.
+	Db []*UefiKey
+
+	// The database of revoked UEFI keys for this image version.
+	Dbx []*UefiKey
+
+	// The Key Encryption Keys of this image version.
+	Kek []*UefiKey
+
+	// The Platform Key of this image version.
+	Pk *UefiKey
+}
+
 // UefiSettings - Specifies the security settings like secure boot and vTPM used while creating the virtual machine. Minimum
 // api-version: 2020-12-01.
 type UefiSettings struct {
@@ -5744,6 +5987,18 @@ type UserAssignedIdentitiesValue struct {
 	PrincipalID *string
 }
 
+// UserInitiatedReboot - Specifies Reboot related Scheduled Event related configurations.
+type UserInitiatedReboot struct {
+	// Specifies Reboot Scheduled Event related configurations.
+	AutomaticallyApprove *bool
+}
+
+// UserInitiatedRedeploy - Specifies Redeploy related Scheduled Event related configurations.
+type UserInitiatedRedeploy struct {
+	// Specifies Redeploy Scheduled Event related configurations.
+	AutomaticallyApprove *bool
+}
+
 // VMDiskSecurityProfile - Specifies the security profile settings for the managed disk. Note: It can only be set for Confidential
 // VMs.
 type VMDiskSecurityProfile struct {
@@ -5752,8 +6007,9 @@ type VMDiskSecurityProfile struct {
 	DiskEncryptionSet *DiskEncryptionSetParameters
 
 	// Specifies the EncryptionType of the managed disk. It is set to DiskWithVMGuestState for encryption of the managed disk
-	// along with VMGuestState blob, and VMGuestStateOnly for encryption of just the
-	// VMGuestState blob. Note: It can be set for only Confidential VMs.
+	// along with VMGuestState blob, VMGuestStateOnly for encryption of just the
+	// VMGuestState blob, and NonPersistedTPM for not persisting firmware state in the VMGuestState blob.. Note: It can be set
+	// for only Confidential VMs.
 	SecurityEncryptionType *SecurityEncryptionTypes
 }
 
@@ -5879,8 +6135,16 @@ type VirtualMachine struct {
 	// The virtual machine zones.
 	Zones []*string
 
+	// READ-ONLY; Etag is property returned in Create/Update/Get response of the VM, so that customer can supply it in the header
+	// to ensure optimistic updates.
+	Etag *string
+
 	// READ-ONLY; Resource Id
 	ID *string
+
+	// READ-ONLY; ManagedBy is set to Virtual Machine Scale Set(VMSS) flex ARM resourceID, if the VM is part of the VMSS. This
+	// property is used by platform for internal resource group delete optimization.
+	ManagedBy *string
 
 	// READ-ONLY; Resource name
 	Name *string
@@ -6377,6 +6641,9 @@ type VirtualMachineInstanceView struct {
 	// placement enabled. Minimum api-version: 2020-06-01.
 	AssignedHost *string
 
+	// READ-ONLY; [Preview Feature] Specifies whether the VM is currently in or out of the Standby Pool.
+	IsVMInStandbyPool *bool
+
 	// READ-ONLY; The health status for the VM.
 	VMHealth *VirtualMachineHealthStatus
 }
@@ -6575,6 +6842,10 @@ type VirtualMachineProperties struct {
 	// Specifies information about the proximity placement group that the virtual machine should be assigned to. Minimum api-version:
 	// 2018-04-01.
 	ProximityPlacementGroup *SubResource
+
+	// Specifies Redeploy, Reboot and ScheduledEventsAdditionalPublishingTargets Scheduled Event related configurations for the
+	// virtual machine.
+	ScheduledEventsPolicy *ScheduledEventsPolicy
 
 	// Specifies Scheduled Event related configurations.
 	ScheduledEventsProfile *ScheduledEventsProfile
@@ -6856,6 +7127,10 @@ type VirtualMachineScaleSet struct {
 
 	// The virtual machine scale set zones. NOTE: Availability zones can only be set when you create the scale set
 	Zones []*string
+
+	// READ-ONLY; Etag is property returned in Create/Update/Get response of the VMSS, so that customer can supply it in the header
+	// to ensure optimistic updates
+	Etag *string
 
 	// READ-ONLY; Resource Id
 	ID *string
@@ -7376,8 +7651,14 @@ type VirtualMachineScaleSetProperties struct {
 	// api-version: 2018-04-01.
 	ProximityPlacementGroup *SubResource
 
+	// Policy for Resiliency
+	ResiliencyPolicy *ResiliencyPolicy
+
 	// Specifies the policies applied when scaling in Virtual Machines in the Virtual Machine Scale Set.
 	ScaleInPolicy *ScaleInPolicy
+
+	// The ScheduledEventsPolicy.
+	ScheduledEventsPolicy *ScheduledEventsPolicy
 
 	// When true this limits the scale set to a single placement group, of max size 100 virtual machines. NOTE: If singlePlacementGroup
 	// is true, it may be modified to false. However, if singlePlacementGroup
@@ -7462,6 +7743,9 @@ type VirtualMachineScaleSetReimageParameters struct {
 	// Specifies in decimal number, the version the OS disk should be reimaged to. If exact version is not provided, the OS disk
 	// is reimaged to the existing version of OS Disk.
 	ExactVersion *string
+
+	// Parameter to force update ephemeral OS disk for a virtual machine scale set VM
+	ForceUpdateOSDiskForEphemeral *bool
 
 	// The virtual machine scale set instance ids. Omitting the virtual machine scale set instance ids will result in the operation
 	// being performed on all virtual machines in the virtual machine scale set.
@@ -7656,6 +7940,9 @@ type VirtualMachineScaleSetUpdateOSDisk struct {
 	// delete option for Ephemeral OS Disk.
 	DeleteOption *DiskDeleteOptionTypes
 
+	// Specifies the ephemeral disk Settings for the operating system disk used by the virtual machine scale set.
+	DiffDiskSettings *DiffDiskSettings
+
 	// Specifies the size of an empty data disk in gigabytes. This element can be used to overwrite the size of the disk in a
 	// virtual machine image.
 	// diskSizeGB is the number of bytes x 1024^3 for the disk and the value cannot be larger than 1023
@@ -7715,6 +8002,9 @@ type VirtualMachineScaleSetUpdateProperties struct {
 	// Specifies information about the proximity placement group that the virtual machine scale set should be assigned to.
 	// Minimum api-version: 2018-04-01.
 	ProximityPlacementGroup *SubResource
+
+	// Policy for Resiliency
+	ResiliencyPolicy *ResiliencyPolicy
 
 	// Specifies the policies applied when scaling in Virtual Machines in the Virtual Machine Scale Set.
 	ScaleInPolicy *ScaleInPolicy
@@ -7830,6 +8120,10 @@ type VirtualMachineScaleSetVM struct {
 
 	// Resource tags
 	Tags map[string]*string
+
+	// READ-ONLY; Etag is property returned in Update/Get response of the VMSS VM, so that customer can supply it in the header
+	// to ensure optimistic updates.
+	Etag *string
 
 	// READ-ONLY; Resource Id
 	ID *string
@@ -8055,6 +8349,11 @@ type VirtualMachineScaleSetVMProfile struct {
 	// UserData for the virtual machines in the scale set, which must be base-64 encoded. Customer should not pass any secrets
 	// in here. Minimum api-version: 2021-03-01.
 	UserData *string
+
+	// READ-ONLY; Specifies the time in which this VM profile for the Virtual Machine Scale Set was created. Minimum API version
+	// for this property is 2024-03-01. This value will be added to VMSS Flex VM tags when
+	// creating/updating the VMSS VM Profile with minimum api-version 2024-03-01.
+	TimeCreated *time.Time
 }
 
 // VirtualMachineScaleSetVMProperties - Describes the properties of a virtual machine scale set virtual machine.
@@ -8149,6 +8448,9 @@ type VirtualMachineScaleSetVMReimageParameters struct {
 	// Specifies in decimal number, the version the OS disk should be reimaged to. If exact version is not provided, the OS disk
 	// is reimaged to the existing version of OS Disk.
 	ExactVersion *string
+
+	// Parameter to force update ephemeral OS disk for a virtual machine scale set VM
+	ForceUpdateOSDiskForEphemeral *bool
 
 	// Specifies information required for reimaging the non-ephemeral OS disk.
 	OSProfile *OSProfileProvisioningData
