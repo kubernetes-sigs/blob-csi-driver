@@ -6,7 +6,6 @@ metadata:
 provisioner: blob.csi.azure.com
 parameters:
   protocol: nfs
-  useDataPlaneAPI: "false"
 volumeBindingMode: Immediate
 allowVolumeExpansion: true
 mountOptions:
