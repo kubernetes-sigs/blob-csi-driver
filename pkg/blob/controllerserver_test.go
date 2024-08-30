@@ -819,12 +819,6 @@ func TestCreateVolume(t *testing.T) {
 
 				m := util.NewMockEXEC(ctrl)
 
-				clientFactoryMock := mock_azclient.NewMockClientFactory(ctrl)
-				blobClientMock := mock_blobcontainerclient.NewMockInterface(ctrl)
-				blobClientMock.EXPECT().CreateContainer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil)
-				clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil)
-				d.clientFactory = clientFactoryMock
-
 				listStr := "no error"
 				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, nil)
 				d.azcopy.ExecCmd = m

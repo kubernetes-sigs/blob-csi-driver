@@ -772,7 +772,7 @@ func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeReq
 		}
 		timeoutFunc := func() error {
 			_, percent, _ := d.azcopy.GetAzcopyJob(dstContainerName, authAzcopyEnv)
-			return fmt.Errorf("timeout waiting for copy blob container %s to %s complete, current copy percent: %s%%", srcPath, dstContainerName, percent)
+			return fmt.Errorf("timeout waiting for copy blob container %s to %s complete, current copy percent: %s%%", srcContainerName, dstContainerName, percent)
 		}
 		copyErr := util.WaitUntilTimeout(time.Duration(d.waitForAzCopyTimeoutMinutes)*time.Minute, execFunc, timeoutFunc)
 		if copyErr != nil {
