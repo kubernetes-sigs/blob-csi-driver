@@ -898,6 +898,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
+				"useDataPlaneAPI":  "true",
 				"skuName":          "Premium_LRS",
 				"protocol":         "nfs",
 				"mountPermissions": "0755",
@@ -930,6 +931,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
+				"useDataPlaneAPI":  "true",
 				"skuName":          "Premium_LRS",
 				"protocol":         "nfs",
 				"mountPermissions": "0755",
@@ -963,8 +965,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName":  "Standard_LRS",
-				"protocol": "fuse2",
+				"useDataPlaneAPI": "true",
+				"skuName":         "Standard_LRS",
+				"protocol":        "fuse2",
 			},
 		}
 		test.Run(ctx, cs, ns)
@@ -995,8 +998,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName":  "Standard_LRS",
-				"protocol": "fuse2",
+				"useDataPlaneAPI": "true",
+				"skuName":         "Standard_LRS",
+				"protocol":        "fuse2",
 			},
 		}
 		test.Run(ctx, cs, ns)
@@ -1026,12 +1030,14 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
+				"useDataPlaneAPI":      "true",
 				"skuName":              "Premium_LRS",
 				"protocol":             "nfs",
 				"mountPermissions":     "0755",
 				"allowsharedkeyaccess": "true",
 			},
 			ClonedStorageClassParameters: map[string]string{
+				"useDataPlaneAPI":      "true",
 				"skuName":              "Standard_LRS",
 				"protocol":             "nfs",
 				"mountPermissions":     "0755",
@@ -1066,12 +1072,14 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName":  "Standard_LRS",
-				"protocol": "fuse2",
+				"useDataPlaneAPI": "true",
+				"skuName":         "Standard_LRS",
+				"protocol":        "fuse2",
 			},
 			ClonedStorageClassParameters: map[string]string{
-				"skuName":  "Premium_LRS",
-				"protocol": "fuse2",
+				"useDataPlaneAPI": "true",
+				"skuName":         "Premium_LRS",
+				"protocol":        "fuse2",
 			},
 		}
 		test.Run(ctx, cs, ns)

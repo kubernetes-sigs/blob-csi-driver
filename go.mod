@@ -17,7 +17,6 @@ require (
 	github.com/kubernetes-csi/csi-lib-utils v0.13.0
 	github.com/onsi/gomega v1.32.0
 	github.com/pborman/uuid v1.2.1
-	github.com/pelletier/go-toml v1.9.5
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/net v0.27.0
 	google.golang.org/grpc v1.65.0
