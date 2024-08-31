@@ -17,7 +17,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/kubernetes-csi/csi-lib-utils v0.16.0
 	github.com/onsi/ginkgo/v2 v2.20.2
-	github.com/onsi/gomega v1.34.1
+	github.com/onsi/gomega v1.34.2
 	github.com/pborman/uuid v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/satori/go.uuid v1.2.0
