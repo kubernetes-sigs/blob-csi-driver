@@ -817,12 +817,6 @@ func TestCreateVolume(t *testing.T) {
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
 
-				m := util.NewMockEXEC(ctrl)
-
-				listStr := "no error"
-				m.EXPECT().RunCommand(gomock.Any(), gomock.Any()).Return(listStr, nil)
-				d.azcopy.ExecCmd = m
-
 				expectedErr := status.Errorf(codes.NotFound, "error parsing volume id: \"unit-test\", should at least contain two #")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -1929,7 +1923,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 				ctx := context.Background()
 				expectedAccountSASToken := ""
 				expectedErr := fmt.Errorf("could not find accountkey or azurestorageaccountkey field in secrets")
-				accountSASToken, _, err := d.getAzcopyAuth(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				accountSASToken, _, err := d.getAzcopyAuth(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace", false)
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}
@@ -1952,7 +1946,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 					defaultSecretAccountName: "accountName",
 					defaultSecretAccountKey:  "YWNjb3VudGtleQo=",
 				}
-				accountSASToken, _, err := d.getAzcopyAuth(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				accountSASToken, _, err := d.getAzcopyAuth(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace", false)
 				if !reflect.DeepEqual(err, nil) || !strings.Contains(accountSASToken, "?se=") {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}
@@ -1978,7 +1972,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 
 				expectedAccountSASToken := ""
 				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
-				accountSASToken, _, err := d.getAzcopyAuth(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				accountSASToken, _, err := d.getAzcopyAuth(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace", false)
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}
@@ -1999,7 +1993,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 				ctx := context.Background()
 				expectedAccountSASToken := ""
 				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
-				accountSASToken, _, err := d.getAzcopyAuth(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace")
+				accountSASToken, _, err := d.getAzcopyAuth(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace", false)
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
 				}

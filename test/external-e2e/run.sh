@@ -34,10 +34,6 @@ setup_e2e_binaries() {
     sed -i "s/blob.csi.azure.com/$DRIVER.csi.azure.com/g" deploy/example/storageclass-blobfuse.yaml
     sed -i "s/blob.csi.azure.com/$DRIVER.csi.azure.com/g" deploy/example/storageclass-blobfuse2.yaml
     sed -i "s/blob.csi.azure.com/$DRIVER.csi.azure.com/g" deploy/example/storageclass-blob-nfs.yaml
-    # workaround: use useDataPlaneAPI as true for blobfuse and nfs copy volume tests
-    sed -i "s/\"false\"/\"true\"/g" deploy/example/storageclass-blobfuse.yaml
-    sed -i "s/\"false\"/\"true\"/g" deploy/example/storageclass-blobfuse2.yaml
-    sed -i "s/\"false\"/\"true\"/g" deploy/example/storageclass-blob-nfs.yaml
 
     make e2e-bootstrap
     sed -i "s/csi-blob-controller/csi-$DRIVER-controller/g" deploy/example/metrics/csi-blob-controller-svc.yaml
