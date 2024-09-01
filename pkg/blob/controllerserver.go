@@ -436,12 +436,22 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Errorf(codes.Internal, "failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
 	}
 	if volContentSource != nil {
-		accountSASToken, authAzcopyEnv, err := d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace)
+		accountSASToken, authAzcopyEnv, err := d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace, false)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to getAzcopyAuth on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
 		}
-		if err := d.copyVolume(ctx, req, accountName, accountSASToken, authAzcopyEnv, validContainerName, secretNamespace, accountOptions, storageEndpointSuffix); err != nil {
-			return nil, err
+		var copyErr error
+		copyErr = d.copyVolume(ctx, req, accountName, accountSASToken, authAzcopyEnv, validContainerName, secretNamespace, accountOptions, storageEndpointSuffix)
+		if accountSASToken == "" && copyErr != nil && strings.Contains(copyErr.Error(), authorizationPermissionMismatch) {
+			klog.Warningf("azcopy copy failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original error: %v", copyErr)
+			accountSASToken, authAzcopyEnv, err := d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace, true)
+			if err != nil {
+				return nil, status.Errorf(codes.Internal, "failed to getAzcopyAuth on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
+			}
+			copyErr = d.copyVolume(ctx, req, accountName, accountSASToken, authAzcopyEnv, validContainerName, secretNamespace, accountOptions, storageEndpointSuffix)
+		}
+		if copyErr != nil {
+			return nil, copyErr
 		}
 	}
 
@@ -775,7 +785,7 @@ func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeReq
 			SubscriptionID:      srcSubscriptionID,
 			GetLatestAccountKey: accountOptions.GetLatestAccountKey,
 		}
-		if srcAccountSasToken, _, err = d.getAzcopyAuth(ctx, srcAccountName, "", storageEndpointSuffix, srcAccountOptions, nil, "", secretNamespace); err != nil {
+		if srcAccountSasToken, _, err = d.getAzcopyAuth(ctx, srcAccountName, "", storageEndpointSuffix, srcAccountOptions, nil, "", secretNamespace, true); err != nil {
 			return err
 		}
 	}
@@ -868,12 +878,11 @@ func (d *Driver) authorizeAzcopyWithIdentity() ([]string, error) {
 // getAzcopyAuth will only generate sas token for azcopy in following conditions:
 // 1. secrets is not empty
 // 2. driver is not using managed identity and service principal
-// 3. azcopy returns AuthorizationPermissionMismatch error when using service principal or managed identity
-func (d *Driver) getAzcopyAuth(ctx context.Context, accountName, accountKey, storageEndpointSuffix string, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, []string, error) {
+// 3. parameter useSasToken is true
+func (d *Driver) getAzcopyAuth(ctx context.Context, accountName, accountKey, storageEndpointSuffix string, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string, useSasToken bool) (string, []string, error) {
 	var authAzcopyEnv []string
 	var err error
-	useSasToken := false
-	if !d.useDataPlaneAPI("", accountName) && len(secrets) == 0 && len(secretName) == 0 {
+	if !useSasToken && !d.useDataPlaneAPI("", accountName) && len(secrets) == 0 && len(secretName) == 0 {
 		// search in cache first
 		if cache, err := d.azcopySasTokenCache.Get(accountName, azcache.CacheReadTypeDefault); err == nil && cache != nil {
 			klog.V(2).Infof("use sas token for account(%s) since this account is found in azcopySasTokenCache", accountName)
@@ -883,17 +892,6 @@ func (d *Driver) getAzcopyAuth(ctx context.Context, accountName, accountKey, sto
 		authAzcopyEnv, err = d.authorizeAzcopyWithIdentity()
 		if err != nil {
 			klog.Warningf("failed to authorize azcopy with identity, error: %v", err)
-		} else {
-			if len(authAzcopyEnv) > 0 {
-				out, testErr := d.azcopy.TestListJobs(accountName, storageEndpointSuffix, authAzcopyEnv)
-				if testErr != nil {
-					return "", nil, fmt.Errorf("azcopy list command failed with error(%v): %v", testErr, out)
-				}
-				if strings.Contains(out, authorizationPermissionMismatch) {
-					klog.Warningf("azcopy list failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original output: %v", out)
-					useSasToken = true
-				}
-			}
 		}
 	}
 
