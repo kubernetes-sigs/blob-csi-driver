@@ -40,7 +40,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		testDriver driver.PVTestDriver
 	)
 
-	ginkgo.BeforeEach(func(ctx ginkgo.SpecContext) {
+	ginkgo.BeforeEach(func(_ ginkgo.SpecContext) {
 		checkPodsRestart := testCmd{
 			command:  "sh",
 			args:     []string{"test/utils/check_driver_pods_restart.sh"},
@@ -891,7 +891,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("[blob.csi.azure.com] verify examples", ginkgo.Label("flaky"), func(ctx ginkgo.SpecContext) {
+	ginkgo.It("[blob.csi.azure.com] verify examples", ginkgo.Label("flaky"), func(_ ginkgo.SpecContext) {
 		createExampleDeployment := testCmd{
 			command:  "bash",
 			args:     []string{"hack/verify-examples.sh"},
