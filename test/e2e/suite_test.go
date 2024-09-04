@@ -109,7 +109,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	}
 	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
 	return nil
-}, func(ctx ginkgo.SpecContext, data []byte) {
+}, func(_ ginkgo.SpecContext, _ []byte) {
 	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
 	// it does not fall back to defaults
 	if os.Getenv(kubeconfigEnvVar) == "" {
@@ -140,7 +140,7 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	}()
 })
 
-var _ = ginkgo.SynchronizedAfterSuite(func(ctx ginkgo.SpecContext) {},
+var _ = ginkgo.SynchronizedAfterSuite(func(_ ginkgo.SpecContext) {},
 	func(ctx ginkgo.SpecContext) {
 		blobLog := testCmd{
 			command:  "bash",
@@ -188,7 +188,7 @@ func execTestCmd(cmds []testCmd) {
 		cmdSh.Stderr = os.Stderr
 		err := cmdSh.Run()
 		if err != nil {
-			log.Printf("Failed to run command: %s %s, Error: %s\n", cmd.command, strings.Join(cmd.args, " "), err.Error())
+			log.Printf("Failed to run command: %s %s, Error: %v\n", cmd.command, strings.Join(cmd.args, " "), err)
 		}
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		log.Println(cmd.endLog)
