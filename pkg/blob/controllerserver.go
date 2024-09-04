@@ -207,7 +207,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			// only do validations here, used in NodeStageVolume, NodePublishVolume
 			if v != "" {
 				if _, err := strconv.ParseUint(v, 8, 32); err != nil {
-					return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s in storage class", v))
+					return nil, status.Errorf(codes.InvalidArgument, "invalid mountPermissions %s in storage class", v)
 				}
 			}
 		case useDataPlaneAPIField:
@@ -217,7 +217,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case tagValueDelimiterField:
 			tagValueDelimiter = v
 		default:
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", k))
+			return nil, status.Errorf(codes.InvalidArgument, "invalid parameter %q in storage class", k)
 		}
 	}
 
@@ -232,7 +232,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if matchTags && account != "" {
-		return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("matchTags must set as false when storageAccount(%s) is provided", account))
+		return nil, status.Errorf(codes.InvalidArgument, "matchTags must set as false when storageAccount(%s) is provided", account)
 	}
 
 	if resourceGroup == "" {
@@ -292,13 +292,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if IsAzureStackCloud(d.cloud) {
 		accountKind = string(armstorage.KindStorage)
 		if storageAccountType != "" && storageAccountType != string(armstorage.SKUNameStandardLRS) && storageAccountType != string(armstorage.SKUNamePremiumLRS) {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", storageAccountType, storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS))
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", storageAccountType, storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS)
 		}
 	}
 
 	tags, err := util.ConvertTagsToMap(customTags, tagValueDelimiter)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
 	if strings.TrimSpace(storageEndpointSuffix) == "" {
@@ -386,7 +386,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, err.Error())
+				return nil, status.Errorf(codes.Internal, "%v", err)
 			}
 			if cache != nil {
 				accountName = cache.(string)
@@ -863,7 +863,7 @@ func (d *Driver) authorizeAzcopyWithIdentity() ([]string, error) {
 		authAzcopyEnv = append(authAzcopyEnv, fmt.Sprintf("%s=%s", azcopySPAApplicationID, azureAuthConfig.AADClientID))
 		authAzcopyEnv = append(authAzcopyEnv, fmt.Sprintf("%s=%s", azcopySPAClientSecret, azureAuthConfig.AADClientSecret))
 		authAzcopyEnv = append(authAzcopyEnv, fmt.Sprintf("%s=%s", azcopyTenantID, azureAuthConfig.TenantID))
-		klog.V(2).Infof(fmt.Sprintf("set AZCOPY_SPA_APPLICATION_ID=%s, AZCOPY_TENANT_ID=%s successfully", azureAuthConfig.AADClientID, azureAuthConfig.TenantID))
+		klog.V(2).Infof("set AZCOPY_SPA_APPLICATION_ID=%s, AZCOPY_TENANT_ID=%s successfully", azureAuthConfig.AADClientID, azureAuthConfig.TenantID)
 
 		return authAzcopyEnv, nil
 	}
@@ -919,10 +919,10 @@ func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) error {
 func parseDays(dayStr string) (int32, error) {
 	days, err := strconv.Atoi(dayStr)
 	if err != nil {
-		return 0, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s:%s in storage class", softDeleteBlobsField, dayStr))
+		return 0, status.Errorf(codes.InvalidArgument, "invalid %s:%s in storage class", softDeleteBlobsField, dayStr)
 	}
 	if days <= 0 || days > 365 {
-		return 0, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s:%s in storage class, should be in range [1, 365]", softDeleteBlobsField, dayStr))
+		return 0, status.Errorf(codes.InvalidArgument, "invalid %s:%s in storage class, should be in range [1, 365]", softDeleteBlobsField, dayStr)
 	}
 
 	return int32(days), nil
@@ -942,13 +942,13 @@ func (d *Driver) generateSASToken(accountName, accountKey, storageEndpointSuffix
 
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
-		return "", status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", accountName, err.Error()))
+		return "", status.Errorf(codes.Internal, "failed to generate sas token in creating new shared key credential, accountName: %s, err: %v", accountName, err)
 	}
 	clientOptions := service.ClientOptions{}
 	clientOptions.InsecureAllowCredentialWithHTTP = true
 	serviceClient, err := service.NewClientWithSharedKeyCredential(fmt.Sprintf("https://%s.blob.%s/", accountName, storageEndpointSuffix), credential, &clientOptions)
 	if err != nil {
-		return "", status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new client with shared key credential, accountName: %s, err: %s", accountName, err.Error()))
+		return "", status.Errorf(codes.Internal, "failed to generate sas token in creating new client with shared key credential, accountName: %s, err: %v", accountName, err)
 	}
 	sasURL, err := serviceClient.GetSASURL(
 		sas.AccountResourceTypes{Object: true, Service: false, Container: true},

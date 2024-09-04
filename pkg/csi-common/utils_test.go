@@ -90,7 +90,7 @@ func TestLogGRPC(t *testing.T) {
 	klog.SetOutput(buf)
 	defer klog.SetOutput(io.Discard)
 
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) { return nil, nil }
+	handler := func(_ context.Context, _ interface{}) (interface{}, error) { return nil, nil }
 	info := grpc.UnaryServerInfo{
 		FullMethod: "fake",
 	}
