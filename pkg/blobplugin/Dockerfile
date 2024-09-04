@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM registry.k8s.io/build-image/debian-base:bookworm-v1.0.3
+FROM registry.k8s.io/build-image/debian-base:bookworm-v1.0.4
 
 ARG ARCH=amd64
 ARG binary=./_output/${ARCH}/blobplugin
