@@ -378,7 +378,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", "invalidparameter"))
+				expectedErr := status.Errorf(codes.InvalidArgument, "invalid parameter %q in storage class", "invalidparameter")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -400,7 +400,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s %s in storage class", "mountPermissions", "0abc"))
+				expectedErr := status.Errorf(codes.InvalidArgument, "invalid %s %s in storage class", "mountPermissions", "0abc")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -496,7 +496,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", "unit-test", storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS))
+				expectedErr := status.Errorf(codes.InvalidArgument, "Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", "unit-test", storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS)
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -1117,7 +1117,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     DATAPLANE,
 			containerProp: &armstorage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.Internal, fmt.Errorf(containerBeingDeletedDataplaneAPIError).Error()),
+			expectedErr:   status.Errorf(codes.Internal, "%v", containerBeingDeletedDataplaneAPIError),
 		},
 		{
 			name: "Requested Volume does not exist",
@@ -1129,7 +1129,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     NULL,
 			containerProp: &armstorage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.NotFound, fmt.Sprintf("requested volume(%s) does not exist", "unit#test#test")),
+			expectedErr:   status.Errorf(codes.NotFound, "requested volume(%s) does not exist", "unit#test#test"),
 		},
 		/*{ //Volume being shown as not existing. ContainerProperties.Deleted not setting correctly??
 			name: "Successful I/O",
@@ -1175,7 +1175,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 		blobClientMock := mock_blobcontainerclient.NewMockInterface(ctrl)
 		clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil).AnyTimes()
 		blobClientMock.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-			func(ctx context.Context, resourceGroupName string, parentResourceName string, resourceName string) (result *armstorage.BlobContainer, rerr error) {
+			func(_ context.Context, _ string, _ string, _ string) (result *armstorage.BlobContainer, _ error) {
 				switch test.clientErr {
 				case DATAPLANE:
 					return nil, fmt.Errorf(containerBeingDeletedDataplaneAPIError)
@@ -1415,7 +1415,7 @@ func TestCreateBlobContainer(t *testing.T) {
 		clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil).AnyTimes()
 		d.clientFactory = clientFactoryMock
 		blobClientMock.EXPECT().CreateContainer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-			func(ctx context.Context, resourceGroupName, accountName, containerName string, parameters armstorage.BlobContainer) (*armstorage.BlobContainer, error) {
+			func(_ context.Context, _, _, _ string, _ armstorage.BlobContainer) (*armstorage.BlobContainer, error) {
 				if test.clientErr == DATAPLANE {
 					return nil, fmt.Errorf(containerBeingDeletedDataplaneAPIError)
 				}
@@ -1423,7 +1423,7 @@ func TestCreateBlobContainer(t *testing.T) {
 					return nil, fmt.Errorf(containerBeingDeletedManagementAPIError)
 				}
 				if test.clientErr == CUSTOM {
-					return nil, fmt.Errorf(test.customErrStr)
+					return nil, fmt.Errorf("%v", test.customErrStr)
 				}
 				return nil, nil
 			}).AnyTimes()
@@ -1505,7 +1505,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 		clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil).AnyTimes()
 		d.clientFactory = clientFactoryMock
 		blobClientMock.EXPECT().DeleteContainer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
-			func(ctx context.Context, resourceGroupName, accountName, containerName string) error {
+			func(_ context.Context, _, _, _ string) error {
 				if test.clientErr == DATAPLANE {
 					return fmt.Errorf(containerBeingDeletedDataplaneAPIError)
 				}
@@ -1513,7 +1513,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 					return fmt.Errorf(containerBeingDeletedManagementAPIError)
 				}
 				if test.clientErr == CUSTOM {
-					return fmt.Errorf(test.customErrStr)
+					return fmt.Errorf("%v", test.customErrStr)
 				}
 				return nil
 			}).AnyTimes()
@@ -1851,7 +1851,7 @@ func TestGenerateSASToken(t *testing.T) {
 			accountName: "unit-test",
 			accountKey:  "fakeValue",
 			want:        "",
-			expectedErr: status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "unit-test", "decode account key: illegal base64 data at input byte 8")),
+			expectedErr: status.Errorf(codes.Internal, "failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "unit-test", "decode account key: illegal base64 data at input byte 8"),
 		},
 	}
 	for _, tt := range tests {
@@ -2066,7 +2066,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 				}
 
 				expectedAccountSASToken := ""
-				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
+				expectedErr := status.Errorf(codes.Internal, "failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8")
 				accountSASToken, _, err := d.getAzcopyAuth(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace", false)
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
@@ -2087,7 +2087,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 
 				ctx := context.Background()
 				expectedAccountSASToken := ""
-				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
+				expectedErr := status.Errorf(codes.Internal, "failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8")
 				accountSASToken, _, err := d.getAzcopyAuth(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace", false)
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
