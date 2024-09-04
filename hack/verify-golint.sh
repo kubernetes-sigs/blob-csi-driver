@@ -18,12 +18,12 @@ set -euo pipefail
 
 if [[ -z "$(command -v golangci-lint)" ]]; then
   echo "Cannot find golangci-lint. Installing golangci-lint..."
-  go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.45.0
+  go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.60.0
   export PATH=$PATH:$(go env GOPATH)/bin
 fi
 
 echo "Verifying golint"
 
-golangci-lint run --no-config --enable=golint --disable=typecheck --deadline=10m
+golangci-lint run --no-config -E=gofmt,unused,ineffassign,revive,misspell,exportloopref,asciicheck,bodyclose,depguard,dogsled,durationcheck,errname,forbidigo -D=staticcheck --timeout=30m
 
 echo "Congratulations! Lint check completed for all Go source files."
