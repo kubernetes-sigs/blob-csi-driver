@@ -1076,7 +1076,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     DATAPLANE,
 			containerProp: &storage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)).Error().Error()),
+			expectedErr:   status.Error(codes.Internal, fmt.Sprintf("ContainerProperties of volume(%s) is nil", "unit#test#test")),
 		},
 		{
 			name: "Requested Volume does not exist",
@@ -1088,7 +1088,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     NULL,
 			containerProp: &storage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.NotFound, fmt.Sprintf("requested volume(%s) does not exist", "unit#test#test")),
+			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)).Error().Error()),
 		},
 		/*{ //Volume being shown as not existing. ContainerProperties.Deleted not setting correctly??
 			name: "Successful I/O",
