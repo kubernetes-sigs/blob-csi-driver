@@ -23,6 +23,7 @@ import (
 	"os"
 
 	"github.com/pborman/uuid"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 )
 
 const (
@@ -31,14 +32,14 @@ const (
 	TempAzureCredentialFilePath = "/tmp/azure.json"
 
 	azureCredentialFileTemplate = `{
-    "cloud": "{{.Cloud}}",
-    "tenantId": "{{.TenantID}}",
-    "subscriptionId": "{{.SubscriptionID}}",
-    "aadClientId": "{{.AADClientID}}",
-    "aadClientSecret": "{{.AADClientSecret}}",
-    "resourceGroup": "{{.ResourceGroup}}",
-    "location": "{{.Location}}",
-	"aadFederatedTokenFile": "{{.AADFederatedTokenFile}}"
+		"cloud": "{{.Cloud}}",
+		"tenantId": "{{.TenantID}}",
+		"subscriptionId": "{{.SubscriptionID}}",
+		"aadClientId": "{{.AADClientID}}",
+		"aadClientSecret": "{{.AADClientSecret}}",
+		"resourceGroup": "{{.ResourceGroup}}",
+		"location": "{{.Location}}",
+		"aadFederatedTokenFile": "{{.AADFederatedTokenFile}}"
 }`
 	defaultAzurePublicCloudLocation = "eastus2"
 
@@ -62,24 +63,19 @@ type Config struct {
 // FromProw is used in Prow to store Azure credentials
 // https://github.com/kubernetes/test-infra/blob/master/kubetest/azure.go#L107-L114
 type FromProw struct {
-	ClientID           string
-	ClientSecret       string
-	TenantID           string
-	SubscriptionID     string
+	azclient.ARMClientConfig
+	azclient.AzureAuthConfig
 	StorageAccountName string
 	StorageAccountKey  string
 }
 
 // Credentials is used in Azure Blob Storage CSI driver to store Azure credentials
 type Credentials struct {
-	Cloud                 string
-	TenantID              string
-	SubscriptionID        string
-	AADClientID           string
-	AADClientSecret       string
-	AADFederatedTokenFile string
-	ResourceGroup         string
-	Location              string
+	azclient.ARMClientConfig
+	azclient.AzureAuthConfig
+	SubscriptionID string
+	ResourceGroup  string
+	Location       string
 }
 
 // CreateAzureCredentialFile creates a temporary Azure credential file for
@@ -155,14 +151,18 @@ func parseAndExecuteTemplate(cloud, tenantID, subscriptionID, aadClientID, aadCl
 	defer f.Close()
 
 	c := Credentials{
-		cloud,
-		tenantID,
-		subscriptionID,
-		aadClientID,
-		aadClientSecret,
-		aadFederatedTokenFile,
-		resourceGroup,
-		location,
+		ARMClientConfig: azclient.ARMClientConfig{
+			Cloud:    cloud,
+			TenantID: tenantID,
+		},
+		AzureAuthConfig: azclient.AzureAuthConfig{
+			AADClientID:           aadClientID,
+			AADClientSecret:       aadClientSecret,
+			AADFederatedTokenFile: aadFederatedTokenFile,
+		},
+		SubscriptionID: subscriptionID,
+		ResourceGroup:  resourceGroup,
+		Location:       location,
 	}
 	err = t.Execute(f, c)
 	if err != nil {
