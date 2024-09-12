@@ -21,20 +21,19 @@ import (
 	"os"
 	"strings"
 
-	kv "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-07-01/network"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	network "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest"
 	azure2 "github.com/Azure/go-autorest/autorest/azure"
 	"golang.org/x/net/context"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
-	providerconfig "sigs.k8s.io/cloud-provider-azure/pkg/provider/config"
-	"sigs.k8s.io/cloud-provider-azure/pkg/retry"
 )
 
 var (
@@ -147,46 +146,28 @@ func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, node
 
 // getKeyVaultSecretContent get content of the keyvault secret
 func (d *Driver) getKeyVaultSecretContent(ctx context.Context, vaultURL string, secretName string, secretVersion string) (content string, err error) {
-	kvClient, err := d.initializeKvClient()
+	var authProvider *azclient.AuthProvider
+	authProvider, err = azclient.NewAuthProvider(&d.cloud.AzureAuthConfig.ARMClientConfig, &d.cloud.AzureAuthConfig.AzureAuthConfig)
+	if err != nil {
+		return "", err
+	}
+	kvClient, err := azsecrets.NewClient(vaultURL, authProvider.GetAzIdentity(), nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to get keyvaultClient: %w", err)
 	}
 
 	klog.V(2).Infof("get secret from vaultURL(%v), sercretName(%v), secretVersion(%v)", vaultURL, secretName, secretVersion)
-	secret, err := kvClient.GetSecret(ctx, vaultURL, secretName, secretVersion)
+	secret, err := kvClient.GetSecret(ctx, secretName, secretVersion, nil)
 	if err != nil {
 		return "", fmt.Errorf("get secret from vaultURL(%v), sercretName(%v), secretVersion(%v) failed with error: %w", vaultURL, secretName, secretVersion, err)
 	}
 	return *secret.Value, nil
 }
 
-func (d *Driver) initializeKvClient() (*kv.BaseClient, error) {
-	kvClient := kv.New()
-	token, err := d.getKeyvaultToken()
-	if err != nil {
-		return nil, err
-	}
-
-	kvClient.Authorizer = token
-	return &kvClient, nil
-}
-
-// getKeyvaultToken retrieves a new service principal token to access keyvault
-func (d *Driver) getKeyvaultToken() (authorizer autorest.Authorizer, err error) {
-	env := d.getCloudEnvironment()
-	kvEndPoint := strings.TrimSuffix(env.KeyVaultEndpoint, "/")
-	servicePrincipalToken, err := providerconfig.GetServicePrincipalToken(&d.cloud.AzureAuthConfig, &env, kvEndPoint)
-	if err != nil {
-		return nil, err
-	}
-	authorizer = autorest.NewBearerAuthorizer(servicePrincipalToken)
-	return authorizer, nil
-}
-
 func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context, vnetResourceGroup, vnetName, subnetName string) ([]string, error) {
 	var vnetResourceIDs []string
-	if d.cloud.SubnetsClient == nil {
-		return vnetResourceIDs, fmt.Errorf("SubnetsClient is nil")
+	if d.networkClientFactory == nil {
+		return vnetResourceIDs, fmt.Errorf("networkClientFactory is nil")
 	}
 
 	if vnetResourceGroup == "" {
@@ -220,21 +201,21 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context, vnetResourceG
 	d.subnetLockMap.LockEntry(lockKey)
 	defer d.subnetLockMap.UnlockEntry(lockKey)
 
-	var subnets []network.Subnet
+	var subnets []*network.Subnet
 	if subnetName != "" {
 		// list multiple subnets separated by comma
 		subnetNames := strings.Split(subnetName, ",")
 		for _, sn := range subnetNames {
 			sn = strings.TrimSpace(sn)
-			subnet, rerr := d.cloud.SubnetsClient.Get(ctx, vnetResourceGroup, vnetName, sn, "")
+			subnet, rerr := d.networkClientFactory.GetSubnetClient().Get(ctx, vnetResourceGroup, vnetName, sn, nil)
 			if rerr != nil {
 				return vnetResourceIDs, fmt.Errorf("failed to get the subnet %s under rg %s vnet %s: %v", subnetName, vnetResourceGroup, vnetName, rerr.Error())
 			}
 			subnets = append(subnets, subnet)
 		}
 	} else {
-		var rerr *retry.Error
-		subnets, rerr = d.cloud.SubnetsClient.List(ctx, vnetResourceGroup, vnetName)
+		var rerr error
+		subnets, rerr = d.networkClientFactory.GetSubnetClient().List(ctx, vnetResourceGroup, vnetName)
 		if rerr != nil {
 			return vnetResourceIDs, fmt.Errorf("failed to list the subnets under rg %s vnet %s: %v", vnetResourceGroup, vnetName, rerr.Error())
 		}
@@ -249,19 +230,19 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context, vnetResourceG
 		klog.V(2).Infof("set vnetResourceID %s", vnetResourceID)
 		vnetResourceIDs = append(vnetResourceIDs, vnetResourceID)
 
-		endpointLocaions := []string{location}
-		storageServiceEndpoint := network.ServiceEndpointPropertiesFormat{
+		endpointLocaions := []*string{to.Ptr(location)}
+		storageServiceEndpoint := &network.ServiceEndpointPropertiesFormat{
 			Service:   &storageService,
-			Locations: &endpointLocaions,
+			Locations: endpointLocaions,
 		}
 		storageServiceExists := false
-		if subnet.SubnetPropertiesFormat == nil {
-			subnet.SubnetPropertiesFormat = &network.SubnetPropertiesFormat{}
+		if subnet.Properties == nil {
+			subnet.Properties = &network.SubnetPropertiesFormat{}
 		}
-		if subnet.SubnetPropertiesFormat.ServiceEndpoints == nil {
-			subnet.SubnetPropertiesFormat.ServiceEndpoints = &[]network.ServiceEndpointPropertiesFormat{}
+		if subnet.Properties.ServiceEndpoints == nil {
+			subnet.Properties.ServiceEndpoints = []*network.ServiceEndpointPropertiesFormat{}
 		}
-		serviceEndpoints := *subnet.SubnetPropertiesFormat.ServiceEndpoints
+		serviceEndpoints := subnet.Properties.ServiceEndpoints
 		for _, v := range serviceEndpoints {
 			if strings.HasPrefix(ptr.Deref(v.Service, ""), storageService) {
 				storageServiceExists = true
@@ -272,10 +253,10 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context, vnetResourceG
 
 		if !storageServiceExists {
 			serviceEndpoints = append(serviceEndpoints, storageServiceEndpoint)
-			subnet.SubnetPropertiesFormat.ServiceEndpoints = &serviceEndpoints
+			subnet.Properties.ServiceEndpoints = serviceEndpoints
 
 			klog.V(2).Infof("begin to update the subnet %s under vnet %s in rg %s", sn, vnetName, vnetResourceGroup)
-			if err := d.cloud.SubnetsClient.CreateOrUpdate(ctx, vnetResourceGroup, vnetName, sn, subnet); err != nil {
+			if _, err := d.networkClientFactory.GetSubnetClient().CreateOrUpdate(ctx, vnetResourceGroup, vnetName, sn, *subnet); err != nil {
 				return vnetResourceIDs, fmt.Errorf("failed to update the subnet %s under vnet %s: %v", sn, vnetName, err)
 			}
 		}

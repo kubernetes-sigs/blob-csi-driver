@@ -663,7 +663,7 @@ func TestGetAuthEnv(t *testing.T) {
 				attrib[storageAccountField] = "accountname"
 				attrib[containerNameField] = "containername"
 				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
-				expectedErrStr := "failed to get keyvaultClient:"
+				expectedErrStr := "parameter name cannot be empty"
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), expectedErrStr)
 			},

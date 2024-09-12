@@ -26,6 +26,7 @@ import (
 	resources "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/identityclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/resourcegroupclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/roleassignmentclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/roledefinitionclient"
@@ -36,9 +37,10 @@ type Client struct {
 	subscriptionID       string
 	groupsClient         resourcegroupclient.Interface
 	accountsClient       accountclient.Interface
-	roledefinitionclient roledefinitionclient.Interface
-	roleassignmentclient roleassignmentclient.Interface
-	vaultclient          vaultclient.Interface
+	roledefinitionClient roledefinitionclient.Interface
+	roleassignmentClient roleassignmentclient.Interface
+	vaultClient          vaultclient.Interface
+	identityClient       identityclient.Interface
 }
 
 func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string, aadFederatedTokenFile string) (*Client, error) {
@@ -74,9 +76,10 @@ func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string, a
 		subscriptionID:       subscriptionID,
 		groupsClient:         factory.GetResourceGroupClient(),
 		accountsClient:       factory.GetAccountClient(),
-		roleassignmentclient: factory.GetRoleAssignmentClient(),
-		vaultclient:          factory.GetVaultClient(),
-		roledefinitionclient: roleclient,
+		roleassignmentClient: factory.GetRoleAssignmentClient(),
+		vaultClient:          factory.GetVaultClient(),
+		roledefinitionClient: roleclient,
+		identityClient:       factory.GetIdentityClient(),
 	}, nil
 }
 
