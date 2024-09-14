@@ -66,7 +66,7 @@ func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string, a
 	if err != nil {
 		return nil, err
 	}
-	roleclient, err := roledefinitionclient.New(subscriptionID, cred, nil)
+	roleclient, err := roledefinitionclient.New(cred, nil)
 	if err != nil {
 		return nil, err
 	}
