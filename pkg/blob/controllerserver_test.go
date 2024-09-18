@@ -68,7 +68,7 @@ func (c *mockBlobClient) CreateContainer(_ context.Context, _, _, _, _ string, _
 	case MANAGEMENT:
 		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
 	case CUSTOM:
-		return retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
+		return retry.GetError(&http.Response{}, fmt.Errorf("%v", *c.custom))
 	}
 	return nil
 }
@@ -79,7 +79,7 @@ func (c *mockBlobClient) DeleteContainer(_ context.Context, _, _, _, _ string) *
 	case MANAGEMENT:
 		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
 	case CUSTOM:
-		return retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
+		return retry.GetError(&http.Response{}, fmt.Errorf("%v", *c.custom))
 	}
 	return nil
 }
@@ -90,7 +90,7 @@ func (c *mockBlobClient) GetContainer(_ context.Context, _, _, _, _ string) (sto
 	case MANAGEMENT:
 		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
 	case CUSTOM:
-		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
+		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf("%v", *c.custom))
 	}
 	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
@@ -411,7 +411,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", "invalidparameter"))
+				expectedErr := status.Errorf(codes.InvalidArgument, "invalid parameter %q in storage class", "invalidparameter")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -433,7 +433,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s %s in storage class", "mountPermissions", "0abc"))
+				expectedErr := status.Errorf(codes.InvalidArgument, "invalid %s %s in storage class", "mountPermissions", "0abc")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -529,7 +529,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", "unit-test", storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS))
+				expectedErr := status.Errorf(codes.InvalidArgument, "Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", "unit-test", storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS)
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -1088,7 +1088,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     NULL,
 			containerProp: &storage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)).Error().Error()),
+			expectedErr:   status.Errorf(codes.Internal, "%v", retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)).Error()),
 		},
 		/*{ //Volume being shown as not existing. ContainerProperties.Deleted not setting correctly??
 			name: "Successful I/O",
@@ -1756,7 +1756,7 @@ func TestGenerateSASToken(t *testing.T) {
 			accountName: "unit-test",
 			accountKey:  "fakeValue",
 			want:        "",
-			expectedErr: status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "unit-test", "decode account key: illegal base64 data at input byte 8")),
+			expectedErr: status.Errorf(codes.Internal, "failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "unit-test", "decode account key: illegal base64 data at input byte 8"),
 		},
 	}
 	for _, tt := range tests {
@@ -1971,7 +1971,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 				}
 
 				expectedAccountSASToken := ""
-				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
+				expectedErr := status.Errorf(codes.Internal, "failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8")
 				accountSASToken, _, err := d.getAzcopyAuth(context.Background(), "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace", false)
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
@@ -1992,7 +1992,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 
 				ctx := context.Background()
 				expectedAccountSASToken := ""
-				expectedErr := status.Errorf(codes.Internal, fmt.Sprintf("failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8"))
+				expectedErr := status.Errorf(codes.Internal, "failed to generate sas token in creating new shared key credential, accountName: %s, err: %s", "accountName", "decode account key: illegal base64 data at input byte 8")
 				accountSASToken, _, err := d.getAzcopyAuth(ctx, "accountName", "", "core.windows.net", &azure.AccountOptions{}, secrets, "secretsName", "secretsNamespace", false)
 				if !reflect.DeepEqual(err, expectedErr) || !reflect.DeepEqual(accountSASToken, expectedAccountSASToken) {
 					t.Errorf("Unexpected accountSASToken: %s, Unexpected error: %v", accountSASToken, err)
