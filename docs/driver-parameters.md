@@ -3,7 +3,8 @@
 
 <details><summary>required permissions for CSI driver controller</summary>
 <pre>
- # assign the "storage account contributor" and "Storage Blob Data Contributor" roles to the CSI driver controller, it will provide permissions for the following actions:
+ # To grant permissions for following actions, you need to assign both "storage account contributor" 
+ # and "Storage Blob Data Contributor" roles to the CSI driver controller.
 Microsoft.Storage/storageAccounts/write
 Microsoft.Storage/storageAccounts/read
 Microsoft.Storage/storageAccounts/listKeys/action
@@ -12,6 +13,7 @@ Microsoft.Storage/storageAccounts/blobServices/containers/write
 Microsoft.Storage/storageAccounts/blobServices/containers/read
 Microsoft.Storage/storageAccounts/blobServices/containers/delete
 Microsoft.Storage/operations/read
+
 # this is only necessary if the driver creates the storage account with a private endpoint:
 Microsoft.Network/virtualNetworks/subnets/write
 Microsoft.Network/virtualNetworks/subnets/read
