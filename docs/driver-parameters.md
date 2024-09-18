@@ -13,7 +13,6 @@ Microsoft.Storage/storageAccounts/blobServices/containers/write
 Microsoft.Storage/storageAccounts/blobServices/containers/read
 Microsoft.Storage/storageAccounts/blobServices/containers/delete
 Microsoft.Storage/operations/read
-
 # this is only necessary if the driver creates the storage account with a private endpoint:
 Microsoft.Network/virtualNetworks/subnets/write
 Microsoft.Network/virtualNetworks/subnets/read
