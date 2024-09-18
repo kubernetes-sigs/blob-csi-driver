@@ -65,7 +65,7 @@ func (c *mockBlobClient) CreateContainer(_ context.Context, _, _, _, _ string, _
 	case MANAGEMENT:
 		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
 	case CUSTOM:
-		return retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
+		return retry.GetError(&http.Response{}, fmt.Errorf("%v", *c.custom))
 	}
 	return nil
 }
@@ -76,7 +76,7 @@ func (c *mockBlobClient) DeleteContainer(_ context.Context, _, _, _, _ string) *
 	case MANAGEMENT:
 		return retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
 	case CUSTOM:
-		return retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
+		return retry.GetError(&http.Response{}, fmt.Errorf("%v", *c.custom))
 	}
 	return nil
 }
@@ -87,7 +87,7 @@ func (c *mockBlobClient) GetContainer(_ context.Context, _, _, _, _ string) (sto
 	case MANAGEMENT:
 		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedManagementAPIError))
 	case CUSTOM:
-		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf(*c.custom))
+		return storage.BlobContainer{ContainerProperties: c.conProp}, retry.GetError(&http.Response{}, fmt.Errorf("%v", *c.custom))
 	}
 	return storage.BlobContainer{ContainerProperties: c.conProp}, nil
 }
@@ -420,7 +420,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", "invalidparameter"))
+				expectedErr := status.Errorf(codes.InvalidArgument, "invalid parameter %q in storage class", "invalidparameter")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -442,7 +442,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s %s in storage class", "mountPermissions", "0abc"))
+				expectedErr := status.Errorf(codes.InvalidArgument, "invalid %s %s in storage class", "mountPermissions", "0abc")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -474,7 +474,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("NFS protocol is not supported in cross subscription(%s)", "foo"))
+				expectedErr := status.Errorf(codes.InvalidArgument, "NFS protocol is not supported in cross subscription(%s)", "foo")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -507,7 +507,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("storeAccountKey must set as true in cross subscription(%s)", "foo"))
+				expectedErr := status.Errorf(codes.InvalidArgument, "storeAccountKey must set as true in cross subscription(%s)", "foo")
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -579,7 +579,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", "unit-test", storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS))
+				expectedErr := status.Errorf(codes.InvalidArgument, "Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", "unit-test", storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS)
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)
@@ -1029,7 +1029,7 @@ func TestValidateVolumeCapabilities(t *testing.T) {
 			clientErr:     NULL,
 			containerProp: &storage.ContainerProperties{},
 			expectedRes:   nil,
-			expectedErr:   status.Errorf(codes.Internal, retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)).Error().Error()),
+			expectedErr:   status.Errorf(codes.Internal, "%v", retry.GetError(&http.Response{}, fmt.Errorf(containerBeingDeletedDataplaneAPIError)).Error()),
 		},
 		/*{ //Volume being shown as not existing. ContainerProperties.Deleted not setting correctly??
 			name: "Successful I/O",

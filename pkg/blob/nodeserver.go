@@ -99,7 +99,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		if perm := getValueInMap(context, mountPermissionsField); perm != "" {
 			var err error
 			if mountPermissions, err = strconv.ParseUint(perm, 8, 32); err != nil {
-				return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s", perm))
+				return nil, status.Errorf(codes.InvalidArgument, "invalid mountPermissions %s", perm)
 			}
 		}
 	}
@@ -128,7 +128,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		klog.Warningf("NodePublishVolume: mock mount on volumeID(%s), this is only for TESTING!!!", volumeID)
 		if err := volumehelper.MakeDir(target, os.FileMode(mountPermissions)); err != nil {
 			klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, status.Errorf(codes.Internal, "%v", err)
 		}
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
@@ -269,7 +269,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 				var err error
 				var perm uint64
 				if perm, err = strconv.ParseUint(v, 8, 32); err != nil {
-					return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s", v))
+					return nil, status.Errorf(codes.InvalidArgument, "invalid mountPermissions %s", v)
 				}
 				if perm == 0 {
 					performChmodOp = false
@@ -291,7 +291,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	_, accountName, _, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, protocol, attrib, secrets)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
 
 	// replace pv/pvc name namespace metadata in subDir
@@ -372,7 +372,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		klog.Warningf("NodeStageVolume: mock mount on volumeID(%s), this is only for TESTING!!!", volumeID)
 		if err := volumehelper.MakeDir(targetPath, os.FileMode(mountPermissions)); err != nil {
 			klog.Errorf("MakeDir failed on target: %s (%v)", targetPath, err)
-			return nil, status.Errorf(codes.Internal, err.Error())
+			return nil, status.Errorf(codes.Internal, "%v", err)
 		}
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
@@ -484,7 +484,7 @@ func (d *Driver) NodeGetVolumeStats(_ context.Context, req *csi.NodeGetVolumeSta
 	// check if the volume stats is cached
 	cache, err := d.volStatsCache.Get(req.VolumeId, azcache.CacheReadTypeDefault)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, err.Error())
+		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
 	if cache != nil {
 		resp := cache.(csi.NodeGetVolumeStatsResponse)

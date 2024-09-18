@@ -181,13 +181,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			// only do validations here, used in NodeStageVolume, NodePublishVolume
 			if v != "" {
 				if _, err := strconv.ParseUint(v, 8, 32); err != nil {
-					return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s in storage class", v))
+					return nil, status.Errorf(codes.InvalidArgument, "invalid mountPermissions %s in storage class", v)
 				}
 			}
 		case useDataPlaneAPIField:
 			useDataPlaneAPI = strings.EqualFold(v, trueValue)
 		default:
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid parameter %q in storage class", k))
+			return nil, status.Errorf(codes.InvalidArgument, "invalid parameter %q in storage class", k)
 		}
 	}
 
@@ -198,15 +198,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	if matchTags && account != "" {
-		return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("matchTags must set as false when storageAccount(%s) is provided", account))
+		return nil, status.Errorf(codes.InvalidArgument, "matchTags must set as false when storageAccount(%s) is provided", account)
 	}
 
 	if subsID != "" && subsID != d.cloud.SubscriptionID {
 		if isNFSProtocol(protocol) {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("NFS protocol is not supported in cross subscription(%s)", subsID))
+			return nil, status.Errorf(codes.InvalidArgument, "NFS protocol is not supported in cross subscription(%s)", subsID)
 		}
 		if !storeAccountKey {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("storeAccountKey must set as true in cross subscription(%s)", subsID))
+			return nil, status.Errorf(codes.InvalidArgument, "storeAccountKey must set as true in cross subscription(%s)", subsID)
 		}
 	}
 
@@ -271,13 +271,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if IsAzureStackCloud(d.cloud) {
 		accountKind = string(storage.KindStorage)
 		if storageAccountType != "" && storageAccountType != string(storage.SkuNameStandardLRS) && storageAccountType != string(storage.SkuNamePremiumLRS) {
-			return nil, status.Errorf(codes.InvalidArgument, fmt.Sprintf("Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", storageAccountType, storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS))
+			return nil, status.Errorf(codes.InvalidArgument, "Invalid skuName value: %s, as Azure Stack only supports %s and %s Storage Account types.", storageAccountType, storage.SkuNamePremiumLRS, storage.SkuNameStandardLRS)
 		}
 	}
 
 	tags, err := util.ConvertTagsToMap(customTags)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, err.Error())
+		return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 	}
 
 	if strings.TrimSpace(storageEndpointSuffix) == "" {
@@ -330,7 +330,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, err.Error())
+				return nil, status.Errorf(codes.Internal, "%v", err)
 			}
 			if cache != nil {
 				accountName = cache.(string)
@@ -691,10 +691,10 @@ func isValidVolumeCapabilities(volCaps []*csi.VolumeCapability) error {
 func parseDays(dayStr string) (int32, error) {
 	days, err := strconv.Atoi(dayStr)
 	if err != nil {
-		return 0, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s:%s in storage class", softDeleteBlobsField, dayStr))
+		return 0, status.Errorf(codes.InvalidArgument, "invalid %s:%s in storage class", softDeleteBlobsField, dayStr)
 	}
 	if days <= 0 || days > 365 {
-		return 0, status.Errorf(codes.InvalidArgument, fmt.Sprintf("invalid %s:%s in storage class, should be in range [1, 365]", softDeleteBlobsField, dayStr))
+		return 0, status.Errorf(codes.InvalidArgument, "invalid %s:%s in storage class, should be in range [1, 365]", softDeleteBlobsField, dayStr)
 	}
 
 	return int32(days), nil
