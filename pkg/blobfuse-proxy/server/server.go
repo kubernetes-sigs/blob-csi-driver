@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"strings"
 	"sync"
@@ -85,7 +86,7 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
 	}
 
-	cmd.Env = append(cmd.Env, authEnv...)
+	cmd.Env = append(os.Environ(), authEnv...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		klog.Error("blobfuse mount failed: with error:", err.Error())
