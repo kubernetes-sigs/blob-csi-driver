@@ -43,7 +43,7 @@ This option does not depend on cloud provider config file, supports cross subscr
 >
 > Execute following command to install a specific version of blobfuse v2 once driver is running on the agent node:
 > ```console
-> kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.3.0"}],"name":"install-blobfuse-proxy"}]}}}}'
+> kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.3.2"}],"name":"install-blobfuse-proxy"}]}}}}'
 > ```
 >
 > Execute following command to install a specific version of blobfuse v1 once driver is running on the agent node:
