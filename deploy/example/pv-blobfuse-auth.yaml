@@ -27,12 +27,11 @@ spec:
       # refer to https://github.com/Azure/azure-storage-fuse#environment-variables
       AzureStorageAuthType: key  # key, sas, msi, spn
       AzureStorageIdentityClientID:
-      AzureStorageIdentityObjectID:
       AzureStorageIdentityResourceID:
       MSIEndpoint:
       AzureStorageSPNClientID:
       AzureStorageSPNTenantID:
       AzureStorageAADEndpoint:
-    nodeStageSecretRef:  # secret should be stored here
+    nodeStageSecretRef:  # secret should be stored here, not needed for msi auth type
       name: azure-secret
       namespace: default
