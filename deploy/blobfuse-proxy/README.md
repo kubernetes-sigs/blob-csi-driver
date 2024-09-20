@@ -9,19 +9,19 @@ This guide shows how to install a blobfuse proxy on all agent nodes and the prox
  - helm install
 ```console
 helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.23.7 --set node.enableBlobfuseProxy=true
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.23.8 --set node.enableBlobfuseProxy=true
 ```
 
  - kubectl install
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v1.23.7/deploy/install-driver.sh | bash -s v1.23.7 blobfuse-proxy --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v1.23.8/deploy/install-driver.sh | bash -s v1.23.8 blobfuse-proxy --
 ```
 
 ### Enable blobfuse proxy on existing Blob CSI driver
  - install blobfuse proxy daemonset
-> blobfuse proxy is supported on CoreOS(OpenShift) from v1.23.7
+> blobfuse proxy is supported on CoreOS(OpenShift) from v1.23.8
 ```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/v1.23.7/blobfuse-proxy.yaml
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/v1.23.8/blobfuse-proxy.yaml
 ```
  - set `enable-blobfuse-proxy=true` in existing `csi-blob-node` daemonset manually (default is `false`)
 ```console
