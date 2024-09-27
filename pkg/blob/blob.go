@@ -288,6 +288,9 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 	if d.cloud != nil {
 		d.clientFactory = d.cloud.ComputeClientFactory
 		d.networkClientFactory = d.cloud.NetworkClientFactory
+		if d.networkClientFactory == nil {
+			d.networkClientFactory = d.cloud.ComputeClientFactory
+		}
 	}
 
 	var err error

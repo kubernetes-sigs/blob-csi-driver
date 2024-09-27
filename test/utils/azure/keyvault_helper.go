@@ -22,20 +22,18 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
-	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/onsi/ginkgo/v2"
 	"k8s.io/apiserver/pkg/storage/names"
 	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/identityclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/vaultclient"
 )
 
 type KeyVaultClient struct {
-	vaultClient vaultclient.Interface
-	Cred        *credentials.Credentials
-	vaultName   string
+	vaultClient    vaultclient.Interface
+	identityClient identityclient.Interface
+	Cred           *credentials.Credentials
+	vaultName      string
 }
 
 func NewKeyVaultClient() (*KeyVaultClient, error) {
@@ -48,9 +46,10 @@ func NewKeyVaultClient() (*KeyVaultClient, error) {
 		return nil, err
 	}
 	return &KeyVaultClient{
-		vaultName:   names.SimpleNameGenerator.GenerateName("blob-csi-test-kv-"),
-		vaultClient: client.vaultclient,
-		Cred:        e2eCred,
+		vaultName:      names.SimpleNameGenerator.GenerateName("blob-csi-test-kv-"),
+		vaultClient:    client.vaultClient,
+		identityClient: client.identityClient,
+		Cred:           e2eCred,
 	}, nil
 }
 
@@ -162,52 +161,16 @@ func (kvc *KeyVaultClient) purgeDeleted(ctx context.Context) error {
 	return nil
 }
 
-func (kvc *KeyVaultClient) getMSIUserAssignedIDClient() (*msi.UserAssignedIdentitiesClient, error) {
-	msiClient := msi.NewUserAssignedIdentitiesClient(kvc.Cred.SubscriptionID)
-
-	env, err := azure.EnvironmentFromName(kvc.Cred.Cloud)
-	if err != nil {
-		return nil, err
-	}
-
-	oauthConfig, err := adal.NewOAuthConfig(env.ActiveDirectoryEndpoint, kvc.Cred.TenantID)
-	if err != nil {
-		return nil, err
-	}
-
-	token, err := adal.NewServicePrincipalToken(*oauthConfig, kvc.Cred.AADClientID, kvc.Cred.AADClientSecret, env.ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	authorizer := autorest.NewBearerAuthorizer(token)
-
-	msiClient.Authorizer = authorizer
-
-	return &msiClient, nil
-}
-
 func (kvc *KeyVaultClient) GetMSIObjectID(ctx context.Context, identityName string) (string, error) {
-	msiClient, err := kvc.getMSIUserAssignedIDClient()
+	id, err := kvc.identityClient.Get(ctx, kvc.Cred.ResourceGroup, identityName)
 	if err != nil {
 		return "", err
 	}
-
-	id, err := msiClient.Get(ctx, kvc.Cred.ResourceGroup, identityName)
-	if err != nil {
-		return "", err
-	}
-
-	return id.UserAssignedIdentityProperties.PrincipalID.String(), err
+	return *id.Properties.PrincipalID, err
 }
 
 func (kvc *KeyVaultClient) GetMSIResourceID(ctx context.Context, identityName string) (string, error) {
-	msiClient, err := kvc.getMSIUserAssignedIDClient()
-	if err != nil {
-		return "", err
-	}
-
-	id, err := msiClient.Get(ctx, kvc.Cred.ResourceGroup, identityName)
+	id, err := kvc.identityClient.Get(ctx, kvc.Cred.ResourceGroup, identityName)
 	if err != nil {
 		return "", err
 	}

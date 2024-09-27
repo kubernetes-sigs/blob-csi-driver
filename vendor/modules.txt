@@ -2,8 +2,6 @@
 ## explicit
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2022-08-01/compute
 github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2021-10-01/containerservice
-github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault
-github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi
 github.com/Azure/azure-sdk-for-go/services/network/mgmt/2022-07-01/network
 github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2017-05-10/resources
 github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage
@@ -51,6 +49,9 @@ github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthoriza
 # github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5 v5.7.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5
+# github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6 v6.1.0
+## explicit; go 1.18
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6
 # github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry v1.2.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry
@@ -1439,8 +1440,8 @@ k8s.io/klog/v2/internal/dbg
 k8s.io/klog/v2/internal/serialize
 k8s.io/klog/v2/internal/severity
 k8s.io/klog/v2/internal/sloghandler
-# k8s.io/kms v0.32.0-alpha.0 => k8s.io/kms v0.31.1
-## explicit; go 1.22.0
+# k8s.io/kms v0.32.0-alpha.0 => k8s.io/kms v0.29.7
+## explicit; go 1.21
 k8s.io/kms/apis/v1beta1
 k8s.io/kms/apis/v2
 k8s.io/kms/pkg/service
@@ -1639,7 +1640,7 @@ sigs.k8s.io/cloud-provider-azure/pkg/util/string
 sigs.k8s.io/cloud-provider-azure/pkg/util/taints
 sigs.k8s.io/cloud-provider-azure/pkg/util/vm
 sigs.k8s.io/cloud-provider-azure/pkg/version
-# sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.56
+# sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.57
 ## explicit; go 1.23.1
 sigs.k8s.io/cloud-provider-azure/pkg/azclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient
@@ -1678,6 +1679,7 @@ sigs.k8s.io/cloud-provider-azure/pkg/azclient/securitygroupclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/snapshotclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/sshpublickeyresourceclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/subnetclient
+sigs.k8s.io/cloud-provider-azure/pkg/azclient/subnetclient/mock_subnetclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/utils
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/utils/armbalancer
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/vaultclient
@@ -1726,7 +1728,7 @@ sigs.k8s.io/yaml/goyaml.v2
 # k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.29.7
 # k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.29.7
 # k8s.io/endpointslice => k8s.io/endpointslice v0.29.7
-# k8s.io/kms => k8s.io/kms v0.31.1
+# k8s.io/kms => k8s.io/kms v0.29.7
 # k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.29.7
 # k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.29.7
 # k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.7

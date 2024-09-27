@@ -462,7 +462,7 @@ func TestCreateVolume(t *testing.T) {
 					controllerServiceCapability,
 				}
 
-				expectedErr := status.Errorf(codes.Internal, "update service endpoints failed with error: %v", fmt.Errorf("SubnetsClient is nil"))
+				expectedErr := status.Errorf(codes.Internal, "update service endpoints failed with error: %v", fmt.Errorf("networkClientFactory is nil"))
 				_, err := d.CreateVolume(context.Background(), req)
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("Unexpected error: %v", err)

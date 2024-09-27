@@ -7,11 +7,12 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.14.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.7.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault v1.4.0
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6 v6.0.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.6.0
+	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.1.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.3.2
 	github.com/Azure/go-autorest/autorest v0.11.29
-	github.com/Azure/go-autorest/autorest/adal v0.9.24
 	github.com/container-storage-interface/spec v1.9.0
 	github.com/go-ini/ini v1.67.0
 	github.com/golang/protobuf v1.5.4
@@ -38,7 +39,7 @@ require (
 	k8s.io/pod-security-admission v0.31.1
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/cloud-provider-azure v1.31.1-0.20240914065912-f4dd79d54775
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.56
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.0.57
 	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.27
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -47,14 +48,14 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.10.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2 v2.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5 v5.7.0 // indirect
+	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6 v6.1.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry v1.2.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6 v6.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi v1.2.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6 v6.0.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/privatedns/armprivatedns v1.2.0 // indirect
-	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.1.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/internal v1.0.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
+	github.com/Azure/go-autorest/autorest/adal v0.9.24 // indirect
 	github.com/Azure/go-autorest/autorest/date v0.3.0 // indirect
 	github.com/Azure/go-autorest/autorest/mocks v0.4.2 // indirect
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
@@ -189,7 +190,7 @@ replace (
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.29.7
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.29.7
 	k8s.io/endpointslice => k8s.io/endpointslice v0.29.7
-	k8s.io/kms => k8s.io/kms v0.31.1
+	k8s.io/kms => k8s.io/kms v0.29.7
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.29.7
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.29.7
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.29.7
