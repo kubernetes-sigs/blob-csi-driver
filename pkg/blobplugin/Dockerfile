@@ -25,11 +25,11 @@ RUN apt update \
 
 # install aznfs
 ARG aznfsVer=2.0.7
-ARG anzfsArch=x86_64
 RUN if [ "$ARCH" = "arm64" ]; then \
-      anzfsArch="arm64"; \
+      curl -Ls https://github.com/Azure/AZNFS-mount/releases/download/${aznfsVer}/aznfs-${aznfsVer}-1.arm64.tar.gz | tar xvzf - -C / --keep-directory-symlink; \
+    else \
+      curl -Ls https://github.com/Azure/AZNFS-mount/releases/download/${aznfsVer}/aznfs-${aznfsVer}-1.x86_64.tar.gz | tar xvzf - -C / --keep-directory-symlink; \
     fi
-RUN curl -Ls https://github.com/Azure/AZNFS-mount/releases/download/${aznfsVer}/aznfs-${aznfsVer}-1.${anzfsArch}.tar.gz | tar xvzf - -C / --keep-directory-symlink
 
 # install azcopy
 RUN curl -Ls https://azcopyvnext.azureedge.net/releases/release-10.26.0-20240731/azcopy_linux_${ARCH}_10.26.0.tar.gz \
