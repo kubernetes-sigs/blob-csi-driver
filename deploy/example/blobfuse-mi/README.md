@@ -7,6 +7,8 @@ This article demonstrates the process of utilizing blobfuse mount with either a 
  - Make sure the managed identity has `Storage Blob Data Owner` role to the storage account
  > here is an example that uses Azure CLI commands to assign the `Storage Blob Data Owner` role to the managed identity for the storage account. If the storage account is created by the driver(dynamic provisioning), then you need to grant `Storage Blob Data Owner` role to the resource group where the storage account is located
 
+ > If you use parameter `allowSharedKeyAccess: false` in storageclass, you should assign the `Storage Blob Data Contributor` role to the managed identity for the storage account.
+
 ```bash
 mid="$(az identity list -g "$resourcegroup" --query "[?name == 'managedIdentityName'].principalId" -o tsv)"
 said="$(az storage account list -g "$resourcegroup" --query "[?name == '$storageaccountname'].id" -o tsv)"
