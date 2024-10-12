@@ -4,13 +4,13 @@ This article demonstrates the process of utilizing blobfuse mount with either a 
 > make sure the managed identity used by CSI driver is bound to the agent node pool.
 
 ## Before you begin
- - Make sure the managed identity has `Storage Blob Data Owner` role to the storage account
- > here is an example that uses Azure CLI commands to assign the `Storage Blob Data Owner` role to the managed identity for the storage account. If the storage account is created by the driver(dynamic provisioning), then you need to grant `Storage Blob Data Owner` role to the resource group where the storage account is located
+ - Make sure the managed identity has `Storage Blob Data Contributor` role to the storage account
+ > here is an example that uses Azure CLI commands to assign the `Storage Blob Data Contributor` role to the managed identity for the storage account. If the storage account is created by the driver(dynamic provisioning), then you need to grant `Storage Blob Data Contributor` role to the resource group where the storage account is located
 
 ```bash
 mid="$(az identity list -g "$resourcegroup" --query "[?name == 'managedIdentityName'].principalId" -o tsv)"
 said="$(az storage account list -g "$resourcegroup" --query "[?name == '$storageaccountname'].id" -o tsv)"
-az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Owner" --scope "$said"
+az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$said"
 ```
 
  - Retrieve the clientID for `AzureStorageIdentityClientID`. If you are using kubelet identity, the identity will be named {aks-cluster-name}-agentpool and located in the node resource group.
