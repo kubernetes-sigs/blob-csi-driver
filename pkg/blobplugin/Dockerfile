@@ -73,6 +73,11 @@ RUN if [ "$ARCH" = "amd64" ] ; then \
     && apt update \
     && apt install -y blobfuse blobfuse2 fuse; fi
 
+RUN if [ "$ARCH" = "arm64" ] ; then \
+    dpkg -i /blobfuse-proxy/packages-microsoft-prod-22.04.deb \
+    && apt update \
+    && apt install -y fuse3 blobfuse2; fi
+
 LABEL maintainers="andyzhangx"
 LABEL description="Azure Blob Storage CSI driver"
 
