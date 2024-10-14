@@ -172,6 +172,7 @@ metadata:
 spec:
   template:
     spec:
+      generation: 2
       identity: UserAssigned
       osDisk:
         diskSizeGB: 128
