@@ -20,9 +20,6 @@ set -xe
 if [ "${DISTRIBUTION}" != "ubuntu" ]
 then
   echo "skip install blobfuse/blobfuse2 for ${DISTRIBUTION}...."
-elif [ "${ARCH}" = "aarch64" ]
-then
-  echo "skip install blobfuse/blobfuse2 for arm64...."
 elif [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
   echo "start to install blobfuse/blobfuse2...."
