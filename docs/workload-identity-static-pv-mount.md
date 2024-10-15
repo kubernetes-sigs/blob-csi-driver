@@ -84,8 +84,7 @@ spec:
   csi:
     driver: blob.csi.azure.com
     # make sure volumeid is unique for every storage blob container in the cluster
-    # the # character is reserved for internal use, the / character is not allowed
-    volumeHandle: unique_volume_id
+    volumeHandle: account-name_container-name
     volumeAttributes:
       storageaccount: $ACCOUNT # required
       containerName: $CONTAINER  # required
