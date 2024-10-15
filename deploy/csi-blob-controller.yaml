@@ -81,7 +81,7 @@ spec:
               drop:
                 - ALL
         - name: blob
-          image: mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.25.0
+          image: mcr.microsoft.com/k8s/csi/blob-csi:latest
           imagePullPolicy: IfNotPresent
           args:
             - "--v=5"
