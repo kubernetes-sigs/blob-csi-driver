@@ -3,10 +3,9 @@
  - [Compare access to Azure Files, Blob Storage, and Azure NetApp Files with NFS](https://docs.microsoft.com/en-us/azure/storage/common/nfs-comparison)
 
 #### Supported OS: Linux
- - dynamic account creation support is available from `v1.2.0`
 
 #### Prerequisite
- - Make sure identity used by the driver controller is added to the Contributor role on the virtual network and network security group of the cluster.
+ - Make sure identity used by the driver controller is added to the `Contributor` role on the virtual network and network security group of the cluster.
  - [Optional][Bring Your Own Storage Account] Follow steps [here](https://docs.microsoft.com/en-us/azure/storage/blobs/network-file-system-protocol-support-how-to) to create storage account that supports NFSv3 protocol and then specify `storageAccount` in below storage class `parameters`
 
 #### How to use NFS feature
