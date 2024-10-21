@@ -74,39 +74,39 @@ then
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
-# install blobfuse-proxy
-updateBlobfuseProxy="true"
-if [ -f "/host/usr/bin/blobfuse-proxy" ];then
-  old=$(sha256sum /host/usr/bin/blobfuse-proxy | awk '{print $1}')
-  new=$(sha256sum /blobfuse-proxy/blobfuse-proxy | awk '{print $1}')
-  if [ "$old" = "$new" ];then
-    updateBlobfuseProxy="false"
-    echo "no need to update blobfuse-proxy"
-  fi
-fi
-if [ "$updateBlobfuseProxy" = "true" ];then
-  echo "copy blobfuse-proxy...."
-  rm -rf /host/"$KUBELET_PATH"/plugins/blob.csi.azure.com/blobfuse-proxy.sock
-  cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy --force
-  chmod 755 /host/usr/bin/blobfuse-proxy
-fi
-
-updateService="true"
-if [ -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
-  old=$(sha256sum /host/usr/lib/systemd/system/blobfuse-proxy.service | awk '{print $1}')
-  new=$(sha256sum /blobfuse-proxy/blobfuse-proxy.service | awk '{print $1}')
-  if [ "$old" = "$new" ];then
-      updateService="false"
-      echo "no need to update blobfuse-proxy.service"
-  fi
-fi
-if [ "$updateService" = "true" ];then
-  echo "copy blobfuse-proxy.service...."
-  mkdir -p /host/usr/lib/systemd/system
-  cp /blobfuse-proxy/blobfuse-proxy.service /host/usr/lib/systemd/system/blobfuse-proxy.service
-fi
-
 if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
+  # install blobfuse-proxy
+  updateBlobfuseProxy="true"
+  if [ -f "/host/usr/bin/blobfuse-proxy" ];then
+    old=$(sha256sum /host/usr/bin/blobfuse-proxy | awk '{print $1}')
+    new=$(sha256sum /blobfuse-proxy/blobfuse-proxy | awk '{print $1}')
+    if [ "$old" = "$new" ];then
+      updateBlobfuseProxy="false"
+      echo "no need to update blobfuse-proxy"
+    fi
+  fi
+  if [ "$updateBlobfuseProxy" = "true" ];then
+    echo "copy blobfuse-proxy...."
+    rm -rf /host/"$KUBELET_PATH"/plugins/blob.csi.azure.com/blobfuse-proxy.sock
+    cp /blobfuse-proxy/blobfuse-proxy /host/usr/bin/blobfuse-proxy --force
+    chmod 755 /host/usr/bin/blobfuse-proxy
+  fi
+
+  updateService="true"
+  if [ -f "/host/usr/lib/systemd/system/blobfuse-proxy.service" ];then
+    old=$(sha256sum /host/usr/lib/systemd/system/blobfuse-proxy.service | awk '{print $1}')
+    new=$(sha256sum /blobfuse-proxy/blobfuse-proxy.service | awk '{print $1}')
+    if [ "$old" = "$new" ];then
+        updateService="false"
+        echo "no need to update blobfuse-proxy.service"
+    fi
+  fi
+  if [ "$updateService" = "true" ];then
+    echo "copy blobfuse-proxy.service...."
+    mkdir -p /host/usr/lib/systemd/system
+    cp /blobfuse-proxy/blobfuse-proxy.service /host/usr/lib/systemd/system/blobfuse-proxy.service
+  fi
+
   if [ "$updateBlobfuseProxy" = "true" ] || [ "$updateService" = "true" ];then
     echo "start blobfuse-proxy...."
     $HOST_CMD systemctl daemon-reload
