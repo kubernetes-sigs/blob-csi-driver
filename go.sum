@@ -1,7 +1,7 @@
 github.com/Azure/azure-sdk-for-go v68.0.0+incompatible h1:fcYLmCpyNYRnvJbPerq7U0hS+6+I79yEDJBqVNcqUzU=
 github.com/Azure/azure-sdk-for-go v68.0.0+incompatible/go.mod h1:9XXNKU+eRnpl9moKnB4QOLf1HestfXbmab5FXxiDBjc=
-github.com/Azure/azure-sdk-for-go/sdk/azcore v1.15.0 h1:eXzkOEXbSTOa7cJ7EqeCVi/OFi/ppDrUtQuttCWy74c=
-github.com/Azure/azure-sdk-for-go/sdk/azcore v1.15.0/go.mod h1:YL1xnZ6QejvQHWJrX/AvhFl4WW4rqHVoKspWNVwFk0M=
+github.com/Azure/azure-sdk-for-go/sdk/azcore v1.16.0 h1:JZg6HRh6W6U4OLl6lk7BZ7BLisIzM9dG1R50zUk9C/M=
+github.com/Azure/azure-sdk-for-go/sdk/azcore v1.16.0/go.mod h1:YL1xnZ6QejvQHWJrX/AvhFl4WW4rqHVoKspWNVwFk0M=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.0 h1:B/dfvscEQtew9dVuoxqxrUKKv8Ih2f55PydknDamU+g=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.8.0/go.mod h1:fiPSssYvltE08HJchL04dOy+RD4hgrjph0cwGGMntdI=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity/cache v0.3.0 h1:+m0M/LFxN43KvULkDNfdXOgrjtg6UYJPFBJyuEcRCAw=
@@ -465,8 +465,8 @@ sigs.k8s.io/cloud-provider-azure v1.31.1-0.20240914065912-f4dd79d54775 h1:0YqezU
 sigs.k8s.io/cloud-provider-azure v1.31.1-0.20240914065912-f4dd79d54775/go.mod h1:ZMuwABqLK6ICPch/wMIeMdTs15yH1lkPlwenTVzaB2A=
 sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.1.0 h1:NwAH9yaj9WW/Yua+rWFplvUqVL3/WV9HeH+z37qz1/U=
 sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.1.0/go.mod h1:p+vMK+QSh06CcAYoy1bPioZiXn3OAyCAg02JwZpJQJc=
-sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.27 h1:o1LU+o0hAuY3esYQ5gzGElsCfkUNKCXmAIcBvf4CxZo=
-sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.0.27/go.mod h1:g/XTYItaIrR2AX3CGoFR0jIwitKedKBf6WwNJYXGoDw=
+sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.1.0 h1:t+vt2HIEoh19WRzdIMvuAPmnfNft/M0hIl7oRKfKRnM=
+sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.1.0/go.mod h1:zCSKQckgBFW11tSfa0XxPQizrnTUVqAftJtQDwZz8/A=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
 sigs.k8s.io/structured-merge-diff/v4 v4.4.1 h1:150L+0vs/8DA78h1u02ooW1/fFq/Lwr+sGiqlzvrtq4=
