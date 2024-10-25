@@ -24,6 +24,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	resources "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
+	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/identityclient"
@@ -45,8 +46,9 @@ type Client struct {
 
 func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string, aadFederatedTokenFile string) (*Client, error) {
 	armConfig := &azclient.ARMClientConfig{
-		Cloud:    cloud,
-		TenantID: tenantID,
+		Cloud:     cloud,
+		TenantID:  tenantID,
+		UserAgent: blob.GetUserAgent(blob.DefaultDriverName, "", "e2e-test"),
 	}
 	useFederatedWorkloadIdentityExtension := false
 	if aadFederatedTokenFile != "" {
