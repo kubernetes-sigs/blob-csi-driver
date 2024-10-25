@@ -69,7 +69,6 @@ RUN chmod +x /blobfuse-proxy/init.sh && \
 RUN if [ "$ARCH" = "amd64" ] ; then \
     clean-install libcurl4-gnutls-dev \
     && dpkg -i /blobfuse-proxy/packages-microsoft-prod-18.04.deb \
-    && rm /blobfuse-proxy/packages-microsoft-prod-18.04.deb \
     && apt update \
     && apt install -y blobfuse blobfuse2 fuse; fi
 
