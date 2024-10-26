@@ -22,8 +22,18 @@ type AgentPoolsClientBeginCreateOrUpdateOptions struct {
 	ResumeToken string
 }
 
+// AgentPoolsClientBeginDeleteMachinesOptions contains the optional parameters for the AgentPoolsClient.BeginDeleteMachines
+// method.
+type AgentPoolsClientBeginDeleteMachinesOptions struct {
+	// Resumes the LRO from the provided token.
+	ResumeToken string
+}
+
 // AgentPoolsClientBeginDeleteOptions contains the optional parameters for the AgentPoolsClient.BeginDelete method.
 type AgentPoolsClientBeginDeleteOptions struct {
+	// ignore-pod-disruption-budget=true to delete those pods on a node without considering Pod Disruption Budget
+	IgnorePodDisruptionBudget *bool
+
 	// Resumes the LRO from the provided token.
 	ResumeToken string
 }
@@ -53,6 +63,16 @@ type AgentPoolsClientGetUpgradeProfileOptions struct {
 
 // AgentPoolsClientListOptions contains the optional parameters for the AgentPoolsClient.NewListPager method.
 type AgentPoolsClientListOptions struct {
+	// placeholder for future optional parameters
+}
+
+// MachinesClientGetOptions contains the optional parameters for the MachinesClient.Get method.
+type MachinesClientGetOptions struct {
+	// placeholder for future optional parameters
+}
+
+// MachinesClientListOptions contains the optional parameters for the MachinesClient.NewListPager method.
+type MachinesClientListOptions struct {
 	// placeholder for future optional parameters
 }
 
