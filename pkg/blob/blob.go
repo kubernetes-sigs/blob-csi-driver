@@ -572,14 +572,14 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	if clientID != "" {
 		klog.V(2).Infof("clientID(%s) is specified, use workload identity for blobfuse auth", clientID)
 
-		workload_identity_token, err := parseServiceAccountToken(serviceAccountToken)
+		workloadIdentityToken, err := parseServiceAccountToken(serviceAccountToken)
 		if err != nil {
 			return rgName, accountName, accountKey, containerName, authEnv, err
 		}
 
 		authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+clientID)
 		authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+tenantID)
-		authEnv = append(authEnv, "WORKLOAD_IDENTITY_TOKEN="+workload_identity_token)
+		authEnv = append(authEnv, "WORKLOAD_IDENTITY_TOKEN="+workloadIdentityToken)
 
 		return rgName, accountName, accountKey, containerName, authEnv, err
 	}
