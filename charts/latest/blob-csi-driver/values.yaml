@@ -127,6 +127,7 @@ node:
     setMaxOpenFileNum: true
     maxOpenFileNum: "9000000"
     disableUpdateDB: true
+    migrateK8sRepo: false
   blobfuseCachePath: /mnt
   appendTimeStampInCacheDir: false
   mountPermissions: 0777
