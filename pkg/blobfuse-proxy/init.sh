@@ -20,6 +20,7 @@ INSTALL_BLOBFUSE_PROXY=${INSTALL_BLOBFUSE_PROXY:-true}
 DISABLE_UPDATEDB=${DISABLE_UPDATEDB:-true}
 SET_MAX_OPEN_FILE_NUM=${SET_MAX_OPEN_FILE_NUM:-true}
 SET_READ_AHEAD_SIZE=${SET_READ_AHEAD_SIZE:-true}
+MIGRATE_K8S_REPO=${MIGRATE_K8S_REPO:-false}
 READ_AHEAD_KB=${READ_AHEAD_KB:-15380}
 
 HOST_CMD="nsenter --mount=/proc/1/ns/mnt"
@@ -41,6 +42,13 @@ then
     cp /blobfuse-proxy/packages-microsoft-prod-22.04.deb /host/etc/packages-microsoft-prod.deb
   fi
   
+  if [ "${MIGRATE_K8S_REPO}" = "true" ]
+  then
+    # https://kubernetes.io/blog/2023/08/15/pkgs-k8s-io-introduction/#how-to-migrate
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /" | tee /host/etc/apt/sources.list.d/kubernetes.list
+    $HOST_CMD curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key | $HOST_CMD gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+  fi
+
   # when running dpkg -i /etc/packages-microsoft-prod.deb, need to enter y to continue. 
   # refer to https://stackoverflow.com/questions/45349571/how-to-install-deb-with-dpkg-non-interactively
   yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt update
