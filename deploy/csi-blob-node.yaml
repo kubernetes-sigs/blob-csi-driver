@@ -55,7 +55,7 @@ spec:
             - name: INSTALL_BLOBFUSE_PROXY
               value: "true"
             - name: INSTALL_BLOBFUSE
-              value: "true"
+              value: "false"
             - name: BLOBFUSE_VERSION
               value: "1.4.5"
             - name: INSTALL_BLOBFUSE2
