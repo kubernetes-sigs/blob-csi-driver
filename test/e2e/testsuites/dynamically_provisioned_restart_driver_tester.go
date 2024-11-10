@@ -82,12 +82,6 @@ func (t *DynamicallyProvisionedRestartDriverTest) Run(ctx context.Context, clien
 	if useBlobfuseProxy {
 		t.StorageClassParameters["skuName"] = "Standard_LRS"
 
-		ginkgo.By("run for blobfuse")
-		t.StorageClassParameters["protocol"] = "fuse"
-		wg.Add(1)
-		wgPodReady.Add(1)
-		go run()
-
 		ginkgo.By("run for blobfuse2")
 		t.StorageClassParameters["protocol"] = "fuse2"
 		wg.Add(1)

@@ -119,13 +119,14 @@ node:
   logLevel: 5
   enableBlobfuseProxy: true
   blobfuseProxy:
-    installBlobfuse: true
+    installBlobfuse: false
     blobfuseVersion: "1.4.5"
     installBlobfuse2: true
     blobfuse2Version: "2.3.2"
     setMaxOpenFileNum: true
     maxOpenFileNum: "9000000"
     disableUpdateDB: true
+    migrateK8sRepo: false
   blobfuseCachePath: /mnt
   appendTimeStampInCacheDir: false
   mountPermissions: 0777
