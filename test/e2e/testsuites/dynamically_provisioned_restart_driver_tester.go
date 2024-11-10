@@ -46,11 +46,7 @@ func (t *DynamicallyProvisionedRestartDriverTest) Run(ctx context.Context, clien
 		defer wg.Done()
 		defer ginkgo.GinkgoRecover()
 
-		tDeployment, cleanup, _ := t.Pod.SetupDeployment(ctx, client, namespace, t.CSIDriver, t.StorageClassParameters)
-		// defer must be called here for resources not get removed before using them
-		for i := range cleanup {
-			defer cleanup[i](ctx)
-		}
+		tDeployment, _, _ := t.Pod.SetupDeployment(ctx, client, namespace, t.CSIDriver, t.StorageClassParameters)
 
 		ginkgo.By("creating the deployment for the pod")
 		tDeployment.Create(ctx)
