@@ -155,7 +155,7 @@ const (
 
 	FSGroupChangeNone = "None"
 	// define tag value delimiter and default is comma
-	tagValueDelimiterField = "tagValueDelimiter"
+	tagValueDelimiterField = "tagvaluedelimiter"
 )
 
 var (
