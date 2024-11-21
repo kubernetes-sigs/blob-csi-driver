@@ -552,9 +552,9 @@ func (d *Driver) NodeGetVolumeStats(_ context.Context, req *csi.NodeGetVolumeSta
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
 	if cache != nil {
-		resp := cache.(csi.NodeGetVolumeStatsResponse)
+		resp := cache.(*csi.NodeGetVolumeStatsResponse)
 		klog.V(6).Infof("NodeGetVolumeStats: volume stats for volume %s path %s is cached", req.VolumeId, req.VolumePath)
-		return &resp, nil
+		return resp, nil
 	}
 
 	mc := metrics.NewMetricContext(blobCSIDriverName, "node_get_volume_stats", d.cloud.ResourceGroup, "", d.Name)
@@ -624,7 +624,7 @@ func (d *Driver) NodeGetVolumeStats(_ context.Context, req *csi.NodeGetVolumeSta
 	isOperationSucceeded = true
 	klog.V(6).Infof("NodeGetVolumeStats: volume stats for volume %s path %s is %v", req.VolumeId, req.VolumePath, resp)
 	// cache the volume stats per volume
-	d.volStatsCache.Set(req.VolumeId, *resp)
+	d.volStatsCache.Set(req.VolumeId, resp)
 	return resp, nil
 }
 
