@@ -213,6 +213,11 @@ func (option *DriverOptions) AddFlags() {
 // Driver implements all interfaces of CSI drivers
 type Driver struct {
 	csicommon.CSIDriver
+	// Embed UnimplementedXXXServer to ensure the driver returns Unimplemented for any
+	// new RPC methods that might be introduced in future versions of the spec.
+	csi.UnimplementedControllerServer
+	csi.UnimplementedIdentityServer
+	csi.UnimplementedNodeServer
 
 	cloud                 *azure.Cloud
 	clientFactory         azclient.ClientFactory
