@@ -84,8 +84,8 @@ github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK3
 github.com/cenkalti/backoff/v4 v4.3.0/go.mod h1:Y3VNntkOUPxTVeUxJ/G5vcM//AlwfmyYozVcomhLiZE=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
-github.com/container-storage-interface/spec v1.10.0 h1:YkzWPV39x+ZMTa6Ax2czJLLwpryrQ+dPesB34mrRMXA=
-github.com/container-storage-interface/spec v1.10.0/go.mod h1:DtUvaQszPml1YJfIK7c00mlv6/g4wNMLanLgiUbKFRI=
+github.com/container-storage-interface/spec v1.11.0 h1:H/YKTOeUZwHtyPOr9raR+HgFmGluGCklulxDYxSdVNM=
+github.com/container-storage-interface/spec v1.11.0/go.mod h1:DtUvaQszPml1YJfIK7c00mlv6/g4wNMLanLgiUbKFRI=
 github.com/coreos/go-semver v0.3.1 h1:yi21YpKnrx1gt5R+la8n5WgS0kCrsPp33dmEyHReZr4=
 github.com/coreos/go-semver v0.3.1/go.mod h1:irMmmIw/7yzSRPWryHsK7EYSg09caPQL03VsM8rvUec=
 github.com/coreos/go-systemd/v22 v22.5.0 h1:RrqgGjYQKalulkV8NGVIfkXQf6YYmOyiJKk8iXXhfZs=
@@ -465,8 +465,8 @@ sigs.k8s.io/cloud-provider-azure v1.31.1-0.20240914065912-f4dd79d54775 h1:0YqezU
 sigs.k8s.io/cloud-provider-azure v1.31.1-0.20240914065912-f4dd79d54775/go.mod h1:ZMuwABqLK6ICPch/wMIeMdTs15yH1lkPlwenTVzaB2A=
 sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.1.20 h1:eZAfeLlBujLvViWXN/r+b+Tg8XUdssePRWr7N8dG0qs=
 sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.1.20/go.mod h1:U1hh84S6bNTLk2RQAF7ZlmaXm1g9XTHYi2gXZxv2TfQ=
-sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.1.6 h1:Imxhux2vgnNxxXG1aqHQeC7y77SRaLzv3LyAtgDkKkM=
-sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.1.6/go.mod h1:Sd2CUnWOBGQ8/oHWClys6lbw5Xmg4pIJRX4knFBgS2Y=
+sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.1.7 h1:svbrF0iYij+ip8o87/FkJC4GW5gPHKQG8AGCKZqSNp4=
+sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.1.7/go.mod h1:/Lw2NMdjFcIZESlZUSjBpcnzS+fY33uUoeo6+I6XyUI=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd h1:EDPBXCAspyGV4jQlpZSudPeMmr1bNJefnuqLsRAsHZo=
 sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd/go.mod h1:B8JuhiUyNFVKdsE8h686QcCxMaH6HrOAZj4vswFpcB0=
 sigs.k8s.io/structured-merge-diff/v4 v4.4.1 h1:150L+0vs/8DA78h1u02ooW1/fFq/Lwr+sGiqlzvrtq4=
