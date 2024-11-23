@@ -13,7 +13,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets v1.3.0
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.3.2
 	github.com/Azure/go-autorest/autorest v0.11.29
-	github.com/container-storage-interface/spec v1.10.0
+	github.com/container-storage-interface/spec v1.11.0
 	github.com/go-ini/ini v1.67.0
 	github.com/golang/protobuf v1.5.4
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.0.1
@@ -28,10 +28,10 @@ require (
 	golang.org/x/sync v0.9.0
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.35.2
-	k8s.io/api v0.31.2
-	k8s.io/apimachinery v0.31.2
+	k8s.io/api v0.31.3
+	k8s.io/apimachinery v0.31.3
 	k8s.io/apiserver v0.31.1
-	k8s.io/client-go v0.31.2
+	k8s.io/client-go v0.31.3
 	k8s.io/component-base v0.31.1
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubernetes v1.31.1
@@ -40,7 +40,7 @@ require (
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/cloud-provider-azure v1.31.1-0.20240914065912-f4dd79d54775
 	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.1.20
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.1.6
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.1.7
 	sigs.k8s.io/yaml v1.4.0
 )
 
