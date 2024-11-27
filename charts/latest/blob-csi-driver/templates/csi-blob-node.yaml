@@ -104,6 +104,8 @@ spec:
               value: "{{ .Values.linux.kubelet }}"
             - name: MIGRATE_K8S_REPO
               value: "{{ .Values.node.blobfuseProxy.migrateK8sRepo }}"
+            - name: SET_READ_AHEAD_SIZE
+              value: "{{ .Values.node.blobfuseProxy.setReadAheadSize }}"
           volumeMounts:
             - name: host-usr
               mountPath: /host/usr
