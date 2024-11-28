@@ -128,6 +128,7 @@ node:
     maxOpenFileNum: "9000000"
     disableUpdateDB: true
     migrateK8sRepo: false
+    setReadAheadSize: true
   blobfuseCachePath: /mnt
   appendTimeStampInCacheDir: false
   mountPermissions: 0777
