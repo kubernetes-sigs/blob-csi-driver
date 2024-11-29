@@ -238,12 +238,12 @@ spec:
               name: azure-cred
             - mountPath: /mnt
               name: blob-cache
-            {{- if eq .Values.cloud "AzureStackCloud" }}
+            {{- if and (eq .Values.cloud "AzureStackCloud") (ne .Values.linux.distro "fedora") }}
             - name: ssl
               mountPath: /etc/ssl/certs
               readOnly: true
             {{- end }}
-            {{- if eq .Values.linux.distro "fedora" }}
+            {{- if and (eq .Values.cloud "AzureStackCloud") (ne .Values.linux.distro "fedora") }}
             - name: ssl
               mountPath: /etc/ssl/certs
               readOnly: true
