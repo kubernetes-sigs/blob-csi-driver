@@ -115,10 +115,13 @@ if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
     cp /blobfuse-proxy/blobfuse-proxy.service /host/usr/lib/systemd/system/blobfuse-proxy.service
   fi
 
+  $HOST_CMD systemctl daemon-reload
+  $HOST_CMD systemctl enable blobfuse-proxy.service
   if [ "$updateBlobfuseProxy" = "true" ] || [ "$updateService" = "true" ];then
-    echo "start blobfuse-proxy...."
-    $HOST_CMD systemctl daemon-reload
-    $HOST_CMD systemctl enable blobfuse-proxy.service
+    echo "restart blobfuse-proxy...."
     $HOST_CMD systemctl restart blobfuse-proxy.service
+  else
+    echo "start blobfuse-proxy...."
+    $HOST_CMD systemctl start blobfuse-proxy.service
   fi
 fi
