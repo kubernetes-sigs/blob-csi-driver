@@ -104,6 +104,8 @@ spec:
               value: "{{ .Values.linux.kubelet }}"
             - name: MIGRATE_K8S_REPO
               value: "{{ .Values.node.blobfuseProxy.migrateK8sRepo }}"
+            - name: SET_READ_AHEAD_SIZE
+              value: "{{ .Values.node.blobfuseProxy.setReadAheadSize }}"
           volumeMounts:
             - name: host-usr
               mountPath: /host/usr
@@ -236,12 +238,12 @@ spec:
               name: azure-cred
             - mountPath: /mnt
               name: blob-cache
-            {{- if eq .Values.cloud "AzureStackCloud" }}
+            {{- if and (eq .Values.cloud "AzureStackCloud") (ne .Values.linux.distro "fedora") }}
             - name: ssl
               mountPath: /etc/ssl/certs
               readOnly: true
             {{- end }}
-            {{- if eq .Values.linux.distro "fedora" }}
+            {{- if and (eq .Values.cloud "AzureStackCloud") (ne .Values.linux.distro "fedora") }}
             - name: ssl
               mountPath: /etc/ssl/certs
               readOnly: true
