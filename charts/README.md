@@ -105,7 +105,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.resources.livenessProbe.limits.memory`    | liveness-probe memory limits                          | 300Mi                                                          |
 | `controller.resources.livenessProbe.requests.cpu`     | liveness-probe cpu requests                    | 10m                                                            |
 | `controller.resources.livenessProbe.requests.memory`  | liveness-probe memory requests                 | 20Mi                                                           |
-| `controller.resources.blob.limits.memory`             | blob-csi-driver memory limits                         | 200Mi                                                          |
+| `controller.resources.blob.limits.memory`             | blob-csi-driver memory limits                         | 800Mi                                                          |
 | `controller.resources.blob.requests.cpu`              | blob-csi-driver cpu requests                   | 10m                                                            |
 | `controller.resources.blob.requests.memory`           | blob-csi-driver memory requests                | 20Mi                                                           |
 | `controller.resources.csiResizer.limits.memory`       | csi-resizer memory limits                             | 300Mi                                                          |
