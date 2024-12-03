@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
+	azureconfig "sigs.k8s.io/cloud-provider-azure/pkg/provider/config"
 )
 
 var (
@@ -50,7 +51,7 @@ func IsAzureStackCloud(cloud *azure.Cloud) bool {
 // getCloudProvider get Azure Cloud Provider
 func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, nodeID, secretName, secretNamespace, userAgent string, allowEmptyCloudConfig bool) (*azure.Cloud, error) {
 	var (
-		config     *azure.Config
+		config     *azureconfig.Config
 		fromSecret bool
 		err        error
 	)
@@ -61,7 +62,7 @@ func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, node
 	if kubeClient != nil {
 		az.KubeClient = kubeClient
 		klog.V(2).Infof("reading cloud config from secret %s/%s", secretNamespace, secretName)
-		config, err = configloader.Load[azure.Config](ctx, &configloader.K8sSecretLoaderConfig{
+		config, err = configloader.Load[azureconfig.Config](ctx, &configloader.K8sSecretLoaderConfig{
 			K8sSecretConfig: configloader.K8sSecretConfig{
 				SecretName:      secretName,
 				SecretNamespace: secretNamespace,
@@ -87,7 +88,7 @@ func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, node
 			klog.V(2).Infof("use default %s env var: %v", DefaultAzureCredentialFileEnv, credFile)
 		}
 
-		config, err = configloader.Load[azure.Config](ctx, nil, &configloader.FileLoaderConfig{
+		config, err = configloader.Load[azureconfig.Config](ctx, nil, &configloader.FileLoaderConfig{
 			FilePath: credFile,
 		})
 		if err != nil {
@@ -147,7 +148,7 @@ func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, node
 // getKeyVaultSecretContent get content of the keyvault secret
 func (d *Driver) getKeyVaultSecretContent(ctx context.Context, vaultURL string, secretName string, secretVersion string) (content string, err error) {
 	var authProvider *azclient.AuthProvider
-	authProvider, err = azclient.NewAuthProvider(&d.cloud.AzureAuthConfig.ARMClientConfig, &d.cloud.AzureAuthConfig.AzureAuthConfig)
+	authProvider, err = azclient.NewAuthProvider(&d.cloud.ARMClientConfig, &d.cloud.AzureAuthConfig)
 	if err != nil {
 		return "", err
 	}
@@ -188,7 +189,7 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context, vnetResourceG
 	}
 
 	lockKey := vnetResourceGroup + vnetName + subnetName
-	cache, err := d.subnetCache.Get(lockKey, azcache.CacheReadTypeDefault)
+	cache, err := d.subnetCache.Get(ctx, lockKey, azcache.CacheReadTypeDefault)
 	if err != nil {
 		return nil, err
 	}
