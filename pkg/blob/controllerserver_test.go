@@ -1856,7 +1856,7 @@ func TestGenerateSASToken(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			sas, err := d.generateSASToken(tt.accountName, tt.accountKey, storageEndpointSuffix, 30)
+			sas, err := d.generateSASToken(context.Background(), tt.accountName, tt.accountKey, storageEndpointSuffix, 30)
 			if !reflect.DeepEqual(err, tt.expectedErr) {
 				t.Errorf("generateSASToken error = %v, expectedErr %v, sas token = %v, want %v", err, tt.expectedErr, sas, tt.want)
 				return
@@ -1878,8 +1878,8 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: azure.Config{
-						AzureAuthConfig: config.AzureAuthConfig{
+					Config: config.Config{
+						AzureClientConfig: config.AzureClientConfig{
 							ARMClientConfig: azclient.ARMClientConfig{
 								TenantID: "TenantID",
 							},
@@ -1908,8 +1908,8 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: azure.Config{
-						AzureAuthConfig: config.AzureAuthConfig{
+					Config: config.Config{
+						AzureClientConfig: config.AzureClientConfig{
 							ARMClientConfig: azclient.ARMClientConfig{
 								TenantID: "TenantID",
 							},
@@ -1932,8 +1932,8 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: azure.Config{
-						AzureAuthConfig: config.AzureAuthConfig{
+					Config: config.Config{
+						AzureClientConfig: config.AzureClientConfig{
 							AzureAuthConfig: azclient.AzureAuthConfig{
 								UseManagedIdentityExtension: true,
 								UserAssignedIdentityID:      "UserAssignedIdentityID",
@@ -1957,8 +1957,8 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: azure.Config{
-						AzureAuthConfig: config.AzureAuthConfig{
+					Config: config.Config{
+						AzureClientConfig: config.AzureClientConfig{
 							AzureAuthConfig: azclient.AzureAuthConfig{
 								UseManagedIdentityExtension: true,
 							},
@@ -1980,8 +1980,8 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: azure.Config{
-						AzureAuthConfig: config.AzureAuthConfig{},
+					Config: config.Config{
+						AzureClientConfig: config.AzureClientConfig{},
 					},
 				}
 				expectedAuthAzcopyEnv := []string{}
@@ -2009,7 +2009,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: azure.Config{},
+					Config: config.Config{},
 				}
 				secrets := map[string]string{
 					defaultSecretAccountName: "accountName",
@@ -2029,8 +2029,8 @@ func TestGetAzcopyAuth(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: azure.Config{
-						AzureAuthConfig: config.AzureAuthConfig{
+					Config: config.Config{
+						AzureClientConfig: config.AzureClientConfig{
 							AzureAuthConfig: azclient.AzureAuthConfig{
 								UseManagedIdentityExtension: true,
 							},
@@ -2052,8 +2052,8 @@ func TestGetAzcopyAuth(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: azure.Config{
-						AzureAuthConfig: config.AzureAuthConfig{
+					Config: config.Config{
+						AzureClientConfig: config.AzureClientConfig{
 							AzureAuthConfig: azclient.AzureAuthConfig{
 								UseManagedIdentityExtension: true,
 							},
@@ -2078,7 +2078,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: azure.Config{},
+					Config: config.Config{},
 				}
 				secrets := map[string]string{
 					defaultSecretAccountName: "accountName",
