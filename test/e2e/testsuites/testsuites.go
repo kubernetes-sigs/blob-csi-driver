@@ -413,7 +413,7 @@ func (t *TestDeployment) Cleanup(ctx context.Context) {
 	framework.Logf("deleting Deployment %q/%q", t.namespace.Name, t.deployment.Name)
 	body, err := t.Logs(ctx)
 	if err != nil {
-		framework.Logf("Error getting logs for pod %s: %w", t.podName, err)
+		framework.Logf("Error getting logs for pod %s: %v", t.podName, err)
 	} else {
 		framework.Logf("Pod %s has the following logs: %s", t.podName, body)
 	}
@@ -466,7 +466,7 @@ func (t *TestPod) Create(ctx context.Context) {
 }
 
 func (t *TestPod) WaitForSuccess(ctx context.Context) {
-	err := e2epod.WaitForPodSuccessInNamespaceSlow(ctx, t.client, t.pod.Name, t.namespace.Name)
+	err := e2epod.WaitForPodSuccessInNamespaceTimeout(ctx, t.client, t.pod.Name, t.namespace.Name, 15*time.Minute)
 	framework.ExpectNoError(err)
 }
 
@@ -616,7 +616,7 @@ func cleanupPodOrFail(ctx context.Context, client clientset.Interface, name, nam
 	framework.Logf("deleting Pod %q/%q", namespace, name)
 	body, err := podLogs(ctx, client, name, namespace)
 	if err != nil {
-		framework.Logf("Error getting logs for pod %s: %w", name, err)
+		framework.Logf("Error getting logs for pod %s: %v", name, err)
 	} else {
 		framework.Logf("Pod %s has the following logs: %s", name, body)
 	}
@@ -637,7 +637,7 @@ func waitForPersistentVolumeClaimDeleted(ctx context.Context, c clientset.Interf
 				framework.Logf("Claim %q in namespace %q doesn't exist in the system", pvcName, ns)
 				return nil
 			}
-			framework.Logf("Failed to get claim %q in namespace %q, retrying in %v. Error: %w", pvcName, ns, Poll, err)
+			framework.Logf("Failed to get claim %q in namespace %q, retrying in %v. Error: %v", pvcName, ns, Poll, err)
 		}
 	}
 	return fmt.Errorf("PersistentVolumeClaim %s is not removed from the system within %v", pvcName, timeout)

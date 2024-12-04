@@ -39,7 +39,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	k8sutil "k8s.io/kubernetes/pkg/volume/util"
 	mount "k8s.io/mount-utils"
 	utilexec "k8s.io/utils/exec"
 
@@ -299,7 +298,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 	}
 
 	var err error
-	getter := func(_ string) (interface{}, error) { return nil, nil }
+	getter := func(_ context.Context, _ string) (interface{}, error) { return nil, nil }
 	if d.accountSearchCache, err = azcache.NewTimedCache(time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
@@ -436,7 +435,7 @@ func getValidContainerName(volumeName, protocol string) string {
 	if !checkContainerNameBeginAndEnd(containerName) || len(containerName) < containerNameMinLength {
 		// now we set as 63 for maximum container name length
 		// todo: get cluster name
-		containerName = k8sutil.GenerateVolumeName(fmt.Sprintf("pvc-%s", protocol), uuid.NewUUID().String(), 63)
+		containerName = generateVolumeName(fmt.Sprintf("pvc-%s", protocol), uuid.NewUUID().String(), 63)
 		klog.Warningf("requested volume name (%s) is invalid, regenerated as (%q)", volumeName, containerName)
 	}
 	return strings.Replace(containerName, "--", "-", -1)
@@ -981,15 +980,15 @@ func (d *Driver) getSubnetResourceID(vnetResourceGroup, vnetName, subnetName str
 	return fmt.Sprintf(subnetTemplate, subsID, vnetResourceGroup, vnetName, subnetName)
 }
 
-func (d *Driver) useDataPlaneAPI(volumeID, accountName string) bool {
-	cache, err := d.dataPlaneAPIVolCache.Get(volumeID, azcache.CacheReadTypeDefault)
+func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName string) bool {
+	cache, err := d.dataPlaneAPIVolCache.Get(ctx, volumeID, azcache.CacheReadTypeDefault)
 	if err != nil {
 		klog.Errorf("get(%s) from dataPlaneAPIVolCache failed with error: %v", volumeID, err)
 	}
 	if cache != nil {
 		return true
 	}
-	cache, err = d.dataPlaneAPIVolCache.Get(accountName, azcache.CacheReadTypeDefault)
+	cache, err = d.dataPlaneAPIVolCache.Get(ctx, accountName, azcache.CacheReadTypeDefault)
 	if err != nil {
 		klog.Errorf("get(%s) from dataPlaneAPIVolCache failed with error: %v", accountName, err)
 	}
@@ -1121,4 +1120,19 @@ func isReadOnlyFromCapability(vc *csi.VolumeCapability) bool {
 	mode := vc.GetAccessMode().GetMode()
 	return (mode == csi.VolumeCapability_AccessMode_MULTI_NODE_READER_ONLY ||
 		mode == csi.VolumeCapability_AccessMode_SINGLE_NODE_READER_ONLY)
+}
+
+// generateVolumeName returns a PV name with clusterName prefix. The function
+// should be used to generate a name of GCE PD or Cinder volume. It basically
+// adds "<clusterName>-dynamic-" before the PV name, making sure the resulting
+// string fits given length and cuts "dynamic" if not.
+func generateVolumeName(clusterName, pvName string, maxLength int) string {
+	prefix := clusterName + "-dynamic"
+	pvLen := len(pvName)
+	// cut the "<clusterName>-dynamic" to fit full pvName into maxLength
+	// +1 for the '-' dash
+	if pvLen+1+len(prefix) > maxLength {
+		prefix = prefix[:maxLength-pvLen-1]
+	}
+	return prefix + "-" + pvName
 }
