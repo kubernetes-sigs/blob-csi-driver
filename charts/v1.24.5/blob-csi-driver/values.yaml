@@ -123,7 +123,7 @@ node:
     installBlobfuse: true
     blobfuseVersion: "1.4.5"
     installBlobfuse2: true
-    blobfuse2Version: "2.3.2"
+    blobfuse2Version: "2.4.0"
     setMaxOpenFileNum: true
     maxOpenFileNum: "9000000"
     disableUpdateDB: true
