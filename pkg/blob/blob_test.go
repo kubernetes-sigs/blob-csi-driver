@@ -1317,6 +1317,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 func TestUseDataPlaneAPI(t *testing.T) {
 	fakeVolumeID := "unit-test-id"
 	fakeAccountName := "unit-test-account"
+	ctx := context.Background()
 	testCases := []struct {
 		name     string
 		testFunc func(t *testing.T)
@@ -1326,7 +1327,7 @@ func TestUseDataPlaneAPI(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.dataPlaneAPIVolCache.Set(fakeVolumeID, "foo")
-				output := d.useDataPlaneAPI(fakeVolumeID, "")
+				output := d.useDataPlaneAPI(ctx, fakeVolumeID, "")
 				if !output {
 					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)
 				}
@@ -1337,7 +1338,7 @@ func TestUseDataPlaneAPI(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.dataPlaneAPIVolCache.Set(fakeAccountName, "foo")
-				output := d.useDataPlaneAPI(fakeAccountName, "")
+				output := d.useDataPlaneAPI(ctx, fakeAccountName, "")
 				if !output {
 					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)
 				}
@@ -1347,7 +1348,7 @@ func TestUseDataPlaneAPI(t *testing.T) {
 			name: "invalid volumeID and account",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				output := d.useDataPlaneAPI("", "")
+				output := d.useDataPlaneAPI(ctx, "", "")
 				if output {
 					t.Errorf("Actual Output: %t, Expected Output: %t", output, false)
 				}
@@ -1878,5 +1879,26 @@ func TestIsReadOnlyFromCapability(t *testing.T) {
 		if result != test.expectedResult {
 			t.Errorf("case(%s): isReadOnlyFromCapability returned with %v, not equal to %v", test.name, result, test.expectedResult)
 		}
+	}
+}
+
+func TestGenerateVolumeName(t *testing.T) {
+	// Normal operation, no truncate
+	v1 := generateVolumeName("kubernetes", "pv-cinder-abcde", 255)
+	if v1 != "kubernetes-dynamic-pv-cinder-abcde" {
+		t.Errorf("Expected kubernetes-dynamic-pv-cinder-abcde, got %s", v1)
+	}
+	// Truncate trailing "6789-dynamic"
+	prefix := strings.Repeat("0123456789", 9) // 90 characters prefix + 8 chars. of "-dynamic"
+	v2 := generateVolumeName(prefix, "pv-cinder-abcde", 100)
+	expect := prefix[:84] + "-pv-cinder-abcde"
+	if v2 != expect {
+		t.Errorf("Expected %s, got %s", expect, v2)
+	}
+	// Truncate really long cluster name
+	prefix = strings.Repeat("0123456789", 1000) // 10000 characters prefix
+	v3 := generateVolumeName(prefix, "pv-cinder-abcde", 100)
+	if v3 != expect {
+		t.Errorf("Expected %s, got %s", expect, v3)
 	}
 }
