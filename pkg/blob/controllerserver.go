@@ -93,7 +93,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace, tagValueDelimiter string
 	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning, createPrivateEndpoint, enableNfsV3, allowSharedKeyAccess *bool
-	var vnetResourceGroup, vnetName, subnetName, accessTier, networkEndpointType, storageEndpointSuffix, fsGroupChangePolicy string
+	var vnetResourceGroup, vnetName, subnetName, accessTier, networkEndpointType, storageEndpointSuffix, fsGroupChangePolicy, srcAccountName string
 	var matchTags, useDataPlaneAPI, getLatestAccountKey bool
 	var softDeleteBlobs, softDeleteContainers int32
 	var vnetResourceIDs []string
@@ -309,6 +309,25 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
 	}
 
+	requestName := "controller_create_volume"
+	if volContentSource != nil {
+		switch volContentSource.Type.(type) {
+		case *csi.VolumeContentSource_Snapshot:
+			return nil, status.Errorf(codes.InvalidArgument, "VolumeContentSource Snapshot is not yet implemented")
+		case *csi.VolumeContentSource_Volume:
+			requestName = "controller_create_volume_from_volume"
+			if volContentSource.GetVolume() != nil {
+				sourceID := volContentSource.GetVolume().VolumeId
+				_, srcAccountName, _, _, _, err = GetContainerInfo(sourceID) //nolint:dogsled
+				if err != nil {
+					klog.Errorf("failed to get source volume info from sourceID(%s), error: %v", sourceID, err)
+				} else {
+					klog.V(2).Infof("source volume account name: %s, sourceID: %s", srcAccountName, sourceID)
+				}
+			}
+		}
+	}
+
 	accountOptions := &azure.AccountOptions{
 		Name:                            account,
 		Type:                            storageAccountType,
@@ -336,6 +355,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		SoftDeleteBlobs:                 softDeleteBlobs,
 		SoftDeleteContainers:            softDeleteContainers,
 		GetLatestAccountKey:             getLatestAccountKey,
+		SourceAccountName:               srcAccountName,
 	}
 
 	containerName = replaceWithMap(containerName, containerNameReplaceMap)
@@ -358,16 +378,6 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, volName)
 	}
 	defer d.volumeLocks.Release(volName)
-
-	requestName := "controller_create_volume"
-	if volContentSource != nil {
-		switch volContentSource.Type.(type) {
-		case *csi.VolumeContentSource_Snapshot:
-			return nil, status.Errorf(codes.InvalidArgument, "VolumeContentSource Snapshot is not yet implemented")
-		case *csi.VolumeContentSource_Volume:
-			requestName = "controller_create_volume_from_volume"
-		}
-	}
 
 	var volumeID string
 	mc := metrics.NewMetricContext(blobCSIDriverName, requestName, d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
@@ -440,8 +450,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "failed to getAzcopyAuth on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
 		}
-		var copyErr error
-		copyErr = d.copyVolume(ctx, req, accountName, accountSASToken, authAzcopyEnv, validContainerName, secretNamespace, accountOptions, storageEndpointSuffix)
+		copyErr := d.copyVolume(ctx, req, accountName, accountSASToken, authAzcopyEnv, validContainerName, secretNamespace, accountOptions, storageEndpointSuffix)
 		if accountSASToken == "" && copyErr != nil && strings.Contains(copyErr.Error(), authorizationPermissionMismatch) {
 			klog.Warningf("azcopy copy failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original error: %v", copyErr)
 			accountSASToken, authAzcopyEnv, err := d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace, true)
