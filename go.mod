@@ -19,7 +19,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.0.1
 	github.com/kubernetes-csi/csi-lib-utils v0.16.0
 	github.com/onsi/ginkgo/v2 v2.22.0
-	github.com/onsi/gomega v1.36.0
+	github.com/onsi/gomega v1.36.1
 	github.com/pborman/uuid v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
@@ -39,7 +39,7 @@ require (
 	k8s.io/pod-security-admission v0.31.1
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8
 	sigs.k8s.io/cloud-provider-azure v1.31.1-0.20241203125659-88ef46cb15b8
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.2.5
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.2.7
 	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.1.8
 	sigs.k8s.io/yaml v1.4.0
 )
