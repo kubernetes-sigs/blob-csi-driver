@@ -16,7 +16,7 @@ require (
 	github.com/onsi/gomega v1.32.0
 	github.com/pborman/uuid v1.2.1
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/net v0.27.0
+	golang.org/x/net v0.33.0
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.34.2
 	k8s.io/api v0.29.7
