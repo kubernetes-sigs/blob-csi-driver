@@ -793,7 +793,17 @@ func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeReq
 	case util.AzcopyJobError, util.AzcopyJobCompleted:
 		return err
 	case util.AzcopyJobRunning:
-		return fmt.Errorf("wait for the existing AzCopy job to complete, current copy percentage is %s%%", percent)
+		err = wait.PollImmediate(20*time.Second, time.Duration(d.waitForAzCopyTimeoutMinutes)*time.Minute, func() (bool, error) {
+			jobState, percent, err := d.azcopy.GetAzcopyJob(dstContainerName, authAzcopyEnv)
+			klog.V(2).Infof("azcopy job status: %s, copy percent: %s%%, error: %v", jobState, percent, err)
+			if err != nil {
+				return false, err
+			}
+			if jobState == util.AzcopyJobRunning {
+				return false, nil
+			}
+			return true, nil
+		})
 	case util.AzcopyJobNotFound:
 		klog.V(2).Infof("copy blob container %s:%s to %s:%s", srcAccountName, srcContainerName, dstAccountName, dstContainerName)
 		execFunc := func() error {
@@ -806,13 +816,12 @@ func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeReq
 			_, percent, _ := d.azcopy.GetAzcopyJob(dstContainerName, authAzcopyEnv)
 			return fmt.Errorf("timeout waiting for copy blob container %s to %s complete, current copy percent: %s%%", srcContainerName, dstContainerName, percent)
 		}
-		copyErr := util.WaitUntilTimeout(time.Duration(d.waitForAzCopyTimeoutMinutes)*time.Minute, execFunc, timeoutFunc)
-		if copyErr != nil {
-			klog.Warningf("CopyBlobContainer(%s, %s, %s) failed with error: %v", accountOptions.ResourceGroup, dstAccountName, dstContainerName, copyErr)
-		} else {
-			klog.V(2).Infof("copied blob container %s to %s successfully", srcContainerName, dstContainerName)
-		}
-		return copyErr
+		err = util.WaitUntilTimeout(time.Duration(d.waitForAzCopyTimeoutMinutes)*time.Minute, execFunc, timeoutFunc)
+	}
+	if err != nil {
+		klog.Warningf("CopyBlobContainer(%s, %s, %s) failed with error: %v", accountOptions.ResourceGroup, dstAccountName, dstContainerName, err)
+	} else {
+		klog.V(2).Infof("copied blob container %s to %s successfully", srcContainerName, dstContainerName)
 	}
 	return err
 }
