@@ -13,7 +13,7 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   storageClassName: blob-nfs
   mountOptions:
-    - nconnect=4
+    - nconnect=4  # Azure Linux node does not support nconnect option
   csi:
     driver: blob.csi.azure.com
     # make sure volumeid is unique for every storage blob container in the cluster

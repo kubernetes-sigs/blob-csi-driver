@@ -22,7 +22,7 @@ allowVolumeExpansion: true
 parameters:
   protocol: nfs
 mountOptions:
-  - nconnect=4
+  - nconnect=4  # Azure Linux node does not support nconnect option
 ```
 
 run following command to create a storage class:

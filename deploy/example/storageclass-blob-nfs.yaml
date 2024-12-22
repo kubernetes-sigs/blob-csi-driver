@@ -9,4 +9,4 @@ parameters:
 volumeBindingMode: Immediate
 allowVolumeExpansion: true
 mountOptions:
-  - nconnect=4
+  - nconnect=4  # Azure Linux node does not support nconnect option
