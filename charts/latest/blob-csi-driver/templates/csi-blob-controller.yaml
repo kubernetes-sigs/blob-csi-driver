@@ -85,6 +85,7 @@ spec:
             - "--kube-api-qps=50"
             - "--kube-api-burst=100"
             - "--feature-gates=HonorPVReclaimPolicy=true"
+            - "--retry-interval-max=30m"
           env:
             - name: ADDRESS
               value: /csi/csi.sock
