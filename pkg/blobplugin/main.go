@@ -51,6 +51,11 @@ func init() {
 	driverOptions.AddFlags()
 }
 
+// exit is a separate function to handle program termination
+var exit = func(code int) {
+	os.Exit(code)
+}
+
 func main() {
 	klog.InitFlags(nil)
 	_ = flag.Set("logtostderr", "true")
@@ -61,12 +66,11 @@ func main() {
 			klog.Fatalln(err)
 		}
 		fmt.Println(info) // nolint
-		os.Exit(0)
+	} else {
+		exportMetrics()
+		handle()
 	}
-
-	exportMetrics()
-	handle()
-	os.Exit(0)
+	exit(0)
 }
 
 func handle() {
