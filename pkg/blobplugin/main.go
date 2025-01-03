@@ -48,6 +48,7 @@ var (
 )
 
 func init() {
+	klog.InitFlags(nil)
 	driverOptions.AddFlags()
 }
 
@@ -57,8 +58,6 @@ var exit = func(code int) {
 }
 
 func main() {
-	klog.InitFlags(nil)
-	_ = flag.Set("logtostderr", "true")
 	flag.Parse()
 	if *version {
 		info, err := blob.GetVersionYAML(driverOptions.DriverName)
