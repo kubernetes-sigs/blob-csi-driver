@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
@@ -45,15 +46,16 @@ var (
 	allowEmptyCloudConfig      = flag.Bool("allow-empty-cloud-config", true, "allow running driver without cloud config")
 	kubeAPIQPS                 = flag.Float64("kube-api-qps", 25.0, "QPS to use while communicating with the kubernetes apiserver.")
 	kubeAPIBurst               = flag.Int("kube-api-burst", 50, "Burst to use while communicating with the kubernetes apiserver.")
+	goMaxProcs                 = flag.Int("max-procs", 2, "maximum number of CPUs that can be executing simultaneously in golang runtime")
 )
 
 func init() {
+	klog.InitFlags(nil)
+	_ = flag.Set("logtostderr", "true")
 	driverOptions.AddFlags()
 }
 
 func main() {
-	klog.InitFlags(nil)
-	_ = flag.Set("logtostderr", "true")
 	flag.Parse()
 	if *version {
 		info, err := blob.GetVersionYAML(driverOptions.DriverName)
@@ -70,6 +72,9 @@ func main() {
 }
 
 func handle() {
+	runtime.GOMAXPROCS(*goMaxProcs)
+	klog.Infof("Sys info: NumCPU: %v MAXPROC: %v", runtime.NumCPU(), runtime.GOMAXPROCS(0))
+
 	userAgent := blob.GetUserAgent(driverOptions.DriverName, *customUserAgent, *userAgentSuffix)
 	klog.V(2).Infof("driver userAgent: %s", userAgent)
 
