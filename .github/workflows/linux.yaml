@@ -18,15 +18,6 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v4
 
-    - name: Run unit test
-      run: |
-        export PATH=$PATH:$HOME/.local/bin
-        wget https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
-        sudo dpkg -i packages-microsoft-prod.deb
-        sudo apt-get update
-        sudo apt-get install blobfuse
-        go test -race -covermode=atomic -coverprofile=profile.cov ./pkg/...
-
     - name: Run build test
       run: |
         export PATH=$PATH:$HOME/.local/bin
@@ -42,10 +33,19 @@ jobs:
         export PATH=$PATH:$HOME/.local/bin
         make blobfuse-proxy
 
+    - name: Run unit test
+      run: |
+        export PATH=$PATH:$HOME/.local/bin
+        wget https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
+        sudo dpkg -i packages-microsoft-prod.deb
+        sudo apt-get update
+        sudo apt-get install blobfuse
+        go test -race -covermode=atomic -coverprofile=profile.cov ./pkg/...
+
     - name: Install goveralls
       run: go install github.com/mattn/goveralls@latest
 
     - name: Send coverage
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: goveralls -coverprofile=profile.cov -service=github -ignore=./pkg/blobfuse-proxy/pb/azure_blob_mount.pb.go,./pkg/blobfuse-proxy/pb/azure_blob_mount_grpc.pb.go
+      run: goveralls -coverprofile=profile.cov -service=github -ignore=./pkg/blobfuse-proxy/pb
