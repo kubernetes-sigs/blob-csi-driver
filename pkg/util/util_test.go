@@ -19,12 +19,14 @@ package util
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	"k8s.io/kubernetes/pkg/volume"
 )
 
 func TestRoundUpBytes(t *testing.T) {
@@ -164,14 +166,19 @@ func TestGetMountOptions(t *testing.T) {
 }
 
 func TestMakeDir(t *testing.T) {
-	//Successfully create directory
-	targetTest := "./target_test"
+	// Successfully create directory
+	targetTest := filepath.Join(os.TempDir(), "TestMakeDir")
 	err := MakeDir(targetTest, 0777)
+	defer func() {
+		err := os.RemoveAll(targetTest)
+		assert.NoError(t, err)
+	}()
 	assert.NoError(t, err)
 
-	// Remove the directory created
-	err = os.RemoveAll(targetTest)
-	assert.NoError(t, err)
+	// create an existing directory
+	if err = MakeDir(targetTest, 0755); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
 }
 
 func TestConvertTagsToMap(t *testing.T) {
@@ -614,6 +621,11 @@ users:
 			envVariableHasConfig:     false,
 			envVariableConfigIsValid: false,
 		},
+		{
+			desc:        "no-need-kubeconfig",
+			kubeconfig:  "no-need-kubeconfig",
+			expectError: false,
+		},
 	}
 
 	for _, test := range tests {
@@ -622,6 +634,44 @@ users:
 		if test.expectError != receiveError {
 			t.Errorf("desc: %s,\n input: %q, GetCloudProvider err: %v, expectErr: %v", test.desc, test.kubeconfig, err, test.expectError)
 		}
+	}
+}
+
+func TestVolumeMounter(t *testing.T) {
+	path := "/mnt/data"
+	attributes := volume.Attributes{}
+
+	mounter := &VolumeMounter{
+		path:       path,
+		attributes: attributes,
+	}
+
+	if mounter.GetPath() != path {
+		t.Errorf("Expected path %s, but got %s", path, mounter.GetPath())
+	}
+
+	if mounter.GetAttributes() != attributes {
+		t.Errorf("Expected attributes %v, but got %v", attributes, mounter.GetAttributes())
+	}
+
+	if err := mounter.CanMount(); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if err := mounter.SetUp(volume.MounterArgs{}); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if err := mounter.SetUpAt("", volume.MounterArgs{}); err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	metrics, err := mounter.GetMetrics()
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	if metrics != nil {
+		t.Errorf("Expected nil metrics, but got %v", metrics)
 	}
 }
 
