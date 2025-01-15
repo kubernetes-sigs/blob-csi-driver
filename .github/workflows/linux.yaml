@@ -48,4 +48,4 @@ jobs:
     - name: Send coverage
       env:
         COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: goveralls -coverprofile=profile.cov -service=github -ignore=./pkg/blobfuse-proxy/pb
+      run: goveralls -coverprofile=profile.cov -service=github -ignore=pkg/blobfuse-proxy/pb/azure_blob_mount.pb.go,pkg/blobfuse-proxy/pb/azure_blob_mount_grpc.pb.go
