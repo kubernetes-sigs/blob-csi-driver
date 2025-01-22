@@ -29,6 +29,7 @@ import (
 
 var (
 	blobfuseProxyEndpoint = flag.String("blobfuse-proxy-endpoint", "unix://tmp/blobfuse-proxy.sock", "blobfuse-proxy endpoint")
+	grpcServerRunner      = server.RunGRPCServer
 )
 
 func main() {
@@ -55,7 +56,7 @@ func main() {
 	mountServer := server.NewMountServiceServer()
 
 	klog.V(2).Infof("Listening for connections on address: %v\n", listener.Addr())
-	if err = server.RunGRPCServer(mountServer, false, listener); err != nil {
+	if err = grpcServerRunner(mountServer, false, listener); err != nil {
 		klog.Fatalf("Error running grpc server %v. Error: %v", listener.Addr(), err)
 	}
 }
