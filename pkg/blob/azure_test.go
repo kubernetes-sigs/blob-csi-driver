@@ -38,7 +38,6 @@ import (
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/mock_azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/subnetclient/mock_subnetclient"
 	azureprovider "sigs.k8s.io/cloud-provider-azure/pkg/provider"
-	azureconfig "sigs.k8s.io/cloud-provider-azure/pkg/provider/config"
 )
 
 // TestGetCloudProvider tests the func getCloudProvider().
@@ -273,7 +272,7 @@ func TestUpdateSubnetServiceEndpoints(t *testing.T) {
 	mockSubnetClient := mock_subnetclient.NewMockInterface(ctrl)
 	networkClientFactory := mock_azclient.NewMockClientFactory(ctrl)
 	networkClientFactory.EXPECT().GetSubnetClient().Return(mockSubnetClient).AnyTimes()
-	config := azureconfig.Config{
+	config := azureprovider.Config{
 		ResourceGroup: "rg",
 		Location:      "loc",
 		VnetName:      "fake-vnet",

@@ -1879,7 +1879,7 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: config.Config{
+					Config: azure.Config{
 						AzureClientConfig: config.AzureClientConfig{
 							ARMClientConfig: azclient.ARMClientConfig{
 								TenantID: "TenantID",
@@ -1909,7 +1909,7 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: config.Config{
+					Config: azure.Config{
 						AzureClientConfig: config.AzureClientConfig{
 							ARMClientConfig: azclient.ARMClientConfig{
 								TenantID: "TenantID",
@@ -1933,7 +1933,7 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: config.Config{
+					Config: azure.Config{
 						AzureClientConfig: config.AzureClientConfig{
 							AzureAuthConfig: azclient.AzureAuthConfig{
 								UseManagedIdentityExtension: true,
@@ -1958,7 +1958,7 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: config.Config{
+					Config: azure.Config{
 						AzureClientConfig: config.AzureClientConfig{
 							AzureAuthConfig: azclient.AzureAuthConfig{
 								UseManagedIdentityExtension: true,
@@ -1981,7 +1981,7 @@ func TestAuthorizeAzcopyWithIdentity(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: config.Config{
+					Config: azure.Config{
 						AzureClientConfig: config.AzureClientConfig{},
 					},
 				}
@@ -2010,7 +2010,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: config.Config{},
+					Config: azure.Config{},
 				}
 				secrets := map[string]string{
 					defaultSecretAccountName: "accountName",
@@ -2030,7 +2030,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: config.Config{
+					Config: azure.Config{
 						AzureClientConfig: config.AzureClientConfig{
 							AzureAuthConfig: azclient.AzureAuthConfig{
 								UseManagedIdentityExtension: true,
@@ -2053,7 +2053,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: config.Config{
+					Config: azure.Config{
 						AzureClientConfig: config.AzureClientConfig{
 							AzureAuthConfig: azclient.AzureAuthConfig{
 								UseManagedIdentityExtension: true,
@@ -2079,7 +2079,7 @@ func TestGetAzcopyAuth(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.cloud = &azure.Cloud{
-					Config: config.Config{},
+					Config: azure.Config{},
 				}
 				secrets := map[string]string{
 					defaultSecretAccountName: "accountName",
