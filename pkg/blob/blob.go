@@ -18,6 +18,7 @@ package blob
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -156,6 +157,9 @@ const (
 	FSGroupChangeNone = "None"
 	// define tag value delimiter and default is comma
 	tagValueDelimiterField = "tagvaluedelimiter"
+
+	DefaultTokenAudience = "api://AzureADTokenExchange" //nolint:gosec // G101 ignore this!
+
 )
 
 var (
@@ -568,14 +572,19 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		tenantID = d.cloud.TenantID
 	}
 
-	// if client id is specified, we only use service account token to get account key
+	// if client id is specified, we only use workload identity for blobfuse auth
 	if clientID != "" {
-		klog.V(2).Infof("clientID(%s) is specified, use service account token to get account key", clientID)
-		if subsID == "" {
-			subsID = d.cloud.SubscriptionID
+		klog.V(2).Infof("clientID(%s) is specified, use workload identity for blobfuse auth", clientID)
+
+		workloadIdentityToken, err := parseServiceAccountToken(serviceAccountToken)
+		if err != nil {
+			return rgName, accountName, accountKey, containerName, authEnv, err
 		}
-		accountKey, err := d.cloud.GetStorageAccesskeyFromServiceAccountToken(ctx, subsID, accountName, rgName, clientID, tenantID, serviceAccountToken)
-		authEnv = append(authEnv, "AZURE_STORAGE_ACCESS_KEY="+accountKey)
+
+		authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+clientID)
+		authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+tenantID)
+		authEnv = append(authEnv, "WORKLOAD_IDENTITY_TOKEN="+workloadIdentityToken)
+
 		return rgName, accountName, accountKey, containerName, authEnv, err
 	}
 
@@ -1135,4 +1144,29 @@ func generateVolumeName(clusterName, pvName string, maxLength int) string {
 		prefix = prefix[:maxLength-pvLen-1]
 	}
 	return prefix + "-" + pvName
+}
+
+// serviceAccountToken represents the service account token sent from NodePublishVolume Request.
+// ref: https://kubernetes-csi.github.io/docs/token-requests.html
+type serviceAccountToken struct {
+	APIAzureADTokenExchange struct {
+		Token               string    `json:"token"`
+		ExpirationTimestamp time.Time `json:"expirationTimestamp"`
+	} `json:"api://AzureADTokenExchange"`
+}
+
+// parseServiceAccountToken parses the bound service account token from the token passed from NodePublishVolume Request.
+// ref: https://kubernetes-csi.github.io/docs/token-requests.html
+func parseServiceAccountToken(tokenStr string) (string, error) {
+	if len(tokenStr) == 0 {
+		return "", fmt.Errorf("service account token is empty")
+	}
+	token := serviceAccountToken{}
+	if err := json.Unmarshal([]byte(tokenStr), &token); err != nil {
+		return "", fmt.Errorf("failed to unmarshal service account tokens, error: %w", err)
+	}
+	if token.APIAzureADTokenExchange.Token == "" {
+		return "", fmt.Errorf("token for audience %s not found", DefaultTokenAudience)
+	}
+	return token.APIAzureADTokenExchange.Token, nil
 }
