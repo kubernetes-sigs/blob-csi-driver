@@ -92,8 +92,8 @@ spec:
   persistentVolumeReclaimPolicy: Retain
   csi:
     driver: blob.csi.azure.com
-    # make sure volumeid is unique for every storage blob container in the cluster
-    volumeHandle: account-name_container-name
+    # make sure volumeHandle is unique for every storage blob container in the cluster
+    volumeHandle: "{resource-group-name}#{account-name}#{container-name}"
     volumeAttributes:
       containerName: EXISTING_CONTAINER_NAME
     nodeStageSecretRef:

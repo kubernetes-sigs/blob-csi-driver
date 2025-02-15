@@ -83,7 +83,7 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
         driver: blob.csi.azure.com
         # make sure this volumeid is unique in the cluster
         # `#` is not allowed in self defined volumeHandle
-        volumeHandle: pv-blob
+        volumeHandle: "{resource-group-name}#{account-name}#{container-name}"
         volumeAttributes:
           protocol: fuse
           resourceGroup: EXISTING_RESOURCE_GROUP_NAME   # optional, node resource group if it's not provided
