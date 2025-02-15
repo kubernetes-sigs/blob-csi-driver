@@ -454,10 +454,10 @@ k8s.io/kube-openapi v0.0.0-20240730131305-7a9a4e85957e h1:OnKkExfhk4yxMqvBSPzUfh
 k8s.io/kube-openapi v0.0.0-20240730131305-7a9a4e85957e/go.mod h1:0CVn9SVo8PeW5/JgsBZZIFmmTk5noOM8WXf2e1tCihE=
 k8s.io/kubectl v0.31.3 h1:3r111pCjPsvnR98oLLxDMwAeM6OPGmPty6gSKaLTQes=
 k8s.io/kubectl v0.31.3/go.mod h1:lhMECDCbJN8He12qcKqs2QfmVo9Pue30geovBVpH5fs=
-k8s.io/kubelet v0.31.3 h1:DIXRAmvVGp42mV2vpA1GCLU6oO8who0/vp3Oq6kSpbI=
-k8s.io/kubelet v0.31.3/go.mod h1:KSdbEfNy5VzqUlAHlytA/fH12s+sE1u8fb/8JY9sL/8=
-k8s.io/kubernetes v1.31.3 h1:oqb7HdfnTelrGlZ6ziNugvQ/L/aJWR704114EAhUn9Q=
-k8s.io/kubernetes v1.31.3/go.mod h1:9xmT2buyTYj8TRKwRae7FcuY8k5+xlxv7VivvO0KKfs=
+k8s.io/kubelet v0.31.6 h1:lxVvyLNDcb/QTpQNkDySk3iscgq4zubeSZs3cF6PmaA=
+k8s.io/kubelet v0.31.6/go.mod h1:BPghO52ilF7UzFEVBmYFOxdVtLge0P1gixjz84lBzzc=
+k8s.io/kubernetes v1.31.6 h1:zVhgWDFHmIj51o5sNARmjdgNvpq4K2Smya8pS5vxqlc=
+k8s.io/kubernetes v1.31.6/go.mod h1:9xmT2buyTYj8TRKwRae7FcuY8k5+xlxv7VivvO0KKfs=
 k8s.io/mount-utils v0.32.1 h1:RJOD6xXzEJT/OOJoG1KstfVa8ZXJJPlHb+t2MoulPHM=
 k8s.io/mount-utils v0.32.1/go.mod h1:Kun5c2svjAPx0nnvJKYQWhfeNW+O0EpzHgRhDcYoSY0=
 k8s.io/pod-security-admission v0.31.3 h1:8NzEV0HtdStX367AuSKfRMIZHn0hT4xuz8xNEf7/zO8=

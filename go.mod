@@ -28,13 +28,13 @@ require (
 	golang.org/x/sync v0.11.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.36.5
-	k8s.io/api v0.31.4
-	k8s.io/apimachinery v0.31.4
-	k8s.io/apiserver v0.31.3
-	k8s.io/client-go v0.31.4
-	k8s.io/component-base v0.31.3
+	k8s.io/api v0.31.6
+	k8s.io/apimachinery v0.31.6
+	k8s.io/apiserver v0.31.6
+	k8s.io/client-go v0.31.6
+	k8s.io/component-base v0.31.6
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/kubernetes v1.31.3
+	k8s.io/kubernetes v1.31.6
 	k8s.io/mount-utils v0.32.1
 	k8s.io/pod-security-admission v0.31.1
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
@@ -194,8 +194,8 @@ replace (
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.31.3
 	k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.31.3
 	k8s.io/kubectl => k8s.io/kubectl v0.31.3
-	k8s.io/kubelet => k8s.io/kubelet v0.31.3
-	k8s.io/kubernetes => k8s.io/kubernetes v1.31.3
+	k8s.io/kubelet => k8s.io/kubelet v0.31.6
+	k8s.io/kubernetes => k8s.io/kubernetes v1.31.6
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.31.3
 	k8s.io/metrics => k8s.io/metrics v0.31.3
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.31.3
