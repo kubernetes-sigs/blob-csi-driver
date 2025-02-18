@@ -182,6 +182,12 @@ spec:
             - name: AZURE_ENVIRONMENT_FILEPATH
               value: /etc/kubernetes/azurestackcloud.json
             {{- end }}
+            - name: AZCOPY_CONCURRENCY_VALUE
+              value: "10"
+            - name: AZCOPY_CONCURRENT_FILES
+              value: "20"
+            - name: AZCOPY_BUFFER_GB
+              value: "1"
           imagePullPolicy: {{ .Values.image.blob.pullPolicy }}
           volumeMounts:
             - mountPath: /csi
