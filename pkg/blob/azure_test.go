@@ -25,20 +25,22 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"time"
 
 	network "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	"github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/mock_azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/subnetclient/mock_subnetclient"
-	azureprovider "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 	azureconfig "sigs.k8s.io/cloud-provider-azure/pkg/provider/config"
+	"sigs.k8s.io/cloud-provider-azure/pkg/provider/storage"
 )
 
 // TestGetCloudProvider tests the func getCloudProvider().
@@ -221,7 +223,7 @@ users:
 		if cloud == nil {
 			t.Errorf("return value of getCloudProvider should not be nil even there is error")
 		} else {
-			assert.Equal(t, cloud.Environment.StorageEndpointSuffix, storage.DefaultBaseURL)
+			assert.Equal(t, cloud.Environment.StorageEndpointSuffix, "core.windows.net")
 			assert.Equal(t, cloud.UserAgent, test.userAgent)
 			assert.Equal(t, cloud.AADFederatedTokenFile, test.aadFederatedTokenFile)
 			assert.Equal(t, cloud.UseFederatedWorkloadIdentityExtension, test.useFederatedWorkloadIdentityExtension)
@@ -232,17 +234,12 @@ users:
 }
 
 func TestGetKeyVaultSecretContent(t *testing.T) {
-	env := azure.Environment{
-		ActiveDirectoryEndpoint: "unit-test",
-		KeyVaultEndpoint:        "unit-test",
-	}
 	d := NewFakeDriver()
-	d.cloud = &azureprovider.Cloud{}
-	d.cloud.Environment = env
+	var err error
 	valueURL := "unit-test"
 	secretName := "unit-test"
 	secretVersion := "v1"
-	_, err := d.getKeyVaultSecretContent(context.TODO(), valueURL, secretName, secretVersion)
+	_, err = d.getKeyVaultSecretContent(context.TODO(), valueURL, secretName, secretVersion)
 	expectedErr := fmt.Errorf("no Host in request URL")
 	if !strings.Contains(err.Error(), expectedErr.Error()) {
 		t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
@@ -280,7 +277,7 @@ func TestUpdateSubnetServiceEndpoints(t *testing.T) {
 		SubnetName:    "fake-subnet",
 	}
 
-	d.cloud = &azureprovider.Cloud{
+	d.cloud = &storage.AccountRepo{
 		Config:               config,
 		NetworkClientFactory: networkClientFactory,
 	}
@@ -374,7 +371,7 @@ func TestGetStorageEndPointSuffix(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		cloud          *azureprovider.Cloud
+		cloud          *storage.AccountRepo
 		expectedSuffix string
 	}{
 		{
@@ -384,13 +381,13 @@ func TestGetStorageEndPointSuffix(t *testing.T) {
 		},
 		{
 			name:           "empty cloud",
-			cloud:          &azureprovider.Cloud{},
+			cloud:          &storage.AccountRepo{},
 			expectedSuffix: "core.windows.net",
 		},
 		{
 			name: "cloud with storage endpoint suffix",
-			cloud: &azureprovider.Cloud{
-				Environment: azure.Environment{
+			cloud: &storage.AccountRepo{
+				Environment: &azclient.Environment{
 					StorageEndpointSuffix: "suffix",
 				},
 			},
@@ -398,15 +395,19 @@ func TestGetStorageEndPointSuffix(t *testing.T) {
 		},
 		{
 			name: "public cloud",
-			cloud: &azureprovider.Cloud{
-				Environment: azure.PublicCloud,
+			cloud: &storage.AccountRepo{
+				Environment: &azclient.Environment{
+					StorageEndpointSuffix: "core.windows.net",
+				},
 			},
 			expectedSuffix: "core.windows.net",
 		},
 		{
 			name: "china cloud",
-			cloud: &azureprovider.Cloud{
-				Environment: azure.ChinaCloud,
+			cloud: &storage.AccountRepo{
+				Environment: &azclient.Environment{
+					StorageEndpointSuffix: "core.chinacloudapi.cn",
+				},
 			},
 			expectedSuffix: "core.chinacloudapi.cn",
 		},
@@ -427,7 +428,7 @@ func TestGetCloudEnvironment(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		cloud       *azureprovider.Cloud
+		cloud       *storage.AccountRepo
 		expectedEnv azure.Environment
 	}{
 		{
@@ -437,8 +438,10 @@ func TestGetCloudEnvironment(t *testing.T) {
 		},
 		{
 			name: "cloud with environment",
-			cloud: &azureprovider.Cloud{
-				Environment: azure.ChinaCloud,
+			cloud: &storage.AccountRepo{
+				Environment: &azclient.Environment{
+					Name: "AzureChinaCloud",
+				},
 			},
 			expectedEnv: azure.ChinaCloud,
 		},
@@ -447,6 +450,57 @@ func TestGetCloudEnvironment(t *testing.T) {
 	for _, test := range tests {
 		d.cloud = test.cloud
 		env := d.getCloudEnvironment()
-		assert.Equal(t, test.expectedEnv, env, test.name)
+		assert.Equal(t, test.expectedEnv.Name, env.Name, test.name)
+	}
+}
+
+func TestGetBackOff(t *testing.T) {
+	tests := []struct {
+		desc     string
+		config   azureconfig.Config
+		expected wait.Backoff
+	}{
+		{
+			desc: "default backoff",
+			config: azureconfig.Config{
+				AzureClientConfig: azureconfig.AzureClientConfig{
+					CloudProviderBackoffRetries:  0,
+					CloudProviderBackoffDuration: 5,
+				},
+				CloudProviderBackoffExponent: 2,
+				CloudProviderBackoffJitter:   1,
+			},
+			expected: wait.Backoff{
+				Steps:    1,
+				Duration: 5 * time.Second,
+				Factor:   2,
+				Jitter:   1,
+			},
+		},
+		{
+			desc: "backoff with retries > 1",
+			config: azureconfig.Config{
+				AzureClientConfig: azureconfig.AzureClientConfig{
+					CloudProviderBackoffRetries:  3,
+					CloudProviderBackoffDuration: 4,
+				},
+				CloudProviderBackoffExponent: 2,
+				CloudProviderBackoffJitter:   1,
+			},
+			expected: wait.Backoff{
+				Steps:    3,
+				Duration: 4 * time.Second,
+				Factor:   2,
+				Jitter:   1,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		result := getBackOff(test.config)
+		if !reflect.DeepEqual(result, test.expected) {
+			t.Errorf("desc: (%s), input: config(%v), getBackOff returned with backoff(%v), not equal to expected(%v)",
+				test.desc, test.config, result, test.expected)
+		}
 	}
 }

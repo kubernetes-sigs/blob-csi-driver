@@ -46,8 +46,7 @@ import (
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
-	"sigs.k8s.io/cloud-provider-azure/pkg/provider"
-	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
+	"sigs.k8s.io/cloud-provider-azure/pkg/provider/storage"
 )
 
 const (
@@ -218,7 +217,7 @@ type Driver struct {
 	csi.UnimplementedIdentityServer
 	csi.UnimplementedNodeServer
 
-	cloud                 *azure.Cloud
+	cloud                 *storage.AccountRepo
 	clientFactory         azclient.ClientFactory
 	networkClientFactory  azclient.ClientFactory
 	KubeClient            kubernetes.Interface
@@ -264,7 +263,7 @@ type Driver struct {
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
 // does not support optional driver plugin info manifest field. Refer to CSI spec for more details.
-func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *provider.Cloud) *Driver {
+func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *storage.AccountRepo) *Driver {
 	d := Driver{
 		volLockMap:                             util.NewLockMap(),
 		subnetLockMap:                          util.NewLockMap(),
@@ -617,7 +616,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 				if err != nil && !getAccountKeyFromSecret && (azureStorageAuthType == "" || strings.EqualFold(azureStorageAuthType, "key")) {
 					klog.V(2).Infof("get account(%s) key from secret(%s, %s) failed with error: %v, use cluster identity to get account key instead",
 						accountName, secretNamespace, secretName, err)
-					accountKey, err = d.cloud.GetStorageAccesskey(ctx, subsID, accountName, rgName, getLatestAccountKey)
+					accountKey, err = d.GetStorageAccesskeyWithSubsID(ctx, subsID, accountName, rgName, getLatestAccountKey)
 					if err != nil {
 						return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
 					}
@@ -750,8 +749,7 @@ func (d *Driver) GetStorageAccountAndContainer(ctx context.Context, volumeID str
 			if rgName == "" {
 				rgName = d.cloud.ResourceGroup
 			}
-
-			accountKey, err = d.cloud.GetStorageAccesskey(ctx, subsID, accountName, rgName, getLatestAccountKey)
+			accountKey, err = d.GetStorageAccesskeyWithSubsID(ctx, subsID, accountName, rgName, getLatestAccountKey)
 			if err != nil {
 				return "", "", "", "", fmt.Errorf("no key for storage account(%s) under resource group(%s), err %w", accountName, rgName, err)
 			}
@@ -915,7 +913,7 @@ func setAzureCredentials(ctx context.Context, kubeClient kubernetes.Interface, a
 //  1. secrets (if not empty)
 //  2. use k8s client identity to read from k8s secret
 //  3. use cluster identity to get from storage account directly
-func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, string, error) {
+func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *storage.AccountOptions, secrets map[string]string, secretName, secretNamespace string) (string, string, error) {
 	if len(secrets) > 0 {
 		return getStorageAccount(secrets)
 	}
@@ -925,11 +923,23 @@ func (d *Driver) GetStorageAccesskey(ctx context.Context, accountOptions *azure.
 		secretName = fmt.Sprintf(secretNameTemplate, accountOptions.Name)
 	}
 	_, accountKey, _, _, _, _, _, err := d.GetInfoFromSecret(ctx, secretName, secretNamespace) //nolint
-	if err != nil {
+	if err != nil && d.cloud != nil {
 		klog.V(2).Infof("could not get account(%s) key from secret(%s) namespace(%s), error: %v, use cluster identity to get account key instead", accountOptions.Name, secretName, secretNamespace, err)
-		accountKey, err = d.cloud.GetStorageAccesskey(ctx, accountOptions.SubscriptionID, accountOptions.Name, accountOptions.ResourceGroup, accountOptions.GetLatestAccountKey)
+		accountKey, err = d.GetStorageAccesskeyWithSubsID(ctx, accountOptions.SubscriptionID, accountOptions.Name, accountOptions.ResourceGroup, accountOptions.GetLatestAccountKey)
 	}
 	return accountOptions.Name, accountKey, err
+}
+
+// GetStorageAccesskeyWithSubsID get Azure storage account key from storage account directly
+func (d *Driver) GetStorageAccesskeyWithSubsID(ctx context.Context, subsID, account, resourceGroup string, getLatestAccountKey bool) (string, error) {
+	if d.cloud == nil || d.cloud.ComputeClientFactory == nil {
+		return "", fmt.Errorf("could not get account key: cloud or ComputeClientFactory is nil")
+	}
+	accountClient, err := d.cloud.ComputeClientFactory.GetAccountClientForSub(subsID)
+	if err != nil {
+		return "", err
+	}
+	return d.cloud.GetStorageAccesskey(ctx, accountClient, account, resourceGroup, getLatestAccountKey)
 }
 
 // GetInfoFromSecret get info from k8s secret

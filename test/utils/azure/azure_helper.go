@@ -50,6 +50,10 @@ func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string, a
 		TenantID:  tenantID,
 		UserAgent: blob.GetUserAgent(blob.DefaultDriverName, "", "e2e-test"),
 	}
+	clientOps, _, err := azclient.GetAzureCloudConfigAndEnvConfig(armConfig)
+	if err != nil {
+		return nil, err
+	}
 	useFederatedWorkloadIdentityExtension := false
 	if aadFederatedTokenFile != "" {
 		useFederatedWorkloadIdentityExtension = true
@@ -66,7 +70,7 @@ func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string, a
 	cred := credProvider.GetAzIdentity()
 	factory, err := azclient.NewClientFactory(&azclient.ClientFactoryConfig{
 		SubscriptionID: subscriptionID,
-	}, armConfig, cred)
+	}, armConfig, clientOps, cred)
 	if err != nil {
 		return nil, err
 	}

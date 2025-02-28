@@ -45,8 +45,7 @@ import (
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/blobcontainerclient"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 	"sigs.k8s.io/cloud-provider-azure/pkg/metrics"
-	"sigs.k8s.io/cloud-provider-azure/pkg/provider"
-	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
+	"sigs.k8s.io/cloud-provider-azure/pkg/provider/storage"
 )
 
 const (
@@ -327,7 +326,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		}
 	}
 
-	accountOptions := &azure.AccountOptions{
+	accountOptions := &storage.AccountOptions{
 		Name:                            account,
 		Type:                            storageAccountType,
 		Kind:                            accountKind,
@@ -348,7 +347,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		SubnetName:                      subnetName,
 		AccessTier:                      accessTier,
 		CreatePrivateEndpoint:           createPrivateEndpoint,
-		StorageType:                     provider.StorageTypeBlob,
+		StorageType:                     storage.StorageTypeBlob,
 		StorageEndpointSuffix:           storageEndpointSuffix,
 		EnableBlobVersioning:            enableBlobVersioning,
 		SoftDeleteBlobs:                 softDeleteBlobs,
@@ -401,7 +400,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 				accountName = cache.(string)
 			} else {
 				d.volLockMap.LockEntry(lockKey)
-				err = wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+				err = wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 					var retErr error
 					accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(ctx, accountOptions, protocol)
 					if isRetriableError(retErr) {
@@ -699,7 +698,7 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
 	}
-	return wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+	return wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
 			container, getErr := getContainerReference(containerName, secrets, d.getCloudEnvironment())
@@ -738,7 +737,7 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
 	}
-	return wait.ExponentialBackoff(d.cloud.RequestBackoff(), func() (bool, error) {
+	return wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
 			container, getErr := getContainerReference(containerName, secrets, d.getCloudEnvironment())
@@ -769,7 +768,7 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 }
 
 // copyBlobContainer copies source volume content into a destination volume
-func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeRequest, dstAccountName string, dstAccountSasToken string, authAzcopyEnv []string, dstContainerName string, secretNamespace string, accountOptions *azure.AccountOptions, storageEndpointSuffix string) error {
+func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeRequest, dstAccountName string, dstAccountSasToken string, authAzcopyEnv []string, dstContainerName string, secretNamespace string, accountOptions *storage.AccountOptions, storageEndpointSuffix string) error {
 	var sourceVolumeID string
 	if req.GetVolumeContentSource() != nil && req.GetVolumeContentSource().GetVolume() != nil {
 		sourceVolumeID = req.GetVolumeContentSource().GetVolume().GetVolumeId()
@@ -787,7 +786,7 @@ func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeReq
 	}
 	srcAccountSasToken := dstAccountSasToken
 	if srcAccountName != dstAccountName && dstAccountSasToken != "" {
-		srcAccountOptions := &azure.AccountOptions{
+		srcAccountOptions := &storage.AccountOptions{
 			Name:                srcAccountName,
 			ResourceGroup:       srcResourceGroupName,
 			SubscriptionID:      srcSubscriptionID,
@@ -840,7 +839,7 @@ func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeReq
 }
 
 // copyVolume copies a volume form volume or snapshot, snapshot is not supported now
-func (d *Driver) copyVolume(ctx context.Context, req *csi.CreateVolumeRequest, accountName string, accountSASToken string, authAzcopyEnv []string, dstContainerName, secretNamespace string, accountOptions *azure.AccountOptions, storageEndpointSuffix string) error {
+func (d *Driver) copyVolume(ctx context.Context, req *csi.CreateVolumeRequest, accountName string, accountSASToken string, authAzcopyEnv []string, dstContainerName, secretNamespace string, accountOptions *storage.AccountOptions, storageEndpointSuffix string) error {
 	vs := req.VolumeContentSource
 	switch vs.Type.(type) {
 	case *csi.VolumeContentSource_Snapshot:
@@ -897,7 +896,7 @@ func (d *Driver) authorizeAzcopyWithIdentity() ([]string, error) {
 // 1. secrets is not empty
 // 2. driver is not using managed identity and service principal
 // 3. parameter useSasToken is true
-func (d *Driver) getAzcopyAuth(ctx context.Context, accountName, accountKey, storageEndpointSuffix string, accountOptions *azure.AccountOptions, secrets map[string]string, secretName, secretNamespace string, useSasToken bool) (string, []string, error) {
+func (d *Driver) getAzcopyAuth(ctx context.Context, accountName, accountKey, storageEndpointSuffix string, accountOptions *storage.AccountOptions, secrets map[string]string, secretName, secretNamespace string, useSasToken bool) (string, []string, error) {
 	var authAzcopyEnv []string
 	var err error
 	if !useSasToken && !d.useDataPlaneAPI(ctx, "", accountName) && len(secrets) == 0 && len(secretName) == 0 {

@@ -20,13 +20,14 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	network "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
-	"github.com/Azure/azure-sdk-for-go/storage"
 	azure2 "github.com/Azure/go-autorest/autorest/azure"
 	"golang.org/x/net/context"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -35,6 +36,7 @@ import (
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
 	azureconfig "sigs.k8s.io/cloud-provider-azure/pkg/provider/config"
+	"sigs.k8s.io/cloud-provider-azure/pkg/provider/storage"
 )
 
 var (
@@ -44,23 +46,28 @@ var (
 )
 
 // IsAzureStackCloud decides whether the driver is running on Azure Stack Cloud.
-func IsAzureStackCloud(cloud *azure.Cloud) bool {
-	return !cloud.DisableAzureStackCloud && strings.EqualFold(cloud.Cloud, "AZURESTACKCLOUD")
+func IsAzureStackCloud(cloud *storage.AccountRepo) bool {
+	return cloud != nil && !cloud.DisableAzureStackCloud && strings.EqualFold(cloud.Cloud, "AZURESTACKCLOUD")
 }
 
 // getCloudProvider get Azure Cloud Provider
-func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, nodeID, secretName, secretNamespace, userAgent string, allowEmptyCloudConfig bool) (*azure.Cloud, error) {
+func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, nodeID, secretName, secretNamespace, userAgent string, allowEmptyCloudConfig bool) (*storage.AccountRepo, error) {
 	var (
 		config     *azureconfig.Config
 		fromSecret bool
 		err        error
 	)
 
-	az := &azure.Cloud{}
-	az.Environment.StorageEndpointSuffix = storage.DefaultBaseURL
+	repo := &storage.AccountRepo{}
+	defer func() {
+		if repo.Environment == nil || repo.Environment.StorageEndpointSuffix == "" {
+			repo.Environment = &azclient.Environment{
+				StorageEndpointSuffix: defaultStorageEndPointSuffix,
+			}
+		}
+	}()
 
 	if kubeClient != nil {
-		az.KubeClient = kubeClient
 		klog.V(2).Infof("reading cloud config from secret %s/%s", secretNamespace, secretName)
 		config, err = configloader.Load[azureconfig.Config](ctx, &configloader.K8sSecretLoaderConfig{
 			K8sSecretConfig: configloader.K8sSecretConfig{
@@ -100,7 +107,7 @@ func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, node
 		if allowEmptyCloudConfig {
 			klog.V(2).Infof("no cloud config provided, error: %v, driver will run without cloud config", err)
 		} else {
-			return az, fmt.Errorf("no cloud config provided, error: %w", err)
+			return repo, fmt.Errorf("no cloud config provided, error: %w", err)
 		}
 	} else {
 		config.UserAgent = userAgent
@@ -116,33 +123,32 @@ func GetCloudProvider(ctx context.Context, kubeClient kubernetes.Interface, node
 			config.AADFederatedTokenFile = federatedTokenFile
 			config.UseFederatedWorkloadIdentityExtension = true
 		}
+		az := &azure.Cloud{}
 		if err = az.InitializeCloudFromConfig(ctx, config, fromSecret, false); err != nil {
 			klog.Warningf("InitializeCloudFromConfig failed with error: %v", err)
 		}
-	}
+		_, env, err := azclient.GetAzureCloudConfigAndEnvConfig(&config.ARMClientConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get AzureCloudConfigAndEnvConfig: %v", err)
+		}
 
-	// reassign kubeClient
-	if kubeClient != nil && az.KubeClient == nil {
-		az.KubeClient = kubeClient
-	}
-
-	isController := (nodeID == "")
-	if isController {
-		if err == nil {
+		if nodeID == "" {
 			// Disable UseInstanceMetadata for controller to mitigate a timeout issue using IMDS
 			// https://github.com/kubernetes-sigs/azuredisk-csi-driver/issues/168
 			klog.V(2).Infof("disable UseInstanceMetadata for controller server")
-			az.Config.UseInstanceMetadata = false
+			config.UseInstanceMetadata = false
+			klog.V(2).Infof("starting controller server...")
+		} else {
+			klog.V(2).Infof("starting node server on node(%s)", nodeID)
 		}
-		klog.V(2).Infof("starting controller server...")
-	} else {
-		klog.V(2).Infof("starting node server on node(%s)", nodeID)
+
+		repo, err = storage.NewRepository(*config, env, az.ComputeClientFactory, az.NetworkClientFactory)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create storage repository: %v", err)
+		}
 	}
 
-	if az.Environment.StorageEndpointSuffix == "" {
-		az.Environment.StorageEndpointSuffix = storage.DefaultBaseURL
-	}
-	return az, nil
+	return repo, nil
 }
 
 // getKeyVaultSecretContent get content of the keyvault secret
@@ -268,15 +274,37 @@ func (d *Driver) updateSubnetServiceEndpoints(ctx context.Context, vnetResourceG
 }
 
 func (d *Driver) getStorageEndPointSuffix() string {
-	if d.cloud == nil || d.cloud.Environment.StorageEndpointSuffix == "" {
+	if d.cloud == nil || d.cloud.Environment == nil || d.cloud.Environment.StorageEndpointSuffix == "" {
 		return defaultStorageEndPointSuffix
 	}
 	return d.cloud.Environment.StorageEndpointSuffix
 }
 
 func (d *Driver) getCloudEnvironment() azure2.Environment {
-	if d.cloud == nil {
+	if d.cloud == nil || d.cloud.Environment == nil {
 		return azure2.PublicCloud
 	}
-	return d.cloud.Environment
+	return azure2.Environment{
+		Name:                       d.cloud.Environment.Name,
+		ServiceManagementEndpoint:  d.cloud.Environment.ServiceManagementEndpoint,
+		ResourceManagerEndpoint:    d.cloud.Environment.ResourceManagerEndpoint,
+		ActiveDirectoryEndpoint:    d.cloud.Environment.ActiveDirectoryEndpoint,
+		StorageEndpointSuffix:      d.cloud.Environment.StorageEndpointSuffix,
+		ContainerRegistryDNSSuffix: d.cloud.Environment.ContainerRegistryDNSSuffix,
+		TokenAudience:              d.cloud.Environment.TokenAudience,
+	}
+}
+
+// getBackOff returns a backoff object based on the config
+func getBackOff(config azureconfig.Config) wait.Backoff {
+	steps := config.CloudProviderBackoffRetries
+	if steps < 1 {
+		steps = 1
+	}
+	return wait.Backoff{
+		Steps:    steps,
+		Factor:   config.CloudProviderBackoffExponent,
+		Jitter:   config.CloudProviderBackoffJitter,
+		Duration: time.Duration(config.CloudProviderBackoffDuration) * time.Second,
+	}
 }
