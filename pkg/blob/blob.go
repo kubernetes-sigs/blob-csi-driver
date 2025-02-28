@@ -282,7 +282,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *p
 		sasTokenExpirationMinutes:              options.SasTokenExpirationMinutes,
 		waitForAzCopyTimeoutMinutes:            options.WaitForAzCopyTimeoutMinutes,
 		fsGroupChangePolicy:                    options.FSGroupChangePolicy,
-		azcopy:                                 &util.Azcopy{},
+		azcopy:                                 &util.Azcopy{ExecCmd: &util.ExecCommand{}},
 		KubeClient:                             kubeClient,
 		cloud:                                  cloud,
 	}
