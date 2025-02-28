@@ -790,7 +790,7 @@ func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeReq
 	jobState, percent, err := d.azcopy.GetAzcopyJob(dstContainerName, authAzcopyEnv)
 	klog.V(2).Infof("azcopy job status: %s, copy percent: %s%%, error: %v", jobState, percent, err)
 	switch jobState {
-	case util.AzcopyJobError, util.AzcopyJobCompleted:
+	case util.AzcopyJobError, util.AzcopyJobCompleted, util.AzcopyJobCompletedWithErrors, util.AzcopyJobCompletedWithSkipped, util.AzcopyJobCompletedWithErrorsAndSkipped:
 		return err
 	case util.AzcopyJobRunning:
 		err = wait.PollImmediate(20*time.Second, time.Duration(d.waitForAzCopyTimeoutMinutes)*time.Minute, func() (bool, error) {
@@ -822,6 +822,9 @@ func (d *Driver) copyBlobContainer(ctx context.Context, req *csi.CreateVolumeReq
 		klog.Warningf("CopyBlobContainer(%s, %s, %s) failed with error: %v", accountOptions.ResourceGroup, dstAccountName, dstContainerName, err)
 	} else {
 		klog.V(2).Infof("copied blob container %s to %s successfully", srcContainerName, dstContainerName)
+		if out, err := d.azcopy.CleanJobs(); err != nil {
+			klog.Warningf("clean azcopy jobs failed with error: %v, output: %s", err, string(out))
+		}
 	}
 	return err
 }
