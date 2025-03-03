@@ -24,7 +24,7 @@ RUN apt update \
     && apt install -y curl
 
 # install aznfs
-ARG aznfsVer=2.0.7
+ARG aznfsVer=2.0.11
 RUN if [ "$ARCH" = "arm64" ]; then \
       curl -Ls https://github.com/Azure/AZNFS-mount/releases/download/${aznfsVer}/aznfs-${aznfsVer}-1.arm64.tar.gz | tar xvzf - -C / --keep-directory-symlink; \
     else \
