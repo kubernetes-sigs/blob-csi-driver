@@ -32,9 +32,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"sigs.k8s.io/cloud-provider-azure/pkg/provider"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/mock_azclient"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -240,7 +240,7 @@ func TestNodePublishVolume(t *testing.T) {
 	_ = makeDir(sourceTest)
 	_ = makeDir(targetTest)
 	d := NewFakeDriver()
-	d.cloud = provider.GetTestCloud(gomock.NewController(t))
+	//d.cloud = provider.GetTestCloud(gomock.NewController(t))
 	fakeMounter := &fakeMounter{}
 	fakeExec := &testingexec.FakeExec{ExactOrder: true}
 	d.mounter = &mount.SafeFormatAndMount{
@@ -521,7 +521,7 @@ func TestNodeStageVolume(t *testing.T) {
 					Secrets: map[string]string{},
 				}
 				d := NewFakeDriver()
-				d.cloud = provider.GetTestCloud(gomock.NewController(t))
+				//d.cloud = provider.GetTestCloud(gomock.NewController(t))
 				d.cloud.ResourceGroup = "rg"
 				d.enableBlobMockMount = true
 				fakeMounter := &fakeMounter{}
@@ -552,7 +552,7 @@ func TestNodeStageVolume(t *testing.T) {
 					Secrets: map[string]string{},
 				}
 				d := NewFakeDriver()
-				d.cloud = provider.GetTestCloud(gomock.NewController(t))
+				//d.cloud = provider.GetTestCloud(gomock.NewController(t))
 				d.cloud.ResourceGroup = "rg"
 				d.enableBlobMockMount = true
 				fakeMounter := &fakeMounter{}
@@ -562,14 +562,17 @@ func TestNodeStageVolume(t *testing.T) {
 					Exec:      fakeExec,
 				}
 
-				keyList := make([]storage.AccountKey, 1)
+				keyList := make([]*armstorage.AccountKey, 1)
 				fakeKey := "fakeKey"
 				fakeValue := "fakeValue"
-				keyList[0] = (storage.AccountKey{
+				keyList[0] = (&armstorage.AccountKey{
 					KeyName: &fakeKey,
 					Value:   &fakeValue,
 				})
-				d.cloud.StorageAccountClient = NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", &keyList)
+				mockStorageAccountsClient := NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", keyList)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(gomock.NewController(t))
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
 
 				_, err := d.NodeStageVolume(context.TODO(), req)
 				//expectedErr := nil

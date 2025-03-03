@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2021-09-01/storage"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
@@ -38,9 +38,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
-	"sigs.k8s.io/cloud-provider-azure/pkg/azureclients/storageaccountclient/mockstorageaccountclient"
-	azure "sigs.k8s.io/cloud-provider-azure/pkg/provider"
-	"sigs.k8s.io/cloud-provider-azure/pkg/retry"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient/mock_accountclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/mock_azclient"
+	"sigs.k8s.io/cloud-provider-azure/pkg/provider/storage"
 )
 
 const (
@@ -59,7 +60,7 @@ func NewFakeDriver() *Driver {
 		WaitForAzCopyTimeoutMinutes: 1,
 		EnableBlobMockMount:         false,
 	}
-	driver := NewDriver(&driverOptions, nil, &azure.Cloud{})
+	driver := NewDriver(&driverOptions, nil, &storage.AccountRepo{})
 	driver.Name = fakeDriverName
 	driver.Version = vendorVersion
 	driver.subnetLockMap = util.NewLockMap()
@@ -75,7 +76,7 @@ func TestNewFakeDriver(t *testing.T) {
 		BlobfuseProxyConnTimout: 5,
 		EnableBlobMockMount:     false,
 	}
-	d := NewDriver(&driverOptions, nil, &azure.Cloud{})
+	d := NewDriver(&driverOptions, nil, &storage.AccountRepo{})
 	assert.NotNil(t, d)
 }
 
@@ -89,7 +90,7 @@ func TestNewDriver(t *testing.T) {
 		WaitForAzCopyTimeoutMinutes: 1,
 		EnableBlobMockMount:         false,
 	}
-	driver := NewDriver(&driverOptions, nil, &azure.Cloud{})
+	driver := NewDriver(&driverOptions, nil, &storage.AccountRepo{})
 	fakedriver := NewFakeDriver()
 	fakedriver.Name = DefaultDriverName
 	fakedriver.Version = driverVersion
@@ -172,7 +173,7 @@ func TestRun(t *testing.T) {
 				os.Setenv(DefaultAzureCredentialFileEnv, fakeCredFile)
 
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				d.NodeID = ""
 				ctx, cancelFn := context.WithCancel(context.Background())
 				var routines errgroup.Group
@@ -528,18 +529,18 @@ func TestGetAuthEnv(t *testing.T) {
 				attrib["azurestoragespntenantid"] = "unit-test"
 				attrib["azurestorageaadendpoint"] = "unit-test"
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
-				accountListKeysResult := storage.AccountListKeysResult{}
-				rerr := &retry.Error{
-					RawError: fmt.Errorf("test"),
-				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
+				accountListKeysResult := []*armstorage.AccountKey{}
+				rerr := fmt.Errorf("test")
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
 				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
-				expectedErr := fmt.Errorf("no key for storage account(storageaccountname) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				expectedErr := fmt.Errorf("no key for storage account(storageaccountname) under resource group(rg), err test")
 				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -552,21 +553,17 @@ func TestGetAuthEnv(t *testing.T) {
 				attrib := make(map[string]string)
 				secret := make(map[string]string)
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
 				s := "unit-test"
-				accountkey := storage.AccountKey{
-					Value: &s,
-				}
-				accountkeylist := []storage.AccountKey{}
-				accountkeylist = append(accountkeylist, accountkey)
-				list := storage.AccountListKeysResult{
-					Keys: &accountkeylist,
-				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				accountkey := armstorage.AccountKey{Value: &s}
+				list := []*armstorage.AccountKey{&accountkey}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
 				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				expectedErr := error(nil)
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -583,21 +580,16 @@ func TestGetAuthEnv(t *testing.T) {
 				}
 				secret := make(map[string]string)
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
 				s := "unit-test"
-				accountkey := storage.AccountKey{
-					Value: &s,
-				}
-				accountkeylist := []storage.AccountKey{}
-				accountkeylist = append(accountkeylist, accountkey)
-				list := storage.AccountListKeysResult{
-					Keys: &accountkeylist,
-				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				accountkey := armstorage.AccountKey{Value: &s}
+				list := []*armstorage.AccountKey{&accountkey}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				expectedErr := fmt.Errorf("invalid getlatestaccountkey: %s in volume context", "invalid")
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -654,7 +646,7 @@ func TestGetAuthEnv(t *testing.T) {
 			name: "failed to get keyvaultClient",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				d.cloud.ResourceGroup = "rg"
 				attrib := make(map[string]string)
 				secret := make(map[string]string)
@@ -681,21 +673,17 @@ func TestGetAuthEnv(t *testing.T) {
 
 				secret := make(map[string]string)
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
 				s := "unit-test"
-				accountkey := storage.AccountKey{
-					Value: &s,
-				}
-				accountkeylist := []storage.AccountKey{}
-				accountkeylist = append(accountkeylist, accountkey)
-				list := storage.AccountListKeysResult{
-					Keys: &accountkeylist,
-				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				accountkey := armstorage.AccountKey{Value: &s}
+				list := []*armstorage.AccountKey{&accountkey}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
 				rg, accountName, _, containerName, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				expectedErr := error(nil)
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -728,18 +716,18 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 				attrib["keyvaultsecretversion"] = "unit-test"
 				attrib["storageaccountname"] = "unit-test"
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
-				accountListKeysResult := storage.AccountListKeysResult{}
-				rerr := &retry.Error{
-					RawError: fmt.Errorf("test"),
-				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
+				accountListKeysResult := []*armstorage.AccountKey{}
+				rerr := fmt.Errorf("test")
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, rerr).AnyTimes()
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
 				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
-				expectedErr := fmt.Errorf("no key for storage account(f5713de20cde511e8ba4900) under resource group(rg), err Retriable: false, RetryAfter: 0s, HTTPStatusCode: 0, RawError: test")
+				expectedErr := fmt.Errorf("no key for storage account(f5713de20cde511e8ba4900) under resource group(rg), err test")
 				if !strings.EqualFold(err.Error(), expectedErr.Error()) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
@@ -752,21 +740,17 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 				attrib := make(map[string]string)
 				secret := make(map[string]string)
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
 				s := "unit-test"
-				accountkey := storage.AccountKey{
-					Value: &s,
-				}
-				accountkeylist := []storage.AccountKey{}
-				accountkeylist = append(accountkeylist, accountkey)
-				list := storage.AccountListKeysResult{
-					Keys: &accountkeylist,
-				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				accountkey := armstorage.AccountKey{Value: &s}
+				list := []*armstorage.AccountKey{&accountkey}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
 				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
 				expectedErr := error(nil)
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -783,21 +767,16 @@ func TestGetStorageAccountAndContainer(t *testing.T) {
 				}
 				secret := make(map[string]string)
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				ctrl := gomock.NewController(t)
 				defer ctrl.Finish()
-				mockStorageAccountsClient := mockstorageaccountclient.NewMockInterface(ctrl)
-				d.cloud.StorageAccountClient = mockStorageAccountsClient
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
 				s := "unit-test"
-				accountkey := storage.AccountKey{
-					Value: &s,
-				}
-				accountkeylist := []storage.AccountKey{}
-				accountkeylist = append(accountkeylist, accountkey)
-				list := storage.AccountListKeysResult{
-					Keys: &accountkeylist,
-				}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				accountkey := armstorage.AccountKey{Value: &s}
+				list := []*armstorage.AccountKey{&accountkey}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 				_, _, _, _, err := d.GetStorageAccountAndContainer(context.TODO(), volumeID, attrib, secret)
 				expectedErr := fmt.Errorf("invalid getlatestaccountkey: %s in volume context", "invalid")
 				if !reflect.DeepEqual(err, expectedErr) {
@@ -960,13 +939,15 @@ func TestGetContainerReference(t *testing.T) {
 	}
 
 	d := NewFakeDriver()
-	d.cloud = azure.GetTestCloud(gomock.NewController(t))
+	d.cloud = &storage.AccountRepo{
+		Environment: &azclient.Environment{},
+	}
 	d.KubeClient = fake.NewSimpleClientset()
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			d.cloud.Environment.StorageEndpointSuffix = tc.endpointSuffix
-			container, err := getContainerReference(tc.containerName, tc.secrets, d.cloud.Environment)
+			container, err := getContainerReference(tc.containerName, tc.secrets, d.getCloudEnvironment())
 			if tc.expectedError != nil {
 				assert.Error(t, err)
 				assert.Equal(t, tc.expectedError, err)
@@ -1034,7 +1015,7 @@ func TestSetAzureCredentials(t *testing.T) {
 }
 
 func TestGetStorageAccesskey(t *testing.T) {
-	options := &azure.AccountOptions{
+	options := &storage.AccountOptions{
 		Name:           "test-sa",
 		SubscriptionID: "test-subID",
 		ResourceGroup:  "test-rg",
@@ -1081,6 +1062,14 @@ func TestGetStorageAccesskey(t *testing.T) {
 	}
 	d := NewFakeDriver()
 	d.KubeClient = fake.NewSimpleClientset()
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+	d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(gomock.NewController(t))
+	d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
+	accountListKeysResult := []*armstorage.AccountKey{}
+	mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(accountListKeysResult, nil).AnyTimes()
+	d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
 	secret := &v1api.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: secretNamespace,
@@ -1099,7 +1088,6 @@ func TestGetStorageAccesskey(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-
 			accName, accKey, err := d.GetStorageAccesskey(context.TODO(), options, tc.secrets, tc.secretName, secretNamespace)
 			if tc.expectedError != nil {
 				assert.Error(t, err, "there should be an error")
@@ -1109,6 +1097,43 @@ func TestGetStorageAccesskey(t *testing.T) {
 				assert.Equal(t, fakeAccKey, accKey, "account keys must match")
 			}
 		})
+	}
+}
+
+func TestGetStorageAccesskeyWithSubsID(t *testing.T) {
+	testCases := []struct {
+		name          string
+		expectedError error
+	}{
+		{
+			name:          "Get storage access key error with cloud is nil",
+			expectedError: fmt.Errorf("could not get account key: cloud or ComputeClientFactory is nil"),
+		},
+		{
+			name:          "Get storage access key error with ComputeClientFactory is nil",
+			expectedError: fmt.Errorf("could not get account key: cloud or ComputeClientFactory is nil"),
+		},
+		{
+			name:          "Get storage access key successfully",
+			expectedError: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		d := NewFakeDriver()
+		if !strings.Contains(tc.name, "is nil") {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+			d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+			d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
+			s := "unit-test"
+			accountkey := armstorage.AccountKey{Value: &s}
+			mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*armstorage.AccountKey{&accountkey}, tc.expectedError).AnyTimes()
+			d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
+		}
+		_, err := d.GetStorageAccesskeyWithSubsID(context.TODO(), "test-subID", "test-rg", "test-sa", true)
+		assert.Equal(t, tc.expectedError, err)
 	}
 }
 
@@ -1122,7 +1147,7 @@ func TestGetInfoFromSecret(t *testing.T) {
 			name: "KubeClient is nil",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				d.KubeClient = nil
 				secretName := "foo"
 				secretNamespace := "bar"
@@ -1187,7 +1212,7 @@ func TestGetInfoFromSecret(t *testing.T) {
 			name: "get other info from secret",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				d.KubeClient = fakeClient
 				secretName := "store_other_info"
 				secretNamespace := "namespace"
@@ -1242,7 +1267,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 			name: "NetworkResourceSubscriptionID is Empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				d.cloud.SubscriptionID = "fakeSubID"
 				d.cloud.NetworkResourceSubscriptionID = ""
 				d.cloud.ResourceGroup = "foo"
@@ -1256,7 +1281,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 			name: "NetworkResourceSubscriptionID is not Empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				d.cloud.SubscriptionID = "fakeSubID"
 				d.cloud.NetworkResourceSubscriptionID = "fakeNetSubID"
 				d.cloud.ResourceGroup = "foo"
@@ -1270,7 +1295,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 			name: "VnetResourceGroup is Empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				d.cloud.SubscriptionID = "bar"
 				d.cloud.NetworkResourceSubscriptionID = "bar"
 				d.cloud.ResourceGroup = "fakeResourceGroup"
@@ -1284,7 +1309,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 			name: "VnetResourceGroup is not Empty",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				d.cloud.SubscriptionID = "bar"
 				d.cloud.NetworkResourceSubscriptionID = "bar"
 				d.cloud.ResourceGroup = "fakeResourceGroup"
@@ -1298,7 +1323,7 @@ func TestGetSubnetResourceID(t *testing.T) {
 			name: "VnetResourceGroup, vnetName, subnetName is specified",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.cloud = &azure.Cloud{}
+				d.cloud = &storage.AccountRepo{}
 				d.cloud.SubscriptionID = "bar"
 				d.cloud.NetworkResourceSubscriptionID = "bar"
 				d.cloud.ResourceGroup = "fakeResourceGroup"

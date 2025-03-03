@@ -24,6 +24,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"k8s.io/klog/v2"
 
@@ -33,7 +34,7 @@ import (
 
 // NetworkMetadata contains metadata about an instance's network
 type NetworkMetadata struct {
-	Interface []NetworkInterface `json:"interface"`
+	Interface []*NetworkInterface `json:"interface"`
 }
 
 // NetworkInterface represents an instances network interface.
@@ -43,7 +44,7 @@ type NetworkInterface struct {
 	MAC  string      `json:"macAddress"`
 }
 
-// NetworkData contains IP information for a network.
+// NetworkData contains IP information for a armnetwork.
 type NetworkData struct {
 	IPAddress []IPAddress `json:"ipAddress"`
 	Subnet    []Subnet    `json:"subnet"`
@@ -64,7 +65,7 @@ type Subnet struct {
 // ComputeMetadata represents compute information
 type ComputeMetadata struct {
 	Environment            string `json:"azEnvironment,omitempty"`
-	SKU                    string `json:"sku,omitempty"`
+	SKU                    string `json:"SKU,omitempty"`
 	Name                   string `json:"name,omitempty"`
 	Zone                   string `json:"zone,omitempty"`
 	VMSize                 string `json:"vmSize,omitempty"`
@@ -172,7 +173,7 @@ func (ims *InstanceMetadataService) getMetadata(_ context.Context, key string) (
 		}
 
 		publicIPs := loadBalancerMetadata.LoadBalancer.PublicIPAddresses
-		fillNetInterfacePublicIPs(publicIPs, &netInterface)
+		fillNetInterfacePublicIPs(publicIPs, netInterface)
 	}
 
 	return instanceMetadata, nil
@@ -191,7 +192,7 @@ func (ims *InstanceMetadataService) getInstanceMetadata(_ string) (*InstanceMeta
 	q.Add("api-version", consts.ImdsInstanceAPIVersion)
 	req.URL.RawQuery = q.Encode()
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: time.Minute}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
@@ -229,7 +230,7 @@ func (ims *InstanceMetadataService) getLoadBalancerMetadata() (*LoadBalancerMeta
 	q.Add("api-version", consts.ImdsLoadBalancerAPIVersion)
 	req.URL.RawQuery = q.Encode()
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: time.Minute}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
