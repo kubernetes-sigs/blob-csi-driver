@@ -26,7 +26,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
 	go.uber.org/mock v0.5.0
-	golang.org/x/net v0.35.0
+	golang.org/x/net v0.36.0
 	golang.org/x/sync v0.11.0
 	google.golang.org/grpc v1.67.1
 	google.golang.org/protobuf v1.36.5
@@ -41,7 +41,7 @@ require (
 	k8s.io/pod-security-admission v0.31.1
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/cloud-provider-azure v1.31.1-0.20250305024401-4c771d529327
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.5.4
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.5.5
 	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.4.0
 	sigs.k8s.io/yaml v1.4.0
 )
