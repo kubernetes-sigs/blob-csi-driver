@@ -5,9 +5,10 @@
 - NFSv3 protocol is not supported
 
 ## Prerequisites
-- Make sure that the virtual network, where the driver controller pod is deployed, is added to the allowed list of the storage account's VNet setting.
+- Make sure that the virtual network hosting the driver controller pod is added to the list of allowed virtual networks in the storage account's VNet settings
+  - if the driver controller pod is managed by AKS, you need to set `Enable from all networks` in the storage account's VNet settings
 - Before proceeding, ensure that the application is not writing data to the source volume.
-- In order to allow the use of a managed identity, the source storage account requires the `Storage Blob Data Reader` role, while the destination storage account requires the `Storage Blob Data Contributor` role. If the Storage Blob Data role is not granted, the CSI driver will use a SAS token as a fallback.
+- In order to allow the use of a managed identity, the source storage account requires the `Storage Blob Data Reader` role, while the destination storage account requires the `Storage Blob Data Contributor` role. If the Storage Blob Data role is not granted, the CSI driver will use SAS token as fallback.
 
 ## Create a Source PVC
 
