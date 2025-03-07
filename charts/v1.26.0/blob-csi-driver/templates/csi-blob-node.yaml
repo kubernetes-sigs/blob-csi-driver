@@ -243,7 +243,7 @@ spec:
               mountPath: /etc/ssl/certs
               readOnly: true
             {{- end }}
-            {{- if and (eq .Values.cloud "AzureStackCloud") (ne .Values.linux.distro "fedora") }}
+            {{- if and (eq .Values.cloud "AzureStackCloud") (eq .Values.linux.distro "fedora") }}
             - name: ssl
               mountPath: /etc/ssl/certs
               readOnly: true
