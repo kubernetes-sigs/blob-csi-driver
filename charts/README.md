@@ -75,7 +75,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | `v2.13.0`                                                      |
 | `image.nodeDriverRegistrar.pullPolicy`                | csi-node-driver-registrar image pull policy           | `IfNotPresent`                                                   |
 | `image.csiResizer.repository`                         | csi-resizer docker image                              | `mcr.microsoft.com/oss/kubernetes-csi/csi-resizer`               |
-| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.13.1`                                                         |
+| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v1.13.2`                                                         |
 | `image.csiResizer.pullPolicy`                         | csi-resizer image pull policy                         | `IfNotPresent`                                                   |
 | `imagePullSecrets`                                    | Specify docker-registry secret names as an array      | [] (does not add image pull secrets to deployed pods)          |
 | `cloud`                                               | the cloud environment the driver is running on        | `AzurePublicCloud`                                               |
