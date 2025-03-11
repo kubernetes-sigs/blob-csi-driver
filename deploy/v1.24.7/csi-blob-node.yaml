@@ -83,7 +83,7 @@ spec:
           image: mcr.microsoft.com/oss/kubernetes-csi/livenessprobe:v2.15.0
           args:
             - --csi-address=/csi/csi.sock
-            - --probe-timeout=3s
+            - --probe-timeout=10s
             - --health-port=29633
             - --v=2
           resources:
@@ -141,7 +141,7 @@ spec:
               path: /healthz
               port: 29633
             initialDelaySeconds: 30
-            timeoutSeconds: 10
+            timeoutSeconds: 30
             periodSeconds: 30
           env:
             - name: AZURE_CREDENTIAL_FILE
