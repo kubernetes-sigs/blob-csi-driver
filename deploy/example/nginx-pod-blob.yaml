@@ -4,6 +4,10 @@ apiVersion: v1
 metadata:
   name: nginx-blob
 spec:
+  securityContext:  # optional just to make sure user is non-root
+    runAsUser: 0
+    runAsGroup: 0
+    fsGroup: 0
   nodeSelector:
     "kubernetes.io/os": linux
   containers:
@@ -20,4 +24,4 @@ spec:
   volumes:
     - name: blob01
       persistentVolumeClaim:
-        claimName: pvc-blob
+        claimName: persistent-storage-statefulset-blob-nonroot-nfs-0
