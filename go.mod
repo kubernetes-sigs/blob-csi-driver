@@ -1,8 +1,8 @@
 module sigs.k8s.io/blob-csi-driver
 
-go 1.23.2
+go 1.24
 
-toolchain go1.23.6
+toolchain go1.24.1
 
 require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
@@ -40,9 +40,9 @@ require (
 	k8s.io/mount-utils v0.32.3
 	k8s.io/pod-security-admission v0.31.1
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
-	sigs.k8s.io/cloud-provider-azure v1.29.1-0.20250306141916-e6840d43979a
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.5.9
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.4.0
+	sigs.k8s.io/cloud-provider-azure v1.29.1-0.20250318132956-f5709787ba2e
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.5.12
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient/configloader v0.4.1
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -62,7 +62,7 @@ require (
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/Azure/go-autorest/logger v0.2.1 // indirect
 	github.com/Azure/go-autorest/tracing v0.6.0 // indirect
-	github.com/Azure/msi-dataplane v0.4.2 // indirect
+	github.com/Azure/msi-dataplane v0.4.3 // indirect
 	github.com/AzureAD/microsoft-authentication-library-for-go v1.4.1 // indirect
 	github.com/JeffAshton/win_pdh v0.0.0-20161109143554-76bb4ee9f0ab // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
@@ -132,7 +132,7 @@ require (
 	github.com/opencontainers/selinux v1.11.1 // indirect
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/prometheus/client_golang v1.21.0 // indirect
+	github.com/prometheus/client_golang v1.21.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
@@ -151,10 +151,10 @@ require (
 	go.opentelemetry.io/otel v1.35.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.32.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.32.0 // indirect
-	go.opentelemetry.io/otel/exporters/prometheus v0.56.0 // indirect
+	go.opentelemetry.io/otel/exporters/prometheus v0.57.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.34.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.35.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
@@ -188,7 +188,7 @@ require (
 	k8s.io/kubectl v0.31.1 // indirect
 	k8s.io/kubelet v0.32.2 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.0 // indirect
-	sigs.k8s.io/cloud-provider-azure/pkg/azclient/cache v0.4.0 // indirect
+	sigs.k8s.io/cloud-provider-azure/pkg/azclient/cache v0.4.1 // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
 )
