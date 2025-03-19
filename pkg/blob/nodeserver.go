@@ -385,9 +385,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		}
 
 		if volumeMountGroup != "" && fsGroupChangePolicy != FSGroupChangeNone {
-			klog.V(2).Infof("set gid of volume(%s) as %s using fsGroupChangePolicy(%s)", volumeID, volumeMountGroup, fsGroupChangePolicy)
-			if err := volumehelper.SetVolumeOwnership(targetPath, volumeMountGroup, fsGroupChangePolicy); err != nil {
-				return nil, status.Error(codes.Internal, fmt.Sprintf("SetVolumeOwnership with volume(%s) on %s failed with %v", volumeID, targetPath, err))
+			klog.V(2).Infof("set gid of volume(%s) as %s and fsGroupChangePolicy(%s)", volumeID, volumeMountGroup, fsGroupChangePolicy)
+			// set the GID of the volume mount point to the group ID specified in the volumeMountGroup
+			// and files and directories in NFS share will inherit the group ID of its parent directory
+			gid, err := strconv.Atoi(volumeMountGroup)
+			if err != nil {
+				return nil, status.Error(codes.InvalidArgument, fmt.Sprintf("convert %s to int failed with %v", volumeMountGroup, err))
+			}
+			if err := os.Chown((targetPath), -1, gid); err != nil {
+				return nil, status.Error(codes.Internal, fmt.Sprintf("Failed to set GID of root directory %s to %d failed with %v", targetPath, gid, err))
 			}
 		}
 
