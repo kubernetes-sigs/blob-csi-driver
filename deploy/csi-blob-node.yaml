@@ -134,6 +134,10 @@ spec:
             - "--user-agent-suffix=OSS-kubectl"
             - "--metrics-address=0.0.0.0:29635"
             - "--enable-aznfs-mount=true"
+          ports:
+            - containerPort: 29635
+              name: metrics
+              protocol: TCP
           livenessProbe:
             failureThreshold: 5
             httpGet:
