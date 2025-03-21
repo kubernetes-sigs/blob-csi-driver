@@ -395,6 +395,38 @@ func SetVolumeOwnership(path, gid, policy string) error {
 	return volume.SetVolumeOwnership(&VolumeMounter{path: path}, path, &gidInt64, &fsGroupChangePolicy, nil)
 }
 
+// SetRootOwnership sets the ownership of the root directory, Setgid bit and permission
+func SetRootOwnership(rootDir string, fsgroup string) error {
+	gid, err := strconv.Atoi(fsgroup)
+	if err != nil {
+		return fmt.Errorf("convert %s to int failed with %v", fsgroup, err)
+	}
+
+	if err := os.Lchown(rootDir, -1, gid); err != nil {
+		return fmt.Errorf("set root ownership failed with %v", err)
+	}
+
+	fsInfo, err := os.Stat(rootDir)
+	if err != nil {
+		return fmt.Errorf("failed to get file system info for %s: %v", rootDir, err)
+	}
+
+	if fsInfo.Mode()&os.ModeSymlink != 0 {
+		return nil
+	}
+
+	unixPerms := os.FileMode(0660)
+	unixPerms |= os.ModeSetgid
+	unixPerms |= os.FileMode(0110)
+
+	err = os.Chmod(rootDir, fsInfo.Mode()|unixPerms)
+	if err != nil {
+		klog.ErrorS(err, "chmod failed", "path", rootDir)
+	}
+
+	return nil
+}
+
 // ExecFunc returns a exec function's output and error
 type ExecFunc func() (err error)
 
