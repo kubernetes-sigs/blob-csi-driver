@@ -3,7 +3,7 @@
 
 ### Limitations
  - This feature is not supported for NFS mount since NFS mount does not need credentials.
- - This feature would still retrieve storage account key using federated identity credentials.
+ - This feature no longer retrieves storage account key using federated identity credentials starting from v1.25.4 or v1.26.1 and later versions.
 
 ## Prerequisites
 ### 1. Create a cluster with oidc-issuer enabled and get the credential
