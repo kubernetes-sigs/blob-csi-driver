@@ -30,7 +30,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	az "github.com/Azure/go-autorest/autorest/azure"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/pborman/uuid"
@@ -871,12 +870,12 @@ func getStorageAccount(secrets map[string]string) (string, string, error) {
 	return accountName, accountKey, nil
 }
 
-func getContainerReference(containerName string, secrets map[string]string, env az.Environment) (*azstorage.Container, error) {
+func getContainerReference(containerName string, secrets map[string]string, storageEndpointSuffix string) (*azstorage.Container, error) {
 	accountName, accountKey, rerr := getStorageAccount(secrets)
 	if rerr != nil {
 		return nil, rerr
 	}
-	client, err := azstorage.NewBasicClientOnSovereignCloud(accountName, accountKey, env)
+	client, err := azstorage.NewClient(accountName, accountKey, storageEndpointSuffix, azstorage.DefaultAPIVersion, true)
 	if err != nil {
 		return nil, err
 	}
