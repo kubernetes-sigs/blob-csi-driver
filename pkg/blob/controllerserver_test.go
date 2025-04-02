@@ -1423,7 +1423,7 @@ func TestCreateBlobContainer(t *testing.T) {
 				}
 				return nil, nil
 			}).AnyTimes()
-		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
+		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, "core.windows.net", test.secrets)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}

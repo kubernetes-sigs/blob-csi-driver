@@ -440,7 +440,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 
 	klog.V(2).Infof("begin to create container(%s) on account(%s) type(%s) subsID(%s) rg(%s) location(%s) size(%d)", validContainerName, accountName, storageAccountType, subsID, resourceGroup, location, requestGiB)
-	if err := d.CreateBlobContainer(ctx, subsID, resourceGroup, accountName, validContainerName, secrets); err != nil {
+	if err := d.CreateBlobContainer(ctx, subsID, resourceGroup, accountName, validContainerName, storageEndpointSuffix, secrets); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to create container(%s) on account(%s) type(%s) rg(%s) location(%s) size(%d), error: %v", validContainerName, accountName, storageAccountType, resourceGroup, location, requestGiB, err)
 	}
 	if volContentSource != nil {
@@ -577,7 +577,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	var exist bool
 	secrets := req.GetSecrets()
 	if len(secrets) > 0 {
-		container, err := getContainerReference(containerName, secrets, d.getCloudEnvironment())
+		container, err := getContainerReference(containerName, secrets, d.getStorageEndPointSuffix())
 		if err != nil {
 			return nil, status.Error(codes.Internal, err.Error())
 		}
@@ -694,14 +694,14 @@ func (d *Driver) ControllerExpandVolume(_ context.Context, req *csi.ControllerEx
 }
 
 // CreateBlobContainer creates a blob container
-func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string, secrets map[string]string) error {
+func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName, storageEndpointSuffix string, secrets map[string]string) error {
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
 	}
 	return wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
-			container, getErr := getContainerReference(containerName, secrets, d.getCloudEnvironment())
+			container, getErr := getContainerReference(containerName, secrets, storageEndpointSuffix)
 			if getErr != nil {
 				return true, getErr
 			}
@@ -740,7 +740,7 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 	return wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
-			container, getErr := getContainerReference(containerName, secrets, d.getCloudEnvironment())
+			container, getErr := getContainerReference(containerName, secrets, d.getStorageEndPointSuffix())
 			if getErr != nil {
 				return true, getErr
 			}

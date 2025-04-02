@@ -892,7 +892,7 @@ func TestGetStorageAccount(t *testing.T) {
 // needs editing, could only get past first error for testing, could not get a fake environment running
 func TestGetContainerReference(t *testing.T) {
 	fakeAccountName := "storageaccountname"
-	fakeAccountKey := "test-key"
+	fakeAccountKey := "dGVzdC1rZXkK"
 	fakeContainerName := "test-con"
 	testCases := []struct {
 		name           string
@@ -946,14 +946,8 @@ func TestGetContainerReference(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			d.cloud.Environment.StorageEndpointSuffix = tc.endpointSuffix
-			container, err := getContainerReference(tc.containerName, tc.secrets, d.getCloudEnvironment())
-			if tc.expectedError != nil {
-				assert.Error(t, err)
-				assert.Equal(t, tc.expectedError, err)
-			} else {
-				container.Name = ""
-			}
+			_, err := getContainerReference(tc.containerName, tc.secrets, tc.endpointSuffix)
+			assert.Equal(t, tc.expectedError, err)
 		})
 	}
 }
