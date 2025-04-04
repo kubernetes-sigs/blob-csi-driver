@@ -39,16 +39,14 @@ Please refer to `blob.csi.azure.com` [driver parameters](./docs/driver-parameter
 This option does not depend on cloud provider config file, supports cross subscription and on-premise cluster scenario. Refer to [detailed steps](./deploy/example/e2e_usage.md#option2-bring-your-own-storage-account).
 
 ### Install driver on a Kubernetes cluster
-> Note: this feature is only available in v1.19.5, v1.21.1 and later versions.
->
 > Execute following command to install a specific version of blobfuse v2 once driver is running on the agent node:
 > ```console
 > kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.4.1"}],"name":"install-blobfuse-proxy"}]}}}}'
 > ```
 >
-> Execute following command to install a specific version of blobfuse v1 once driver is running on the agent node:
+> If you want to install a lower version of blobfuse2 than the current version, you can add ` --allow-downgrades` to the `BLOBFUSE2_VERSION` value, e.g.
 > ```console
-> kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE","value":"true"},{"name":"BLOBFUSE_VERSION","value":"1.4.5"}],"name":"install-blobfuse-proxy"}]}}}}'
+> kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.3.0 --allow-downgrades"}],"name":"install-blobfuse-proxy"}]}}}}'
 > ```
 
  - install by [helm charts](./charts)
