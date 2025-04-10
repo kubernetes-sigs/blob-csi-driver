@@ -125,7 +125,7 @@ nodeStageSecretRef.namespace | secret namespace | k8s namespace  |  Yes  |
 --- | **Following parameters are only for NFS protocol** | --- | --- |
 volumeAttributes.mountPermissions | mounted folder permissions | `0777` | No |
 volumeAttributes.fsGroupChangePolicy | indicates how volume's ownership will be changed by the driver, pod `securityContext.fsGroupChangePolicy` is ignored  | `OnRootMismatch`(by default), `Always`, `None` | No | `OnRootMismatch`
---- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#environment-variables)** | --- | --- |
+--- | **Following parameters are only for feature: blobfuse [Managed Identity and Service Principal Name auth](https://github.com/Azure/azure-storage-fuse?tab=readme-ov-file#environment-variables)** | --- | --- |
 volumeAttributes.AzureStorageAuthType | Authentication Type | `Key`, `SAS`, `MSI`, `SPN` | No | `Key`
 volumeAttributes.AzureStorageIdentityClientID | Identity Client ID |  | No |
 volumeAttributes.AzureStorageIdentityObjectID | Identity Object ID (deprecated) |  | No |
@@ -134,6 +134,8 @@ volumeAttributes.MSIEndpoint | MSI Endpoint |  | No |
 volumeAttributes.AzureStorageSPNClientID | SPN Client ID |  | No |
 volumeAttributes.AzureStorageSPNTenantID | SPN Tenant ID |  | No |
 volumeAttributes.AzureStorageAADEndpoint | AADEndpoint |  | No |
+--- | **Following parameters are only for feature: blobfuse [Workload Identity auth](https://github.com/Azure/azure-storage-fuse?tab=readme-ov-file#environment-variables)** | --- | --- |
+volumeAttributes.ClientID | clientid of the MI assigned as subject field on a Federated Identity Credential (FIC) on the App Registration |  | No |
 --- | **Following parameters are only for feature: blobfuse read account key or SAS token from key vault** | --- | --- |
 volumeAttributes.keyVaultURL | Azure Key Vault DNS name | existing Azure Key Vault DNS name | No |
 volumeAttributes.keyVaultSecretName | Azure Key Vault secret name | existing Azure Key Vault secret name | No |
