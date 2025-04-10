@@ -98,8 +98,8 @@ const (
 	ephemeralField                 = "csi.storage.k8s.io/ephemeral"
 	podNamespaceField              = "csi.storage.k8s.io/pod.namespace"
 	serviceAccountTokenField       = "csi.storage.k8s.io/serviceAccount.tokens"
-	clientIDField                  = "clientID"
-	tenantIDField                  = "tenantID"
+	clientIDField                  = "clientid"
+	tenantIDField                  = "tenantid"
 	mountOptionsField              = "mountoptions"
 	falseValue                     = "false"
 	trueValue                      = "true"
@@ -539,9 +539,9 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			if getLatestAccountKey, err = strconv.ParseBool(v); err != nil {
 				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("invalid %s: %s in volume context", getLatestAccountKeyField, v)
 			}
-		case strings.ToLower(clientIDField):
+		case clientIDField:
 			clientID = v
-		case strings.ToLower(tenantIDField):
+		case tenantIDField:
 			tenantID = v
 		case strings.ToLower(serviceAccountTokenField):
 			serviceAccountToken = v
@@ -580,7 +580,9 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		}
 
 		authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+clientID)
-		authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+tenantID)
+		if tenantID != "" {
+			authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+tenantID)
+		}
 		authEnv = append(authEnv, "WORKLOAD_IDENTITY_TOKEN="+workloadIdentityToken)
 
 		return rgName, accountName, accountKey, containerName, authEnv, err
