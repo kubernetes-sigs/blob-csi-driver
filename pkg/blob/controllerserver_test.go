@@ -1774,7 +1774,7 @@ func TestCopyVolume(t *testing.T) {
 				d.waitForAzCopyTimeoutMinutes = 1
 
 				err := d.copyVolume(ctx, req, "", "sastoken", nil, "dstContainer", "", &accountOptions, defaultStorageEndPointSuffix)
-				if !reflect.DeepEqual(err, wait.ErrWaitTimeout) {
+				if !reflect.DeepEqual(err, context.DeadlineExceeded) {
 					t.Errorf("Unexpected error: %v", err)
 				}
 			},
