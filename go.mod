@@ -23,7 +23,7 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
-	go.uber.org/mock v0.5.0
+	go.uber.org/mock v0.5.1
 	golang.org/x/net v0.39.0
 	golang.org/x/sync v0.13.0
 	google.golang.org/grpc v1.67.1
