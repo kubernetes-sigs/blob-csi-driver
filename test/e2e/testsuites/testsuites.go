@@ -645,7 +645,7 @@ func waitForPersistentVolumeClaimDeleted(ctx context.Context, c clientset.Interf
 
 func pollForStringWorker(namespace string, pod string, command []string, expectedString string, ch chan<- error) {
 	args := append([]string{"exec", pod, "--"}, command...)
-	err := wait.PollImmediate(poll, pollForStringTimeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(context.Background(), poll, pollForStringTimeout, true, func(context.Context) (bool, error) {
 		stdout, err := e2ekubectl.RunKubectl(namespace, args...)
 		if err != nil {
 			framework.Logf("Error waiting for output %q in pod %q: %v.", expectedString, pod, err)
