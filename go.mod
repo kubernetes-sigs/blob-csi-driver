@@ -23,6 +23,7 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.10.0
+	go.uber.org/goleak v1.3.0
 	go.uber.org/mock v0.5.1
 	golang.org/x/net v0.39.0
 	golang.org/x/sync v0.13.0
@@ -156,7 +157,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
-	go.uber.org/goleak v1.3.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.37.0 // indirect
