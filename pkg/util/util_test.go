@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/goleak"
 	"go.uber.org/mock/gomock"
 )
 
@@ -771,6 +772,7 @@ func TestSetVolumeOwnership(t *testing.T) {
 }
 
 func TestWaitUntilTimeout(t *testing.T) {
+	defer goleak.VerifyNone(t)
 	tests := []struct {
 		desc        string
 		timeout     time.Duration
@@ -797,6 +799,7 @@ func TestWaitUntilTimeout(t *testing.T) {
 				return nil
 			},
 			timeoutFunc: func() error {
+				time.Sleep(2 * time.Second)
 				return fmt.Errorf("timeout error")
 			},
 			expectedErr: fmt.Errorf("timeout error"),
