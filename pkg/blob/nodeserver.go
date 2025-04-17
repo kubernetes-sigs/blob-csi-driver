@@ -165,20 +165,29 @@ func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string)
 	defer cancel()
 	klog.V(2).Infof("start connecting to blobfuse proxy, protocol: %s, args: %s", protocol, args)
 	conn, err := grpc.DialContext(ctx, d.blobfuseProxyEndpoint, grpc.WithInsecure(), grpc.WithBlock())
-	if err == nil {
-		mountClient := NewMountClient(conn)
-		mountreq := mount_azure_blob.MountAzureBlobRequest{
-			MountArgs: args,
-			Protocol:  protocol,
-			AuthEnv:   authEnv,
-		}
-		klog.V(2).Infof("begin to mount with blobfuse proxy, protocol: %s, args: %s", protocol, args)
-		resp, err = mountClient.service.MountAzureBlob(context.TODO(), &mountreq)
-		if err != nil {
-			klog.Error("GRPC call returned with an error:", err)
-		}
-		output = resp.GetOutput()
+	if err != nil {
+		klog.Errorf("failed to connect to blobfuse proxy: %v", err)
+		return "", err
 	}
+	defer func() {
+		if err := conn.Close(); err != nil {
+			klog.Errorf("failed to close connection to blobfuse proxy: %v", err)
+		}
+	}()
+
+	mountClient := NewMountClient(conn)
+	mountreq := mount_azure_blob.MountAzureBlobRequest{
+		MountArgs: args,
+		Protocol:  protocol,
+		AuthEnv:   authEnv,
+	}
+	klog.V(2).Infof("begin to mount with blobfuse proxy, protocol: %s, args: %s", protocol, args)
+	resp, err = mountClient.service.MountAzureBlob(context.TODO(), &mountreq)
+	if err != nil {
+		klog.Error("GRPC call returned with an error:", err)
+	}
+	output = resp.GetOutput()
+
 	return output, err
 }
 
