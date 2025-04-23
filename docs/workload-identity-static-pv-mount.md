@@ -1,9 +1,9 @@
 # workload identity support on static provisioning
  - supported from v1.24.0 (from AKS 1.29 with `tokenRequests` field support in `CSIDriver`)
 
-### Limitations
+### Note
  - This feature is not supported for NFS mount since NFS mount does not need credentials.
- - This feature no longer retrieves storage account key using federated identity credentials starting from v1.25.4 or v1.26.1 and later versions.
+ - This feature no longer retrieves storage account key using federated identity credentials starting from v1.25.4 or v1.26.1 and later versions, while it requires `Storage Blob Data Contributor` role on the account instead of `Storage Account Contributor` role.
 
 ## Prerequisites
 ### 1. Create a cluster with oidc-issuer enabled and get the credential
