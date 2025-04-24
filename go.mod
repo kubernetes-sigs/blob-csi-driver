@@ -1,6 +1,7 @@
 module sigs.k8s.io/blob-csi-driver
 
 go 1.24
+toolchain go1.24.1
 
 require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
@@ -36,7 +37,7 @@ require (
 	k8s.io/component-base v0.32.2
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kubernetes v1.32.2
-	k8s.io/mount-utils v0.32.4
+	k8s.io/mount-utils v0.33.0
 	k8s.io/pod-security-admission v0.31.1
 	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/cloud-provider-azure v1.29.1-0.20250318132956-f5709787ba2e
