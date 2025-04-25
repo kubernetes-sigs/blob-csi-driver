@@ -105,7 +105,6 @@ done
 ```
 
 ## 4. Install CSI driver manually
- > workload identity is NOT supported on AKS **managed** Blob CSI driver
 
  - if you are using Azure AD Application:
 
