@@ -1860,14 +1860,14 @@ k8s.io/kubernetes/test/utils/kubeconfig
 k8s.io/kubernetes/third_party/forked/golang/expansion
 k8s.io/kubernetes/third_party/forked/libcontainer/apparmor
 k8s.io/kubernetes/third_party/forked/libcontainer/utils
-# k8s.io/mount-utils v0.32.4
-## explicit; go 1.23.0
+# k8s.io/mount-utils v0.33.0
+## explicit; go 1.24.0
 k8s.io/mount-utils
 # k8s.io/pod-security-admission v0.31.1 => k8s.io/pod-security-admission v0.32.2
 ## explicit; go 1.23.0
 k8s.io/pod-security-admission/api
 k8s.io/pod-security-admission/policy
-# k8s.io/utils v0.0.0-20241210054802-24370beab758
+# k8s.io/utils v0.0.0-20250321185631-1f6e0b77f77e
 ## explicit; go 1.18
 k8s.io/utils/buffer
 k8s.io/utils/clock
