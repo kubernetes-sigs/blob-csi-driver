@@ -489,6 +489,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	klog.V(2).Infof("volume(%s) mount on %q succeeded", volumeID, targetPath)
+	isOperationSucceeded = true
 	return &csi.NodeStageVolumeResponse{}, nil
 }
 
