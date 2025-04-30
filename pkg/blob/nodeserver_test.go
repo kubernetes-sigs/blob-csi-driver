@@ -36,6 +36,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 
@@ -234,6 +235,113 @@ func TestNodePublishVolume(t *testing.T) {
 			},
 			expectedErr: status.Error(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s", "07ab")),
 		},
+		{
+			desc: "Valid request with service account token and clientID",
+			setup: func(d *Driver) {
+				// Mock NodeStageVolume to return success
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					serviceAccountTokenField: `{"api://AzureADTokenExchange":{"token":"test-token","expirationTimestamp":"2023-01-01T00:00:00Z"}}`,
+					clientIDField:            "client-id-value",
+				},
+			},
+			expectedErr: nil,
+		},
+		{
+			desc: "Valid request with ephemeral volume",
+			setup: func(d *Driver) {
+				// Mock NodeStageVolume to return success
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					"csi.storage.k8s.io/ephemeral":     "true",
+					"csi.storage.k8s.io/pod.namespace": "test-namespace",
+					"containername":                    "test-container", // Add container name to avoid error
+				},
+			},
+			expectedErr: nil,
+		},
+		{
+			desc: "Volume already mounted",
+			setup: func(_ *Driver) {
+				// Create the directory and ensure it's seen as already mounted
+				_ = makeDir("./false_is_likely")
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        "./false_is_likely", // This path will make IsLikelyNotMountPoint return false
+				StagingTargetPath: sourceTest,
+			},
+			expectedErr: nil,
+			cleanup: func(_ *Driver) {
+				// Clean up the directory
+				_ = os.RemoveAll("./false_is_likely")
+			},
+		},
+		{
+			desc: "enableBlobMockMount enabled",
+			setup: func(d *Driver) {
+				// Enable mock mount
+				d.enableBlobMockMount = true
+
+				// Create a temporary directory for the test
+				_ = makeDir("./mock_mount_test")
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        "./mock_mount_test",
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					mountPermissionsField: "0755",
+				},
+			},
+			expectedErr: nil,
+			cleanup: func(d *Driver) {
+				// Disable mock mount
+				d.enableBlobMockMount = false
+
+				// Clean up the directory
+				_ = os.RemoveAll("./mock_mount_test")
+			},
+		},
+		{
+			desc: "enableBlobMockMount enabled - MakeDir fails",
+			setup: func(d *Driver) {
+				// Enable mock mount
+				d.enableBlobMockMount = true
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        "./azure.go", // This will fail because it's a file, not a directory
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					mountPermissionsField: "0755",
+				},
+			},
+			expectedErr: func() error {
+				if runtime.GOOS == "windows" {
+					t.Skip("Skipping test on ", runtime.GOOS)
+					return nil
+				}
+				return status.Errorf(codes.Internal, "Could not mount target \"./azure.go\": mkdir ./azure.go: not a directory")
+			}(),
+		},
 	}
 
 	// Setup
@@ -271,6 +379,71 @@ func TestNodePublishVolume(t *testing.T) {
 	assert.NoError(t, err)
 	err = os.RemoveAll(targetTest)
 	assert.NoError(t, err)
+}
+
+func TestNodePublishVolumeMountError(t *testing.T) {
+	d := NewFakeDriver()
+	fakeMounter := &fakeMounter{}
+	fakeExec := &testingexec.FakeExec{ExactOrder: true}
+	d.mounter = &mount.SafeFormatAndMount{
+		Interface: fakeMounter,
+		Exec:      fakeExec,
+	}
+
+	volumeCap := csi.VolumeCapability_AccessMode{
+		Mode: csi.VolumeCapability_AccessMode_SINGLE_NODE_WRITER,
+	}
+
+	// Test case 1: Mount fails with source error
+	targetPath := "./mount_test_target"
+	_ = makeDir(targetPath)
+
+	req := &csi.NodePublishVolumeRequest{
+		VolumeId:          "vol_1",
+		TargetPath:        targetPath,
+		StagingTargetPath: "error_mount", // This will trigger an error in Mount
+		VolumeCapability: &csi.VolumeCapability{
+			AccessMode: &volumeCap,
+		},
+	}
+
+	// Run the test
+	_, err := d.NodePublishVolume(context.Background(), req)
+	expectedErr := status.Errorf(codes.Internal, "Could not mount \"error_mount\" at \"./mount_test_target\": fake Mount: source error")
+	if err == nil || err.Error() != expectedErr.Error() {
+		t.Errorf("Expected error: %v, got: %v", expectedErr, err)
+	}
+
+	// Clean up
+	_ = os.RemoveAll(targetPath)
+
+	// Let's try a different approach
+	// Let's create a custom fakeMounter that returns a specific error for Mount
+
+	// We'll continue to use the same fakeMounter
+	// It's already configured to return an error for paths containing "error_mount"
+
+	// Create a test directory that doesn't exist
+	nonExistentPath := "/tmp/non-existent-path-" + uuid.NewString()
+
+	req = &csi.NodePublishVolumeRequest{
+		VolumeId:          "vol_1",
+		TargetPath:        nonExistentPath,
+		StagingTargetPath: "error_mount", // This will trigger an error in Mount
+		VolumeCapability: &csi.VolumeCapability{
+			AccessMode: &volumeCap,
+		},
+	}
+
+	// Run the test
+	_, err = d.NodePublishVolume(context.Background(), req)
+
+	// The error should be about failing to mount, not about removing the target
+	// because the target doesn't exist
+	expectedErr = status.Errorf(codes.Internal, "Could not mount \"error_mount\" at \"%s\": fake Mount: source error", nonExistentPath)
+	if err == nil || err.Error() != expectedErr.Error() {
+		t.Errorf("Expected error: %v, got: %v", expectedErr, err)
+	}
 }
 
 func TestNodePublishVolumeIdempotentMount(t *testing.T) {
