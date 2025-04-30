@@ -102,6 +102,12 @@ mount | grep blobfuse | uniq
 > 
 > You can find more detailed information about blobfuse environment variables at https://github.com/Azure/azure-storage-fuse#environment-variables.
 
+ - check whether blob storage account is accessible on the node
+```console
+nslookup accountname.blob.core.windows.net
+nc -v -w 2 accountname.blob.core.windows.net 443
+```
+
  - blobfuse mount with account key authentication
 ```console
 mkdir test
