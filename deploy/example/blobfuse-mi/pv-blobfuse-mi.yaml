@@ -17,7 +17,6 @@ spec:
     driver: blob.csi.azure.com
     readOnly: false
     # make sure this volumeid is unique in the cluster
-    # `#` is not allowed in self defined volumeHandle
     volumeHandle: "{resource-group-name}#{account-name}#{container-name}"
     volumeAttributes:
       protocol: fuse
