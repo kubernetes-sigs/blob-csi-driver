@@ -94,6 +94,7 @@ const (
 	storageAccountNameField        = "storageaccountname"
 	allowBlobPublicAccessField     = "allowblobpublicaccess"
 	allowSharedKeyAccessField      = "allowsharedkeyaccess"
+	publicNetworkAccessField       = "publicnetworkaccess"
 	requireInfraEncryptionField    = "requireinfraencryption"
 	ephemeralField                 = "csi.storage.k8s.io/ephemeral"
 	podNamespaceField              = "csi.storage.k8s.io/pod.namespace"
@@ -115,6 +116,7 @@ const (
 	NFSv3                          = "nfsv3"
 	vnetResourceGroupField         = "vnetresourcegroup"
 	vnetNameField                  = "vnetname"
+	vnetLinkNameField              = "vnetlinkname"
 	subnetNameField                = "subnetname"
 	accessTierField                = "accesstier"
 	networkEndpointTypeField       = "networkendpointtype"
@@ -807,6 +809,18 @@ func isSupportedAccessTier(accessTier string) bool {
 	}
 	for _, tier := range armstorage.PossibleAccessTierValues() {
 		if accessTier == string(tier) {
+			return true
+		}
+	}
+	return false
+}
+
+func isSupportedPublicNetworkAccess(publicNetworkAccess string) bool {
+	if publicNetworkAccess == "" {
+		return true
+	}
+	for _, tier := range armstorage.PossiblePublicNetworkAccessValues() {
+		if publicNetworkAccess == string(tier) {
 			return true
 		}
 	}
