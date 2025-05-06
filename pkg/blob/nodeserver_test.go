@@ -249,6 +249,7 @@ func TestNodePublishVolume(t *testing.T) {
 				StagingTargetPath: sourceTest,
 				VolumeContext: map[string]string{
 					serviceAccountTokenField: `{"api://AzureADTokenExchange":{"token":"test-token","expirationTimestamp":"2023-01-01T00:00:00Z"}}`,
+					mountWithWITokenField:    "true",
 					clientIDField:            "client-id-value",
 				},
 			},
