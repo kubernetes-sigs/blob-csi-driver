@@ -656,6 +656,31 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "Failed with invalid PublicNetworkAccess",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.SubscriptionID = "subID"
+
+				mp := make(map[string]string)
+				mp[publicNetworkAccessField] = "invalid"
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, "publicNetworkAccess(%s) is not supported, supported PublicNetworkAccess list: %v", "invalid", armstorage.PossiblePublicNetworkAccessValues())
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v\nExpected error: %v", err, expectedErr)
+				}
+			},
+		},
+		{
 			name: "Failed with storeAccountKey is not supported for account with shared access key disabled",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
@@ -724,6 +749,7 @@ func TestCreateVolume(t *testing.T) {
 				mp[resourceGroupField] = "unit-test"
 				mp[containerNameField] = "unit-test"
 				mp[mountPermissionsField] = "0750"
+				mp[vnetLinkNameField] = "vnetlink"
 				req := &csi.CreateVolumeRequest{
 					Name:               "unit-test",
 					VolumeCapabilities: stdVolumeCapabilities,
