@@ -3,7 +3,7 @@
 
 ### Note
  - This feature is not supported for NFS mount since NFS mount does not need credentials.
- - This feature no longer retrieves storage account key using federated(workload) identity credentials starting from v1.25.4 or v1.26.1 and later versions, while it requires `Storage Blob Data Contributor` role on the account instead of `Storage Account Contributor` role.
+ - This feature would retrieve storage account key using federated identity credentials.
 
 ## Prerequisites
 ### 1. Create a cluster with oidc-issuer enabled and get the credential
@@ -33,7 +33,7 @@ export IDENTITY_TENANT=$(az aks show --name $CLUSTER_NAME --resource-group $RESO
 export ACCOUNT_SCOPE=$(az storage account show --name $ACCOUNT --query id -o tsv)
 
 # please retry if you meet `Cannot find user or service principal in graph database` error, it may take a while for the identity to propagate
-az role assignment create --role "Storage Blob Data Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
+az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
 
 ### 4. Create service account on AKS
