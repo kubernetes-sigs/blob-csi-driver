@@ -91,7 +91,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace, tagValueDelimiter string
 	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning, createPrivateEndpoint, enableNfsV3, allowSharedKeyAccess *bool
-	var vnetResourceGroup, vnetName, subnetName, accessTier, networkEndpointType, storageEndpointSuffix, fsGroupChangePolicy, srcAccountName string
+	var vnetResourceGroup, vnetName, vnetLinkName, publicNetworkAccess, subnetName, accessTier, networkEndpointType, storageEndpointSuffix, fsGroupChangePolicy, srcAccountName string
 	var matchTags, useDataPlaneAPI, getLatestAccountKey bool
 	var softDeleteBlobs, softDeleteContainers int32
 	var vnetResourceIDs []string
@@ -164,6 +164,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			if strings.EqualFold(v, trueValue) {
 				allowBlobPublicAccess = ptr.To(true)
 			}
+		case publicNetworkAccessField:
+			publicNetworkAccess = v
 		case allowSharedKeyAccessField:
 			var boolValue bool
 			if boolValue, err = strconv.ParseBool(v); err != nil {
@@ -197,6 +199,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			vnetResourceGroup = v
 		case vnetNameField:
 			vnetName = v
+		case vnetLinkNameField:
+			vnetLinkName = v
 		case subnetNameField:
 			subnetName = v
 		case accessTierField:
@@ -255,6 +259,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	if !isSupportedAccessTier(accessTier) {
 		return nil, status.Errorf(codes.InvalidArgument, "accessTier(%s) is not supported, supported AccessTier list: %v", accessTier, armstorage.PossibleAccessTierValues())
+	}
+	if !isSupportedPublicNetworkAccess(publicNetworkAccess) {
+		return nil, status.Errorf(codes.InvalidArgument, "publicNetworkAccess(%s) is not supported, supported PublicNetworkAccess list: %v", publicNetworkAccess, armstorage.PossiblePublicNetworkAccessValues())
 	}
 
 	if containerName != "" && containerNamePrefix != "" {
@@ -342,10 +349,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		IsHnsEnabled:                    isHnsEnabled,
 		EnableNfsV3:                     enableNfsV3,
 		AllowBlobPublicAccess:           allowBlobPublicAccess,
+		PublicNetworkAccess:             publicNetworkAccess,
 		AllowSharedKeyAccess:            allowSharedKeyAccess,
 		RequireInfrastructureEncryption: requireInfraEncryption,
 		VNetResourceGroup:               vnetResourceGroup,
 		VNetName:                        vnetName,
+		VNetLinkName:                    vnetLinkName,
 		SubnetName:                      subnetName,
 		AccessTier:                      accessTier,
 		CreatePrivateEndpoint:           createPrivateEndpoint,

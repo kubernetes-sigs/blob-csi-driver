@@ -1966,3 +1966,34 @@ func TestParseServiceAccountToken(t *testing.T) {
 		t.Errorf("ParseServiceAccountToken(%s) = %s, want %s", saTokens, token, expectedToken)
 	}
 }
+
+func TestIsSupportedPublicNetworkAccess(t *testing.T) {
+	tests := []struct {
+		publicNetworkAccess string
+		expectedResult      bool
+	}{
+		{
+			publicNetworkAccess: "",
+			expectedResult:      true,
+		},
+		{
+			publicNetworkAccess: "Enabled",
+			expectedResult:      true,
+		},
+		{
+			publicNetworkAccess: "Disabled",
+			expectedResult:      true,
+		},
+		{
+			publicNetworkAccess: "InvalidValue",
+			expectedResult:      false,
+		},
+	}
+
+	for _, test := range tests {
+		result := isSupportedPublicNetworkAccess(test.publicNetworkAccess)
+		if result != test.expectedResult {
+			t.Errorf("isSupportedPublicNetworkAccess(%s) returned %v, expected %v", test.publicNetworkAccess, result, test.expectedResult)
+		}
+	}
+}

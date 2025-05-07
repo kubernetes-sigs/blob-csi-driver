@@ -715,6 +715,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			StorageClassParameters: map[string]string{
 				"skuName":             "Standard_LRS",
 				"networkEndpointType": "privateEndpoint",
+				"publicNetworkAccess": "Disabled",
 			},
 		}
 		test.Run(ctx, cs, ns)
