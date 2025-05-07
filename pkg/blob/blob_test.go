@@ -550,7 +550,23 @@ func TestGetAuthEnv(t *testing.T) {
 			name: "valid request",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				attrib := make(map[string]string)
+				attrib := map[string]string{
+					subscriptionIDField:          "subID",
+					resourceGroupField:           "rg",
+					storageAccountField:          "accountname",
+					storageAccountNameField:      "accountname",
+					secretNameField:              "secretName",
+					secretNamespaceField:         "sNS",
+					containerNameField:           "containername",
+					mountWithWITokenField:        "false",
+					pvcNamespaceKey:              "pvcNSKey",
+					getAccountKeyFromSecretField: "false",
+					storageAuthTypeField:         "key",
+					msiEndpointField:             "msiEndpoint",
+					getLatestAccountKeyField:     "true",
+					tenantIDField:                "tenantID",
+					serviceAccountTokenField:     "serviceAccountToken",
+				}
 				secret := make(map[string]string)
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
 				d.cloud = &storage.AccountRepo{}
@@ -580,18 +596,24 @@ func TestGetAuthEnv(t *testing.T) {
 				}
 				secret := make(map[string]string)
 				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				d.cloud = &storage.AccountRepo{}
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
-				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
-				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
-				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
-				s := "unit-test"
-				accountkey := armstorage.AccountKey{Value: &s}
-				list := []*armstorage.AccountKey{&accountkey}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
 				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
 				expectedErr := fmt.Errorf("invalid getlatestaccountkey: %s in volume context", "invalid")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "invalid mountWithWIToken value",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				attrib := map[string]string{
+					mountWithWITokenField: "invalid",
+				}
+				secret := make(map[string]string)
+				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				expectedErr := fmt.Errorf("invalid %s: %s in volume context", mountWithWITokenField, "invalid")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
