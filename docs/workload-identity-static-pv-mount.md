@@ -33,7 +33,7 @@ export IDENTITY_TENANT=$(az aks show --name $CLUSTER_NAME --resource-group $RESO
 export ACCOUNT_SCOPE=$(az storage account show --name $ACCOUNT --query id -o tsv)
 
 # please retry if you meet `Cannot find user or service principal in graph database` error, it may take a while for the identity to propagate
-az role assignment create --role "Storage Blob Data Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
+az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
 
 ### 4. Create service account on AKS

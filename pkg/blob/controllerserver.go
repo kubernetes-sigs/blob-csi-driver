@@ -188,6 +188,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case storageIdentityObjectIDField:
 		case storageIdentityResourceIDField:
 		case clientIDField:
+		case mountWithWITokenField:
 		case tenantIDField:
 		case msiEndpointField:
 		case storageAADEndpointField:
