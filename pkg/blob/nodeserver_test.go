@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -43,6 +44,7 @@ import (
 	mount "k8s.io/mount-utils"
 	utilexec "k8s.io/utils/exec"
 	testingexec "k8s.io/utils/exec/testing"
+	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
 )
 
 const (
@@ -935,13 +937,157 @@ func TestNodeExpandVolume(t *testing.T) {
 	}
 }
 
+// fakeMountServiceServer implements mount_azure_blob.MountServiceServer for testing
+type fakeMountServiceServer struct {
+	mount_azure_blob.MountServiceServer
+	mockOutput string
+	mockError  error
+}
+
+// MountAzureBlob implements the mount service method
+func (s *fakeMountServiceServer) MountAzureBlob(_ context.Context, _ *mount_azure_blob.MountAzureBlobRequest) (*mount_azure_blob.MountAzureBlobResponse, error) {
+	return &mount_azure_blob.MountAzureBlobResponse{
+		Output: s.mockOutput,
+	}, s.mockError
+}
+
 func TestMountBlobfuseWithProxy(t *testing.T) {
-	args := "--tmp-path /tmp"
-	authEnv := []string{"username=blob", "authkey=blob"}
-	d := NewFakeDriver()
-	_, err := d.mountBlobfuseWithProxy(args, "fuse", authEnv)
-	// should be context.deadlineExceededError{} error
-	assert.NotNil(t, err)
+	tests := []struct {
+		desc         string
+		setup        func(*testing.T) (*Driver, *grpc.Server, net.Listener)
+		args         string
+		protocol     string
+		authEnv      []string
+		expectedOut  string
+		expectedErr  error
+		cleanupCheck func(*testing.T, string, error)
+	}{
+		{
+			desc: "Success case with mock server",
+			setup: func(t *testing.T) (*Driver, *grpc.Server, net.Listener) {
+				// Create a mock server for the success test
+				mockServer := &fakeMountServiceServer{
+					mockOutput: "mock mount successful",
+					mockError:  nil,
+				}
+
+				// Start a local gRPC server for testing
+				lis, err := net.Listen("tcp", "127.0.0.1:0") // Use random available port
+				if err != nil {
+					t.Fatalf("Failed to listen: %v", err)
+				}
+				s := grpc.NewServer()
+				mount_azure_blob.RegisterMountServiceServer(s, mockServer)
+
+				// Start the server in a goroutine
+				go func() {
+					if err := s.Serve(lis); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
+						t.Logf("Server exited with error: %v", err)
+					}
+				}()
+
+				// Create the driver with the configured proxy
+				d := NewFakeDriver()
+				d.blobfuseProxyEndpoint = lis.Addr().String()
+				d.blobfuseProxyConnTimout = 5 // 5 second timeout
+
+				return d, s, lis
+			},
+			args:        "--tmp-path /tmp",
+			protocol:    "fuse",
+			authEnv:     []string{"username=blob", "authkey=blob"},
+			expectedOut: "mock mount successful",
+			expectedErr: nil,
+			cleanupCheck: func(t *testing.T, output string, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "mock mount successful", output)
+			},
+		},
+		{
+			desc: "Error from MountAzureBlob",
+			setup: func(t *testing.T) (*Driver, *grpc.Server, net.Listener) {
+				// Create a mock server for the error test
+				mockServer := &fakeMountServiceServer{
+					mockOutput: "",
+					mockError:  fmt.Errorf("mock mount error"),
+				}
+
+				// Start a local gRPC server for testing
+				lis, err := net.Listen("tcp", "127.0.0.1:0") // Use random available port
+				if err != nil {
+					t.Fatalf("Failed to listen: %v", err)
+				}
+				s := grpc.NewServer()
+				mount_azure_blob.RegisterMountServiceServer(s, mockServer)
+
+				// Start the server in a goroutine
+				go func() {
+					if err := s.Serve(lis); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
+						t.Logf("Server exited with error: %v", err)
+					}
+				}()
+
+				// Create the driver with the configured proxy
+				d := NewFakeDriver()
+				d.blobfuseProxyEndpoint = lis.Addr().String()
+				d.blobfuseProxyConnTimout = 5 // 5 second timeout
+
+				return d, s, lis
+			},
+			args:        "--tmp-path /tmp",
+			protocol:    "fuse",
+			authEnv:     []string{"username=blob", "authkey=blob"},
+			expectedOut: "",
+			expectedErr: fmt.Errorf("mock mount error"),
+			cleanupCheck: func(t *testing.T, _ string, err error) {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "mock mount error")
+			},
+		},
+		{
+			desc: "Connection error case",
+			setup: func(_ *testing.T) (*Driver, *grpc.Server, net.Listener) {
+				// Create the driver with a non-existent endpoint
+				d := NewFakeDriver()
+				d.blobfuseProxyEndpoint = "unix://non-existent-socket.sock"
+				d.blobfuseProxyConnTimout = 1 // 1 second timeout for quick failure
+
+				// No server or listener for this test
+				return d, nil, nil
+			},
+			args:        "--tmp-path /tmp",
+			protocol:    "fuse",
+			authEnv:     []string{"username=blob", "authkey=blob"},
+			expectedOut: "",
+			expectedErr: fmt.Errorf("failed to exit idle mode: invalid (non-empty) authority: non-existent-socket.sock"),
+			cleanupCheck: func(t *testing.T, output string, err error) {
+				assert.Error(t, err)
+				assert.Empty(t, output)
+				assert.Contains(t, err.Error(), "invalid (non-empty) authority: non-existent-socket.sock")
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			// Setup the test
+			d, s, lis := test.setup(t)
+
+			// Cleanup resources if needed
+			if s != nil && lis != nil {
+				defer s.Stop()
+				defer lis.Close()
+			}
+
+			// Run the test - call mountBlobfuseWithProxy directly
+			output, err := d.mountBlobfuseWithProxy(test.args, test.protocol, test.authEnv)
+
+			// Verify results
+			if test.cleanupCheck != nil {
+				test.cleanupCheck(t, output, err)
+			}
+		})
+	}
 }
 
 func TestMountBlobfuseInsideDriver(t *testing.T) {
