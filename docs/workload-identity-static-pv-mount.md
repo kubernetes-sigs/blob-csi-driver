@@ -1,7 +1,8 @@
-# workload identity support on static provisioning
+# workload identity support on static provisioning (Preview)
  - supported from v1.24.0 (from AKS 1.29 with `tokenRequests` field support in `CSIDriver`)
 
 ### Note
+ - This feature is in **Preview**
  - This feature is not supported for NFS mount since NFS mount does not need credentials.
  - This feature would retrieve storage account key using federated identity credentials.
 
