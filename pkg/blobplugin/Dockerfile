@@ -24,7 +24,7 @@ RUN apt update \
     && apt install -y curl
 
 # install aznfs
-ARG aznfsVer=2.0.11
+ARG aznfsVer=2.0.12
 ARG aznfsTarPkgName=aznfs-${aznfsVer}-1.x86_64
 RUN if [ "$ARCH" = "arm64" ]; then \
       aznfsTarPkgName=aznfs-${aznfsVer}-1.arm64; \
