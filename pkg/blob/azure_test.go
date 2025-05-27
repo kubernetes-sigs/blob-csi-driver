@@ -28,7 +28,6 @@ import (
 	"time"
 
 	network "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -417,40 +416,6 @@ func TestGetStorageEndPointSuffix(t *testing.T) {
 		d.cloud = test.cloud
 		suffix := d.getStorageEndPointSuffix()
 		assert.Equal(t, test.expectedSuffix, suffix, test.name)
-	}
-}
-
-func TestGetCloudEnvironment(t *testing.T) {
-	d := NewFakeDriver()
-
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	tests := []struct {
-		name        string
-		cloud       *storage.AccountRepo
-		expectedEnv azure.Environment
-	}{
-		{
-			name:        "nil cloud",
-			cloud:       nil,
-			expectedEnv: azure.PublicCloud,
-		},
-		{
-			name: "cloud with environment",
-			cloud: &storage.AccountRepo{
-				Environment: &azclient.Environment{
-					Name: "AzureChinaCloud",
-				},
-			},
-			expectedEnv: azure.ChinaCloud,
-		},
-	}
-
-	for _, test := range tests {
-		d.cloud = test.cloud
-		env := d.getCloudEnvironment()
-		assert.Equal(t, test.expectedEnv.Name, env.Name, test.name)
 	}
 }
 
