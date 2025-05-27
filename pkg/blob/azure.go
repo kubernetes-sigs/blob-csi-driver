@@ -25,7 +25,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	network "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
-	azure2 "github.com/Azure/go-autorest/autorest/azure"
 	"golang.org/x/net/context"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -278,21 +277,6 @@ func (d *Driver) getStorageEndPointSuffix() string {
 		return defaultStorageEndPointSuffix
 	}
 	return d.cloud.Environment.StorageEndpointSuffix
-}
-
-func (d *Driver) getCloudEnvironment() azure2.Environment {
-	if d.cloud == nil || d.cloud.Environment == nil {
-		return azure2.PublicCloud
-	}
-	return azure2.Environment{
-		Name:                       d.cloud.Environment.Name,
-		ServiceManagementEndpoint:  d.cloud.Environment.ServiceManagementEndpoint,
-		ResourceManagerEndpoint:    d.cloud.Environment.ResourceManagerEndpoint,
-		ActiveDirectoryEndpoint:    d.cloud.Environment.ActiveDirectoryEndpoint,
-		StorageEndpointSuffix:      d.cloud.Environment.StorageEndpointSuffix,
-		ContainerRegistryDNSSuffix: d.cloud.Environment.ContainerRegistryDNSSuffix,
-		TokenAudience:              d.cloud.Environment.TokenAudience,
-	}
 }
 
 // getBackOff returns a backoff object based on the config
