@@ -32,7 +32,7 @@ RUN if [ "$ARCH" = "arm64" ]; then \
     fi
 
 # install azcopy
-RUN curl -Ls https://azcopyvnext-awgzd8g7aagqhzhe.b02.azurefd.net/releases/release-10.29.0-20250428/azcopy_linux_${ARCH}_10.29.0.tar.gz \
+RUN curl -Ls https://azcopyvnext-awgzd8g7aagqhzhe.b02.azurefd.net/releases/release-10.29.1-20250515/azcopy_linux_${ARCH}_10.29.1.tar.gz \
         | tar xvzf - --strip-components=1 -C /usr/local/bin/ --wildcards "*/azcopy"
 
 # download blobfuse deb
