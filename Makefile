@@ -17,7 +17,7 @@ GIT_COMMIT ?= $(shell git rev-parse HEAD)
 REGISTRY ?= andyzhangx
 REGISTRY_NAME ?= $(shell echo $(REGISTRY) | sed "s/.azurecr.io//g")
 IMAGE_NAME ?= blob-csi
-IMAGE_VERSION ?= v1.25.7
+IMAGE_VERSION ?= v1.25.8
 CLOUD ?= AzurePublicCloud
 # Use a custom version for E2E tests if we are in Prow
 ifdef CI
