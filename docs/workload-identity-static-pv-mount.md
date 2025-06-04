@@ -1,10 +1,13 @@
-# workload identity support on static provisioning (Preview)
+# workload identity support on static provisioning
  - supported from v1.24.0 (from AKS 1.29 with `tokenRequests` field support in `CSIDriver`)
 
 ### Note
- - This feature is in **Preview**
  - This feature is not supported for NFS mount since NFS mount does not need credentials.
- - This feature would retrieve storage account key using federated identity credentials.
+ - This feature would retrieve storage account key using federated identity credentials by default.
+ - This feature supports mounting with workload identity token only (**Preview**) by configuring the following:
+    > limitation: the workload identity token would expire after 24 hours, make sure the blobfuse volume would be remounted by your application before it expires
+    - set `mountWithWorkloadIdentityToken: "true"` in parameters of storage class or persistent volume
+    - set `Storage Blob Data Contributor` role on the identity
 
 ## Prerequisites
 ### 1. Create a cluster with oidc-issuer enabled and get the credential
