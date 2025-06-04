@@ -1056,8 +1056,7 @@ func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName str
 		// prevent billing charges on mounting
 		"--cancel-list-on-mount-seconds": "10",
 		// allow remounting using a non-empty tmp-path
-		"--empty-dir-check":       "false",
-		"--disable-version-check": "true",
+		"--empty-dir-check": "false",
 	}
 
 	// stores the mount options already included in mountOptions
