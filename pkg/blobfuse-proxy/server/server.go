@@ -78,6 +78,10 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 			klog.V(2).Infof("append --ignore-open-flags=true to mount args")
 			args = args + " " + "--ignore-open-flags=true"
 		}
+		if !strings.Contains(args, "--disable-version-check") {
+			klog.V(2).Infof("append --disable-version-check to mount args")
+			args = args + " " + "--disable-version-check=true"
+		}
 		args = util.TrimDuplicatedSpace(args)
 		klog.V(2).Infof("mount with v2, protocol: %s, args: %s", protocol, args)
 		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
