@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -1508,6 +1509,10 @@ func TestIsSupportedContainerNamePrefix(t *testing.T) {
 }
 
 func TestChmodIfPermissionMismatch(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows")
+	}
+
 	permissionMatchingPath, _ := getWorkDirPath("permissionMatchingPath")
 	_ = makeDir(permissionMatchingPath)
 	defer os.RemoveAll(permissionMatchingPath)
