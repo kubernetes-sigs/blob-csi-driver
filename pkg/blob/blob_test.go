@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -1508,6 +1509,10 @@ func TestIsSupportedContainerNamePrefix(t *testing.T) {
 }
 
 func TestChmodIfPermissionMismatch(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on Windows")
+	}
+
 	permissionMatchingPath, _ := getWorkDirPath("permissionMatchingPath")
 	_ = makeDir(permissionMatchingPath)
 	defer os.RemoveAll(permissionMatchingPath)
@@ -1516,11 +1521,23 @@ func TestChmodIfPermissionMismatch(t *testing.T) {
 	_ = os.MkdirAll(permissionMismatchPath, os.FileMode(0721))
 	defer os.RemoveAll(permissionMismatchPath)
 
+	permissionMatchGidMismatchPath, _ := getWorkDirPath("permissionMatchGidMismatchPath")
+	_ = os.MkdirAll(permissionMatchGidMismatchPath, os.FileMode(0755))
+	_ = os.Chmod(permissionMatchGidMismatchPath, 0755|os.ModeSetgid) // Setgid bit is set
+	defer os.RemoveAll(permissionMatchGidMismatchPath)
+
+	permissionMismatchGidMismatch, _ := getWorkDirPath("permissionMismatchGidMismatch")
+	_ = os.MkdirAll(permissionMismatchGidMismatch, os.FileMode(0721))
+	_ = os.Chmod(permissionMismatchGidMismatch, 0721|os.ModeSetgid) // Setgid bit is set
+	defer os.RemoveAll(permissionMismatchGidMismatch)
+
 	tests := []struct {
-		desc          string
-		path          string
-		mode          os.FileMode
-		expectedError error
+		desc           string
+		path           string
+		mode           os.FileMode
+		expectedPerms  os.FileMode
+		expectedGidBit bool
+		expectedError  error
 	}{
 		{
 			desc:          "Invalid path",
@@ -1529,16 +1546,52 @@ func TestChmodIfPermissionMismatch(t *testing.T) {
 			expectedError: fmt.Errorf("CreateFile invalid-path: The system cannot find the file specified"),
 		},
 		{
-			desc:          "permission matching path",
-			path:          permissionMatchingPath,
-			mode:          0755,
-			expectedError: nil,
+			desc:           "permission matching path",
+			path:           permissionMatchingPath,
+			mode:           0755,
+			expectedPerms:  0755,
+			expectedGidBit: false,
+			expectedError:  nil,
 		},
 		{
-			desc:          "permission mismatch path",
-			path:          permissionMismatchPath,
-			mode:          0755,
-			expectedError: nil,
+			desc:           "permission mismatch path",
+			path:           permissionMismatchPath,
+			mode:           0755,
+			expectedPerms:  0755,
+			expectedGidBit: false,
+			expectedError:  nil,
+		},
+		{
+			desc:           "permission mismatch path",
+			path:           permissionMismatchPath,
+			mode:           0755,
+			expectedPerms:  0755,
+			expectedGidBit: false,
+			expectedError:  nil,
+		},
+		{
+			desc:           "only match the permission mode bits",
+			path:           permissionMatchGidMismatchPath,
+			mode:           0755,
+			expectedPerms:  0755,
+			expectedGidBit: true,
+			expectedError:  nil,
+		},
+		{
+			desc:           "only change the permission mode bits when gid is set",
+			path:           permissionMismatchGidMismatch,
+			mode:           0755,
+			expectedPerms:  0755,
+			expectedGidBit: true,
+			expectedError:  nil,
+		},
+		{
+			desc:           "only change the permission mode bits when gid is not set but mode bits have gid set",
+			path:           permissionMismatchPath,
+			mode:           02755,
+			expectedPerms:  0755,
+			expectedGidBit: false,
+			expectedError:  nil,
 		},
 	}
 
@@ -1549,7 +1602,19 @@ func TestChmodIfPermissionMismatch(t *testing.T) {
 				t.Errorf("test[%s]: unexpected error: %v, expected error: %v", test.desc, err, test.expectedError)
 			}
 		}
+
+		if test.expectedError == nil {
+			info, _ := os.Lstat(test.path)
+			if test.expectedError == nil && (info.Mode()&os.ModePerm != test.expectedPerms) {
+				t.Errorf("test[%s]: unexpected perms: %v, expected perms: %v, ", test.desc, info.Mode()&os.ModePerm, test.expectedPerms)
+			}
+
+			if (info.Mode()&os.ModeSetgid != 0) != test.expectedGidBit {
+				t.Errorf("test[%s]: unexpected gid bit: %v, expected gid bit: %v", test.desc, info.Mode()&os.ModeSetgid != 0, test.expectedGidBit)
+			}
+		}
 	}
+
 }
 
 // getWorkDirPath returns the path to the current working directory
