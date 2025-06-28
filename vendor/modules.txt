@@ -1691,7 +1691,7 @@ k8s.io/kubelet/pkg/apis/pluginregistration/v1
 k8s.io/kubelet/pkg/apis/podresources/v1
 k8s.io/kubelet/pkg/apis/podresources/v1alpha1
 k8s.io/kubelet/pkg/apis/stats/v1alpha1
-# k8s.io/kubernetes v1.32.2 => k8s.io/kubernetes v1.32.2
+# k8s.io/kubernetes v1.32.6 => k8s.io/kubernetes v1.32.6
 ## explicit; go 1.23.0
 k8s.io/kubernetes/pkg/api/legacyscheme
 k8s.io/kubernetes/pkg/api/service
@@ -2052,7 +2052,7 @@ sigs.k8s.io/yaml/goyaml.v2
 # k8s.io/kube-scheduler => k8s.io/kube-scheduler v0.32.2
 # k8s.io/kubectl => k8s.io/kubectl v0.32.2
 # k8s.io/kubelet => k8s.io/kubelet v0.32.2
-# k8s.io/kubernetes => k8s.io/kubernetes v1.32.2
+# k8s.io/kubernetes => k8s.io/kubernetes v1.32.6
 # k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.32.2
 # k8s.io/metrics => k8s.io/metrics v0.32.2
 # k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.32.2
