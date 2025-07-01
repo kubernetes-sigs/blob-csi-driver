@@ -8,7 +8,7 @@
 - Make sure that the virtual network hosting the driver controller pod is added to the list of allowed virtual networks in the storage account's VNet settings
   - if the driver controller pod is managed by AKS, you need to set `Enable from all networks` in the storage account's VNet settings
 - Before proceeding, ensure that the application is not writing data to the source volume.
-- In order to allow the use of a managed identity, the source storage account requires the `Storage Blob Data Reader` role, while the destination storage account requires the `Storage Blob Data Contributor` role. If the Storage Blob Data role is not granted, the CSI driver will use SAS token as fallback.
+- ensure that you have granted the `Storage File Data Privileged Contributor` role to the CSI driver controller identity; otherwise, the driver will utilize an SAS key for volume cloning operations.
 
 ## Create a Source PVC
 
