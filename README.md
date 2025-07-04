@@ -41,7 +41,7 @@ This option does not depend on cloud provider config file, supports cross subscr
 ### Install driver on a Kubernetes cluster
 > Execute following command to install a specific version of blobfuse v2 once driver is running on the agent node:
 > ```console
-> kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.4.1"}],"name":"install-blobfuse-proxy"}]}}}}'
+> kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.4.2"}],"name":"install-blobfuse-proxy"}]}}}}'
 > ```
 >
 > If you want to install a lower version of blobfuse2 than the current version, you can add ` --allow-downgrades` to the `BLOBFUSE2_VERSION` value, e.g.
