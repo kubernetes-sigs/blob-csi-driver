@@ -1,8 +1,7 @@
-# workload identity support
+# workload identity support on self-managed clusters
 > Note:
 >  - supported version: v1.22.0
 >  - workload identity is supported on OpenShift, capz and other self-managed clusters
->  - workload identity is NOT supported on AKS **managed** Blob CSI driver since the driver controller is managed by AKS control plane which is already using [managed identity](https://learn.microsoft.com/en-us/azure/aks/use-managed-identity) by default, it's not necessary to use workload identity for AKS managed Blob CSI driver.
 
 ## Prerequisites
 
