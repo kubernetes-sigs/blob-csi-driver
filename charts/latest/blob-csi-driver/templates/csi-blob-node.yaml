@@ -88,8 +88,6 @@ spec:
               value: "{{ .Values.node.blobfuseProxy.installBlobfuse }}"
             - name: BLOBFUSE_VERSION
               value: "{{ .Values.node.blobfuseProxy.blobfuseVersion }}"
-            - name: ALLOW_BLOBFUSE_DOWNGRADES
-              value: "{{ .Values.node.blobfuseProxy.allowBlobfuseDowngrades }}"
             - name: INSTALL_BLOBFUSE2
               value: "{{ .Values.node.blobfuseProxy.installBlobfuse2 }}"
             - name: BLOBFUSE2_VERSION
