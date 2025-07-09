@@ -48,6 +48,11 @@ This option does not depend on cloud provider config file, supports cross subscr
 > ```console
 > kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.3.0 --allow-downgrades"}],"name":"install-blobfuse-proxy"}]}}}}'
 > ```
+>
+> Alternatively, when using Helm charts, you can use the dedicated `allowBlobfuse2Downgrades` parameter for cleaner configuration:
+> ```console
+> helm upgrade --set node.blobfuseProxy.blobfuse2Version="2.3.0" --set node.blobfuseProxy.allowBlobfuse2Downgrades=true blob-csi-driver charts/latest/blob-csi-driver
+> ```
 
  - install by [helm charts](./charts)
  - install by [kubectl](./docs/install-blob-csi-driver.md)
