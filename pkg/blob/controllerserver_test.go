@@ -2133,3 +2133,42 @@ func TestGetAzcopyAuth(t *testing.T) {
 		t.Run(tc.name, tc.testFunc)
 	}
 }
+
+func TestControllerModifyVolume(t *testing.T) {
+	d := NewFakeDriver()
+	ctx := context.Background()
+	
+	req := &csi.ControllerModifyVolumeRequest{}
+	
+	_, err := d.ControllerModifyVolume(ctx, req)
+	
+	// Should return Unimplemented error
+	expectedErr := status.Error(codes.Unimplemented, "")
+	if !reflect.DeepEqual(err, expectedErr) {
+		t.Errorf("Expected error %v, but got %v", expectedErr, err)
+	}
+}
+
+func TestExecAzcopyCopy(t *testing.T) {
+	d := NewFakeDriver()
+	
+	// Test with invalid command (should fail)
+	srcPath := "/invalid/path"
+	dstPath := "/invalid/dest"
+	azcopyCopyOptions := []string{}
+	authAzcopyEnv := []string{}
+	
+	output, err := d.execAzcopyCopy(srcPath, dstPath, azcopyCopyOptions, authAzcopyEnv)
+	
+	// We expect an error since azcopy command won't work in test environment
+	assert.Error(t, err)
+	assert.NotNil(t, output)
+	
+	// Test with auth environment variables
+	authAzcopyEnv = []string{"AZCOPY_AUTO_LOGIN_TYPE=MSI"}
+	output2, err2 := d.execAzcopyCopy(srcPath, dstPath, azcopyCopyOptions, authAzcopyEnv)
+	
+	// We expect an error since azcopy command won't work in test environment
+	assert.Error(t, err2)
+	assert.NotNil(t, output2)
+}

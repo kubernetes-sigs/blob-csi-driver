@@ -1,0 +1,25 @@
+mode: count
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:53.43,57.2 3 4
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:62.62,73.68 9 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:73.68,77.53 2 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:77.53,80.4 2 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:81.3,81.57 1 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:81.57,84.4 2 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:85.3,87.63 3 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:88.8,92.3 3 0
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:94.2,96.16 3 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:96.16,98.3 1 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:98.8,100.3 1 0
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:101.2,103.16 3 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:103.16,105.3 1 2
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:106.2,106.21 1 0
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:113.9,126.2 5 1
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:128.43,130.16 2 5
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:130.16,133.3 2 0
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:135.2,135.128 1 5
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:135.128,138.3 2 0
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:140.2,140.47 1 5
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:140.47,143.3 2 0
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:145.2,145.77 1 5
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:145.77,148.3 2 5
+sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server/server.go:150.2,151.19 2 0
