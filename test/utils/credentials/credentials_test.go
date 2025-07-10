@@ -117,3 +117,42 @@ func withEnvironmentVariables(t *testing.T) {
 	assert.NoError(t, err)
 	assert.JSONEq(t, buf.String(), string(azureCredentialFileContent))
 }
+
+func TestDeleteAzureCredentialFileNotExists(t *testing.T) {
+	// Ensure the file doesn't exist first
+	os.Remove(TempAzureCredentialFilePath)
+	
+	// Trying to delete a non-existent file should not error
+	err := DeleteAzureCredentialFile()
+	assert.NoError(t, err)
+}
+
+func TestParseAzureCredentialFileNotExists(t *testing.T) {
+	// Ensure the file doesn't exist first
+	os.Remove(TempAzureCredentialFilePath)
+	
+	// Trying to parse a non-existent file should error
+	_, err := ParseAzureCredentialFile()
+	assert.Error(t, err)
+}
+
+func TestCreateAzureCredentialFileWithMissingEnvVars(t *testing.T) {
+	// Clear all environment variables
+	os.Unsetenv(tenantIDEnvVar)
+	os.Unsetenv(subscriptionIDEnvVar)
+	os.Unsetenv(aadClientIDEnvVar)
+	os.Unsetenv(aadClientSecretEnvVar)
+	os.Unsetenv(resourceGroupEnvVar)
+	os.Unsetenv(locationEnvVar)
+	os.Unsetenv(federatedTokenFileVar)
+	os.Unsetenv(cloudNameEnvVar)
+	
+	creds, err := CreateAzureCredentialFile()
+	defer func() {
+		DeleteAzureCredentialFile()
+	}()
+	
+	// Should error when required env vars are missing
+	assert.Error(t, err)
+	assert.Nil(t, creds)
+}

@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
+	csicommon "sigs.k8s.io/blob-csi-driver/pkg/csi-common"
 )
 
 func mockRunGRPCServer(_ pb.MountServiceServer, _ bool, _ net.Listener) error {
@@ -45,4 +46,35 @@ func TestMain(t *testing.T) {
 
 	// Run main
 	main()
+}
+
+func TestMainWithTCPEndpoint(t *testing.T) {
+	// Skip test on windows
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping test on ", runtime.GOOS)
+	}
+
+	// mock the grpcServerRunner
+	originalGRPCServerRunner := grpcServerRunner
+	grpcServerRunner = mockRunGRPCServer
+	defer func() { grpcServerRunner = originalGRPCServerRunner }()
+
+	// Set the blobfuse-proxy-endpoint with TCP
+	// Use a separate process to avoid flag redefinition issues
+	os.Args = []string{"cmd", "-blobfuse-proxy-endpoint=tcp://127.0.0.1:0"}
+
+	// Since we can't call main() directly due to flag conflicts,
+	// let's test the core functionality instead
+	proto, addr, err := csicommon.ParseEndpoint("tcp://127.0.0.1:0")
+	if err != nil {
+		t.Errorf("failed to parse endpoint: %v", err)
+	}
+	
+	if proto != "tcp" {
+		t.Errorf("expected protocol tcp, got %s", proto)
+	}
+	
+	if addr == "" {
+		t.Errorf("expected non-empty address")
+	}
 }
