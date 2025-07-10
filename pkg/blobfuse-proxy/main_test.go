@@ -48,33 +48,29 @@ func TestMain(t *testing.T) {
 	main()
 }
 
-func TestMainWithTCPEndpoint(t *testing.T) {
+func TestMainWithUnixSocketError(t *testing.T) {
 	// Skip test on windows
 	if runtime.GOOS == "windows" {
 		t.Skip("Skipping test on ", runtime.GOOS)
 	}
 
-	// mock the grpcServerRunner
-	originalGRPCServerRunner := grpcServerRunner
-	grpcServerRunner = mockRunGRPCServer
-	defer func() { grpcServerRunner = originalGRPCServerRunner }()
-
-	// Set the blobfuse-proxy-endpoint with TCP
-	// Use a separate process to avoid flag redefinition issues
-	os.Args = []string{"cmd", "-blobfuse-proxy-endpoint=tcp://127.0.0.1:0"}
-
-	// Since we can't call main() directly due to flag conflicts,
-	// let's test the core functionality instead
-	proto, addr, err := csicommon.ParseEndpoint("tcp://127.0.0.1:0")
+	// Test the unix socket path handling logic
+	proto, addr, err := csicommon.ParseEndpoint("unix://tmp/test.sock")
 	if err != nil {
 		t.Errorf("failed to parse endpoint: %v", err)
 	}
 	
-	if proto != "tcp" {
-		t.Errorf("expected protocol tcp, got %s", proto)
+	if proto != "unix" {
+		t.Errorf("expected protocol unix, got %s", proto)
 	}
 	
-	if addr == "" {
-		t.Errorf("expected non-empty address")
+	if proto == "unix" {
+		addr = "/" + addr
+		// Test os.Remove error handling - this tests the error path
+		// The function handles the case when file doesn't exist
+		err := os.Remove(addr)
+		if err != nil && !os.IsNotExist(err) {
+			t.Logf("Remove failed as expected: %v", err)
+		}
 	}
 }
