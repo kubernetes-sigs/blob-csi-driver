@@ -243,6 +243,12 @@ func TestNodePublishVolume(t *testing.T) {
 				// Mock NodeStageVolume to return success
 				d.cloud.ResourceGroup = "rg"
 				d.enableBlobMockMount = true
+				// Create the directory for token file
+				defaultAzureOAuthTokenDir = "./blob.csi.azure.com/"
+				_ = makeDir(defaultAzureOAuthTokenDir)
+			},
+			cleanup: func(_ *Driver) {
+				_ = os.RemoveAll(defaultAzureOAuthTokenDir)
 			},
 			req: &csi.NodePublishVolumeRequest{
 				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
@@ -253,6 +259,7 @@ func TestNodePublishVolume(t *testing.T) {
 					serviceAccountTokenField: `{"api://AzureADTokenExchange":{"token":"test-token","expirationTimestamp":"2023-01-01T00:00:00Z"}}`,
 					mountWithWITokenField:    "true",
 					clientIDField:            "client-id-value",
+					storageAccountNameField:  "test-account",
 				},
 			},
 			expectedErr: nil,
