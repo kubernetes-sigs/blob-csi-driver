@@ -165,6 +165,7 @@ node:
 
 feature:
   fsGroupPolicy: ReadWriteOnceWithFSType
+  requiresRepublish: true
   enableGetVolumeStats: false
 
 driver:

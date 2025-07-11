@@ -266,12 +266,6 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
-	mc := metrics.NewMetricContext(blobCSIDriverName, "node_stage_volume", d.cloud.ResourceGroup, "", d.Name)
-	isOperationSucceeded := false
-	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
-	}()
-
 	var serverAddress, storageEndpointSuffix, protocol, ephemeralVolMountOptions string
 	var ephemeralVol, isHnsEnabled bool
 
@@ -327,16 +321,22 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", targetPath, err)
 	}
+
+	_, accountName, _, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, protocol, attrib, secrets)
+	if err != nil && !mnt {
+		return nil, status.Errorf(codes.Internal, "%v", err)
+	}
+
 	if mnt {
 		klog.V(2).Infof("NodeStageVolume: volume %s is already mounted on %s", volumeID, targetPath)
-		isOperationSucceeded = true
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
-	_, accountName, _, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, protocol, attrib, secrets)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "%v", err)
-	}
+	mc := metrics.NewMetricContext(blobCSIDriverName, "node_stage_volume", d.cloud.ResourceGroup, "", d.Name)
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+	}()
 
 	// replace pv/pvc name namespace metadata in subDir
 	containerName = replaceWithMap(containerName, containerNameReplaceMap)
