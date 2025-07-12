@@ -469,7 +469,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	rgName, accountName, containerName, secretNamespace, _, err := GetContainerInfo(volumeID)
 	if err != nil {
 		// ignore volumeID parsing error
-		klog.V(2).Infof("parsing volumeID(%s) return with error: %v", volumeID, err)
+		klog.V(6).Infof("parsing volumeID(%s) return with error: %v", volumeID, err)
 		err = nil
 	}
 
