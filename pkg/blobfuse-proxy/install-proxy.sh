@@ -73,7 +73,11 @@ then
       echo "install blobfuse2 with latest version"
       pkg_list="${pkg_list} blobfuse2"
     else
-      pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
+      blobfuse2_install_str="blobfuse2=${BLOBFUSE2_VERSION}"
+      if [ "${ALLOW_BLOBFUSE2_DOWNGRADES}" = "true" ]; then
+        blobfuse2_install_str="${blobfuse2_install_str} --allow-downgrades"
+      fi
+      pkg_list="${pkg_list} ${blobfuse2_install_str}"
     fi
   fi
 
