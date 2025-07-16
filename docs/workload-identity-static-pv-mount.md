@@ -65,7 +65,7 @@ az identity federated-credential create --name $FEDERATED_IDENTITY_NAME \
 --issuer $AKS_OIDC_ISSUER \
 --subject system:serviceaccount:${SERVICE_ACCOUNT_NAMESPACE}:${SERVICE_ACCOUNT_NAME}
 ```
-## option#1: dynamic provisoning with storage class
+## option#1: dynamic provisioning with storage class
 ```
 cat <<EOF | kubectl apply -f -
 apiVersion: storage.k8s.io/v1
