@@ -329,6 +329,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 	if mnt {
 		klog.V(2).Infof("NodeStageVolume: volume %s is already mounted on %s", volumeID, targetPath)
+		isOperationSucceeded = true
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
