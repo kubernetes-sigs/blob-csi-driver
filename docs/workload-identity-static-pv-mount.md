@@ -65,8 +65,79 @@ az identity federated-credential create --name $FEDERATED_IDENTITY_NAME \
 --issuer $AKS_OIDC_ISSUER \
 --subject system:serviceaccount:${SERVICE_ACCOUNT_NAMESPACE}:${SERVICE_ACCOUNT_NAME}
 ```
+## option#1: dynamic provisoning with storage class
+```
+cat <<EOF | kubectl apply -f -
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blob-fuse
+provisioner: blob.csi.azure.com
+parameters:
+  storageaccount: $ACCOUNT # required
+  clientID: $USER_ASSIGNED_CLIENT_ID # required, $USER_ASSIGNED_CLIENT_ID is only for mount auth, make sure you CSI driver controller pod has `Contributor` role on the specified account
+  resourcegroup: $STORAGE_RESOURCE_GROUP # optional, specified when the storage account is not under AKS node resource group(which is prefixed with "MC_")
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+mountOptions:
+  - -o allow_other
+  - --file-cache-timeout-in-seconds=120
+  - --use-attr-cache=true
+  - --cancel-list-on-mount-seconds=10  # prevent billing charges on mounting
+  - -o attr_timeout=120
+  - -o entry_timeout=120
+  - -o negative_timeout=120
+  - --log-level=LOG_WARNING  # LOG_WARNING, LOG_INFO, LOG_DEBUG
+  - --cache-size-mb=1000  # Default will be 80% of available memory, eviction will happen beyond that.
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: statefulset-blob
+  namespace: ${SERVICE_ACCOUNT_NAMESPACE}
+  labels:
+    app: nginx
+spec:
+  serviceName: statefulset-blob
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      serviceAccountName: $SERVICE_ACCOUNT_NAME  #required, Pod lacks the necessary permission to mount the volume without this field
+      nodeSelector:
+        "kubernetes.io/os": linux
+      containers:
+        - name: statefulset-blob
+          image: mcr.microsoft.com/mirror/docker/library/nginx:1.23
+          command:
+            - "/bin/bash"
+            - "-c"
+            - set -euo pipefail; while true; do echo $(date) >> /mnt/blob/outfile; sleep 1; done
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /mnt/blob
+              readOnly: false
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: nginx
+  volumeClaimTemplates:
+    - metadata:
+        name: persistent-storage
+      spec:
+        storageClassName: blob-fuse
+        accessModes: ["ReadWriteMany"]
+        resources:
+          requests:
+            storage: 100Gi
+EOF
+```
 
-## option#1: static provision with PV
+## option#2: static provision with PV
 ```
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
@@ -94,13 +165,12 @@ spec:
       containerName: $CONTAINER  # required
       clientID: $USER_ASSIGNED_CLIENT_ID # required
       resourcegroup: $STORAGE_RESOURCE_GROUP # optional, specified when the storage account is not under AKS node resource group(which is prefixed with "MC_")
-      # tenantID: $IDENTITY_TENANT  #optional, only specified when workload identity and AKS cluster are in different tenant
-      # subscriptionid: $SUBSCRIPTION #optional, only specified when workload identity and AKS cluster are in different subscription
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
 metadata:
   name: pvc-blob
+  namespace: ${SERVICE_ACCOUNT_NAMESPACE}
 spec:
   accessModes:
     - ReadWriteMany
@@ -116,6 +186,7 @@ metadata:
   labels:
     app: nginx
   name: deployment-blob
+  namespace: ${SERVICE_ACCOUNT_NAMESPACE}
 spec:
   replicas: 1
   selector:
@@ -127,7 +198,7 @@ spec:
         app: nginx
       name: deployment-blob
     spec:
-      serviceAccountName: $SERVICE_ACCOUNT_NAME  #required, Pod has no permission to mount the volume without this field
+      serviceAccountName: $SERVICE_ACCOUNT_NAME  #required, Pod lacks the necessary permission to mount the volume without this field
       nodeSelector:
         "kubernetes.io/os": linux
       containers:
@@ -150,41 +221,5 @@ spec:
       maxSurge: 0
       maxUnavailable: 1
     type: RollingUpdate
-EOF
-```
-
-## option#2: Pod with ephemeral inline volume
-```
-cat <<EOF | kubectl apply -f -
-kind: Pod
-apiVersion: v1
-metadata:
-  name: nginx-blobfuse-inline-volume
-spec:
-  serviceAccountName: $SERVICE_ACCOUNT_NAME  #required, Pod does not use this service account has no permission to mount the volume
-  nodeSelector:
-    "kubernetes.io/os": linux
-  containers:
-    - image: mcr.microsoft.com/oss/nginx/nginx:1.19.5
-      name: nginx-blobfuse
-      command:
-        - "/bin/bash"
-        - "-c"
-        - set -euo pipefail; while true; do echo $(date) >> /mnt/blobfuse/outfile; sleep 1; done
-      volumeMounts:
-        - name: persistent-storage
-          mountPath: "/mnt/blobfuse"
-          readOnly: false
-  volumes:
-    - name: persistent-storage
-      csi:
-        driver: blob.csi.azure.com
-        volumeAttributes:
-          storageaccount: $ACCOUNT # required
-          containerName: $CONTAINER  # required
-          clientID: $USER_ASSIGNED_CLIENT_ID # required
-          resourcegroup: $STORAGE_RESOURCE_GROUP # optional, specified when the storage account is not under AKS node resource group(which is prefixed with "MC_")
-          # tenantID: $IDENTITY_TENANT  # optional, only specified when workload identity and AKS cluster are in different tenant
-          # subscriptionid: $SUBSCRIPTION # optional, only specified when workload identity and AKS cluster are in different subscription
 EOF
 ```
