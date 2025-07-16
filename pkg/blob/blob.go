@@ -83,6 +83,7 @@ const (
 	storageSPNClientIDField        = "azurestoragespnclientid"
 	storageSPNTenantIDField        = "azurestoragespntenantid"
 	storageAuthTypeField           = "azurestorageauthtype"
+	storageAuthTypeMSI             = "msi"
 	storageIdentityClientIDField   = "azurestorageidentityclientid"
 	storageIdentityObjectIDField   = "azurestorageidentityobjectid"
 	storageIdentityResourceIDField = "azurestorageidentityresourceid"
@@ -635,7 +636,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 				if spnTenantID != "" {
 					storageSPNTenantID = spnTenantID
 				}
-				if err != nil && strings.EqualFold(azureStorageAuthType, "msi") {
+				if err != nil && strings.EqualFold(azureStorageAuthType, storageAuthTypeMSI) {
 					klog.V(2).Infof("ignore error(%v) since secret is optional for auth type(%s)", err, azureStorageAuthType)
 					err = nil
 				}
@@ -706,6 +707,23 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	if storageSPNTenantID != "" {
 		klog.V(2).Infof("storageSPNTenantID(%s) is not empty, use it to access storage account(%s), container(%s)", storageSPNTenantID, accountName, containerName)
 		authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+storageSPNTenantID)
+	}
+
+	if azureStorageAuthType == storageAuthTypeMSI {
+		// check whether authEnv contains AZURE_STORAGE_IDENTITY_ prefix
+		containsIdentityEnv := false
+		for _, env := range authEnv {
+			if strings.HasPrefix(env, "AZURE_STORAGE_IDENTITY_") {
+				klog.V(2).Infof("AZURE_STORAGE_IDENTITY_ is already set in authEnv, skip setting it again")
+				containsIdentityEnv = true
+				break
+			}
+		}
+		if !containsIdentityEnv && d.cloud != nil && d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID != "" {
+			klog.V(2).Infof("azureStorageAuthType is set to %s, add AZURE_STORAGE_IDENTITY_CLIENT_ID(%s) into authEnv",
+				azureStorageAuthType, d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID)
+			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_CLIENT_ID="+d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID)
+		}
 	}
 
 	return rgName, accountName, accountKey, containerName, authEnv, err
