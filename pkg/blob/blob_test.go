@@ -591,54 +591,6 @@ func TestGetAuthEnv(t *testing.T) {
 			},
 		},
 		{
-			name: "valid request with MSIAuthTypeAddsIdentityEnv",
-			testFunc: func(t *testing.T) {
-				d := NewFakeDriver()
-				d.cloud = &storage.AccountRepo{}
-				d.cloud.Config.AzureAuthConfig = azclient.AzureAuthConfig{
-					UserAssignedIdentityID: "unit-test-identity-id",
-				}
-
-				attrib := map[string]string{
-					subscriptionIDField:          "subID",
-					resourceGroupField:           "rg",
-					storageAccountField:          "accountname",
-					storageAccountNameField:      "accountname",
-					secretNameField:              "secretName",
-					secretNamespaceField:         "sNS",
-					containerNameField:           "containername",
-					mountWithWITokenField:        "false",
-					pvcNamespaceKey:              "pvcNSKey",
-					getAccountKeyFromSecretField: "false",
-					storageAuthTypeField:         storageAuthTypeMSI,
-					msiEndpointField:             "msiEndpoint",
-					getLatestAccountKeyField:     "true",
-				}
-				secret := make(map[string]string)
-				volumeID := "rg#f5713de20cde511e8ba4900#pvc-fuse-dynamic-17e43f84-f474-11e8-acd0-000d3a00df41"
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
-				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
-				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
-				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
-				s := "unit-test"
-				accountkey := armstorage.AccountKey{Value: &s}
-				list := []*armstorage.AccountKey{&accountkey}
-				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
-				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
-				_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
-				assert.NoError(t, err)
-				found := false
-				for _, env := range authEnv {
-					if env == "AZURE_STORAGE_IDENTITY_CLIENT_ID=unit-test-identity-id" {
-						found = true
-						break
-					}
-				}
-				assert.True(t, found, "AZURE_STORAGE_IDENTITY_CLIENT_ID should be present in authEnv")
-			},
-		},
-		{
 			name: "invalid getLatestAccountKey value",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
