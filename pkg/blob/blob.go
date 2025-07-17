@@ -23,6 +23,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -161,7 +162,6 @@ const (
 	tagValueDelimiterField = "tagvaluedelimiter"
 
 	DefaultTokenAudience = "api://AzureADTokenExchange" //nolint:gosec // G101 ignore this!
-
 )
 
 var (
@@ -171,7 +171,8 @@ var (
 
 	// azcopyCloneVolumeOptions used in volume cloning between different storage account and --check-length to false because volume data may be in changing state, copy volume is not same as current source volume,
 	// set --s2s-preserve-access-tier=false to avoid BlobAccessTierNotSupportedForAccountType error in azcopy
-	azcopyCloneVolumeOptions = []string{"--recursive", "--check-length=false", "--s2s-preserve-access-tier=false", "--log-level=ERROR"}
+	azcopyCloneVolumeOptions  = []string{"--recursive", "--check-length=false", "--s2s-preserve-access-tier=false", "--log-level=ERROR"}
+	defaultAzureOAuthTokenDir = "/var/lib/kubelet/plugins/" + DefaultDriverName
 )
 
 // DriverOptions defines driver parameters specified in driver deployment
@@ -587,13 +588,17 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			if err != nil {
 				return rgName, accountName, accountKey, containerName, authEnv, err
 			}
+			azureOAuthTokenFile := filepath.Join(defaultAzureOAuthTokenDir, clientID+accountName)
+			if err := os.WriteFile(azureOAuthTokenFile, []byte(workloadIdentityToken), 0600); err != nil {
+				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("failed to write workload identity token file %s: %v", azureOAuthTokenFile, err)
+			}
 
 			authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+clientID)
 			if tenantID != "" {
 				authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+tenantID)
 			}
-			authEnv = append(authEnv, "WORKLOAD_IDENTITY_TOKEN="+workloadIdentityToken)
-
+			authEnv = append(authEnv, "AZURE_OAUTH_TOKEN_FILE="+azureOAuthTokenFile)
+			klog.V(2).Infof("workload identity auth: %v", authEnv)
 			return rgName, accountName, accountKey, containerName, authEnv, err
 		}
 		klog.V(2).Infof("clientID(%s) is specified, use service account token to get account key", clientID)

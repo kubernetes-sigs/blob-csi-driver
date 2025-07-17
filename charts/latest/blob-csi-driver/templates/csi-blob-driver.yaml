@@ -12,5 +12,7 @@ spec:
   volumeLifecycleModes:
     - Persistent
     - Ephemeral
+  requiresRepublish: {{ .Values.feature.requiresRepublish }}
   tokenRequests:
     - audience: api://AzureADTokenExchange
+      expirationSeconds: 3600
