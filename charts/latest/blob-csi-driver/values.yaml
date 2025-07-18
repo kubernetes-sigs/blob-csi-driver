@@ -129,6 +129,7 @@ node:
     disableUpdateDB: true
     migrateK8sRepo: false
     setReadAheadSize: true
+    allowPackageInstallDowngrade: true
   blobfuseCachePath: /mnt
   appendTimeStampInCacheDir: false
   mountPermissions: 0777
