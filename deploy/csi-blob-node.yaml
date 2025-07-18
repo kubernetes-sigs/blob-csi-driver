@@ -68,6 +68,8 @@ spec:
               value: "9000000"
             - name: DISABLE_UPDATEDB
               value: "true"
+            - name: ALLOW_PACKAGE_INSTALL_DOWNGRADE
+              value: "true"
           volumeMounts:
             - name: host-usr
               mountPath: /host/usr

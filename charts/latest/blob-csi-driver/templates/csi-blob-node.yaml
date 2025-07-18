@@ -106,6 +106,8 @@ spec:
               value: "{{ .Values.node.blobfuseProxy.migrateK8sRepo }}"
             - name: SET_READ_AHEAD_SIZE
               value: "{{ .Values.node.blobfuseProxy.setReadAheadSize }}"
+            - name: ALLOW_PACKAGE_INSTALL_DOWNGRADE
+              value: "{{ .Values.node.blobfuseProxy.allowPackageInstallDowngrade }}"
           volumeMounts:
             - name: host-usr
               mountPath: /host/usr
