@@ -23,6 +23,8 @@ SET_READ_AHEAD_SIZE=${SET_READ_AHEAD_SIZE:-true}
 MIGRATE_K8S_REPO=${MIGRATE_K8S_REPO:-false}
 READ_AHEAD_KB=${READ_AHEAD_KB:-15380}
 KUBELET_PATH=${KUBELET_PATH:-/var/lib/kubelet}
+ALLOW_PACKAGE_INSTALL_DOWNGRADE=${ALLOW_PACKAGE_INSTALL_DOWNGRADE:-true}
+
 if [ "$KUBELET_PATH" != "/var/lib/kubelet" ];then
   echo "kubelet path is $KUBELET_PATH, update blobfuse-proxy.service...."
   sed -i "s#--blobfuse-proxy-endpoint[^ ]*#--blobfuse-proxy-endpoint=unix:/${KUBELET_PATH}/plugins/blob.csi.azure.com/blobfuse-proxy.sock#" /blobfuse-proxy/blobfuse-proxy.service

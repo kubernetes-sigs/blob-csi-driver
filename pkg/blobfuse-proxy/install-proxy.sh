@@ -77,6 +77,11 @@ then
     fi
   fi
 
+  if [ "${ALLOW_PACKAGE_INSTALL_DOWNGRADE}" = "true" ]; then
+    echo "allow package install downgrade"
+    pkg_list="${pkg_list} --allow-downgrades"
+  fi
+
   echo "begin to install ${pkg_list}"
   $HOST_CMD apt-get install -y $pkg_list || true
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
