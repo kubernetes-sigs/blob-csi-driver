@@ -54,15 +54,11 @@ COPY --from=builder --chown=root:root /blobfuse-proxy /blobfuse-proxy
 # packages that are only needed by aznfs: procps conntrack iptables bind9-host iproute2 bash netcat sysvinit-utils.
 RUN apt update && apt upgrade -y && apt-mark unhold libcap2 && clean-install ca-certificates uuid-dev util-linux mount udev e2fsprogs nfs-common netbase procps conntrack iptables bind9-host iproute2 bash netcat-traditional sysvinit-utils kmod
 
-COPY ./pkg/blobfuse-proxy/init.sh /blobfuse-proxy/
-COPY ./pkg/blobfuse-proxy/install-proxy.sh /blobfuse-proxy/
-COPY ./pkg/blobfuse-proxy/install-proxy-rhcos.sh /blobfuse-proxy/
+COPY ./pkg/blobfuse-proxy/*.sh /blobfuse-proxy/
 COPY ./pkg/blobfuse-proxy/blobfuse-proxy.service /blobfuse-proxy/
 COPY ./_output/${ARCH}/blobfuse-proxy /blobfuse-proxy/
 
-RUN chmod +x /blobfuse-proxy/init.sh && \
-  chmod +x /blobfuse-proxy/install-proxy-rhcos.sh && \
-  chmod +x /blobfuse-proxy/install-proxy.sh && \
+RUN chmod +x /blobfuse-proxy/*.sh && \
   chmod +x /blobfuse-proxy/blobfuse-proxy.service && \
   chmod +x /blobfuse-proxy/blobfuse-proxy
 
