@@ -272,7 +272,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
 	}()
 
-	var serverAddress, storageEndpointSuffix, protocol, ephemeralVolMountOptions string
+	var serverAddress, storageEndpointSuffix, protocol, ephemeralVolMountOptions, blobStorageAccountType string
 	var ephemeralVol, isHnsEnabled bool
 
 	containerNameReplaceMap := map[string]string{}
@@ -316,6 +316,8 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			}
 		case fsGroupChangePolicyField:
 			fsGroupChangePolicy = v
+		case blobStorageAccountTypeField:
+			blobStorageAccountType = v
 		}
 	}
 
@@ -435,6 +437,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		targetPath, protocol, volumeID, mountFlags, mountOptions, volumeMountGroup, args, serverAddress)
 
 	authEnv = append(authEnv, "AZURE_STORAGE_ACCOUNT="+accountName, "AZURE_STORAGE_BLOB_ENDPOINT="+serverAddress)
+	if blobStorageAccountType != "" {
+		klog.V(2).Infof("set AZURE_STORAGE_ACCOUNT_TYPE to %s", blobStorageAccountType)
+		authEnv = append(authEnv, "AZURE_STORAGE_ACCOUNT_TYPE="+blobStorageAccountType)
+	}
 	if d.enableBlobMockMount {
 		klog.Warningf("NodeStageVolume: mock mount on volumeID(%s), this is only for TESTING!!!", volumeID)
 		if err := volumehelper.MakeDir(targetPath, os.FileMode(mountPermissions)); err != nil {
