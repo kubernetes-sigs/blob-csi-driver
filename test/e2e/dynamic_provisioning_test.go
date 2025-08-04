@@ -118,10 +118,11 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 			StorageClassParameters: map[string]string{
-				"skuName":             "Standard_LRS",
-				"secretNamespace":     "default",
-				"containerNamePrefix": "nameprefix",
-				"accessTier":          "Cool",
+				"skuName":                "Standard_LRS",
+				"secretNamespace":        "default",
+				"containerNamePrefix":    "nameprefix",
+				"accessTier":             "Cool",
+				"blobStorageAccountType": "block",
 			},
 		}
 		test.Run(ctx, cs, ns)
