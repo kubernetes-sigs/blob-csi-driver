@@ -84,6 +84,7 @@ const (
 	storageSPNClientIDField        = "azurestoragespnclientid"
 	storageSPNTenantIDField        = "azurestoragespntenantid"
 	storageAuthTypeField           = "azurestorageauthtype"
+	blobStorageAccountTypeField    = "blobstorageaccounttype"
 	storageAuthTypeMSI             = "msi"
 	storageIdentityClientIDField   = "azurestorageidentityclientid"
 	storageIdentityObjectIDField   = "azurestorageidentityobjectid"
