@@ -192,6 +192,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		case tenantIDField:
 		case msiEndpointField:
 		case storageAADEndpointField:
+		case blobStorageAccountTypeField:
 			// no op, only used in NodeStageVolume
 		case storageEndpointSuffixField:
 			storageEndpointSuffix = v
