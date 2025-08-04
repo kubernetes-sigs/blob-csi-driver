@@ -439,6 +439,7 @@ func TestCreateVolume(t *testing.T) {
 				mp[mountPermissionsField] = "0750"
 				mp[storageAuthTypeField] = "msi"
 				mp[storageIdentityClientIDField] = "msi"
+				mp[blobStorageAccountTypeField] = "adls"
 				mp[clientIDField] = "clientID"
 				mp[mountWithWITokenField] = "true"
 				mp[tenantIDField] = "tenantID"
