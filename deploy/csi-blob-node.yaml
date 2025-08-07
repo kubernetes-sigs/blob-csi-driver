@@ -56,8 +56,6 @@ spec:
               value: "true"
             - name: INSTALL_BLOBFUSE
               value: "false"
-            - name: BLOBFUSE_VERSION
-              value: "1.4.5"
             - name: INSTALL_BLOBFUSE2
               value: "true"
             - name: BLOBFUSE2_VERSION
