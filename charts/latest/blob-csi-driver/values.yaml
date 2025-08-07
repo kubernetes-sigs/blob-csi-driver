@@ -163,6 +163,8 @@ node:
   tolerations:
     - operator: "Exists"
   enableAznfsMount: true
+  aznfs:
+    mountDir: /opt/microsoft/aznfs/data
 
 feature:
   fsGroupPolicy: ReadWriteOnceWithFSType

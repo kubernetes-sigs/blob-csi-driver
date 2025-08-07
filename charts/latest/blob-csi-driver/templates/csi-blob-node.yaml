@@ -255,7 +255,7 @@ spec:
               readOnly: true
             {{- end }}
             {{- if .Values.node.enableAznfsMount }}
-            - mountPath: /opt/microsoft/aznfs/data
+            - mountPath: {{ .Values.node.aznfs.mountDir }}
               name: aznfs-data
             - mountPath: /lib/modules
               name: lib-modules
@@ -279,7 +279,7 @@ spec:
               - ALL
           resources: {{- toYaml .Values.node.resources.aznfswatchdog | nindent 12 }}
           volumeMounts:
-            - mountPath: /opt/microsoft/aznfs/data
+            - mountPath: {{ .Values.node.aznfs.mountDir }}
               name: aznfs-data
             - mountPath: {{ .Values.linux.kubelet }}/
               mountPropagation: Bidirectional
@@ -326,7 +326,7 @@ spec:
         {{- end }}
         {{- if .Values.node.enableAznfsMount }}
         - hostPath:
-            path: /opt/microsoft/aznfs/data
+            path: {{ .Values.node.aznfs.mountDir }}
             type: DirectoryOrCreate
           name: aznfs-data
         - name: lib-modules
