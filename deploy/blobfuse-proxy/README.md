@@ -1,5 +1,4 @@
 # Blobfuse Proxy
- - supported CSI driver version: v1.6.0+
 
 By default, restart csi-blobfuse-node daemonset would make current blobfuse mounts unavailable. When fuse nodeserver restarts on the node, the fuse daemon also restarts, this results in breaking all connections FUSE daemon is maintaining. You could find more details here: [No easy way how to update CSI driver that uses fuse](https://github.com/kubernetes/kubernetes/issues/70013).
 
@@ -9,20 +8,16 @@ This guide shows how to install a blobfuse proxy on all agent nodes and the prox
  - helm install
 ```console
 helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.23.1 --set node.enableBlobfuseProxy=true
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.26.6 --set node.enableBlobfuseProxy=true
 ```
 
  - kubectl install
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v1.23.1/deploy/install-driver.sh | bash -s v1.23.1 blobfuse-proxy --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v1.26.6/deploy/install-driver.sh | bash -s v1.26.6 blobfuse-proxy --
 ```
 
 ### Enable blobfuse proxy on existing Blob CSI driver
- - install blobfuse proxy daemonset
 > blobfuse proxy is supported on CoreOS(OpenShift) from v1.23.2
-```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/v1.23.1/blobfuse-proxy.yaml
-```
  - set `enable-blobfuse-proxy=true` in existing `csi-blob-node` daemonset manually (default is `false`)
 ```console
 kubectl edit ds csi-blob-node -n kube-system
