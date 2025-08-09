@@ -16,12 +16,16 @@
 
 set -xe
 
-# in coreos, we could just copy the blobfuse2 binary to /usr/local/bin/blobfuse2
+BIN_PATH=${BIN_PATH:-/usr/local/bin}
+if [ "${DISTRIBUTION}" = "cos" ]; then
+  BIN_PATH="/home/kubernetes/bin"
+fi
+#copy blobfuse2 binary to BIN_PATH/blobfuse2
 updateBlobfuse2="true"
 if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
-  if [ -f "/host/usr/local/bin/blobfuse2" ];then
-    old=$(sha256sum /host/usr/local/bin/blobfuse2 | awk '{print $1}')
+  if [ -f "/host/${BIN_PATH}/blobfuse2" ];then
+    old=$(sha256sum /host/${BIN_PATH}/blobfuse2 | awk '{print $1}')
     new=$(sha256sum /usr/bin/blobfuse2 | awk '{print $1}')
     if [ "$old" = "$new" ];then
       updateBlobfuse2="false"
@@ -34,15 +38,15 @@ else
 fi
 if [ "$updateBlobfuse2" = "true" ];then
   echo "copy blobfuse2...."
-  cp /usr/bin/blobfuse2 /host/usr/local/bin/blobfuse2 --force
-  chmod 755 /host/usr/local/bin/blobfuse2
+  cp /usr/bin/blobfuse2 /host/${BIN_PATH}/blobfuse2 --force
+  chmod 755 /host/${BIN_PATH}/blobfuse2
 fi
 
 if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
   # install blobfuse-proxy
   updateBlobfuseProxy="true"
-  if [ -f "/host/usr/local/bin/blobfuse-proxy" ];then
-    old=$(sha256sum /host/usr/local/bin/blobfuse-proxy | awk '{print $1}')
+  if [ -f "/host/${BIN_PATH}/blobfuse-proxy" ];then
+    old=$(sha256sum /host/${BIN_PATH}/blobfuse-proxy | awk '{print $1}')
     new=$(sha256sum /blobfuse-proxy/blobfuse-proxy | awk '{print $1}')
     if [ "$old" = "$new" ];then
       updateBlobfuseProxy="false"
@@ -51,14 +55,14 @@ if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
   fi
   if [ "$updateBlobfuseProxy" = "true" ];then
     echo "copy blobfuse-proxy...."
-    rm -rf /host/"$KUBELET_PATH"/plugins/blob.csi.azure.com/blobfuse-proxy.sock
-    cp /blobfuse-proxy/blobfuse-proxy /host/usr/local/bin/blobfuse-proxy --force
-    chmod 755 /host/usr/local/bin/blobfuse-proxy
+    rm -rf /host/${KUBELET_PATH}/plugins/blob.csi.azure.com/blobfuse-proxy.sock
+    cp /blobfuse-proxy/blobfuse-proxy /host/${BIN_PATH}/blobfuse-proxy --force
+    chmod 755 /host/${BIN_PATH}/blobfuse-proxy
   fi
 
   updateService="true"
-  echo "change from /usr/bin/blobfuse-proxy to /usr/local/bin/blobfuse-proxy in blobfuse-proxy.service"
-  sed -i 's/\/usr\/bin\/blobfuse-proxy/\/usr\/local\/bin\/blobfuse-proxy/g' /blobfuse-proxy/blobfuse-proxy.service
+  echo "change from /usr/bin/blobfuse-proxy to ${BIN_PATH}/blobfuse-proxy in blobfuse-proxy.service"
+  sed -i "s|/usr/bin/blobfuse-proxy|${BIN_PATH}/blobfuse-proxy|g" /blobfuse-proxy/blobfuse-proxy.service
   if [ -f "/host/etc/systemd/system/blobfuse-proxy.service" ];then
     old=$(sha256sum /host/etc/systemd/system/blobfuse-proxy.service | awk '{print $1}')
     new=$(sha256sum /blobfuse-proxy/blobfuse-proxy.service | awk '{print $1}')
