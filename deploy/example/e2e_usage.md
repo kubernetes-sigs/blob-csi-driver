@@ -90,11 +90,17 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
+  storageClassName: blob-fuse
+  mountOptions:
+    - -o allow_other
+    - --file-cache-timeout-in-seconds=120
   csi:
     driver: blob.csi.azure.com
     # make sure volumeHandle is unique for every storage blob container in the cluster
     volumeHandle: "{resource-group-name}#{account-name}#{container-name}"
     volumeAttributes:
+      resourceGroup: EXISTING_RESOURCE_GROUP_NAME
+      storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
       containerName: EXISTING_CONTAINER_NAME
     nodeStageSecretRef:
       name: azure-secret
