@@ -101,6 +101,9 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 	result.Output = string(output)
 	klog.V(2).Infof("blobfuse output: %s\n", result.Output)
 	if err != nil {
+		if strings.Contains(err.Error(), "executable file not found") {
+			return &result, fmt.Errorf("%w, PATH=%s, %s", err, os.Getenv("PATH"), result.Output)
+		}
 		return &result, fmt.Errorf("%w %s", err, result.Output)
 	}
 	return &result, nil
