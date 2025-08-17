@@ -18,8 +18,18 @@ set -xe
 
 BIN_PATH=${BIN_PATH:-/usr/local/bin}
 if [ "${DISTRIBUTION}" = "cos" ]; then
+  echo "set BIN_PATH to /home/kubernetes/bin"
   BIN_PATH="/home/kubernetes/bin"
 fi
+if [ "${DISTRIBUTION}" = "gardenlinux" ]; then
+  echo "set BIN_PATH to /var/bin"
+  BIN_PATH="/var/bin"
+fi
+if [ "${CUSTOM_BIN_PATH}" != "" ]; then
+  echo "set BIN_PATH to ${CUSTOM_BIN_PATH}"
+  BIN_PATH="${CUSTOM_BIN_PATH}"
+fi
+
 #copy blobfuse2 binary to BIN_PATH/blobfuse2
 updateBlobfuse2="true"
 if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
@@ -63,6 +73,10 @@ if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
   updateService="true"
   echo "change from /usr/bin/blobfuse-proxy to ${BIN_PATH}/blobfuse-proxy in blobfuse-proxy.service"
   sed -i "s|/usr/bin/blobfuse-proxy|${BIN_PATH}/blobfuse-proxy|g" /blobfuse-proxy/blobfuse-proxy.service
+  if [ "${BIN_PATH}" != "/usr/local/bin" ]; then
+    echo "add Environment=\"PATH=${BIN_PATH}:$PATH\" in blobfuse-proxy.service"
+    sed -i "/Delegate=yes/a Environment=\"PATH=${BIN_PATH}:\$PATH\"" /blobfuse-proxy/blobfuse-proxy.service
+  fi
   if [ -f "/host/etc/systemd/system/blobfuse-proxy.service" ];then
     old=$(sha256sum /host/etc/systemd/system/blobfuse-proxy.service | awk '{print $1}')
     new=$(sha256sum /blobfuse-proxy/blobfuse-proxy.service | awk '{print $1}')
