@@ -874,3 +874,82 @@ func TestWaitUntilTimeout(t *testing.T) {
 		}
 	}
 }
+
+func TestMakeDirAdditional(t *testing.T) {
+	tests := []struct {
+		name     string
+		pathname string
+		perm     os.FileMode
+		wantErr  bool
+	}{
+		{
+			name:     "create new directory with specific permissions",
+			pathname: "/tmp/test-make-dir-additional",
+			perm:     0700,
+			wantErr:  false,
+		},
+		{
+			name:     "fail to create directory with invalid path",
+			pathname: "/invalid-root-path/that/does/not/exist",
+			perm:     0755,
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := MakeDir(tt.pathname, tt.perm)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("MakeDir() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			
+			// Cleanup only if successful
+			if err == nil {
+				os.RemoveAll(tt.pathname)
+			}
+		})
+	}
+}
+
+func TestExecCommand_RunCommand(t *testing.T) {
+	ec := &ExecCommand{}
+	
+	tests := []struct {
+		name     string
+		cmdStr   string
+		authEnv  []string
+		wantErr  bool
+	}{
+		{
+			name:     "simple echo command",
+			cmdStr:   "echo hello",
+			authEnv:  []string{},
+			wantErr:  false,
+		},
+		{
+			name:     "command with environment variable",
+			cmdStr:   "echo $TEST_VAR",
+			authEnv:  []string{"TEST_VAR=test_value"},
+			wantErr:  false,
+		},
+		{
+			name:     "invalid command",
+			cmdStr:   "nonexistent_command_12345",
+			authEnv:  []string{},
+			wantErr:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output, err := ec.RunCommand(tt.cmdStr, tt.authEnv)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RunCommand() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			
+			if !tt.wantErr {
+				assert.NotEmpty(t, output)
+			}
+		})
+	}
+}
