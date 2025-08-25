@@ -73,7 +73,11 @@ then
       echo "install blobfuse2 with latest version"
       pkg_list="${pkg_list} blobfuse2"
     else
-      pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
+      if echo "${BLOBFUSE2_VERSION}" | grep -q "preview"; then
+        pkg_list="${pkg_list} blobfuse2-preview=${BLOBFUSE2_VERSION}"
+      else
+        pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
+      fi
     fi
   fi
 
