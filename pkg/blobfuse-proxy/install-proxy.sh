@@ -73,7 +73,17 @@ then
       echo "install blobfuse2 with latest version"
       pkg_list="${pkg_list} blobfuse2"
     else
-      pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
+      if echo "${BLOBFUSE2_VERSION}" | grep -q "preview"; then
+        if $HOST_CMD dpkg -l | grep -q blobfuse2; then
+          $HOST_CMD apt-get remove -y blobfuse2
+        fi
+        pkg_list="${pkg_list} blobfuse2-preview=${BLOBFUSE2_VERSION}"
+      else
+        if $HOST_CMD dpkg -l | grep -q blobfuse2-preview; then
+          $HOST_CMD apt-get remove -y blobfuse2-preview
+        fi
+        pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
+      fi
     fi
   fi
 
