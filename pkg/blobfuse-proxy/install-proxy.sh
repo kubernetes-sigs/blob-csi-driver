@@ -74,6 +74,7 @@ then
       pkg_list="${pkg_list} blobfuse2"
     else
       if echo "${BLOBFUSE2_VERSION}" | grep -q "preview"; then
+        $HOST_CMD apt remove -y blobfuse2`
         pkg_list="${pkg_list} blobfuse2-preview=${BLOBFUSE2_VERSION}"
       else
         pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
