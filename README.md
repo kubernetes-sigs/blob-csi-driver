@@ -20,7 +20,7 @@ Disclaimer: Deploying this driver manually is not an officially supported Micros
 |----------------|------------------------------------------------------|-----------------------|
 |master branch   |mcr.microsoft.com/k8s/csi/blob-csi:latest             | 1.21+                 |
 |v1.27.0         |mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.27.0 | 1.21+                 |
-|v1.26.3         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.26.3 | 1.21+                 |
+|v1.26.7         |mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.26.7 | 1.21+                 |
 |v1.25.6         |mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.25.6 | 1.21+                 |
 
 ### Driver parameters
