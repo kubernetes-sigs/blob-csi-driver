@@ -1,3 +1,6 @@
+{{- if and .Values.linux.mountHomeK8sBin .Values.linux.mountVarLib }}
+{{- fail "Only one of linux.mountHomeK8sBin and linux.mountVarLib can be true at a time" }}
+{{- end }}
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -107,10 +110,14 @@ spec:
             - name: ALLOW_PACKAGE_INSTALL_DOWNGRADE
               value: "{{ .Values.node.blobfuseProxy.allowPackageInstallDowngrade }}"
           volumeMounts:
+{{- if eq .Values.linux.distro "cos" }}
             - name: host-home-kubernetes-bin
               mountPath: /host/home/kubernetes/bin
+{{- end }}
+{{- if eq .Values.linux.distro "gardenlinux" }}
             - name: host-var-bin
               mountPath: /host/var/bin
+{{- end }}
             - name: host-usr
               mountPath: /host/usr
             - name: host-usr-local
@@ -291,12 +298,16 @@ spec:
               name: mountpoint-dir
 {{- end }}
       volumes:
+        {{- if .Values.linux.mountHomeK8sBin }}
         - name: host-home-kubernetes-bin
           hostPath:
             path: /home/kubernetes/bin
+        {{- end }}
+        {{- if .Values.linux.mountVarLib }}
         - name: host-var-bin
           hostPath:
             path: /var/bin
+        {{- end }}
         - name: host-usr
           hostPath:
             path: /usr
