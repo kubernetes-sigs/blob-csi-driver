@@ -298,16 +298,16 @@ spec:
               name: mountpoint-dir
 {{- end }}
       volumes:
-        {{- if .Values.linux.mountHomeK8sBin }}
+{{- if eq .Values.linux.distro "cos" }}
         - name: host-home-kubernetes-bin
           hostPath:
             path: /home/kubernetes/bin
-        {{- end }}
-        {{- if .Values.linux.mountVarLib }}
+{{- end }}
+{{- if eq .Values.linux.distro "gardenlinux" }}
         - name: host-var-bin
           hostPath:
             path: /var/bin
-        {{- end }}
+{{- end }}
         - name: host-usr
           hostPath:
             path: /usr
