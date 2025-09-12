@@ -107,12 +107,19 @@ spec:
             - name: ALLOW_PACKAGE_INSTALL_DOWNGRADE
               value: "{{ .Values.node.blobfuseProxy.allowPackageInstallDowngrade }}"
           volumeMounts:
+            - name: host-home-kubernetes-bin
+              mountPath: /host/home/kubernetes/bin
+            - name: host-var-bin
+              mountPath: /host/var/bin
             - name: host-usr
               mountPath: /host/usr
             - name: host-usr-local
               mountPath: /host/usr/local
             - name: host-etc
               mountPath: /host/etc
+{{- if .Values.node.additionalVolumeMounts }}
+{{- toYaml .Values.node.additionalVolumeMounts | nindent 12 }}
+{{- end }}
       containers:
         - name: liveness-probe
           imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
@@ -284,6 +291,12 @@ spec:
               name: mountpoint-dir
 {{- end }}
       volumes:
+        - name: host-home-kubernetes-bin
+          hostPath:
+            path: /home/kubernetes/bin
+        - name: host-var-bin
+          hostPath:
+            path: /var/bin
         - name: host-usr
           hostPath:
             path: /usr
@@ -332,6 +345,9 @@ spec:
             path: /lib/modules
             type: DirectoryOrCreate
         {{- end }}
+{{- if .Values.node.additionalVolumes }}
+{{- toYaml .Values.node.additionalVolumes | nindent 8 }}
+{{- end }}
       {{- if .Values.securityContext }}
       securityContext: {{- toYaml .Values.securityContext | nindent 8 }}
       {{- end }}
