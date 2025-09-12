@@ -1,6 +1,3 @@
-{{- if and .Values.linux.mountHomeK8sBin .Values.linux.mountVarLib }}
-{{- fail "Only one of linux.mountHomeK8sBin and linux.mountVarLib can be true at a time" }}
-{{- end }}
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
