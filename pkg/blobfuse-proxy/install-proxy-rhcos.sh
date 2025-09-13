@@ -34,8 +34,8 @@ fi
 updateBlobfuse2="true"
 if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
-  if [ -f "/host/${BIN_PATH}/blobfuse2" ];then
-    old=$(sha256sum /host/${BIN_PATH}/blobfuse2 | awk '{print $1}')
+  if [ -f "/host${BIN_PATH}/blobfuse2" ];then
+    old=$(sha256sum /host${BIN_PATH}/blobfuse2 | awk '{print $1}')
     new=$(sha256sum /usr/bin/blobfuse2 | awk '{print $1}')
     if [ "$old" = "$new" ];then
       updateBlobfuse2="false"
@@ -48,15 +48,15 @@ else
 fi
 if [ "$updateBlobfuse2" = "true" ];then
   echo "copy blobfuse2...."
-  cp /usr/bin/blobfuse2 /host/${BIN_PATH}/blobfuse2 --force
-  chmod 755 /host/${BIN_PATH}/blobfuse2
+  cp /usr/bin/blobfuse2 /host${BIN_PATH}/blobfuse2 --force
+  chmod 755 /host${BIN_PATH}/blobfuse2
 fi
 
 if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
   # install blobfuse-proxy
   updateBlobfuseProxy="true"
-  if [ -f "/host/${BIN_PATH}/blobfuse-proxy" ];then
-    old=$(sha256sum /host/${BIN_PATH}/blobfuse-proxy | awk '{print $1}')
+  if [ -f "/host${BIN_PATH}/blobfuse-proxy" ];then
+    old=$(sha256sum /host${BIN_PATH}/blobfuse-proxy | awk '{print $1}')
     new=$(sha256sum /blobfuse-proxy/blobfuse-proxy | awk '{print $1}')
     if [ "$old" = "$new" ];then
       updateBlobfuseProxy="false"
@@ -66,8 +66,8 @@ if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
   if [ "$updateBlobfuseProxy" = "true" ];then
     echo "copy blobfuse-proxy...."
     rm -rf /host/${KUBELET_PATH}/plugins/blob.csi.azure.com/blobfuse-proxy.sock
-    cp /blobfuse-proxy/blobfuse-proxy /host/${BIN_PATH}/blobfuse-proxy --force
-    chmod 755 /host/${BIN_PATH}/blobfuse-proxy
+    cp /blobfuse-proxy/blobfuse-proxy /host${BIN_PATH}/blobfuse-proxy --force
+    chmod 755 /host${BIN_PATH}/blobfuse-proxy
   fi
 
   updateService="true"
