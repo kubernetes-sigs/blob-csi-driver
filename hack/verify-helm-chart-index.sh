@@ -19,6 +19,7 @@ set -euo pipefail
 readonly PKG_ROOT="$(git rev-parse --show-toplevel)"
 
 INDEX=${PKG_ROOT}/charts/index.yaml
+ignore_filename=""
 
 function check_url() {  
     url=$1
