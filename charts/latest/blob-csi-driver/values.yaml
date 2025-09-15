@@ -163,6 +163,21 @@ node:
   tolerations:
     - operator: "Exists"
   enableAznfsMount: true
+  # Additional volumes to be added to the DaemonSet
+  additionalVolumes: []
+  # - name: custom-config
+  #   configMap:
+  #     name: my-config
+  # - name: custom-secret
+  #   secret:
+  #     secretName: my-secret
+  # Additional volume mounts to be added to the init container
+  additionalVolumeMounts: []
+  # - name: custom-config
+  #   mountPath: /etc/custom-config
+  # - name: custom-secret
+  #   mountPath: /etc/custom-secret
+  #   readOnly: true
 
 feature:
   fsGroupPolicy: ReadWriteOnceWithFSType
