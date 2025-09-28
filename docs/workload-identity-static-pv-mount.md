@@ -9,7 +9,7 @@
     - grant `Storage Blob Data Contributor` role instead of `Storage Account Contributor` role to the managed identity
 
 ## Prerequisites
-### 1. Create a cluster with oidc-issuer enabled and get the credential
+### 1. Create a cluster with oidc-issuer enabled and get the AKS cluster credential
 
 Refer to the [documentation](https://learn.microsoft.com/en-us/azure/aks/use-oidc-issuer#create-an-aks-cluster-with-oidc-issuer) for instructions on creating a new AKS cluster with the `--enable-oidc-issuer` parameter and get the AKS credentials. And export following environment variables:
 ```console
@@ -19,14 +19,14 @@ export REGION=<your region>
 ```
 
 ### 2. Bring your own storage account and storage container
-Refer to the [documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-cli) for instructions on creating a new storage account and container, or alternatively, utilize your existing storage account and container.  And export following environment variables:
+Refer to the [documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-cli) for instructions on creating a new storage account and container, or alternatively, utilize your existing storage account and container. And export following environment variables:
 ```console
 export STORAGE_RESOURCE_GROUP=<your storage account resource group>
 export ACCOUNT=<your storage account name>
-export CONTAINER=<your storage container name>
+export CONTAINER=<your storage container name> # optional
 ```
 
-### 3. Create or bring your own managed identity and role assignment
+### 3. Create or bring your own managed identity and grant role to the managed identity
 > you could leverage the default user assigned managed identity bound to the AKS agent node pool(with naming rule [`AKS Cluster Name-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)) in node resource group
 ```console
 export UAMI=<your managed identity name>
@@ -46,7 +46,7 @@ az role assignment create --role "Storage Account Contributor" --assignee $USER_
 az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
 
-### 4. Create service account on AKS
+### 4. Create a service account on AKS
 ```
 export SERVICE_ACCOUNT_NAME=<your sa name>
 export SERVICE_ACCOUNT_NAMESPACE=<your sa namespace>
@@ -71,6 +71,7 @@ az identity federated-credential create --name $FEDERATED_IDENTITY_NAME \
 --issuer $AKS_OIDC_ISSUER \
 --subject system:serviceaccount:${SERVICE_ACCOUNT_NAMESPACE}:${SERVICE_ACCOUNT_NAME}
 ```
+
 ## option#1: dynamic provisioning with storage class
 ```yaml
 cat <<EOF | kubectl apply -f -
