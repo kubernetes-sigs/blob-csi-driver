@@ -2,41 +2,47 @@
  - supported from v1.24.0 (from AKS 1.29 with `tokenRequests` field support in `CSIDriver`)
 
 ### Note
- - This feature is not supported for NFS mount since NFS mount does not need credentials.
- - This feature would retrieve storage account key using federated identity credentials by default.
- - This feature supports mounting with workload identity token only (**Preview**) by configuring the following:
-    > limitation: the workload identity token would expire after 24 hours, make sure the blobfuse volume would be remounted by your application before it expires
-    - set `mountWithWorkloadIdentityToken: "true"` in parameters of storage class or persistent volume
-    - set `Storage Blob Data Contributor` role on the identity
+ - This feature is not supported for NFS mount since NFS mount does not need credentials during mount.
+ - This feature would retrieve storage account key using federated identity credentials by default, you could mount with workload identity token only (**Preview**) by configuring as following:
+    > mounting with workload identity token only is supported from v1.27.0
+    - set `mountWithWorkloadIdentityToken: "true"` in `parameters` of storage class or persistent volume
+    - grant `Storage Blob Data Contributor` role instead of `Storage Account Contributor` role to the managed identity
 
 ## Prerequisites
 ### 1. Create a cluster with oidc-issuer enabled and get the credential
 
-Following the [documentation](https://learn.microsoft.com/en-us/azure/aks/use-oidc-issuer#create-an-aks-cluster-with-oidc-issuer) to create an AKS cluster with the `--enable-oidc-issuer` parameter and get the AKS credentials. And export following environment variables:
-```
+Refer to the [documentation](https://learn.microsoft.com/en-us/azure/aks/use-oidc-issuer#create-an-aks-cluster-with-oidc-issuer) for instructions on creating a new AKS cluster with the `--enable-oidc-issuer` parameter and get the AKS credentials. And export following environment variables:
+```console
 export RESOURCE_GROUP=<your resource group name>
 export CLUSTER_NAME=<your cluster name>
 export REGION=<your region>
 ```
 
 ### 2. Bring your own storage account and storage container
-Following the [documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-cli) to create a new storage account and container or use your own. And export following environment variables:
-```
+Refer to the [documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-cli) for instructions on creating a new storage account and container, or alternatively, utilize your existing storage account and container.  And export following environment variables:
+```console
 export STORAGE_RESOURCE_GROUP=<your storage account resource group>
 export ACCOUNT=<your storage account name>
 export CONTAINER=<your storage container name>
 ```
 
-### 3. Create managed identity and role assignment
-```
+### 3. Create or bring your own managed identity and role assignment
+> you could leverage the default user assigned managed identity bound to the AKS agent node pool(with naming rule [`AKS Cluster Name-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)) in node resource group
+```console
 export UAMI=<your managed identity name>
 az identity create --name $UAMI --resource-group $RESOURCE_GROUP
 
 export USER_ASSIGNED_CLIENT_ID="$(az identity show -g $RESOURCE_GROUP --name $UAMI --query 'clientId' -o tsv)"
 export IDENTITY_TENANT=$(az aks show --name $CLUSTER_NAME --resource-group $RESOURCE_GROUP --query identity.tenantId -o tsv)
 export ACCOUNT_SCOPE=$(az storage account show --name $ACCOUNT --query id -o tsv)
+```
+ - grant `Storage Account Contributor` role to the managed identity to retrieve account key (default)
+```console
+az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
+```
 
-# please retry if you meet `Cannot find user or service principal in graph database` error, it may take a while for the identity to propagate
+ - grant the `Storage Blob Data Contributor` role to the managed identity for mounting using a workload identity token exclusively, without relying on account key authentication.
+```console
 az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
 
@@ -66,7 +72,7 @@ az identity federated-credential create --name $FEDERATED_IDENTITY_NAME \
 --subject system:serviceaccount:${SERVICE_ACCOUNT_NAMESPACE}:${SERVICE_ACCOUNT_NAME}
 ```
 ## option#1: dynamic provisioning with storage class
-```
+```yaml
 cat <<EOF | kubectl apply -f -
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
