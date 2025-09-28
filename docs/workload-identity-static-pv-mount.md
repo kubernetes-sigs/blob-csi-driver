@@ -112,7 +112,7 @@ spec:
       labels:
         app: nginx
     spec:
-      serviceAccountName: $SERVICE_ACCOUNT_NAME  #required, Pod lacks the necessary permission to mount the volume without this field
+      serviceAccountName: $SERVICE_ACCOUNT_NAME  #required, make sure the pod have the required permissions to mount volume
       nodeSelector:
         "kubernetes.io/os": linux
       containers:
@@ -144,7 +144,7 @@ EOF
 ```
 
 ## option#2: static provision with PV
-```
+```yaml
 cat <<EOF | kubectl apply -f -
 apiVersion: v1
 kind: PersistentVolume
