@@ -18,7 +18,7 @@ export CLUSTER_NAME=<your cluster name>
 export REGION=<your region>
 ```
 
-### 2. Bring your own storage account and storage container
+### 2. Bring your own storage account
 Refer to the [documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-quickstart-blobs-cli) for instructions on creating a new storage account and container, or alternatively, utilize your existing storage account and container. And export following environment variables:
 ```console
 export STORAGE_RESOURCE_GROUP=<your storage account resource group>
@@ -27,7 +27,7 @@ export CONTAINER=<your storage container name> # optional
 ```
 
 ### 3. Create or bring your own managed identity and grant role to the managed identity
-> you could leverage the default user assigned managed identity bound to the AKS agent node pool(with naming rule [`AKS Cluster Name-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)) in node resource group
+> you could leverage the bult-in user assigned managed identity bound to the AKS agent node pool(with name [`AKS Cluster Name-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)) in node resource group
 ```console
 export UAMI=<your managed identity name>
 az identity create --name $UAMI --resource-group $RESOURCE_GROUP
@@ -36,12 +36,12 @@ export USER_ASSIGNED_CLIENT_ID="$(az identity show -g $RESOURCE_GROUP --name $UA
 export IDENTITY_TENANT=$(az aks show --name $CLUSTER_NAME --resource-group $RESOURCE_GROUP --query identity.tenantId -o tsv)
 export ACCOUNT_SCOPE=$(az storage account show --name $ACCOUNT --query id -o tsv)
 ```
- - grant `Storage Account Contributor` role to the managed identity to retrieve account key (default)
+ - option#1: grant `Storage Account Contributor` role to the managed identity to retrieve account key (default)
 ```console
 az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
 
- - grant the `Storage Blob Data Contributor` role to the managed identity for mounting using a workload identity token exclusively, without relying on account key authentication.
+ - option#2: grant the `Storage Blob Data Contributor` role to the managed identity for mounting using a workload identity token exclusively, without relying on account key authentication.
 ```console
 az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
