@@ -27,7 +27,7 @@ export CONTAINER=<your storage container name> # optional
 ```
 
 ### 3. Create or bring your own managed identity and grant role to the managed identity
-> you could leverage the bult-in user assigned managed identity bound to the AKS agent node pool(with name [`AKS Cluster Name-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)) in node resource group
+> you could leverage the built-in user assigned managed identity bound to the AKS agent node pool(with name [`AKS Cluster Name-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)) in node resource group
 ```console
 export UAMI=<your managed identity name>
 az identity create --name $UAMI --resource-group $RESOURCE_GROUP
