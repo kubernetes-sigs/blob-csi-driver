@@ -1,7 +1,7 @@
 # Mount Azure blob storage with managed identity
 
-This article demonstrates the process of utilizing blobfuse mount with either a dedicated user-assigned managed identity or kubelet identity.
-> make sure the managed identity used by CSI driver is bound to the agent node pool.
+This article demonstrates the process of utilizing blobfuse mount with user-assigned managed identity.
+> you could leverage the built-in user assigned managed identity(kubelet identity) bound to the AKS agent node pool(with naming rule [`AKS Cluster Name-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)), if you have created your own managed identity, make sure the managed identity is bound to the agent node pool.
 
 ## Before you begin
  - Make sure the managed identity has `Storage Blob Data Contributor` role to the storage account
