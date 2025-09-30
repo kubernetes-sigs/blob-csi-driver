@@ -4,8 +4,8 @@ This article demonstrates the process of utilizing blobfuse mount with user-assi
 > you could leverage the built-in user assigned managed identity(kubelet identity) bound to the AKS agent node pool(with naming rule [`AKS Cluster Name-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)), if you have created your own managed identity, make sure the managed identity is bound to the agent node pool.
 
 ## Before you begin
- - Make sure the managed identity has `Storage Blob Data Contributor` role to the storage account
- > here is an example that uses Azure CLI commands to assign the `Storage Blob Data Contributor` role to the managed identity for the storage account. If the storage account is created by the driver(dynamic provisioning), then you need to grant `Storage Blob Data Contributor` role to the resource group where the storage account is located
+ - Make sure the managed identity assigned the `Storage Blob Data Contributor` role for the storage account
+ > here is an example that uses Azure CLI commands to assign the `Storage Blob Data Contributor` role to the managed identity for the storage account. If the storage account is created by the driver(dynamic provisioning), then you need to grant `Storage Blob Data Contributor` role on the resource group where the storage account is located
 
 ```bash
 mid="$(az identity list -g "$resourcegroup" --query "[?name == 'managedIdentityName'].principalId" -o tsv)"
@@ -13,16 +13,15 @@ said="$(az storage account list -g "$resourcegroup" --query "[?name == '$storage
 az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$said"
 ```
 
- - Retrieve the clientID for `AzureStorageIdentityClientID`. If you are using kubelet identity, the identity will be named {aks-cluster-name}-agentpool and located in the node resource group.
+ - Retrieve the clientID of managed identity.
+ > If you are using kubelet identity, the identity will be named `{aks-cluster-name}-agentpool` and located in the node resource group.
 ```bash
 AzureStorageIdentityClientID=`az identity list -g "$resourcegroup" --query "[?name == '$identityname'].clientId" -o tsv`
 ```
     
 ## Dynamic Provisioning
-- Ensure that the system-assigned identity of your cluster control plane has the `Storage Account Contributor role` for the storage account.
- > if the storage account is created by the driver, then you need to grant `Storage Account Contributor` role to the resource group where the storage account is located
-
- > AKS cluster control plane identity already has `Contributor` role on the node resource group by default.
+- Ensure that the system-assigned identity of your cluster control plane has been assigned the `Storage Blob Data Contributor` role for the storage account.
+ > if the storage account is created by the driver, then you need to grant `Storage Blob Data Contributor` role on the resource group where the storage account is located
 
 1. Create a storage class
     ```yml
