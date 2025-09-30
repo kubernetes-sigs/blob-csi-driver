@@ -20,8 +20,10 @@ AzureStorageIdentityClientID=`az identity list -g "$resourcegroup" --query "[?na
 ```
     
 ## Dynamic Provisioning
-- Ensure that the system-assigned identity of your cluster control plane has been assigned the `Storage Blob Data Contributor` role for the storage account.
- > if the storage account is created by the driver, then you need to grant `Storage Blob Data Contributor` role on the resource group where the storage account is located
+- Ensure that the identity of your cluster control plane has been assigned the `Storage Account Contributor` role for the storage account.
+ > if the storage account is created by the driver, then you need to grant `Storage Account Contributor` role on the resource group where the storage account is located
+
+ > AKS cluster control plane identity has assigned the `Contributor` role on the node resource group by default.
 
 1. Create a storage class
     ```yml
