@@ -55,16 +55,16 @@ AzureStorageIdentityClientID=`az identity list -g "$resourcegroup" --query "[?na
       - --cache-size-mb=1000  # Default will be 80% of available memory, eviction will happen beyond that.
     ```
 
-1. create a statefulset with blobfuse volume mount
+1. create a statefulset with volume mount
 ```bash
 kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
 ```
 
 ## Static Provisioning
 
-> bring your own storage account and blob container
+> bring your own storage account
 
-1. create PV with specified account name, blob container and AzureStorageIdentityClientID
+1. create PV with specified account name and AzureStorageIdentityClientID
     ```yml
     apiVersion: v1
     kind: PersistentVolume
@@ -88,12 +88,11 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
           protocol: fuse
           resourceGroup: EXISTING_RESOURCE_GROUP_NAME   # optional, node resource group if it's not provided
           storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
-          containerName: EXISTING_CONTAINER_NAME
           AzureStorageAuthType: MSI
           AzureStorageIdentityClientID: "xxxxx-xxxx-xxx-xxx-xxxxxxx"
     ```
 
-1. create a pvc and a deployment with blobfuse volume mount
+1. create a pvc and a deployment with volume mount
     ```console
     kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/deployment.yaml
     ```
