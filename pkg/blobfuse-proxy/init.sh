@@ -37,9 +37,9 @@ DISTRIBUTION=$($HOST_CMD cat /etc/os-release | grep ^ID= | cut -d'=' -f2 | tr -d
 ARCH=$($HOST_CMD uname -m)
 echo "Linux distribution: $DISTRIBUTION, Arch: $ARCH"
 
-# install blobfuse-proxy and blobfuse/blofuse2 if needed
+# install blobfuse-proxy and blobfuse/blobfuse2 if needed
 case "${DISTRIBUTION}" in
-  "rhcos" | "cos" | "gardenlinux")
+  "rhcos" | "rhel" | "cos" | "gardenlinux")
     . ./blobfuse-proxy/install-proxy-rhcos.sh
     ;;
   *)
