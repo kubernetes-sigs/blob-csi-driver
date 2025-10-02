@@ -37,7 +37,7 @@ echo "Linux distribution: $DISTRIBUTION, Arch: $ARCH"
 
 # install blobfuse-proxy and blobfuse/blofuse2 if needed
 case "${DISTRIBUTION}" in
-  "rhcos")
+  "rhcos" | "rhel" | "cos" | "gardenlinux")
     . ./blobfuse-proxy/install-proxy-rhcos.sh
     ;;
   *)
