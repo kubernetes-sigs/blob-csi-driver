@@ -140,8 +140,8 @@ func getBlobfuseVersion() BlobfuseVersion {
 		return BlobfuseV2
 	}
 
-	if strings.EqualFold(osinfo.Distro, "rhcos") {
-		klog.V(2).Info("proxy default using blobfuse V2 for mounting on RHCOS")
+	if strings.EqualFold(osinfo.Distro, "rhcos") || strings.EqualFold(osinfo.Distro, "rhel") {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on RHCOS/RHEL")
 		return BlobfuseV2
 	}
 
