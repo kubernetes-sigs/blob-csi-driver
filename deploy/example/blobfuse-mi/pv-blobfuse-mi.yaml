@@ -5,7 +5,7 @@ metadata:
   name: pv-blob
 spec:
   capacity:
-    storage: 10Gi
+    storage: 100Gi
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain  # If set as "Delete" container would be removed after pvc deletion
@@ -15,13 +15,11 @@ spec:
     - --file-cache-timeout-in-seconds=120
   csi:
     driver: blob.csi.azure.com
-    readOnly: false
     # make sure this volumeid is unique in the cluster
     volumeHandle: "{resource-group-name}#{account-name}#{container-name}"
     volumeAttributes:
       protocol: fuse
-      resourceGroup: aks-fuseblob-mi
-      storageAccount: myaksblob
-      containerName: mycontainer
+      resourceGroup: EXISTING_RESOURCE_GROUP_NAME   # optional, node resource group if it's not provided
+      storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
       AzureStorageAuthType: MSI
-      AzureStorageIdentityClientID: "xxxxxx-xxxx-xxxxxxxxxxx-xxxxxxx-xxxxx"
+      AzureStorageIdentityClientID: "xxxxx-xxxx-xxx-xxx-xxxxxxx"
