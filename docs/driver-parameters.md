@@ -155,6 +155,7 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
  - `securityContext.fsGroup` setting
     - blobfuse volume mount does not respect `securityContext.fsGroup`. Instead, you could utilize `-o gid=1000` in `mountOptions` to establish ownership, check [here](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#mount-options) for more mountoptions.
     - when there is a large number of files inside an NFS volume, the process of setting volume ownership can slow down the NFS volume mount when `securityContext.fsGroup` is different from group ownership of volume. By configuring `fsGroupChangePolicy: None` in the `parameters` of storage class or persistent volume, you can bypass the volume ownership setting step, resulting in faster NFS volume mounts.
+       > when the issue is related to setting the volume ownership, the CSI driver logs will display the message: volume_linux.go:128] "Expected group ownership of volume did not match with Gid".
  - To support an [Azure DataLake storage account](https://docs.microsoft.com/en-us/azure/storage/blobs/upgrade-to-data-lake-storage-gen2-how-to) when using blobfuse mount, you'll need to do the following:
    - To create an ADLS account using the driver in dynamic provisioning, specify `isHnsEnabled: "true"` in the storage class parameters.
    - To enable blobfuse access to an ADLS account in static provisioning, specify the mount option `--use-adls=true` in the persistent volume.
