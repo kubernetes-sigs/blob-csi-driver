@@ -16,19 +16,19 @@
 
 set -xe
 
-BIN_PATH=${BIN_PATH:-/usr/local/bin}
-if [ "${DISTRIBUTION}" = "cos" ]; then
-  echo "set BIN_PATH to /home/kubernetes/bin"
-  BIN_PATH="/home/kubernetes/bin"
+if [ -z "${CUSTOM_BIN_PATH:-}" ] ; then
+  case "${DISTRIBUTION}" in
+    "cos")
+      BIN_PATH="/home/kubernetes/bin" ;;
+    "gardenlinux" | "flatcar")
+      BIN_PATH="/var/bin" ;;
+    *)
+      BIN_PATH=${BIN_PATH:-/usr/local/bin} ;;
+  esac
+else
+  BIN_PATH="/${CUSTOM_BIN_PATH#/}"
 fi
-if [ "${DISTRIBUTION}" = "gardenlinux" ]; then
-  echo "set BIN_PATH to /var/bin"
-  BIN_PATH="/var/bin"
-fi
-if [ "${CUSTOM_BIN_PATH}" != "" ]; then
-  echo "set BIN_PATH to ${CUSTOM_BIN_PATH}"
-  BIN_PATH="${CUSTOM_BIN_PATH}"
-fi
+echo "set BIN_PATH to ${BIN_PATH}"
 
 #copy blobfuse2 binary to BIN_PATH/blobfuse2
 updateBlobfuse2="true"
@@ -60,6 +60,15 @@ if [ "$updateBlobfuse2" = "true" ];then
     cp /usr/lib64/libfuse3.so.3* /host/usr/lib64/
   fi
   chmod 755 /host${BIN_PATH}/blobfuse2
+  if [ "$DISTRIBUTION" = "flatcar" ] ; then
+    find /usr/ -name 'libfuse.so.*' -exec cp '{}' /host${BIN_PATH} \;
+    mv /host${BIN_PATH}/blobfuse2 /host${BIN_PATH}/blobfuse2.bin
+    {
+      echo '#!/usr/bin/bash'
+      echo "LD_LIBRARY_PATH='${BIN_PATH}' exec ${BIN_PATH}/blobfuse2.bin \"\${@}\""
+    } >/host${BIN_PATH}/blobfuse2
+    chmod 755 /host${BIN_PATH}/blobfuse2
+  fi
 fi
 
 if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
