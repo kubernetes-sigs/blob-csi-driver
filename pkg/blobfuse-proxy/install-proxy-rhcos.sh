@@ -49,6 +49,16 @@ fi
 if [ "$updateBlobfuse2" = "true" ];then
   echo "copy blobfuse2...."
   cp /usr/bin/blobfuse2 /host${BIN_PATH}/blobfuse2 --force
+  # if both /usr/lib/libfuse3.so.3 and target folder /host/usr/lib64/ exist, copy libfuse3.so.3 to /host/usr/lib64/
+  if [ -f "/usr/lib/libfuse3.so.3" ] && [ -d "/host/usr/lib64/" ]; then
+    echo "copy libfuse3.so.3 to /host/usr/lib64/"
+    cp /usr/lib/libfuse3.so.3* /host/usr/lib64/
+  fi
+  # if both /usr/lib64/libfuse3.so.3 and target folder /host/usr/lib64/ exist, copy libfuse3.so.3 to /host/usr/lib64/
+  if [ -f "/usr/lib64/libfuse3.so.3" ] && [ -d "/host/usr/lib64/" ]; then
+    echo "copy libfuse3.so.3 to /host/usr/lib64/"
+    cp /usr/lib64/libfuse3.so.3* /host/usr/lib64/
+  fi
   chmod 755 /host${BIN_PATH}/blobfuse2
 fi
 
