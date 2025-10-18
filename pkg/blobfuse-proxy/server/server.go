@@ -150,6 +150,11 @@ func getBlobfuseVersion() BlobfuseVersion {
 		return BlobfuseV2
 	}
 
+	if strings.EqualFold(osinfo.Distro, "flatcar") {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on Flatcar Container Linux")
+		return BlobfuseV2
+	}
+
 	klog.V(2).Info("proxy default using blobfuse V1 for mounting")
 	return BlobfuseV1
 }
