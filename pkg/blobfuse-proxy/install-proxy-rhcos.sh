@@ -101,7 +101,7 @@ if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
   sed -i "s|/usr/bin/blobfuse-proxy|${BIN_PATH}/blobfuse-proxy|g" /blobfuse-proxy/blobfuse-proxy.service
   if [ "${BIN_PATH}" != "/usr/local/bin" ]; then
     echo "add \"PATH=${BIN_PATH}:\$PATH\" in blobfuse-proxy.service ExecStart."
-    sed "s,^ExecStart[[:space:]]*=\\(.*\\)\$,ExecStart=/usr/bin/bash -c \"PATH=${BIN_PATH}:\$PATH \\1\"," \
+    sed -i "s,^ExecStart[[:space:]]*=\\(.*\\)\$,ExecStart=/usr/bin/bash -c \"PATH=${BIN_PATH}:\$PATH \\1\"," \
       /blobfuse-proxy/blobfuse-proxy.service
   fi
   if [ -f "/host/etc/systemd/system/blobfuse-proxy.service" ];then
