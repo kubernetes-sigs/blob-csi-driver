@@ -35,7 +35,12 @@ updateBlobfuse2="true"
 if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
   if [ -f "/host${BIN_PATH}/blobfuse2" ];then
-    old=$(sha256sum /host${BIN_PATH}/blobfuse2 | awk '{print $1}')
+    if [ "$DISTRIBUTION" = "flatcar" ] ; then
+      # Flatcar uses a custom binary name and provides a wrapper script library loader, see below
+      old=$(sha256sum /host${BIN_PATH}/blobfuse2.bin | awk '{print $1}')
+    else
+      old=$(sha256sum /host${BIN_PATH}/blobfuse2 | awk '{print $1}')
+    fi
     new=$(sha256sum /usr/bin/blobfuse2 | awk '{print $1}')
     if [ "$old" = "$new" ];then
       updateBlobfuse2="false"
@@ -48,7 +53,18 @@ else
 fi
 if [ "$updateBlobfuse2" = "true" ];then
   echo "copy blobfuse2...."
-  cp /usr/bin/blobfuse2 /host${BIN_PATH}/blobfuse2 --force
+  if [ "$DISTRIBUTION" = "flatcar" ] ; then
+    # No libfuse.so.* on Flatcar so we ship the container's and provide a wrapper script
+    find /usr/ -name 'libfuse.so.*' -exec cp '{}' /host${BIN_PATH} \;
+    cp /usr/bin/blobfuse2 /host${BIN_PATH}/blobfuse2.bin --force
+    {
+      echo '#!/usr/bin/bash'
+      echo "LD_LIBRARY_PATH='${BIN_PATH}' exec ${BIN_PATH}/blobfuse2.bin \"\${@}\""
+    } >/host${BIN_PATH}/blobfuse2
+    chmod 755 /host${BIN_PATH}/blobfuse2.bin
+  else
+    cp /usr/bin/blobfuse2 /host${BIN_PATH}/blobfuse2 --force
+  fi
   # if both /usr/lib/libfuse3.so.3 and target folder /host/usr/lib64/ exist, copy libfuse3.so.3 to /host/usr/lib64/
   if [ -f "/usr/lib/libfuse3.so.3" ] && [ -d "/host/usr/lib64/" ]; then
     echo "copy libfuse3.so.3 to /host/usr/lib64/"
@@ -60,15 +76,6 @@ if [ "$updateBlobfuse2" = "true" ];then
     cp /usr/lib64/libfuse3.so.3* /host/usr/lib64/
   fi
   chmod 755 /host${BIN_PATH}/blobfuse2
-  if [ "$DISTRIBUTION" = "flatcar" ] ; then
-    find /usr/ -name 'libfuse.so.*' -exec cp '{}' /host${BIN_PATH} \;
-    mv /host${BIN_PATH}/blobfuse2 /host${BIN_PATH}/blobfuse2.bin
-    {
-      echo '#!/usr/bin/bash'
-      echo "LD_LIBRARY_PATH='${BIN_PATH}' exec ${BIN_PATH}/blobfuse2.bin \"\${@}\""
-    } >/host${BIN_PATH}/blobfuse2
-    chmod 755 /host${BIN_PATH}/blobfuse2
-  fi
 fi
 
 if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
