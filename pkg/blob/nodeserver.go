@@ -389,8 +389,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		}
 
 		if performChmodOp {
-			if err := chmodIfPermissionMismatch(targetPath, os.FileMode(mountPermissions)); err != nil {
-				return nil, status.Error(codes.Internal, err.Error())
+			if !isReadOnlyFromCapability(volumeCapability) {
+				if err := chmodIfPermissionMismatch(targetPath, os.FileMode(mountPermissions)); err != nil {
+					return nil, status.Error(codes.Internal, err.Error())
+				}
+			} else {
+				klog.V(2).Infof("skip chmod on targetPath(%s) since it's a read-only mount", targetPath)
 			}
 		} else {
 			klog.V(2).Infof("skip chmod on targetPath(%s) since mountPermissions is set as 0", targetPath)
