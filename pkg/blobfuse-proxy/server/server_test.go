@@ -18,6 +18,8 @@ package server
 
 import (
 	"context"
+	"os/exec"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -57,6 +59,130 @@ func TestServerMountAzureBlob(t *testing.T) {
 			if tc.code == codes.OK {
 				require.NoError(t, err)
 				require.NotNil(t, res)
+			} else {
+				require.Error(t, err)
+				require.NotNil(t, res)
+			}
+		})
+	}
+}
+
+// fakeExecCommand is used to mock exec.Command for testing, it returns list of args
+func fakeExecCommandEchoArgs(_ string, args ...string) *exec.Cmd {
+	return exec.Command("echo", append([]string{"-n"}, args...)...)
+}
+
+func TestAddTelemetryTagToArgs(t *testing.T) {
+	driverVersion = "fake-version-ut"
+	t.Parallel()
+	testCases := []struct {
+		name         string
+		args         string
+		expectedArgs string
+	}{
+		{
+			name:         "args_without_telemetry_option",
+			args:         "--account-name=testaccount --container-name=testcontainer --tmp-path=/tmp/blobfuse-tmp",
+			expectedArgs: "--account-name=testaccount --container-name=testcontainer --tmp-path=/tmp/blobfuse-tmp --telemetry=" + telemetryTagPrefix + driverVersion,
+		},
+		{
+			name:         "args_with_some_telemetry_option",
+			args:         "--account-name=testaccount --container-name=testcontainer --telemetry=app1-volume1 --tmp-path=/tmp/blobfuse-tmp",
+			expectedArgs: "--account-name=testaccount --container-name=testcontainer --telemetry=" + telemetryTagPrefix + driverVersion + ",app1-volume1 --tmp-path=/tmp/blobfuse-tmp",
+		},
+		{
+			name:         "args_with_csi_driver_telemetry_option",
+			args:         "--account-name=testaccount --container-name=testcontainer --telemetry=" + telemetryTagPrefix + driverVersion + ",app1-volume1 --tmp-path=/tmp/blobfuse-tmp",
+			expectedArgs: "--account-name=testaccount --container-name=testcontainer --telemetry=" + telemetryTagPrefix + driverVersion + ",app1-volume1 --tmp-path=/tmp/blobfuse-tmp",
+		},
+		{
+			name:         "args_with_some_telemetry_option_only",
+			args:         "--telemetry=app1-volume1",
+			expectedArgs: "--telemetry=" + telemetryTagPrefix + driverVersion + ",app1-volume1",
+		},
+		{
+			name:         "args_with_multiple_telemetry_options",
+			args:         "--account-name=testaccount --container-name=testcontainer --telemetry=app1 --tmp-path=/tmp/blobfuse-tmp --telemetry=app2",
+			expectedArgs: "--account-name=testaccount --container-name=testcontainer --telemetry=" + telemetryTagPrefix + driverVersion + ",app1 --tmp-path=/tmp/blobfuse-tmp --telemetry=app2",
+		},
+	}
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			actualArgs := addTelemetryTagToArgs(tc.args)
+			require.Equal(t, tc.expectedArgs, actualArgs)
+		})
+	}
+}
+
+func TestServerMountAzureBlob_Telemetry(t *testing.T) {
+	driverVersion = "fake-version"
+	t.Parallel()
+	testCases := []struct {
+		name                  string
+		args                  string
+		code                  codes.Code
+		mountServer           MountServer
+		areValidTelemetryArgs func(cmdArgs string) bool
+	}{
+		{
+			name: "mount_with_telemetry_tag_blobfusev2",
+			args: "--account-name=testaccount --container-name=testcontainer --telemetry=volume1-app1 --tmp-path=/tmp/blobfuse-tmp",
+			mountServer: MountServer{
+				blobfuseVersion: BlobfuseV2,
+				exec:            fakeExecCommandEchoArgs,
+			},
+			code: codes.OK,
+			areValidTelemetryArgs: func(cmdArgs string) bool {
+				expectedTelemetryArg := "--telemetry=" + telemetryTagPrefix + driverVersion + ",volume1-app1"
+				return strings.Contains(cmdArgs, expectedTelemetryArg)
+			},
+		},
+		{
+			name: "mount_without_telemetry_tag_blobfusev2",
+			args: "--account-name=testaccount --container-name=testcontainer --tmp-path=/tmp/blobfuse-tmp",
+			mountServer: MountServer{
+				blobfuseVersion: BlobfuseV2,
+				exec:            fakeExecCommandEchoArgs,
+			},
+			code: codes.OK,
+			areValidTelemetryArgs: func(cmdArgs string) bool {
+				expectedTelemetryArg := "--telemetry=" + telemetryTagPrefix + driverVersion
+				return strings.Contains(cmdArgs, expectedTelemetryArg)
+			},
+		},
+		{
+			name: "mount_with_blobfusev1",
+			args: "--account-name=testaccount --container-name=testcontainer --tmp-path=/tmp/blobfuse-tmp",
+			mountServer: MountServer{
+				blobfuseVersion: BlobfuseV1,
+				exec:            fakeExecCommandEchoArgs,
+			},
+			code: codes.OK,
+			areValidTelemetryArgs: func(cmdArgs string) bool {
+				// No telemetry arg should be added for blobfuse v1
+				return !strings.Contains(cmdArgs, "--telemetry=") && cmdArgs == "--account-name=testaccount --container-name=testcontainer --tmp-path=/tmp/blobfuse-tmp"
+			},
+		},
+	}
+
+	for i := range testCases {
+		tc := testCases[i]
+
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			req := mount_azure_blob.MountAzureBlobRequest{
+				MountArgs: tc.args,
+				AuthEnv:   []string{},
+			}
+			res, err := tc.mountServer.MountAzureBlob(context.Background(), &req)
+			if tc.code == codes.OK {
+				require.NoError(t, err)
+				require.NotNil(t, res)
+				require.True(t, tc.areValidTelemetryArgs(res.Output), "telemetry args are mismatching in command args: %s", res.Output)
 			} else {
 				require.Error(t, err)
 				require.NotNil(t, res)

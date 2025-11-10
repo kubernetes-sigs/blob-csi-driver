@@ -34,8 +34,12 @@ import (
 )
 
 var (
-	mutex sync.Mutex
+	mutex         sync.Mutex
+	driverVersion string
 )
+
+// telemetryTagPrefix is used to identify the mounts done via blobcsi driver
+const telemetryTagPrefix = "blobpartner-csi/"
 
 type BlobfuseVersion int
 
@@ -47,12 +51,14 @@ const (
 type MountServer struct {
 	blobfuseVersion BlobfuseVersion
 	mount_azure_blob.UnimplementedMountServiceServer
+	exec func(name string, arg ...string) *exec.Cmd
 }
 
 // NewMountServer returns a new Mountserver
 func NewMountServiceServer() *MountServer {
 	mountServer := &MountServer{}
 	mountServer.blobfuseVersion = getBlobfuseVersion()
+	mountServer.exec = exec.Command
 	return mountServer
 }
 
@@ -82,13 +88,15 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 			klog.V(2).Infof("append --disable-version-check to mount args")
 			args = args + " " + "--disable-version-check=true"
 		}
+		// Adding telemetry tag to know that blob is been mounted through AKS CSI Driver
+		args = addTelemetryTagToArgs(args)
 		args = util.TrimDuplicatedSpace(args)
 		klog.V(2).Infof("mount with v2, protocol: %s, args: %s", protocol, args)
-		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
+		cmd = server.exec("blobfuse2", strings.Split(args, " ")...)
 	} else {
 		args = util.TrimDuplicatedSpace(args)
 		klog.V(2).Infof("mount with v1, protocol: %s, args: %s", protocol, args)
-		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
+		cmd = server.exec("blobfuse", strings.Split(args, " ")...)
 	}
 
 	cmd.Env = append(os.Environ(), authEnv...)
@@ -152,4 +160,38 @@ func getBlobfuseVersion() BlobfuseVersion {
 
 	klog.V(2).Info("proxy default using blobfuse V1 for mounting")
 	return BlobfuseV1
+}
+
+// Adding CSI driver specific telemetry tag if not present to
+// know that blob is been mounted through CSI Driver
+func addTelemetryTagToArgs(args string) string {
+	telemetryTag := telemetryTagPrefix + driverVersion
+	if !strings.Contains(args, "--telemetry") {
+		klog.V(2).Infof("append --telemetry=%s to mount args", telemetryTag)
+		args = args + " " + "--telemetry=" + telemetryTag
+	} else {
+		// If telemetry flag is already present, check for aks tag if not present
+		// then user might have their own telemetry tag append aks tag to it
+		if !strings.Contains(args, telemetryTagPrefix) {
+			argSlice := strings.Fields(args)
+			telemetryIndex := -1
+			for i, arg := range argSlice {
+				if strings.HasPrefix(arg, "--telemetry=") {
+					telemetryIndex = i
+					break
+				}
+			}
+			if telemetryIndex != -1 {
+				// Update the telemetry tag, appending our tag if not present
+				telemetryVal := strings.TrimPrefix(argSlice[telemetryIndex], "--telemetry=")
+				// Avoid duplicating the tag if already present
+				if !strings.Contains(telemetryVal, telemetryTag) {
+					argSlice[telemetryIndex] = "--telemetry=" + telemetryTag + "," + telemetryVal
+					args = strings.Join(argSlice, " ")
+					klog.V(2).Infof("updated --telemetry tag in mount args: %s", args)
+				}
+			}
+		}
+	}
+	return args
 }
