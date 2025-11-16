@@ -268,6 +268,9 @@ type Driver struct {
 	waitForAzCopyTimeoutMinutes int
 	// azcopy for provide exec mock for ut
 	azcopy *util.Azcopy
+
+	// if azcopy has to trust the driver's supplying endpoint
+	requiredAzCopyToTrust bool
 }
 
 // NewDriver Creates a NewCSIDriver object. Assumes vendor version is equal to driver version &
@@ -326,6 +329,12 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *s
 	if d.subnetCache, err = azcache.NewTimedCache(10*time.Minute, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
+
+	requiredAzCopyToTrust := d.getStorageEndPointSuffix() != "" && !strings.Contains(azcopyTrustedSuffixesAAD, d.getStorageEndPointSuffix())
+	if requiredAzCopyToTrust {
+		klog.V(2).Infof("storage endpoint suffix %s is not in azcopy trusted suffixes, azcopy will trust it temporarily during volume clone and snapshot restore", d.getStorageEndPointSuffix())
+	}
+	d.requiredAzCopyToTrust = requiredAzCopyToTrust
 
 	d.mounter = &mount.SafeFormatAndMount{
 		Interface: mount.New(""),
