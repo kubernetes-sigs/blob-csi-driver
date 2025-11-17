@@ -409,7 +409,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	// Get mountOptions that the volume will be formatted and mounted with
-	mountFlags = util.JoinMountOptions(mountFlags, []string{fmt.Sprintf("--telemetry=azpartner-aks/%s", d.Version)})
+	if protocol == Fuse2 {
+		// Adding telemetry tag to know that blob is been mounted through AKS
+		mountFlags = util.JoinMountOptions(mountFlags, []string{fmt.Sprintf("--telemetry=azpartner-aks/%s", d.Version)})
+	}
 	mountOptions := mountFlags
 	if ephemeralVol {
 		mountOptions = util.JoinMountOptions(mountOptions, strings.Split(ephemeralVolMountOptions, ","))
