@@ -68,7 +68,7 @@ func TestServerMountAzureBlob(t *testing.T) {
 }
 
 // fakeExecCommand is used to mock exec.Command for testing, it returns list of args
-func fakeExecCommandEchoArgs(command string, args ...string) *exec.Cmd {
+func fakeExecCommandEchoArgs(_ string, args ...string) *exec.Cmd {
 	return exec.Command("echo", append([]string{"-n"}, args...)...)
 }
 
