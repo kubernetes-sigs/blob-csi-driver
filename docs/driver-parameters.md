@@ -132,7 +132,7 @@ volumeAttributes.AzureStorageSPNTenantID | SPN Tenant ID |  | No |
 volumeAttributes.AzureStorageAADEndpoint | AADEndpoint |  | No |
 --- | **Following parameters are only for feature: blobfuse [Workload Identity auth](../docs/workload-identity-static-pv-mount.md)** | --- | --- |
 volumeAttributes.ClientID | clientid of the managed identity assigned to the storage account |  | No |
-volumeAttributes.mountWithWorkloadIdentityToken (Preview) | indicates whether performing blobfuse mount with workload identity token | `true`,`false` | No | `false` (limitation: the workload identity token would expire after 24 hours, make sure the blobfuse volume would be remounted by your application before it expires)
+volumeAttributes.mountWithWorkloadIdentityToken (Preview) | indicates whether performing blobfuse mount with workload identity token | `true`,`false` (use the type "string" instead of "bool") | No | `false` (limitation: the workload identity token would expire after 24 hours, make sure the blobfuse volume would be remounted by your application before it expires)
 --- | **Following parameters are only for feature: blobfuse read account key or SAS token from key vault** | --- | --- |
 volumeAttributes.keyVaultURL | Azure Key Vault DNS name | existing Azure Key Vault DNS name | No |
 volumeAttributes.keyVaultSecretName | Azure Key Vault secret name | existing Azure Key Vault secret name | No |
