@@ -34,8 +34,12 @@ import (
 )
 
 var (
-	mutex sync.Mutex
+	mutex         sync.Mutex
+	driverVersion string
 )
+
+// telemetryTagPrefix is used to identify the mounts done via blobcsi driver
+const telemetryTagPrefix = "blobpartner-csi/"
 
 type BlobfuseVersion int
 
@@ -47,12 +51,14 @@ const (
 type MountServer struct {
 	blobfuseVersion BlobfuseVersion
 	mount_azure_blob.UnimplementedMountServiceServer
+	exec func(name string, arg ...string) *exec.Cmd
 }
 
 // NewMountServer returns a new Mountserver
 func NewMountServiceServer() *MountServer {
 	mountServer := &MountServer{}
 	mountServer.blobfuseVersion = getBlobfuseVersion()
+	mountServer.exec = exec.Command
 	return mountServer
 }
 
@@ -71,6 +77,7 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 	var cmd *exec.Cmd
 	var result mount_azure_blob.MountAzureBlobResponse
 	if protocol == blob.Fuse2 || server.blobfuseVersion == BlobfuseV2 {
+		telemetryTag := telemetryTagPrefix + driverVersion
 		args = "mount " + args
 		// add this arg for blobfuse2 to solve the issue:
 		// https://github.com/Azure/azure-storage-fuse/issues/1015
@@ -82,13 +89,28 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 			klog.V(2).Infof("append --disable-version-check to mount args")
 			args = args + " " + "--disable-version-check=true"
 		}
+		// Adding telemetry tag to know that blob is been mounted through AKS CSI Driver
+		if !strings.Contains(args, "--telemetry") {
+			klog.V(2).Infof("append --telemetry=%s to mount args", telemetryTag)
+			args = args + " " + "--telemetry=" + telemetryTag
+		} else {
+			// If telemetry flag is already present, check for aks tag if not present
+			// then user might have their own telemetry tag append aks tag to it
+			if !strings.Contains(args, telemetryTagPrefix) {
+				splitedArgs := strings.Split(args, "--telemetry=")
+				if len(splitedArgs) == 2 {
+					args = splitedArgs[0] + " --telemetry=" + telemetryTag + "," + splitedArgs[1]
+				}
+				klog.V(2).Infof("updated --telemetry tag in mount args: %s", args)
+			}
+		}
 		args = util.TrimDuplicatedSpace(args)
 		klog.V(2).Infof("mount with v2, protocol: %s, args: %s", protocol, args)
-		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
+		cmd = server.exec("blobfuse2", strings.Split(args, " ")...)
 	} else {
 		args = util.TrimDuplicatedSpace(args)
 		klog.V(2).Infof("mount with v1, protocol: %s, args: %s", protocol, args)
-		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
+		cmd = server.exec("blobfuse", strings.Split(args, " ")...)
 	}
 
 	cmd.Env = append(os.Environ(), authEnv...)
