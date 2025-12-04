@@ -40,7 +40,7 @@ spec:
         - operator: "Exists"
       initContainers:
         - name: install-blobfuse-proxy
-          image: mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.27.0
+          image: mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.27.0-2
           imagePullPolicy: IfNotPresent
           command:
             - "/blobfuse-proxy/init.sh"
@@ -123,7 +123,7 @@ spec:
               drop:
                 - ALL
         - name: blob
-          image: mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.27.0
+          image: mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.27.0-2
           imagePullPolicy: IfNotPresent
           args:
             - "--v=5"
@@ -190,7 +190,7 @@ spec:
               cpu: 10m
               memory: 20Mi
         - name: aznfswatchdog
-          image: mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.27.0
+          image: mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.27.0-2
           command:
             - "aznfswatchdog"
           imagePullPolicy: IfNotPresent
