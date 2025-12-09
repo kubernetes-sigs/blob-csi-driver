@@ -178,4 +178,4 @@ delete-metrics-svc:
 
 .PHONY: blobfuse-proxy
 blobfuse-proxy:
-	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -mod vendor -ldflags="-s -w" -o _output/${ARCH}/blobfuse-proxy ./pkg/blobfuse-proxy
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH) go build -mod vendor -ldflags="-s -w -X ${PKG}/pkg/blobfuse-proxy/server.driverVersion=${IMAGE_VERSION}" -o _output/${ARCH}/blobfuse-proxy ./pkg/blobfuse-proxy
