@@ -80,7 +80,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	context := req.GetVolumeContext()
 	if context != nil {
 		// token request
-		if context[serviceAccountTokenField] != "" && getValueInMap(context, clientIDField) != "" {
+		if context[serviceAccountTokenField] != "" && useWorkloadIdentity(context) {
 			klog.V(2).Infof("NodePublishVolume: volume(%s) mount on %s with service account token, clientID: %s", volumeID, target, getValueInMap(context, clientIDField))
 			_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
 				StagingTargetPath: target,
@@ -261,7 +261,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
 
-	if getValueInMap(attrib, clientIDField) != "" && attrib[serviceAccountTokenField] == "" {
+	if useWorkloadIdentity(attrib) && attrib[serviceAccountTokenField] == "" {
 		klog.V(2).Infof("Skip NodeStageVolume for volume(%s) since clientID %s is provided but service account token is empty", volumeID, getValueInMap(attrib, clientIDField))
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
@@ -730,6 +730,14 @@ func checkGidPresentInMountFlags(mountFlags []string) bool {
 		if strings.Contains(mountFlag, "gid=") {
 			return true
 		}
+	}
+	return false
+}
+
+// useWorkloadIdentity checks whether workload identity is used based on the presence of clientID or mountWithWIToken in volume attributes
+func useWorkloadIdentity(attrib map[string]string) bool {
+	if getValueInMap(attrib, clientIDField) != "" || getValueInMap(attrib, mountWithWITokenField) == trueValue {
+		return true
 	}
 	return false
 }

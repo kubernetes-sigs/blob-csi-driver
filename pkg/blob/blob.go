@@ -603,7 +603,11 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		if err != nil {
 			return rgName, accountName, accountKey, containerName, authEnv, err
 		}
-		azureOAuthTokenFile := filepath.Join(defaultAzureOAuthTokenDir, clientID+accountName)
+		tokenFileName := clientID + accountName
+		if !isValidTokenFileName(tokenFileName) {
+			return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("the generated token file name %s is invalid", tokenFileName)
+		}
+		azureOAuthTokenFile := filepath.Join(defaultAzureOAuthTokenDir, tokenFileName)
 		if err := os.WriteFile(azureOAuthTokenFile, []byte(workloadIdentityToken), 0600); err != nil {
 			return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("failed to write workload identity token file %s: %v", azureOAuthTokenFile, err)
 		}
@@ -1250,4 +1254,21 @@ func parseServiceAccountToken(tokenStr string) (string, error) {
 		return "", fmt.Errorf("token for audience %s not found", DefaultTokenAudience)
 	}
 	return token.APIAzureADTokenExchange.Token, nil
+}
+
+// isValidTokenFileName checks if the token file name is valid
+// fileName should only contain alphanumeric characters, hyphens
+func isValidTokenFileName(fileName string) bool {
+	if fileName == "" {
+		return false
+	}
+	for _, c := range fileName {
+		if !(('a' <= c && c <= 'z') ||
+			('A' <= c && c <= 'Z') ||
+			('0' <= c && c <= '9') ||
+			(c == '-')) {
+			return false
+		}
+	}
+	return true
 }
