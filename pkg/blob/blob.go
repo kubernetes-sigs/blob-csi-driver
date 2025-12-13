@@ -590,27 +590,34 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		tenantID = d.cloud.TenantID
 	}
 
-	if clientID != "" {
-		if mountWithWIToken {
-			klog.V(2).Infof("clientID(%s) is specified, use workload identity for blobfuse auth", clientID)
+	if mountWithWIToken {
+		if clientID == "" {
+			clientID = d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID
+			if clientID == "" {
+				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("mountWithWorkloadIdentityToken is true but clientID is not specified")
+			}
+		}
+		klog.V(2).Infof("mountWithWorkloadIdentityToken is specified, use workload identity auth for mount, clientID: %s, tenantID: %s", clientID, tenantID)
 
-			workloadIdentityToken, err := parseServiceAccountToken(serviceAccountToken)
-			if err != nil {
-				return rgName, accountName, accountKey, containerName, authEnv, err
-			}
-			azureOAuthTokenFile := filepath.Join(defaultAzureOAuthTokenDir, clientID+accountName)
-			if err := os.WriteFile(azureOAuthTokenFile, []byte(workloadIdentityToken), 0600); err != nil {
-				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("failed to write workload identity token file %s: %v", azureOAuthTokenFile, err)
-			}
-
-			authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+clientID)
-			if tenantID != "" {
-				authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+tenantID)
-			}
-			authEnv = append(authEnv, "AZURE_OAUTH_TOKEN_FILE="+azureOAuthTokenFile)
-			klog.V(2).Infof("workload identity auth: %v", authEnv)
+		workloadIdentityToken, err := parseServiceAccountToken(serviceAccountToken)
+		if err != nil {
 			return rgName, accountName, accountKey, containerName, authEnv, err
 		}
+		azureOAuthTokenFile := filepath.Join(defaultAzureOAuthTokenDir, clientID+accountName)
+		if err := os.WriteFile(azureOAuthTokenFile, []byte(workloadIdentityToken), 0600); err != nil {
+			return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("failed to write workload identity token file %s: %v", azureOAuthTokenFile, err)
+		}
+
+		authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+clientID)
+		if tenantID != "" {
+			authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+tenantID)
+		}
+		authEnv = append(authEnv, "AZURE_OAUTH_TOKEN_FILE="+azureOAuthTokenFile)
+		klog.V(2).Infof("workload identity auth: %v", authEnv)
+		return rgName, accountName, accountKey, containerName, authEnv, err
+	}
+
+	if clientID != "" {
 		klog.V(2).Infof("clientID(%s) is specified, use service account token to get account key", clientID)
 		if subsID == "" {
 			subsID = d.cloud.SubscriptionID
