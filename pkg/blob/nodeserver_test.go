@@ -1192,3 +1192,46 @@ func TestCheckGidPresentInMountFlags(t *testing.T) {
 		}
 	}
 }
+
+func TestUseWorkloadIdentity(t *testing.T) {
+	tests := []struct {
+		name   string
+		attrib map[string]string
+		want   bool
+	}{
+		{
+			name: "clientID present",
+			attrib: map[string]string{
+				clientIDField: "client-id",
+			},
+			want: true,
+		},
+		{
+			name: "mountWithWIToken true",
+			attrib: map[string]string{
+				mountWithWITokenField: trueValue,
+			},
+			want: true,
+		},
+		{
+			name: "mountWithWIToken false",
+			attrib: map[string]string{
+				mountWithWITokenField: "false",
+			},
+			want: false,
+		},
+		{
+			name:   "no workload identity fields",
+			attrib: map[string]string{},
+			want:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := useWorkloadIdentity(tt.attrib); got != tt.want {
+				t.Errorf("useWorkloadIdentity() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
