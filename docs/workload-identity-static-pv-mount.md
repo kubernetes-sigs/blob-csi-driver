@@ -43,7 +43,7 @@ az role assignment create --role "Storage Account Contributor" --assignee $USER_
 
  - option#2: grant the `Storage Blob Data Contributor` role to the managed identity for mounting using a workload identity token exclusively, without relying on account key authentication.
 ```console
-az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
+az role assignment create --role "Storage Blob Data Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
 
 ### 4. Create a service account on AKS
