@@ -590,27 +590,45 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		tenantID = d.cloud.TenantID
 	}
 
-	if clientID != "" {
-		if mountWithWIToken {
-			klog.V(2).Infof("clientID(%s) is specified, use workload identity for blobfuse auth", clientID)
-
-			workloadIdentityToken, err := parseServiceAccountToken(serviceAccountToken)
-			if err != nil {
-				return rgName, accountName, accountKey, containerName, authEnv, err
+	if mountWithWIToken {
+		if clientID == "" {
+			clientID = d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID
+			if clientID == "" {
+				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("mountWithWorkloadIdentityToken is true but clientID is not specified")
 			}
-			azureOAuthTokenFile := filepath.Join(defaultAzureOAuthTokenDir, clientID+accountName)
+		}
+		klog.V(2).Infof("mountWithWorkloadIdentityToken is specified, use workload identity auth for mount, clientID: %s, tenantID: %s", clientID, tenantID)
+
+		workloadIdentityToken, err := parseServiceAccountToken(serviceAccountToken)
+		if err != nil {
+			return rgName, accountName, accountKey, containerName, authEnv, err
+		}
+		tokenFileName := clientID + "-" + accountName
+		if !isValidTokenFileName(tokenFileName) {
+			return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("the generated token file name %s is invalid", tokenFileName)
+		}
+		azureOAuthTokenFile := filepath.Join(defaultAzureOAuthTokenDir, tokenFileName)
+		// check whether token value is the same as the one in the token file
+		existingToken, readErr := os.ReadFile(azureOAuthTokenFile)
+		if readErr == nil && string(existingToken) == workloadIdentityToken {
+			klog.V(6).Infof("the existing workload identity token file %s is up-to-date, no need to rewrite", azureOAuthTokenFile)
+		} else {
+			// write the token to a file
 			if err := os.WriteFile(azureOAuthTokenFile, []byte(workloadIdentityToken), 0600); err != nil {
 				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("failed to write workload identity token file %s: %v", azureOAuthTokenFile, err)
 			}
-
-			authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+clientID)
-			if tenantID != "" {
-				authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+tenantID)
-			}
-			authEnv = append(authEnv, "AZURE_OAUTH_TOKEN_FILE="+azureOAuthTokenFile)
-			klog.V(2).Infof("workload identity auth: %v", authEnv)
-			return rgName, accountName, accountKey, containerName, authEnv, err
 		}
+
+		authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+clientID)
+		if tenantID != "" {
+			authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+tenantID)
+		}
+		authEnv = append(authEnv, "AZURE_OAUTH_TOKEN_FILE="+azureOAuthTokenFile)
+		klog.V(2).Infof("workload identity auth: %v", authEnv)
+		return rgName, accountName, accountKey, containerName, authEnv, err
+	}
+
+	if clientID != "" {
 		klog.V(2).Infof("clientID(%s) is specified, use service account token to get account key", clientID)
 		if subsID == "" {
 			subsID = d.cloud.SubscriptionID
@@ -1243,4 +1261,21 @@ func parseServiceAccountToken(tokenStr string) (string, error) {
 		return "", fmt.Errorf("token for audience %s not found", DefaultTokenAudience)
 	}
 	return token.APIAzureADTokenExchange.Token, nil
+}
+
+// isValidTokenFileName checks if the token file name is valid
+// fileName should only contain alphanumeric characters, hyphens
+func isValidTokenFileName(fileName string) bool {
+	if fileName == "" {
+		return false
+	}
+	for _, c := range fileName {
+		if !(('a' <= c && c <= 'z') ||
+			('A' <= c && c <= 'Z') ||
+			('0' <= c && c <= '9') ||
+			(c == '-')) {
+			return false
+		}
+	}
+	return true
 }
