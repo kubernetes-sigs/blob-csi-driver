@@ -38,7 +38,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	k8sutil "k8s.io/kubernetes/pkg/volume/util"
 	mount "k8s.io/mount-utils"
 	utilexec "k8s.io/utils/exec"
 
@@ -426,7 +425,7 @@ func getValidContainerName(volumeName, protocol string) string {
 	if !checkContainerNameBeginAndEnd(containerName) || len(containerName) < containerNameMinLength {
 		// now we set as 63 for maximum container name length
 		// todo: get cluster name
-		containerName = k8sutil.GenerateVolumeName(fmt.Sprintf("pvc-%s", protocol), uuid.NewUUID().String(), 63)
+		containerName = generateVolumeName(fmt.Sprintf("pvc-%s", protocol), uuid.NewUUID().String(), 63)
 		klog.Warningf("requested volume name (%s) is invalid, regenerated as (%q)", volumeName, containerName)
 	}
 	return strings.Replace(containerName, "--", "-", -1)
@@ -1107,6 +1106,21 @@ func replaceWithMap(str string, m map[string]string) string {
 		}
 	}
 	return str
+}
+
+// generateVolumeName returns a PV name with clusterName prefix. The function
+// should be used to generate a name of GCE PD or Cinder volume. It basically
+// adds "<clusterName>-dynamic-" before the PV name, making sure the resulting
+// string fits given length and cuts "dynamic" if not.
+func generateVolumeName(clusterName, pvName string, maxLength int) string {
+	prefix := clusterName + "-dynamic"
+	pvLen := len(pvName)
+	// cut the "<clusterName>-dynamic" to fit full pvName into maxLength
+	// +1 for the '-' dash
+	if pvLen+1+len(prefix) > maxLength {
+		prefix = prefix[:maxLength-pvLen-1]
+	}
+	return prefix + "-" + pvName
 }
 
 func isSupportedFSGroupChangePolicy(policy string) bool {
