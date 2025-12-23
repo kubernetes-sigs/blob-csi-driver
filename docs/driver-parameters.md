@@ -162,6 +162,7 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
  - blobfuse cache(`--tmp-path` [mount option](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#mount-options))
    - By default, the blobfuse cache is located in the `/mnt` directory. If the VM SKU provides a temporary disk, the `/mnt` directory is mounted on the temporary disk. However, if the VM SKU does not provide a temporary disk, the `/mnt` directory is mounted on the OS disk. 
    - with blobfuse-proxy deployment (default on AKS), user could set `--tmp-path=` mount option to specify a different cache directory
+ - If there are CVEs in the `livenessprobe` and `csi-node-driver-registrar` sidecar images, you can run `kubectl edit ds -n kube-system csi-blob-node` to change the `imagePullPolicy` to `Always` for both sidecar containers. This will cause the CSI driver to restart and pull the latest patched images, thereby resolving the CVEs in these sidecar components.
  - [Mount Azure blob storage with managed identity](../deploy/example/blobfuse-mi)
  - [Blobfuse Performance and caching](https://github.com/Azure/azure-storage-fuse?tab=readme-ov-file#frequently-asked-questions)
  - [Blobfuse CLI Flag Options v1 & v2](https://github.com/Azure/azure-storage-fuse/blob/main/MIGRATION.md#blobfuse-cli-flag-options)
