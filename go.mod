@@ -1,6 +1,6 @@
 module sigs.k8s.io/blob-csi-driver
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/Azure/azure-sdk-for-go v68.0.0+incompatible
