@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 
 	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"google.golang.org/grpc"
@@ -34,7 +33,6 @@ import (
 )
 
 var (
-	mutex         sync.Mutex
 	driverVersion string
 )
 
@@ -66,9 +64,6 @@ func NewMountServiceServer() *MountServer {
 func (server *MountServer) MountAzureBlob(_ context.Context,
 	req *mount_azure_blob.MountAzureBlobRequest,
 ) (resp *mount_azure_blob.MountAzureBlobResponse, err error) {
-	mutex.Lock()
-	defer mutex.Unlock()
-
 	args := req.GetMountArgs()
 	authEnv := req.GetAuthEnv()
 	protocol := req.GetProtocol()
