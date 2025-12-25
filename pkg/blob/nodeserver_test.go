@@ -1087,7 +1087,7 @@ func TestMountBlobfuseWithProxy(t *testing.T) {
 			}
 
 			// Run the test - call mountBlobfuseWithProxy directly
-			output, err := d.mountBlobfuseWithProxy(test.args, test.protocol, test.authEnv)
+			output, err := d.mountBlobfuseWithProxy(context.Background(), test.args, test.protocol, test.authEnv)
 
 			// Verify results
 			if test.cleanupCheck != nil {

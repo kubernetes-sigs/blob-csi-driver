@@ -38,6 +38,7 @@ import (
 	mount "k8s.io/mount-utils"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
 
 	"golang.org/x/net/context"
@@ -48,6 +49,7 @@ import (
 const (
 	waitForMountInterval = 20 * time.Millisecond
 	waitForMountTimeout  = 60 * time.Second
+	mountTimeoutInSec    = 115
 )
 
 type MountClient struct {
@@ -157,21 +159,15 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
-func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string) (string, error) {
-	var resp *mount_azure_blob.MountAzureBlobResponse
-	var output string
-	connectionTimout := time.Duration(d.blobfuseProxyConnTimout) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), connectionTimout)
-	defer cancel()
-	klog.V(2).Infof("start connecting to blobfuse proxy, protocol: %s, args: %s", protocol, args)
-	conn, err := grpc.DialContext(ctx, d.blobfuseProxyEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+func (d *Driver) mountBlobfuseWithProxy(ctx context.Context, args, protocol string, authEnv []string) (string, error) {
+	conn, err := grpc.NewClient(d.blobfuseProxyEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		klog.Errorf("failed to connect to blobfuse proxy: %v", err)
+		klog.Error("failed to connect to blobfuse proxy:", err)
 		return "", err
 	}
 	defer func() {
 		if err := conn.Close(); err != nil {
-			klog.Errorf("failed to close connection to blobfuse proxy: %v", err)
+			klog.Error("failed to close connection to blobfuse proxy:", err)
 		}
 	}()
 
@@ -182,12 +178,26 @@ func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string)
 		AuthEnv:   authEnv,
 	}
 	klog.V(2).Infof("begin to mount with blobfuse proxy, protocol: %s, args: %s", protocol, args)
-	resp, err = mountClient.service.MountAzureBlob(context.TODO(), &mountreq)
-	if err != nil {
+	// create a new context with ctx and mountTimeoutInSec*time.Second timeout
+	newCtx, cancel := context.WithTimeout(ctx, mountTimeoutInSec*time.Second)
+	defer cancel()
+
+	var output string
+	execFunc := func() error {
+		resp, err := mountClient.service.MountAzureBlob(newCtx, &mountreq)
+		if resp != nil {
+			output = resp.GetOutput()
+		}
+		return err
+	}
+	timeoutFunc := func() error {
+		return fmt.Errorf("mount with blobfuse proxy timed out after %d seconds, args: %s", mountTimeoutInSec, args)
+	}
+
+	if err = volumehelper.WaitUntilTimeout(mountTimeoutInSec*time.Second, execFunc, timeoutFunc); err != nil {
 		klog.Error("GRPC call returned with an error:", err)
 	}
-	output = resp.GetOutput()
-
+	klog.V(2).Infof("mount with blobfuse proxy completed, output: %s", output)
 	return output, err
 }
 
@@ -379,8 +389,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		source := fmt.Sprintf("%s:/%s/%s", serverAddress, accountName, containerName)
 		mountOptions := util.JoinMountOptions(mountFlags, []string{"sec=sys,vers=3,nolock"})
 		execFunc := func() error { return d.mounter.MountSensitive(source, targetPath, mountType, mountOptions, []string{}) }
-		timeoutFunc := func() error { return fmt.Errorf("time out") }
-		if err := volumehelper.WaitUntilTimeout(90*time.Second, execFunc, timeoutFunc); err != nil {
+		timeoutFunc := func() error {
+			return fmt.Errorf("mount operation timed out after %d seconds: source=%s, target=%s", mountTimeoutInSec, source, targetPath)
+		}
+		if err := volumehelper.WaitUntilTimeout(mountTimeoutInSec*time.Second, execFunc, timeoutFunc); err != nil {
 			var helpLinkMsg string
 			if d.appendMountErrorHelpLink {
 				helpLinkMsg = "\nPlease refer to http://aka.ms/blobmounterror for possible causes and solutions for mount errors."
@@ -456,7 +468,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	var output string
 	if d.enableBlobfuseProxy {
-		output, err = d.mountBlobfuseWithProxy(args, protocol, authEnv)
+		output, err = d.mountBlobfuseWithProxy(ctx, args, protocol, authEnv)
 	} else {
 		output, err = d.mountBlobfuseInsideDriver(args, protocol, authEnv)
 	}
