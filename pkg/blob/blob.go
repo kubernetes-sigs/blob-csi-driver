@@ -182,7 +182,7 @@ type DriverOptions struct {
 	DriverName                             string
 	BlobfuseProxyEndpoint                  string
 	EnableBlobfuseProxy                    bool
-	BlobfuseProxyConnTimout                int
+	BlobfuseProxyConnTimeout               int
 	EnableBlobMockMount                    bool
 	AllowInlineVolumeKeyAccessWithIdentity bool
 	EnableGetVolumeStats                   bool
@@ -202,7 +202,7 @@ func (option *DriverOptions) AddFlags() {
 	flag.StringVar(&option.NodeID, "nodeid", "", "node id")
 	flag.StringVar(&option.DriverName, "drivername", DefaultDriverName, "name of the driver")
 	flag.BoolVar(&option.EnableBlobfuseProxy, "enable-blobfuse-proxy", false, "using blobfuse proxy for mounts")
-	flag.IntVar(&option.BlobfuseProxyConnTimout, "blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
+	flag.IntVar(&option.BlobfuseProxyConnTimeout, "blobfuse-proxy-connect-timeout", 5, "blobfuse proxy connection timeout(seconds)")
 	flag.BoolVar(&option.EnableBlobMockMount, "enable-blob-mock-mount", false, "enable mock mount(only for testing)")
 	flag.BoolVar(&option.EnableGetVolumeStats, "enable-get-volume-stats", false, "allow GET_VOLUME_STATS on agent node")
 	flag.BoolVar(&option.AppendTimeStampInCacheDir, "append-timestamp-cache-dir", false, "append timestamp into cache directory on agent node")
@@ -238,7 +238,7 @@ type Driver struct {
 	allowInlineVolumeKeyAccessWithIdentity bool
 	appendTimeStampInCacheDir              bool
 	appendMountErrorHelpLink               bool
-	blobfuseProxyConnTimout                int
+	blobfuseProxyConnTimeout               int
 	mountPermissions                       uint64
 	enableAznfsMount                       bool
 	enableVolumeMountGroup                 bool
@@ -283,7 +283,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *s
 		blobfuseProxyEndpoint:                  options.BlobfuseProxyEndpoint,
 		enableBlobfuseProxy:                    options.EnableBlobfuseProxy,
 		allowInlineVolumeKeyAccessWithIdentity: options.AllowInlineVolumeKeyAccessWithIdentity,
-		blobfuseProxyConnTimout:                options.BlobfuseProxyConnTimout,
+		blobfuseProxyConnTimeout:               options.BlobfuseProxyConnTimeout,
 		enableBlobMockMount:                    options.EnableBlobMockMount,
 		enableGetVolumeStats:                   options.EnableGetVolumeStats,
 		enableVolumeMountGroup:                 options.EnableVolumeMountGroup,

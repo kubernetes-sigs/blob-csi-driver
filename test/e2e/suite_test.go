@@ -122,12 +122,12 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	_, useBlobfuseProxy := os.LookupEnv("ENABLE_BLOBFUSE_PROXY")
 	os.Setenv("AZURE_CREDENTIAL_FILE", credentials.TempAzureCredentialFilePath)
 	driverOptions := blob.DriverOptions{
-		NodeID:                  os.Getenv("nodeid"),
-		DriverName:              blob.DefaultDriverName,
-		BlobfuseProxyEndpoint:   "",
-		EnableBlobfuseProxy:     useBlobfuseProxy,
-		BlobfuseProxyConnTimout: 5,
-		EnableBlobMockMount:     false,
+		NodeID:                   os.Getenv("nodeid"),
+		DriverName:               blob.DefaultDriverName,
+		BlobfuseProxyEndpoint:    "",
+		EnableBlobfuseProxy:      useBlobfuseProxy,
+		BlobfuseProxyConnTimeout: 5,
+		EnableBlobMockMount:      false,
 	}
 	kubeClient, err := util.GetKubeClient(kubeconfig, 25.0, 50, "")
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
