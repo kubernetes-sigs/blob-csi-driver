@@ -47,7 +47,7 @@ import (
 
 const (
 	waitForMountInterval = 20 * time.Millisecond
-	waitForMountTimeout  = 60 * time.Second
+	waitForMountTimeout  = 110 * time.Second
 )
 
 type MountClient struct {
@@ -158,10 +158,8 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 }
 
 func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string) (string, error) {
-	var resp *mount_azure_blob.MountAzureBlobResponse
-	var output string
-	connectionTimout := time.Duration(d.blobfuseProxyConnTimout) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), connectionTimout)
+	connectionTimeout := time.Duration(d.blobfuseProxyConnTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
 	defer cancel()
 	klog.V(2).Infof("start connecting to blobfuse proxy, protocol: %s, args: %s", protocol, args)
 	conn, err := grpc.DialContext(ctx, d.blobfuseProxyEndpoint, grpc.WithInsecure(), grpc.WithBlock())
@@ -182,12 +180,15 @@ func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string)
 		AuthEnv:   authEnv,
 	}
 	klog.V(2).Infof("begin to mount with blobfuse proxy, protocol: %s, args: %s", protocol, args)
-	resp, err = mountClient.service.MountAzureBlob(context.TODO(), &mountreq)
+	resp, err := mountClient.service.MountAzureBlob(context.TODO(), &mountreq)
 	if err != nil {
 		klog.Error("GRPC call returned with an error:", err)
 	}
-	output = resp.GetOutput()
-
+	var output string
+	if resp != nil {
+		output = resp.GetOutput()
+	}
+	klog.V(2).Infof("mount with blobfuse proxy completed, protocol: %s, args: %s, output: %s, error: %v", protocol, args, output, err)
 	return output, err
 }
 
