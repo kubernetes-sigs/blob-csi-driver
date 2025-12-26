@@ -996,7 +996,7 @@ func TestMountBlobfuseWithProxy(t *testing.T) {
 				// Create the driver with the configured proxy
 				d := NewFakeDriver()
 				d.blobfuseProxyEndpoint = lis.Addr().String()
-				d.blobfuseProxyConnTimout = 5 // 5 second timeout
+				d.blobfuseProxyConnTimeout = 5 // 5 second timeout
 
 				return d, s, lis
 			},
@@ -1037,7 +1037,7 @@ func TestMountBlobfuseWithProxy(t *testing.T) {
 				// Create the driver with the configured proxy
 				d := NewFakeDriver()
 				d.blobfuseProxyEndpoint = lis.Addr().String()
-				d.blobfuseProxyConnTimout = 5 // 5 second timeout
+				d.blobfuseProxyConnTimeout = 5 // 5 second timeout
 
 				return d, s, lis
 			},
@@ -1057,7 +1057,7 @@ func TestMountBlobfuseWithProxy(t *testing.T) {
 				// Create the driver with a non-existent endpoint
 				d := NewFakeDriver()
 				d.blobfuseProxyEndpoint = "unix://non-existent-socket.sock"
-				d.blobfuseProxyConnTimout = 1 // 1 second timeout for quick failure
+				d.blobfuseProxyConnTimeout = 1 // 1 second timeout for quick failure
 
 				// No server or listener for this test
 				return d, nil, nil

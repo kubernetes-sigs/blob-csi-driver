@@ -57,7 +57,7 @@ func NewFakeDriver() *Driver {
 		DriverName:                  DefaultDriverName,
 		BlobfuseProxyEndpoint:       "",
 		EnableBlobfuseProxy:         false,
-		BlobfuseProxyConnTimout:     5,
+		BlobfuseProxyConnTimeout:    5,
 		WaitForAzCopyTimeoutMinutes: 1,
 		EnableBlobMockMount:         false,
 	}
@@ -70,12 +70,12 @@ func NewFakeDriver() *Driver {
 
 func TestNewFakeDriver(t *testing.T) {
 	driverOptions := DriverOptions{
-		NodeID:                  fakeNodeID,
-		DriverName:              DefaultDriverName,
-		BlobfuseProxyEndpoint:   "",
-		EnableBlobfuseProxy:     false,
-		BlobfuseProxyConnTimout: 5,
-		EnableBlobMockMount:     false,
+		NodeID:                   fakeNodeID,
+		DriverName:               DefaultDriverName,
+		BlobfuseProxyEndpoint:    "",
+		EnableBlobfuseProxy:      false,
+		BlobfuseProxyConnTimeout: 5,
+		EnableBlobMockMount:      false,
 	}
 	d := NewDriver(&driverOptions, nil, &storage.AccountRepo{})
 	assert.NotNil(t, d)
@@ -87,7 +87,7 @@ func TestNewDriver(t *testing.T) {
 		DriverName:                  DefaultDriverName,
 		BlobfuseProxyEndpoint:       "",
 		EnableBlobfuseProxy:         false,
-		BlobfuseProxyConnTimout:     5,
+		BlobfuseProxyConnTimeout:    5,
 		WaitForAzCopyTimeoutMinutes: 1,
 		EnableBlobMockMount:         false,
 	}
