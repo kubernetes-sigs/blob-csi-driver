@@ -28,10 +28,10 @@ import (
 
 	volumehelper "sigs.k8s.io/blob-csi-driver/pkg/util"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
-	"sigs.k8s.io/cloud-provider-azure/pkg/metrics"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util"
@@ -43,6 +43,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
+	csiMetrics "sigs.k8s.io/blob-csi-driver/pkg/metrics"
 )
 
 const (
@@ -136,6 +137,12 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
+	mc := csiMetrics.NewCSIMetricContext("node_publish_volume")
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveWithLabels(isOperationSucceeded, "volume_id", volumeID)
+	}()
+
 	klog.V(2).Infof("NodePublishVolume: volume %s mounting %s at %s with mountOptions: %v", volumeID, source, target, mountOptions)
 	if d.enableBlobMockMount {
 		klog.Warningf("NodePublishVolume: mock mount on volumeID(%s), this is only for TESTING!!!", volumeID)
@@ -154,6 +161,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	}
 	klog.V(2).Infof("NodePublishVolume: volume %s mount %s at %s successfully", volumeID, source, target)
 
+	isOperationSucceeded = true
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
@@ -216,7 +224,7 @@ func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv
 }
 
 // NodeUnpublishVolume unmount the volume from the target path
-func (d *Driver) NodeUnpublishVolume(_ context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
+func (d *Driver) NodeUnpublishVolume(ctx context.Context, req *csi.NodeUnpublishVolumeRequest) (*csi.NodeUnpublishVolumeResponse, error) {
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
@@ -226,6 +234,12 @@ func (d *Driver) NodeUnpublishVolume(_ context.Context, req *csi.NodeUnpublishVo
 		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
 	}
 
+	mc := csiMetrics.NewCSIMetricContext("node_unpublish_volume")
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveWithLabels(isOperationSucceeded, "volume_id", volumeID)
+	}()
+
 	klog.V(2).Infof("NodeUnpublishVolume: unmounting volume %s on %s", volumeID, targetPath)
 	err := mount.CleanupMountPoint(targetPath, d.mounter, true /*extensiveMountPointCheck*/)
 	if err != nil {
@@ -233,6 +247,7 @@ func (d *Driver) NodeUnpublishVolume(_ context.Context, req *csi.NodeUnpublishVo
 	}
 	klog.V(2).Infof("NodeUnpublishVolume: unmount volume %s on %s successfully", volumeID, targetPath)
 
+	isOperationSucceeded = true
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
@@ -273,6 +288,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	containerNameReplaceMap := map[string]string{}
 
 	fsGroupChangePolicy := d.fsGroupChangePolicy
+	// Default to OnRootMismatch if not specified (matches SetVolumeOwnership default)
+	if fsGroupChangePolicy == "" {
+		fsGroupChangePolicy = string(v1.FSGroupChangeOnRootMismatch)
+	}
 
 	mountPermissions := d.mountPermissions
 	performChmodOp := (mountPermissions > 0)
@@ -335,10 +354,16 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
-	mc := metrics.NewMetricContext(blobCSIDriverName, "node_stage_volume", d.cloud.ResourceGroup, "", d.Name)
+	mc := csiMetrics.NewCSIMetricContext("node_stage_volume")
 	isOperationSucceeded := false
 	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+		mc.ObserveWithLabels(isOperationSucceeded,
+			"volume_id", volumeID,
+			"protocol", protocol,
+			"storage_account_type", blobStorageAccountType,
+			"account_name", accountName,
+			"container_name", containerName,
+			"is_hns_enabled", strconv.FormatBool(isHnsEnabled))
 	}()
 
 	// replace pv/pvc name namespace metadata in subDir
@@ -506,7 +531,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 }
 
 // NodeUnstageVolume unmount the volume from the staging path
-func (d *Driver) NodeUnstageVolume(_ context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
+func (d *Driver) NodeUnstageVolume(ctx context.Context, req *csi.NodeUnstageVolumeRequest) (*csi.NodeUnstageVolumeResponse, error) {
 	volumeID := req.GetVolumeId()
 	if len(volumeID) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID not provided")
@@ -523,10 +548,10 @@ func (d *Driver) NodeUnstageVolume(_ context.Context, req *csi.NodeUnstageVolume
 	}
 	defer d.volumeLocks.Release(lockKey)
 
-	mc := metrics.NewMetricContext(blobCSIDriverName, "node_unstage_volume", d.cloud.ResourceGroup, "", d.Name)
+	mc := csiMetrics.NewCSIMetricContext("node_unstage_volume")
 	isOperationSucceeded := false
 	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+		mc.ObserveWithLabels(isOperationSucceeded, "volume_id", volumeID)
 	}()
 
 	klog.V(2).Infof("NodeUnstageVolume: volume %s unmounting on %s", volumeID, stagingTargetPath)
@@ -541,21 +566,27 @@ func (d *Driver) NodeUnstageVolume(_ context.Context, req *csi.NodeUnstageVolume
 }
 
 // NodeGetCapabilities return the capabilities of the Node plugin
-func (d *Driver) NodeGetCapabilities(_ context.Context, _ *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
+func (d *Driver) NodeGetCapabilities(ctx context.Context, _ *csi.NodeGetCapabilitiesRequest) (*csi.NodeGetCapabilitiesResponse, error) {
 	return &csi.NodeGetCapabilitiesResponse{
 		Capabilities: d.NSCap,
 	}, nil
 }
 
 // NodeGetInfo return info of the node on which this plugin is running
-func (d *Driver) NodeGetInfo(_ context.Context, _ *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
+func (d *Driver) NodeGetInfo(ctx context.Context, _ *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
+	mc := csiMetrics.NewCSIMetricContext("node_get_info")
+	defer mc.Observe(true)
+
 	return &csi.NodeGetInfoResponse{
 		NodeId: d.NodeID,
 	}, nil
 }
 
 // NodeExpandVolume node expand volume
-func (d *Driver) NodeExpandVolume(_ context.Context, _ *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
+func (d *Driver) NodeExpandVolume(ctx context.Context, _ *csi.NodeExpandVolumeRequest) (*csi.NodeExpandVolumeResponse, error) {
+	mc := csiMetrics.NewCSIMetricContext("node_expand_volume")
+	defer mc.Observe(false)
+
 	return nil, status.Error(codes.Unimplemented, "NodeExpandVolume is not yet implemented")
 }
 
@@ -579,11 +610,10 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 		return resp, nil
 	}
 
-	mc := metrics.NewMetricContext(blobCSIDriverName, "node_get_volume_stats", d.cloud.ResourceGroup, "", d.Name)
-	mc.LogLevel = 6 // change log level
+	mc := csiMetrics.NewCSIMetricContext("node_get_volume_stats")
 	isOperationSucceeded := false
 	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, req.VolumeId)
+		mc.ObserveWithLabels(isOperationSucceeded, "volume_id", req.VolumeId)
 	}()
 
 	if _, err := os.Lstat(req.VolumePath); err != nil {
