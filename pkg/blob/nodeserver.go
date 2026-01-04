@@ -28,7 +28,6 @@ import (
 
 	volumehelper "sigs.k8s.io/blob-csi-driver/pkg/util"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
-	"sigs.k8s.io/cloud-provider-azure/pkg/metrics"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
@@ -43,6 +42,7 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
+	csiMetrics "sigs.k8s.io/blob-csi-driver/pkg/metrics"
 )
 
 const (
@@ -122,6 +122,12 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		return nil, status.Error(codes.InvalidArgument, "Staging target not provided")
 	}
 
+	mc := csiMetrics.NewCSIMetricContext("node_publish_volume")
+	isOperationSucceeded := false
+	defer func() {
+		mc.Observe(isOperationSucceeded)
+	}()
+
 	mountOptions := []string{"bind"}
 	if req.GetReadonly() {
 		mountOptions = append(mountOptions, "ro")
@@ -133,6 +139,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	}
 	if mnt {
 		klog.V(2).Infof("NodePublishVolume: volume %s is already mounted on %s", volumeID, target)
+		isOperationSucceeded = true
 		return &csi.NodePublishVolumeResponse{}, nil
 	}
 
@@ -154,6 +161,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	}
 	klog.V(2).Infof("NodePublishVolume: volume %s mount %s at %s successfully", volumeID, source, target)
 
+	isOperationSucceeded = true
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
@@ -225,6 +233,12 @@ func (d *Driver) NodeUnpublishVolume(_ context.Context, req *csi.NodeUnpublishVo
 		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
 	}
 
+	mc := csiMetrics.NewCSIMetricContext("node_unpublish_volume")
+	isOperationSucceeded := false
+	defer func() {
+		mc.Observe(isOperationSucceeded)
+	}()
+
 	klog.V(2).Infof("NodeUnpublishVolume: unmounting volume %s on %s", volumeID, targetPath)
 	err := mount.CleanupMountPoint(targetPath, d.mounter, true /*extensiveMountPointCheck*/)
 	if err != nil {
@@ -232,6 +246,7 @@ func (d *Driver) NodeUnpublishVolume(_ context.Context, req *csi.NodeUnpublishVo
 	}
 	klog.V(2).Infof("NodeUnpublishVolume: unmount volume %s on %s successfully", volumeID, targetPath)
 
+	isOperationSucceeded = true
 	return &csi.NodeUnpublishVolumeResponse{}, nil
 }
 
@@ -319,6 +334,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Errorf(codes.InvalidArgument, "fsGroupChangePolicy(%s) is not supported, supported fsGroupChangePolicy list: %v", fsGroupChangePolicy, supportedFSGroupChangePolicyList)
 	}
 
+	mc := csiMetrics.NewCSIMetricContext("node_stage_volume")
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveWithLabels(isOperationSucceeded,
+			"protocol", protocol,
+			"storage_account_type", blobStorageAccountType,
+			"is_hns_enabled", strconv.FormatBool(isHnsEnabled))
+	}()
 	mnt, err := d.ensureMountPoint(targetPath, fs.FileMode(mountPermissions))
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", targetPath, err)
@@ -331,14 +354,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	if mnt {
 		klog.V(2).Infof("NodeStageVolume: volume %s is already mounted on %s", volumeID, targetPath)
+		isOperationSucceeded = true
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
-
-	mc := metrics.NewMetricContext(blobCSIDriverName, "node_stage_volume", d.cloud.ResourceGroup, "", d.Name)
-	isOperationSucceeded := false
-	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
-	}()
 
 	// replace pv/pvc name namespace metadata in subDir
 	containerName = replaceWithMap(containerName, containerNameReplaceMap)
@@ -522,10 +540,10 @@ func (d *Driver) NodeUnstageVolume(_ context.Context, req *csi.NodeUnstageVolume
 	}
 	defer d.volumeLocks.Release(lockKey)
 
-	mc := metrics.NewMetricContext(blobCSIDriverName, "node_unstage_volume", d.cloud.ResourceGroup, "", d.Name)
+	mc := csiMetrics.NewCSIMetricContext("node_unstage_volume")
 	isOperationSucceeded := false
 	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+		mc.Observe(isOperationSucceeded)
 	}()
 
 	klog.V(2).Infof("NodeUnstageVolume: volume %s unmounting on %s", volumeID, stagingTargetPath)
@@ -548,6 +566,9 @@ func (d *Driver) NodeGetCapabilities(_ context.Context, _ *csi.NodeGetCapabiliti
 
 // NodeGetInfo return info of the node on which this plugin is running
 func (d *Driver) NodeGetInfo(_ context.Context, _ *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
+	mc := csiMetrics.NewCSIMetricContext("node_get_info")
+	defer mc.Observe(true)
+
 	return &csi.NodeGetInfoResponse{
 		NodeId: d.NodeID,
 	}, nil
@@ -578,11 +599,10 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 		return resp, nil
 	}
 
-	mc := metrics.NewMetricContext(blobCSIDriverName, "node_get_volume_stats", d.cloud.ResourceGroup, "", d.Name)
-	mc.LogLevel = 6 // change log level
+	mc := csiMetrics.NewCSIMetricContext("node_get_volume_stats")
 	isOperationSucceeded := false
 	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, req.VolumeId)
+		mc.Observe(isOperationSucceeded)
 	}()
 
 	if _, err := os.Lstat(req.VolumePath); err != nil {
