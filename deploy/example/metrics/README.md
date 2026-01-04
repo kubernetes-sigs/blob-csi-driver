@@ -1,19 +1,178 @@
-# Get Prometheus metrics from CSI driver
+# Prometheus Metrics for CSI Blob Driver
 
-1. Create `csi-blob-controller` service with targetPort `29634`
-```console
-kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/metrics/csi-blob-controller-svc.yaml
+This directory contains manifests and tools for monitoring the Azure Blob CSI driver with Prometheus.
+
+## Metrics Endpoints
+
+The CSI driver exposes Prometheus metrics on two endpoints:
+
+- **Controller**: Port `29634` - Metrics for volume provisioning/deletion operations
+- **Node**: Port `29635` - Metrics for mount/unmount operations on each node
+
+## Quick Start
+
+### Option 1: Deploy Full Prometheus Stack (Recommended)
+
+Deploy Prometheus with auto-discovery of CSI driver metrics:
+
+```bash
+# Deploy Prometheus
+kubectl apply -f deploy/example/metrics/prometheus-setup.yaml
+
+# Wait for Prometheus to be ready
+kubectl wait --for=condition=ready pod -l app=prometheus -n monitoring --timeout=120s
+
+# Access Prometheus UI
+kubectl port-forward -n monitoring svc/prometheus 9090:9090
+# Then open http://localhost:9090 in your browser
 ```
 
-2. Get ClusterIP of service `csi-blob-controller`
-```console
-$ kubectl get svc csi-blob-controller -n kube-system
-NAME                  TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)     AGE
-csi-blob-controller   ClusterIP   10.0.156.8   20.39.0.113   29634/TCP   32m
+### Option 2: Manual Metrics Access
+
+Create services to access metrics directly:
+
+```bash
+# Create controller service
+kubectl apply -f deploy/example/metrics/csi-blob-controller-svc.yaml
+
+# Create node service
+kubectl apply -f deploy/example/metrics/csi-blob-node-svc.yaml
+
+# Get controller metrics
+kubectl get svc csi-blob-controller -n kube-system
+ip=$(kubectl get svc csi-blob-controller -n kube-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+curl http://$ip:29634/metrics
 ```
 
-3. Run following command to get cloudprovider_azure metrics
-```console
-ip=`kubectl get svc csi-blob-controller -n kube-system | grep blob | awk '{print $4}'`
-curl http://$ip:29634/metrics | grep cloudprovider_azure | grep -e sum -e count
+## Verify Metrics
+
+Run the verification script to check that metrics are being exported correctly:
+
+```bash
+./deploy/example/metrics/verify-metrics.sh
 ```
+
+This script will:
+1. Check CSI driver pods are running
+2. Test controller metrics endpoint
+3. Test node metrics endpoint
+4. Verify Prometheus deployment
+5. Check for CSI-specific metrics with dimensions
+6. Provide useful PromQL queries
+
+## Available Metrics
+
+### Azure Cloud Provider Metrics
+- `cloudprovider_azure_api_request_duration_seconds` - API request latency
+- `cloudprovider_azure_api_request_errors` - API request errors
+- `cloudprovider_azure_api_request_throttled_count` - Throttled requests
+
+### CSI Operation Metrics
+
+All CSI operations include these dimensions:
+- `volumeID` - The volume identifier
+- `protocol` - Mount protocol (nfs, fuse, fuse2, aznfs)
+- `storageAccountType` - Storage SKU (Premium_LRS, Standard_LRS, etc.)
+- `accountName` - Storage account name
+- `containerName` - Blob container name
+
+**Controller Operations:**
+- `controller_create_volume` - Volume creation operations
+- `controller_delete_volume` - Volume deletion operations
+- `controller_validate_volume_capabilities` - Volume validation
+
+**Node Operations:**
+- `node_stage_volume` - Volume staging (mounting)
+- `node_unstage_volume` - Volume unstaging (unmounting)
+- `node_publish_volume` - Volume publishing
+- `node_unpublish_volume` - Volume unpublishing
+- `node_get_volume_stats` - Volume statistics retrieval
+
+## Example PromQL Queries
+
+### Operation Success Rate
+```promql
+# Controller create volume success rate
+rate(cloudprovider_azure_api_request_duration_seconds_count{request="controller_create_volume"}[5m])
+```
+
+### Operations by Protocol
+```promql
+# NFS mount operations
+sum(rate(cloudprovider_azure_api_request_duration_seconds_count{request="node_stage_volume",protocol="nfs"}[5m]))
+
+# Blobfuse mount operations
+sum(rate(cloudprovider_azure_api_request_duration_seconds_count{request="node_stage_volume",protocol="fuse2"}[5m]))
+```
+
+### Operations by Storage Account Type
+```promql
+# Premium storage operations
+sum(rate(cloudprovider_azure_api_request_duration_seconds_count{storageAccountType="Premium_LRS"}[5m]))
+```
+
+### Error Rate
+```promql
+# Failed operations
+sum(rate(cloudprovider_azure_api_request_errors[5m])) by (request)
+```
+
+### Latency Percentiles
+```promql
+# 95th percentile latency for volume creation
+histogram_quantile(0.95, 
+  rate(cloudprovider_azure_api_request_duration_seconds_bucket{request="controller_create_volume"}[5m])
+)
+```
+
+## Grafana Dashboards
+
+After deploying Prometheus, you can import Grafana dashboards to visualize metrics:
+
+1. Deploy Grafana (optional):
+```bash
+kubectl apply -f https://raw.githubusercontent.com/prometheus-operator/kube-prometheus/main/manifests/grafana-deployment.yaml
+```
+
+2. Configure Prometheus as a data source
+3. Create custom dashboards using the PromQL queries above
+
+## Troubleshooting
+
+### Metrics not appearing
+
+1. Check pods are running:
+```bash
+kubectl get pods -n kube-system -l app=csi-blob-controller
+kubectl get pods -n kube-system -l app=csi-blob-node
+```
+
+2. Check metrics endpoint directly:
+```bash
+# Controller
+kubectl exec -n kube-system <controller-pod> -- curl http://localhost:29634/metrics
+
+# Node
+kubectl exec -n kube-system <node-pod> -c blob -- curl http://localhost:29635/metrics
+```
+
+3. Check Prometheus targets:
+- Open Prometheus UI at http://localhost:9090
+- Go to Status → Targets
+- Verify `csi-blob-controller` and `csi-blob-node` targets are UP
+
+### No dimensions in metrics
+
+Dimensions (protocol, storageAccountType, etc.) only appear after operations are performed. Create test volumes to generate metrics with full dimensions:
+
+```bash
+# Create a test volume
+kubectl create -f deploy/example/storageclass-blobfuse.yaml
+kubectl create -f deploy/example/pvc-blobfuse.yaml
+```
+
+## Additional Resources
+
+- [Prometheus Documentation](https://prometheus.io/docs/)
+- [PromQL Basics](https://prometheus.io/docs/prometheus/latest/querying/basics/)
+
