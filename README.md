@@ -64,8 +64,8 @@ This option does not depend on cloud provider config file, supports cross subscr
  - [NFSv3](./deploy/example/nfs)
  - [fsGroupPolicy](./deploy/example/fsgroup)
  - [Volume cloning](./deploy/example/cloning)
- - [Workload identity](./docs/workload-identity-static-pv-mount.md)
- - [Mount Azure blob storage with managed identity](./deploy/example/blobfuse-mi)
+ - [Mount with workload identity](./docs/workload-identity-static-pv-mount.md)
+ - [Mount with managed identity](./deploy/example/blobfuse-mi)
 
 ### Troubleshooting
  - [CSI driver troubleshooting guide](./docs/csi-debug.md)
