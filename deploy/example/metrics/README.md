@@ -41,22 +41,6 @@ ip=$(kubectl get svc csi-blob-controller -n kube-system -o jsonpath='{.status.lo
 curl http://$ip:29634/metrics
 ```
 
-## Verify Metrics
-
-Run the verification script to check that metrics are being exported correctly:
-
-```bash
-./deploy/example/metrics/verify-metrics.sh
-```
-
-This script will:
-1. Check CSI driver pods are running
-2. Test controller metrics endpoint
-3. Test node metrics endpoint
-4. Verify Prometheus deployment
-5. Check for CSI-specific metrics with dimensions
-6. Provide useful PromQL queries
-
 ## Available Metrics
 
 ### Azure Cloud Provider Metrics
