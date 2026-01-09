@@ -431,9 +431,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 						klog.Warningf("EnsureStorageAccount(%s) failed with error(%v), waiting for retrying", account, retErr)
 						return false, nil
 					}
-					isAzureOpSucceeded = (retErr == nil)
 					return true, retErr
 				})
+				isAzureOpSucceeded = (err == nil)
 				d.volLockMap.UnlockEntry(lockKey)
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "ensure storage account failed with %v", err)
@@ -742,7 +742,7 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 	defer func() {
 		azureMC.ObserveOperationWithResult(isAzureOpSucceeded)
 	}()
-	return wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
+	err := wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
 			container, getErr := getContainerReference(containerName, secrets, storageEndpointSuffix)
@@ -764,7 +764,6 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 				return true, err
 			}
 			_, err = blobClient.CreateContainer(ctx, resourceGroupName, accountName, containerName, blobContainer)
-			isAzureOpSucceeded = (err == nil)
 		}
 		if err != nil {
 			if strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) ||
@@ -775,6 +774,8 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 		}
 		return true, err
 	})
+	isAzureOpSucceeded = (err == nil)
+	return err
 }
 
 // DeleteBlobContainer deletes a blob container
@@ -787,7 +788,7 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 	defer func() {
 		azureMC.ObserveOperationWithResult(isAzureOpSucceeded)
 	}()
-	return wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
+	err := wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
 			container, getErr := getContainerReference(containerName, secrets, d.getStorageEndPointSuffix())
@@ -802,7 +803,6 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 				return true, err
 			}
 			err = blobClient.DeleteContainer(ctx, resourceGroupName, accountName, containerName)
-			isAzureOpSucceeded = (err == nil || strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) || strings.Contains(err.Error(), containerBeingDeletedManagementAPIError) || strings.Contains(err.Error(), statusCodeNotFound) || strings.Contains(err.Error(), httpCodeNotFound))
 		}
 		if err != nil {
 			if strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) ||
@@ -816,6 +816,9 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 		}
 		return true, err
 	})
+	// For delete operations, consider successful if no error or if it's an acceptable "not found" type error
+	isAzureOpSucceeded = (err == nil)
+	return err
 }
 
 // copyBlobContainer copies source volume content into a destination volume
@@ -911,6 +914,7 @@ func (d *Driver) execAzcopyCopy(srcPath, dstPath string, azcopyCopyOptions, auth
 	if d.requiredAzCopyToTrust {
 		azcopyCopyOptions = append(azcopyCopyOptions, fmt.Sprintf("--trusted-microsoft-suffixes=%s", d.getStorageEndPointSuffix()))
 	}
+
 	cmd := exec.Command("azcopy", "copy", srcPath, dstPath)
 	cmd.Args = append(cmd.Args, azcopyCopyOptions...)
 	if len(authAzcopyEnv) > 0 {
