@@ -782,6 +782,11 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
 	}
+	azureMC := metrics.NewMetricContext(blobCSIDriverName, "blob_container_delete", resourceGroupName, subsID, d.Name)
+	isAzureOpSucceeded := false
+	defer func() {
+		azureMC.ObserveOperationWithResult(isAzureOpSucceeded)
+	}()
 	return wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
@@ -796,11 +801,6 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 			if err != nil {
 				return true, err
 			}
-			azureMC := metrics.NewMetricContext(blobCSIDriverName, "blob_container_delete", resourceGroupName, subsID, d.Name)
-			isAzureOpSucceeded := false
-			defer func() {
-				azureMC.ObserveOperationWithResult(isAzureOpSucceeded)
-			}()
 			err = blobClient.DeleteContainer(ctx, resourceGroupName, accountName, containerName)
 			isAzureOpSucceeded = (err == nil || strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) || strings.Contains(err.Error(), containerBeingDeletedManagementAPIError) || strings.Contains(err.Error(), statusCodeNotFound) || strings.Contains(err.Error(), httpCodeNotFound))
 		}
@@ -907,6 +907,10 @@ func (d *Driver) copyVolume(ctx context.Context, req *csi.CreateVolumeRequest, a
 
 // execAzcopyCopy exec azcopy copy command
 func (d *Driver) execAzcopyCopy(srcPath, dstPath string, azcopyCopyOptions, authAzcopyEnv []string) ([]byte, error) {
+	// Use --trusted-microsoft-suffixes option to avoid failure caused by
+	if d.requiredAzCopyToTrust {
+		azcopyCopyOptions = append(azcopyCopyOptions, fmt.Sprintf("--trusted-microsoft-suffixes=%s", d.getStorageEndPointSuffix()))
+	}
 	cmd := exec.Command("azcopy", "copy", srcPath, dstPath)
 	cmd.Args = append(cmd.Args, azcopyCopyOptions...)
 	if len(authAzcopyEnv) > 0 {

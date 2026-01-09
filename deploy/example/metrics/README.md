@@ -69,13 +69,6 @@ This script will:
 
 ### CSI Operation Metrics
 
-All CSI operations include these dimensions:
-- `volumeID` - The volume identifier
-- `protocol` - Mount protocol (nfs, fuse, fuse2, aznfs)
-- `storageAccountType` - Storage SKU (Premium_LRS, Standard_LRS, etc.)
-- `accountName` - Storage account name
-- `containerName` - Blob container name
-
 **Controller Operations:**
 - `controller_create_volume` - Volume creation operations
 - `controller_delete_volume` - Volume deletion operations
@@ -93,36 +86,64 @@ All CSI operations include these dimensions:
 ### Operation Success Rate
 ```promql
 # Controller create volume success rate
-rate(cloudprovider_azure_api_request_duration_seconds_count{request="controller_create_volume"}[5m])
+rate(blob_csi_driver_operations_total{operation="controller_create_volume",success="true"}[5m]) / 
+rate(blob_csi_driver_operations_total{operation="controller_create_volume"}[5m])
+
+# Node stage volume success rate  
+rate(blob_csi_driver_operations_total{operation="node_stage_volume",success="true"}[5m]) / 
+rate(blob_csi_driver_operations_total{operation="node_stage_volume"}[5m])
 ```
 
 ### Operations by Protocol
 ```promql
 # NFS mount operations
-sum(rate(cloudprovider_azure_api_request_duration_seconds_count{request="node_stage_volume",protocol="nfs"}[5m]))
+sum(rate(blob_csi_driver_operation_duration_seconds_labeled_count{operation="node_stage_volume",protocol="nfs"}[5m]))
 
-# Blobfuse mount operations
-sum(rate(cloudprovider_azure_api_request_duration_seconds_count{request="node_stage_volume",protocol="fuse2"}[5m]))
+# Blobfuse mount operations  
+sum(rate(blob_csi_driver_operation_duration_seconds_labeled_count{operation="node_stage_volume",protocol="fuse"}[5m]))
+
+# Blobfuse2 mount operations
+sum(rate(blob_csi_driver_operation_duration_seconds_labeled_count{operation="node_stage_volume",protocol="fuse2"}[5m]))
 ```
 
 ### Operations by Storage Account Type
 ```promql
 # Premium storage operations
-sum(rate(cloudprovider_azure_api_request_duration_seconds_count{storageAccountType="Premium_LRS"}[5m]))
+sum(rate(blob_csi_driver_operation_duration_seconds_labeled_count{storage_account_type="Premium_LRS"}[5m]))
+
+# Standard storage operations
+sum(rate(blob_csi_driver_operation_duration_seconds_labeled_count{storage_account_type="Standard_LRS"}[5m]))
 ```
 
 ### Error Rate
 ```promql
-# Failed operations
-sum(rate(cloudprovider_azure_api_request_errors[5m])) by (request)
+# Failed operations by type
+sum(rate(blob_csi_driver_operations_total{success="false"}[5m])) by (operation)
+
+# Failed mount operations
+rate(blob_csi_driver_operations_total{operation="node_stage_volume",success="false"}[5m])
 ```
 
 ### Latency Percentiles
 ```promql
 # 95th percentile latency for volume creation
 histogram_quantile(0.95, 
-  rate(cloudprovider_azure_api_request_duration_seconds_bucket{request="controller_create_volume"}[5m])
+  rate(blob_csi_driver_operation_duration_seconds_bucket{operation="controller_create_volume"}[5m])
 )
+
+# 95th percentile latency for volume mounting with labels
+histogram_quantile(0.95,
+  rate(blob_csi_driver_operation_duration_seconds_labeled_bucket{operation="node_stage_volume"}[5m])
+)
+```
+
+### HNS-enabled Operations
+```promql
+# Operations with HNS enabled
+sum(rate(blob_csi_driver_operation_duration_seconds_labeled_count{is_hns_enabled="true"}[5m]))
+
+# Operations with HNS disabled  
+sum(rate(blob_csi_driver_operation_duration_seconds_labeled_count{is_hns_enabled="false"}[5m]))
 ```
 
 ## Grafana Dashboards
