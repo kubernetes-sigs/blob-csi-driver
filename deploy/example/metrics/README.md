@@ -35,9 +35,6 @@ Create services to access metrics directly:
 # Create controller service
 kubectl apply -f deploy/example/metrics/csi-blob-controller-svc.yaml
 
-# Create node service
-kubectl apply -f deploy/example/metrics/csi-blob-node-svc.yaml
-
 # Get controller metrics
 kubectl get svc csi-blob-controller -n kube-system
 ip=$(kubectl get svc csi-blob-controller -n kube-system -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
