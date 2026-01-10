@@ -41,6 +41,7 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 
+	csiMetrics "sigs.k8s.io/blob-csi-driver/pkg/metrics"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/blobcontainerclient"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
@@ -394,10 +395,12 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	defer d.volumeLocks.Release(volName)
 
 	var volumeID string
-	mc := metrics.NewMetricContext(blobCSIDriverName, requestName, d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
+	csiMC := csiMetrics.NewCSIMetricContext(requestName)
 	isOperationSucceeded := false
 	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+		csiMC.ObserveWithLabels(isOperationSucceeded,
+			"storage_account_type", storageAccountType,
+			"protocol", protocol)
 	}()
 
 	var accountKey string
@@ -416,6 +419,11 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 				accountName = cache.(string)
 			} else {
 				d.volLockMap.LockEntry(lockKey)
+				azureMC := metrics.NewMetricContext(blobCSIDriverName, "storage_account_ensure", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
+				isAzureOpSucceeded := false
+				defer func() {
+					azureMC.ObserveOperationWithResult(isAzureOpSucceeded)
+				}()
 				err = wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 					var retErr error
 					accountName, accountKey, retErr = d.cloud.EnsureStorageAccount(ctx, accountOptions, protocol)
@@ -425,6 +433,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 					}
 					return true, retErr
 				})
+				isAzureOpSucceeded = (err == nil)
 				d.volLockMap.UnlockEntry(lockKey)
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "ensure storage account failed with %v", err)
@@ -555,10 +564,10 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		}
 	}
 
-	mc := metrics.NewMetricContext(blobCSIDriverName, "controller_delete_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
+	csiMC := csiMetrics.NewCSIMetricContext("controller_delete_volume")
 	isOperationSucceeded := false
 	defer func() {
-		mc.ObserveOperationWithResult(isOperationSucceeded, VolumeID, volumeID)
+		csiMC.Observe(isOperationSucceeded)
 	}()
 
 	if resourceGroupName == "" {
@@ -583,6 +592,12 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	if err := isValidVolumeCapabilities(req.GetVolumeCapabilities()); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+
+	csiMC := csiMetrics.NewCSIMetricContext("controller_validate_volume_capabilities")
+	isOperationSucceeded := false
+	defer func() {
+		csiMC.Observe(isOperationSucceeded)
+	}()
 
 	resourceGroupName, accountName, containerName, _, subsID, err := GetContainerInfo(volumeID)
 	if err != nil {
@@ -624,6 +639,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 	}
 	klog.V(2).Infof("ValidateVolumeCapabilities on volume(%s) succeeded", volumeID)
 
+	isOperationSucceeded = true
 	// blob driver supports all AccessModes, no need to check capabilities here
 	return &csi.ValidateVolumeCapabilitiesResponse{
 		Confirmed: &csi.ValidateVolumeCapabilitiesResponse_Confirmed{
@@ -685,6 +701,12 @@ func (d *Driver) ControllerGetCapabilities(_ context.Context, _ *csi.ControllerG
 
 // ControllerExpandVolume controller expand volume
 func (d *Driver) ControllerExpandVolume(_ context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
+	csiMC := csiMetrics.NewCSIMetricContext("controller_expand_volume")
+	isOperationSucceeded := false
+	defer func() {
+		csiMC.Observe(isOperationSucceeded)
+	}()
+
 	if len(req.GetVolumeId()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Volume ID missing in request")
 	}
@@ -706,6 +728,7 @@ func (d *Driver) ControllerExpandVolume(_ context.Context, req *csi.ControllerEx
 
 	klog.V(2).Infof("ControllerExpandVolume(%s) successfully, currentQuota: %d Gi", req.VolumeId, requestGiB)
 
+	isOperationSucceeded = true
 	return &csi.ControllerExpandVolumeResponse{CapacityBytes: req.GetCapacityRange().GetRequiredBytes()}, nil
 }
 
@@ -714,7 +737,12 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
 	}
-	return wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
+	azureMC := metrics.NewMetricContext(blobCSIDriverName, "blob_container_create", resourceGroupName, subsID, d.Name)
+	isAzureOpSucceeded := false
+	defer func() {
+		azureMC.ObserveOperationWithResult(isAzureOpSucceeded)
+	}()
+	err := wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
 			container, getErr := getContainerReference(containerName, secrets, storageEndpointSuffix)
@@ -746,6 +774,8 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 		}
 		return true, err
 	})
+	isAzureOpSucceeded = (err == nil)
+	return err
 }
 
 // DeleteBlobContainer deletes a blob container
@@ -753,7 +783,12 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
 	}
-	return wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
+	azureMC := metrics.NewMetricContext(blobCSIDriverName, "blob_container_delete", resourceGroupName, subsID, d.Name)
+	isAzureOpSucceeded := false
+	defer func() {
+		azureMC.ObserveOperationWithResult(isAzureOpSucceeded)
+	}()
+	err := wait.ExponentialBackoff(getBackOff(d.cloud.Config), func() (bool, error) {
 		var err error
 		if len(secrets) > 0 {
 			container, getErr := getContainerReference(containerName, secrets, d.getStorageEndPointSuffix())
@@ -781,6 +816,9 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 		}
 		return true, err
 	})
+	// For delete operations, consider successful if no error or if it's an acceptable "not found" type error
+	isAzureOpSucceeded = (err == nil)
+	return err
 }
 
 // copyBlobContainer copies source volume content into a destination volume
