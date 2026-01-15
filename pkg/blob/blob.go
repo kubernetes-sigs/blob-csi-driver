@@ -155,6 +155,7 @@ const (
 	pvNameMetadata       = "${pv.metadata.name}"
 
 	VolumeID = "volumeid"
+	Protocol = "protocol"
 
 	defaultStorageEndPointSuffix = "core.windows.net"
 
@@ -383,6 +384,12 @@ func (d *Driver) Run(ctx context.Context, endpoint string) error {
 		klog.Fatalf("%v", err)
 	}
 	klog.Infof("\nDRIVER INFORMATION:\n-------------------\n%s\n\nStreaming logs below:", versionMeta)
+
+	if d.enableBlobfuseProxy && d.blobfuseProxyEndpoint != "" {
+		monitor := NewBlobfuseProxyMonitor(d.blobfuseProxyEndpoint)
+		go monitor.Start(ctx)
+	}
+
 	opts := []grpc.ServerOption{
 		grpc.ChainUnaryInterceptor(
 			grpcprom.NewServerMetrics().UnaryServerInterceptor(),
