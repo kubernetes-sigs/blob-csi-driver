@@ -166,6 +166,12 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 }
 
 func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string) (string, error) {
+	mc := csiMetrics.NewCSIMetricContext("node_blobfuse_proxy_mount")
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveWithLabels(isOperationSucceeded, Protocol, protocol)
+	}()
+
 	connectionTimeout := time.Duration(d.blobfuseProxyConnTimeout) * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
 	defer cancel()
@@ -197,10 +203,18 @@ func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string)
 		output = resp.GetOutput()
 	}
 	klog.V(2).Infof("mount with blobfuse proxy completed, protocol: %s, args: %s, output: %s, error: %v", protocol, args, output, err)
+
+	isOperationSucceeded = err == nil
 	return output, err
 }
 
 func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv []string) (string, error) {
+	mc := csiMetrics.NewCSIMetricContext("node_blobfuse_mount")
+	isOperationSucceeded := false
+	defer func() {
+		mc.ObserveWithLabels(isOperationSucceeded, Protocol, protocol)
+	}()
+
 	var cmd *exec.Cmd
 
 	args = volumehelper.TrimDuplicatedSpace(args)
@@ -220,6 +234,7 @@ func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv
 	output, err := cmd.CombinedOutput()
 	klog.V(2).Infof("mount output: %s\n", string(output))
 
+	isOperationSucceeded = err == nil
 	return string(output), err
 }
 

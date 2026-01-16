@@ -7,7 +7,7 @@ This directory contains manifests and tools for monitoring the Azure Blob CSI dr
 The CSI driver exposes Prometheus metrics on two endpoints:
 
 - **Controller**: Port `29634` - Metrics for volume provisioning/deletion operations
-- **Node**: Port `29635` - Metrics for mount/unmount operations on each node
+- **Node**: Port `29635` - Metrics for mount/unmount operations and blobfuse proxy status on each node
 
 ## Quick Start
 
@@ -61,6 +61,11 @@ curl http://$ip:29634/metrics
 - `node_publish_volume` - Volume publishing
 - `node_unpublish_volume` - Volume unpublishing
 - `node_get_volume_stats` - Volume statistics retrieval
+- `node_blobfuse_mount` - Blobfuse mount operations
+- `node_blobfuse_proxy_mount` - Blobfuse proxy mount operations
+
+**Blobfuse Proxy Monitoring:**
+- `blobfuse_proxy_health` - Health check status of blobfuse-proxy
 
 ## Example PromQL Queries
 
@@ -125,6 +130,34 @@ sum(rate(blob_csi_driver_operation_duration_seconds_labeled_count{is_hns_enabled
 
 # Operations with HNS disabled  
 sum(rate(blob_csi_driver_operation_duration_seconds_labeled_count{is_hns_enabled="false"}[5m]))
+```
+
+### Blobfuse Proxy Health
+```promql
+# Proxy health check success rate (1 = healthy, 0 = unhealthy)
+rate(blob_csi_driver_operations_total{operation="blobfuse_proxy_health",success="true"}[5m]) /
+rate(blob_csi_driver_operations_total{operation="blobfuse_proxy_health"}[5m])
+```
+
+### Blobfuse Mount Operations
+```promql
+# Mount success rate via proxy
+rate(blob_csi_driver_operations_total{operation="node_blobfuse_proxy_mount",success="true"}[5m]) /
+rate(blob_csi_driver_operations_total{operation="node_blobfuse_proxy_mount"}[5m])
+
+# Mount success rate inside driver
+rate(blob_csi_driver_operations_total{operation="node_blobfuse_mount",success="true"}[5m]) /
+rate(blob_csi_driver_operations_total{operation="node_blobfuse_mount"}[5m])
+
+# 95th percentile latency for blobfuse proxy mount by protocol
+histogram_quantile(0.95,
+  rate(blob_csi_driver_operation_duration_seconds_labeled_bucket{operation="node_blobfuse_proxy_mount"}[5m])
+) by (protocol)
+
+# 95th percentile latency for blobfuse mount by protocol
+histogram_quantile(0.95,
+  rate(blob_csi_driver_operation_duration_seconds_labeled_bucket{operation="node_blobfuse_mount"}[5m])
+) by (protocol)
 ```
 
 ## Grafana Dashboards
