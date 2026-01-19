@@ -59,7 +59,7 @@ spec:
             - name: INSTALL_BLOBFUSE2
               value: "true"
             - name: BLOBFUSE2_VERSION
-              value: "2.5.1"
+              value: "2.5.2"
             - name: SET_MAX_OPEN_FILE_NUM
               value: "true"
             - name: MAX_FILE_NUM
