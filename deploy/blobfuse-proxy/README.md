@@ -8,12 +8,12 @@ This guide shows how to install a blobfuse proxy on all agent nodes and the prox
  - helm install
 ```console
 helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.27.1 --set node.enableBlobfuseProxy=true
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --version v1.27.2 --set node.enableBlobfuseProxy=true
 ```
 
  - kubectl install
 ```console
-curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v1.27.1/deploy/install-driver.sh | bash -s v1.27.1 blobfuse-proxy --
+curl -skSL https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/v1.27.2/deploy/install-driver.sh | bash -s v1.27.2 blobfuse-proxy --
 ```
 
 ### Enable blobfuse proxy on existing Blob CSI driver
