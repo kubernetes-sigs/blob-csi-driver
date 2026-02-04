@@ -2,6 +2,19 @@
 
 This directory contains manifests and tools for monitoring the Azure Blob CSI driver with Prometheus.
 
+## Security Note
+
+The Prometheus setup uses fine-grained kubelet API authorization (`nodes/metrics`) instead of the broad `nodes/proxy` permission. This follows Kubernetes security best practices ([KEP-2862](https://github.com/kubernetes/enhancements/issues/2862)) to prevent potential privilege escalation attacks.
+
+**Important Security Context:**
+The `nodes/proxy` permission is dangerous because it allows proxying ANY HTTP request to ANY kubelet endpoint on ANY node, including endpoints that can execute arbitrary commands in containers. Granting even `get` access to `nodes/proxy` can be exploited for Remote Code Execution (RCE). The fine-grained `nodes/metrics` subresource restricts access to only the metrics endpoints needed for monitoring.
+
+**Kubernetes Version Requirements:**
+- Kubernetes 1.21+: The `nodes/metrics` subresource is supported when kubelet is configured with `--authorization-mode=Webhook` (default in most distributions including AKS, EKS, GKE)
+- The kubelet must have authorization webhook enabled to properly enforce RBAC for subresources
+
+**Note:** If metrics collection fails after this change, verify that your kubelet is configured with webhook authorization mode.
+
 ## Metrics Endpoints
 
 The CSI driver exposes Prometheus metrics on two endpoints:
