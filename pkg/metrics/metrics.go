@@ -17,10 +17,13 @@ limitations under the License.
 package metrics
 
 import (
+	"strings"
 	"time"
 
 	"k8s.io/component-base/metrics"
 	"k8s.io/component-base/metrics/legacyregistry"
+
+	"sigs.k8s.io/cloud-provider-azure/pkg/log"
 )
 
 const (
@@ -69,17 +72,21 @@ func init() {
 
 // CSIMetricContext represents the context for CSI operation metrics
 type CSIMetricContext struct {
-	operation string
-	start     time.Time
-	labels    map[string]string
+	operation  string
+	attributes []string
+	start      time.Time
+	labels     map[string]string
+	logLevel   int32
 }
 
 // NewCSIMetricContext creates a new CSI metric context
-func NewCSIMetricContext(operation string) *CSIMetricContext {
+func NewCSIMetricContext(operation, resourceGroup, subscriptionID, source string) *CSIMetricContext {
 	return &CSIMetricContext{
-		operation: operation,
-		start:     time.Now(),
-		labels:    make(map[string]string),
+		operation:  operation,
+		attributes: []string{strings.ToLower(resourceGroup), subscriptionID, source},
+		start:      time.Now(),
+		labels:     make(map[string]string),
+		logLevel:   3,
 	}
 }
 
@@ -93,11 +100,13 @@ func (mc *CSIMetricContext) WithLabel(key, value string) *CSIMetricContext {
 }
 
 // Observe records the operation result and duration
-func (mc *CSIMetricContext) Observe(success bool) {
+func (mc *CSIMetricContext) Observe(success bool, additionalKeysAndValues ...interface{}) {
 	duration := time.Since(mc.start).Seconds()
-	successStr := "false"
-	if success {
-		successStr = "true"
+	successStr := "true"
+	resultCode := "succeeded"
+	if !success {
+		successStr = "false"
+		resultCode = "failed_" + mc.operation
 	}
 
 	// Always record basic metrics
@@ -118,18 +127,23 @@ func (mc *CSIMetricContext) Observe(success bool) {
 			isHnsEnabled,
 		).Observe(duration)
 	}
+
+	logger := log.Background().WithName("logLatency")
+	keysAndValues := []interface{}{"latency_seconds", duration, "request", subSystem + "_" + mc.operation, "resource_group", mc.attributes[0], "subscription_id", mc.attributes[1], "source", mc.attributes[2], "result_code", resultCode}
+	keysAndValues = append(keysAndValues, additionalKeysAndValues...)
+	logger.V(int(mc.logLevel)).Info("Observed Request Latency", keysAndValues...)
 }
 
 // ObserveWithLabels records the operation with provided label pairs
-func (mc *CSIMetricContext) ObserveWithLabels(success bool, labelPairs ...string) {
-	if len(labelPairs)%2 != 0 {
-		// Invalid label pairs, just observe without labels
-		mc.Observe(success)
+func (mc *CSIMetricContext) ObserveWithLabels(success bool, labelPairs []string, additionalKeysAndValues ...interface{}) {
+	if len(labelPairs) == 0 || len(labelPairs)%2 != 0 {
+		// No label pairs or invalid label pairs, just observe without labels
+		mc.Observe(success, additionalKeysAndValues...)
 		return
 	}
 
 	for i := 0; i < len(labelPairs); i += 2 {
 		mc.WithLabel(labelPairs[i], labelPairs[i+1])
 	}
-	mc.Observe(success)
+	mc.Observe(success, additionalKeysAndValues...)
 }
