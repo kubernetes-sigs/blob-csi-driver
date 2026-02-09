@@ -395,12 +395,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	defer d.volumeLocks.Release(volName)
 
 	var volumeID string
-	csiMC := csiMetrics.NewCSIMetricContext(requestName)
+	csiMC := csiMetrics.NewCSIMetricContext(requestName, d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
 	isOperationSucceeded := false
 	defer func() {
-		csiMC.ObserveWithLabels(isOperationSucceeded,
-			"storage_account_type", storageAccountType,
-			"protocol", protocol)
+		csiMC.ObserveWithLabels(isOperationSucceeded, []string{"storage_account_type", storageAccountType, "protocol", protocol}, VolumeID, volumeID)
 	}()
 
 	var accountKey string
@@ -564,10 +562,10 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		}
 	}
 
-	csiMC := csiMetrics.NewCSIMetricContext("controller_delete_volume")
+	csiMC := csiMetrics.NewCSIMetricContext("controller_delete_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
 	isOperationSucceeded := false
 	defer func() {
-		csiMC.Observe(isOperationSucceeded)
+		csiMC.Observe(isOperationSucceeded, VolumeID, volumeID)
 	}()
 
 	if resourceGroupName == "" {
@@ -593,7 +591,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	csiMC := csiMetrics.NewCSIMetricContext("controller_validate_volume_capabilities")
+	csiMC := csiMetrics.NewCSIMetricContext("controller_validate_volume_capabilities", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
 	isOperationSucceeded := false
 	defer func() {
 		csiMC.Observe(isOperationSucceeded)
@@ -701,7 +699,7 @@ func (d *Driver) ControllerGetCapabilities(_ context.Context, _ *csi.ControllerG
 
 // ControllerExpandVolume controller expand volume
 func (d *Driver) ControllerExpandVolume(_ context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-	csiMC := csiMetrics.NewCSIMetricContext("controller_expand_volume")
+	csiMC := csiMetrics.NewCSIMetricContext("controller_expand_volume", d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
 	isOperationSucceeded := false
 	defer func() {
 		csiMC.Observe(isOperationSucceeded)
