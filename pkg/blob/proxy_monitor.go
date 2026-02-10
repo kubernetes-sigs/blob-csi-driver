@@ -70,7 +70,7 @@ func (m *BlobfuseProxyMonitor) Start(ctx context.Context) {
 
 // checkHealth checks health and records metrics.
 func (m *BlobfuseProxyMonitor) checkHealth() {
-	mc := csiMetrics.NewCSIMetricContext("blobfuse_proxy_health", "", "", "")
+	mc := csiMetrics.NewCSIMetricContext("blobfuse_proxy_health")
 	isOperationSucceeded := m.isProxyReachable()
 	mc.Observe(isOperationSucceeded)
 }

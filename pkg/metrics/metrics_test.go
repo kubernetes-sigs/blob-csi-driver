@@ -25,7 +25,7 @@ import (
 
 func TestCSIMetricContext_NewCSIMetricContext(t *testing.T) {
 	operation := "test_operation"
-	mc := NewCSIMetricContext(operation, "test-rg", "test-sub", "test-source")
+	mc := NewCSIMetricContext(operation).WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	if mc.operation != operation {
 		t.Errorf("expected operation %s, got %s", operation, mc.operation)
@@ -41,7 +41,7 @@ func TestCSIMetricContext_NewCSIMetricContext(t *testing.T) {
 }
 
 func TestCSIMetricContext_WithLabel(t *testing.T) {
-	mc := NewCSIMetricContext("test_operation", "test-rg", "test-sub", "test-source")
+	mc := NewCSIMetricContext("test_operation").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	mc.WithLabel("key1", "value1")
 	mc.WithLabel("key2", "value2")
@@ -60,7 +60,7 @@ func TestCSIMetricContext_Observe(t *testing.T) {
 	operationDuration.Reset()
 	operationTotal.Reset()
 
-	mc := NewCSIMetricContext("node_stage_volume", "test-rg", "test-sub", "test-source")
+	mc := NewCSIMetricContext("node_stage_volume").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	// Test basic observation (success)
 	mc.Observe(true)
@@ -101,7 +101,7 @@ func TestCSIMetricContext_ObserveWithFailure(t *testing.T) {
 	// Reset metrics before test
 	operationTotal.Reset()
 
-	mc := NewCSIMetricContext("node_publish_volume", "test-rg", "test-sub", "test-source")
+	mc := NewCSIMetricContext("node_publish_volume").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	// Test observation with failure
 	mc.Observe(false)
@@ -147,13 +147,13 @@ func TestCSIMetricContext_ObserveWithLabels(t *testing.T) {
 	operationTotal.Reset()
 	operationDurationWithLabels.Reset()
 
-	mc := NewCSIMetricContext("controller_create_volume", "test-rg", "test-sub", "test-source")
+	mc := NewCSIMetricContext("controller_create_volume").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	// Test observation with labels
 	mc.ObserveWithLabels(true,
-		[]string{"protocol", "fuse",
-			"storage_account_type", "Standard_LRS",
-			"is_hns_enabled", "false"})
+		"protocol", "fuse",
+		"storage_account_type", "Standard_LRS",
+		"is_hns_enabled", "false")
 
 	// Verify that both basic and labeled metrics were recorded
 	families, err := legacyregistry.DefaultGatherer.Gather()
@@ -205,10 +205,10 @@ func TestCSIMetricContext_ObserveWithInvalidLabels(t *testing.T) {
 	operationTotal.Reset()
 	operationDurationWithLabels.Reset()
 
-	mc := NewCSIMetricContext("test_operation", "test-rg", "test-sub", "test-source")
+	mc := NewCSIMetricContext("test_operation").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	// Test with odd number of label parameters (should fallback to basic observe)
-	mc.ObserveWithLabels(true, []string{"protocol", "fuse", "orphan_key"})
+	mc.ObserveWithLabels(true, "protocol", "fuse", "orphan_key")
 
 	// Should still record basic metrics but not labeled metrics
 	families, err := legacyregistry.DefaultGatherer.Gather()
@@ -237,7 +237,7 @@ func TestCSIMetricContext_ObserveWithInvalidLabels(t *testing.T) {
 }
 
 func TestCSIMetricContext_TimingAccuracy(t *testing.T) {
-	mc := NewCSIMetricContext("timing_test", "test-rg", "test-sub", "test-source")
+	mc := NewCSIMetricContext("timing_test").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	// Add a small delay
 	time.Sleep(10 * time.Millisecond)
@@ -257,7 +257,7 @@ func TestCSIMetricContext_TimingAccuracy(t *testing.T) {
 }
 
 func TestCSIMetricContext_ChainedLabels(t *testing.T) {
-	mc := NewCSIMetricContext("test_operation", "test-rg", "test-sub", "test-source")
+	mc := NewCSIMetricContext("test_operation").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	// Test method chaining
 	mc.WithLabel("key1", "value1").WithLabel("key2", "value2").WithLabel("key3", "value3")
@@ -268,7 +268,7 @@ func TestCSIMetricContext_ChainedLabels(t *testing.T) {
 }
 
 func TestCSIMetricContext_EmptyLabels(t *testing.T) {
-	mc := NewCSIMetricContext("test_operation", "test-rg", "test-sub", "test-source")
+	mc := NewCSIMetricContext("test_operation").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	// Test observing without any labels
 	mc.Observe(true)
@@ -281,7 +281,7 @@ func TestCSIMetricContext_EmptyLabels(t *testing.T) {
 func BenchmarkCSIMetricContext_Observe(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mc := NewCSIMetricContext("benchmark_test", "test-rg", "test-sub", "test-source")
+		mc := NewCSIMetricContext("benchmark_test").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 		mc.Observe(true)
 	}
 }
@@ -289,11 +289,11 @@ func BenchmarkCSIMetricContext_Observe(b *testing.B) {
 func BenchmarkCSIMetricContext_ObserveWithLabels(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mc := NewCSIMetricContext("benchmark_test", "test-rg", "test-sub", "test-source")
+		mc := NewCSIMetricContext("benchmark_test").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 		mc.ObserveWithLabels(true,
-			[]string{"protocol", "fuse",
-				"storage_account_type", "Standard_LRS",
-				"is_hns_enabled", "false"})
+			"protocol", "fuse",
+			"storage_account_type", "Standard_LRS",
+			"is_hns_enabled", "false")
 	}
 }
 
@@ -310,7 +310,7 @@ func BenchmarkMetricsRecordingOnly(b *testing.B) {
 func BenchmarkCSIMetricContext_NewAndObserve(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		mc := NewCSIMetricContext("benchmark_test", "test-rg", "test-sub", "test-source")
+		mc := NewCSIMetricContext("benchmark_test").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 		mc.Observe(true)
 	}
 }
