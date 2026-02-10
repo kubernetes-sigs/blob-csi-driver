@@ -22,8 +22,7 @@ import (
 
 	"k8s.io/component-base/metrics"
 	"k8s.io/component-base/metrics/legacyregistry"
-
-	"sigs.k8s.io/cloud-provider-azure/pkg/log"
+	klog "k8s.io/klog/v2"
 )
 
 const (
@@ -72,22 +71,44 @@ func init() {
 
 // CSIMetricContext represents the context for CSI operation metrics
 type CSIMetricContext struct {
-	operation  string
-	attributes []string
-	start      time.Time
-	labels     map[string]string
-	logLevel   int32
+	operation     string
+	volumeContext map[string]string
+	start         time.Time
+	labels        map[string]string
+	logLevel      int32
+	enableLogging bool
 }
 
 // NewCSIMetricContext creates a new CSI metric context
-func NewCSIMetricContext(operation, resourceGroup, subscriptionID, source string) *CSIMetricContext {
+func NewCSIMetricContext(operation string) *CSIMetricContext {
 	return &CSIMetricContext{
-		operation:  operation,
-		attributes: []string{strings.ToLower(resourceGroup), subscriptionID, source},
-		start:      time.Now(),
-		labels:     make(map[string]string),
-		logLevel:   3,
+		operation:     operation,
+		volumeContext: make(map[string]string),
+		start:         time.Now(),
+		labels:        make(map[string]string),
+		logLevel:      3,
+		enableLogging: true,
 	}
+}
+
+// WithBasicVolumeInfo adds the standard volume-related context to the metric context
+func (mc *CSIMetricContext) WithBasicVolumeInfo(resourceGroup, subscriptionID, source string) *CSIMetricContext {
+	mc.volumeContext["resource_group"] = strings.ToLower(resourceGroup)
+	mc.volumeContext["subscription_id"] = subscriptionID
+	mc.volumeContext["source"] = source
+	return mc
+}
+
+// WithAdditionalVolumeInfo adds additional volume-related context as key-value pairs
+// e.g., WithAdditionalVolumeInfo("volume_id", "vol-123")
+func (mc *CSIMetricContext) WithAdditionalVolumeInfo(keyValuePairs ...string) *CSIMetricContext {
+	if len(keyValuePairs)%2 != 0 {
+		return mc
+	}
+	for i := 0; i < len(keyValuePairs); i += 2 {
+		mc.volumeContext[keyValuePairs[i]] = keyValuePairs[i+1]
+	}
+	return mc
 }
 
 // WithLabel adds a label to the metric context
@@ -99,8 +120,20 @@ func (mc *CSIMetricContext) WithLabel(key, value string) *CSIMetricContext {
 	return mc
 }
 
+// WithLogLevel sets the log level for the metric context
+func (mc *CSIMetricContext) WithLogLevel(level int32) *CSIMetricContext {
+	mc.logLevel = level
+	return mc
+}
+
+// WithLogging enables or disables latency logging
+func (mc *CSIMetricContext) WithLogging(enabled bool) *CSIMetricContext {
+	mc.enableLogging = enabled
+	return mc
+}
+
 // Observe records the operation result and duration
-func (mc *CSIMetricContext) Observe(success bool, additionalKeysAndValues ...interface{}) {
+func (mc *CSIMetricContext) Observe(success bool) {
 	duration := time.Since(mc.start).Seconds()
 	successStr := "true"
 	resultCode := "succeeded"
@@ -128,22 +161,26 @@ func (mc *CSIMetricContext) Observe(success bool, additionalKeysAndValues ...int
 		).Observe(duration)
 	}
 
-	logger := log.Background().WithName("logLatency")
-	keysAndValues := []interface{}{"latency_seconds", duration, "request", subSystem + "_" + mc.operation, "resource_group", mc.attributes[0], "subscription_id", mc.attributes[1], "source", mc.attributes[2], "result_code", resultCode}
-	keysAndValues = append(keysAndValues, additionalKeysAndValues...)
-	logger.V(int(mc.logLevel)).Info("Observed Request Latency", keysAndValues...)
+	if mc.enableLogging {
+		logger := klog.Background().WithName("logLatency")
+		keysAndValues := []interface{}{"latency_seconds", duration, "request", subSystem + "_" + mc.operation, "result_code", resultCode}
+		for k, v := range mc.volumeContext {
+			keysAndValues = append(keysAndValues, k, v)
+		}
+		logger.V(int(mc.logLevel)).Info("Observed Request Latency", keysAndValues...)
+	}
 }
 
 // ObserveWithLabels records the operation with provided label pairs
-func (mc *CSIMetricContext) ObserveWithLabels(success bool, labelPairs []string, additionalKeysAndValues ...interface{}) {
+func (mc *CSIMetricContext) ObserveWithLabels(success bool, labelPairs ...string) {
 	if len(labelPairs) == 0 || len(labelPairs)%2 != 0 {
 		// No label pairs or invalid label pairs, just observe without labels
-		mc.Observe(success, additionalKeysAndValues...)
+		mc.Observe(success)
 		return
 	}
 
 	for i := 0; i < len(labelPairs); i += 2 {
 		mc.WithLabel(labelPairs[i], labelPairs[i+1])
 	}
-	mc.Observe(success, additionalKeysAndValues...)
+	mc.Observe(success)
 }
