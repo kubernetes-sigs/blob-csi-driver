@@ -485,7 +485,7 @@ func isSASToken(key string) bool {
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
 func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, string, string, []string, error) {
-	rgName, accountName, containerName, secretNamespace, _, err := GetContainerInfo(volumeID)
+	rgName, accountName, containerName, secretNamespace, subsID, err := GetContainerInfo(volumeID)
 	if err != nil {
 		// ignore volumeID parsing error
 		klog.V(6).Infof("parsing volumeID(%s) return with error: %v", volumeID, err)
@@ -493,7 +493,6 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 	}
 
 	var (
-		subsID                  string
 		accountKey              string
 		accountSasToken         string
 		msiSecret               string
