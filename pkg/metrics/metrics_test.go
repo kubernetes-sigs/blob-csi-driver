@@ -278,6 +278,128 @@ func TestCSIMetricContext_EmptyLabels(t *testing.T) {
 	}
 }
 
+func TestCSIMetricContext_WithAdditionalVolumeInfo(t *testing.T) {
+	mc := NewCSIMetricContext("test_operation")
+
+	// Test adding additional volume info key-value pairs
+	mc.WithAdditionalVolumeInfo("volumeid", "vol-123", "container", "my-container")
+
+	// volumeContext is now []interface{}, check order and values
+	expected := []interface{}{"volumeid", "vol-123", "container", "my-container"}
+	if len(mc.volumeContext) != len(expected) {
+		t.Errorf("expected %d elements, got %d", len(expected), len(mc.volumeContext))
+	}
+	for i, v := range expected {
+		if mc.volumeContext[i] != v {
+			t.Errorf("expected volumeContext[%d]=%v, got %v", i, v, mc.volumeContext[i])
+		}
+	}
+}
+
+func TestCSIMetricContext_WithAdditionalVolumeInfo_Chaining(t *testing.T) {
+	mc := NewCSIMetricContext("test_operation").
+		WithBasicVolumeInfo("test-rg", "test-sub", "test-source").
+		WithAdditionalVolumeInfo("volumeid", "vol-456", "storageaccount", "mystorageaccount")
+
+	// volumeContext preserves insertion order
+	expected := []interface{}{
+		"resource_group", "test-rg",
+		"subscription_id", "test-sub",
+		"source", "test-source",
+		"volumeid", "vol-456",
+		"storageaccount", "mystorageaccount",
+	}
+	if len(mc.volumeContext) != len(expected) {
+		t.Errorf("expected %d elements, got %d", len(expected), len(mc.volumeContext))
+	}
+	for i, v := range expected {
+		if mc.volumeContext[i] != v {
+			t.Errorf("expected volumeContext[%d]=%v, got %v", i, v, mc.volumeContext[i])
+		}
+	}
+}
+
+func TestCSIMetricContext_WithAdditionalVolumeInfo_OddParameters(t *testing.T) {
+	mc := NewCSIMetricContext("test_operation")
+
+	// Test odd number of parameters - should silently skip adding to volumeContext
+	mc.WithAdditionalVolumeInfo("key1", "value1", "orphan_key")
+
+	// Should not have added anything due to odd number of parameters
+	if len(mc.volumeContext) != 0 {
+		t.Errorf("expected empty volumeContext with odd parameters, got: %v", mc.volumeContext)
+	}
+
+	// Now add valid pairs
+	mc.WithAdditionalVolumeInfo("key2", "value2")
+
+	// Should work for valid pairs
+	if len(mc.volumeContext) != 2 || mc.volumeContext[0] != "key2" || mc.volumeContext[1] != "value2" {
+		t.Errorf("expected [key2, value2] after valid call, got %v", mc.volumeContext)
+	}
+}
+
+func TestCSIMetricContext_WithLogLevel(t *testing.T) {
+	tests := []struct {
+		name             string
+		logLevel         int32
+		expectedLogLevel int32
+	}{
+		{
+			name:             "set log level to 0",
+			logLevel:         0,
+			expectedLogLevel: 0,
+		},
+		{
+			name:             "set log level to 5",
+			logLevel:         5,
+			expectedLogLevel: 5,
+		},
+		{
+			name:             "set high log level",
+			logLevel:         10,
+			expectedLogLevel: 10,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mc := NewCSIMetricContext("test_operation").WithLogLevel(tt.logLevel)
+
+			if mc.logLevel != tt.expectedLogLevel {
+				t.Errorf("expected logLevel %d, got %d", tt.expectedLogLevel, mc.logLevel)
+			}
+		})
+	}
+}
+
+func TestCSIMetricContext_WithLogLevel_DefaultValue(t *testing.T) {
+	mc := NewCSIMetricContext("test_operation")
+
+	// Default log level should be 3
+	if mc.logLevel != 3 {
+		t.Errorf("expected default logLevel 3, got %d", mc.logLevel)
+	}
+}
+
+func TestCSIMetricContext_WithLogLevel_Chaining(t *testing.T) {
+	mc := NewCSIMetricContext("test_operation").
+		WithBasicVolumeInfo("test-rg", "test-sub", "test-source").
+		WithLogLevel(5).
+		WithLabel("key", "value")
+
+	if mc.logLevel != 5 {
+		t.Errorf("expected logLevel 5 after chaining, got %d", mc.logLevel)
+	}
+	if mc.labels["key"] != "value" {
+		t.Errorf("expected label key=value after chaining, got %s", mc.labels["key"])
+	}
+	// volumeContext is []interface{}, check first two elements
+	if len(mc.volumeContext) < 2 || mc.volumeContext[0] != "resource_group" || mc.volumeContext[1] != "test-rg" {
+		t.Errorf("expected resource_group=test-rg after chaining, got %v", mc.volumeContext)
+	}
+}
+
 func BenchmarkCSIMetricContext_Observe(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
