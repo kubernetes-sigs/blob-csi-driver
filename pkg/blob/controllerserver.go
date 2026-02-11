@@ -593,7 +593,7 @@ func (d *Driver) ValidateVolumeCapabilities(ctx context.Context, req *csi.Valida
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	csiMC := csiMetrics.NewCSIMetricContext("controller_validate_volume_capabilities").WithLogging(false)
+	csiMC := csiMetrics.NewCSIMetricContext("controller_validate_volume_capabilities")
 	isOperationSucceeded := false
 	defer func() {
 		csiMC.Observe(isOperationSucceeded)
@@ -701,7 +701,7 @@ func (d *Driver) ControllerGetCapabilities(_ context.Context, _ *csi.ControllerG
 
 // ControllerExpandVolume controller expand volume
 func (d *Driver) ControllerExpandVolume(_ context.Context, req *csi.ControllerExpandVolumeRequest) (*csi.ControllerExpandVolumeResponse, error) {
-	csiMC := csiMetrics.NewCSIMetricContext("controller_expand_volume").WithLogging(false)
+	csiMC := csiMetrics.NewCSIMetricContext("controller_expand_volume")
 	isOperationSucceeded := false
 	defer func() {
 		csiMC.Observe(isOperationSucceeded)

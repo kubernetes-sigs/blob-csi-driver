@@ -123,7 +123,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		return nil, status.Error(codes.InvalidArgument, "Staging target not provided")
 	}
 
-	mc := csiMetrics.NewCSIMetricContext("node_publish_volume").WithLogging(false)
+	mc := csiMetrics.NewCSIMetricContext("node_publish_volume")
 	isOperationSucceeded := false
 	defer func() {
 		mc.Observe(isOperationSucceeded)
@@ -167,7 +167,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 }
 
 func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string) (string, error) {
-	mc := csiMetrics.NewCSIMetricContext("node_blobfuse_proxy_mount").WithLogging(false)
+	mc := csiMetrics.NewCSIMetricContext("node_blobfuse_proxy_mount")
 	isOperationSucceeded := false
 	defer func() {
 		mc.ObserveWithLabels(isOperationSucceeded, Protocol, protocol)
@@ -210,7 +210,7 @@ func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string)
 }
 
 func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv []string) (string, error) {
-	mc := csiMetrics.NewCSIMetricContext("node_blobfuse_mount").WithLogging(false)
+	mc := csiMetrics.NewCSIMetricContext("node_blobfuse_mount")
 	isOperationSucceeded := false
 	defer func() {
 		mc.ObserveWithLabels(isOperationSucceeded, Protocol, protocol)
@@ -250,7 +250,7 @@ func (d *Driver) NodeUnpublishVolume(_ context.Context, req *csi.NodeUnpublishVo
 		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
 	}
 
-	mc := csiMetrics.NewCSIMetricContext("node_unpublish_volume").WithLogging(false)
+	mc := csiMetrics.NewCSIMetricContext("node_unpublish_volume")
 	isOperationSucceeded := false
 	defer func() {
 		mc.Observe(isOperationSucceeded)
@@ -585,7 +585,7 @@ func (d *Driver) NodeGetCapabilities(_ context.Context, _ *csi.NodeGetCapabiliti
 
 // NodeGetInfo return info of the node on which this plugin is running
 func (d *Driver) NodeGetInfo(_ context.Context, _ *csi.NodeGetInfoRequest) (*csi.NodeGetInfoResponse, error) {
-	mc := csiMetrics.NewCSIMetricContext("node_get_info").WithLogging(false)
+	mc := csiMetrics.NewCSIMetricContext("node_get_info")
 	defer mc.Observe(true)
 
 	return &csi.NodeGetInfoResponse{

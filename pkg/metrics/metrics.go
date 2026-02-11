@@ -72,41 +72,45 @@ func init() {
 // CSIMetricContext represents the context for CSI operation metrics
 type CSIMetricContext struct {
 	operation     string
-	volumeContext map[string]string
+	volumeContext []interface{}
 	start         time.Time
 	labels        map[string]string
 	logLevel      int32
-	enableLogging bool
 }
 
 // NewCSIMetricContext creates a new CSI metric context
 func NewCSIMetricContext(operation string) *CSIMetricContext {
 	return &CSIMetricContext{
 		operation:     operation,
-		volumeContext: make(map[string]string),
+		volumeContext: []interface{}{},
 		start:         time.Now(),
 		labels:        make(map[string]string),
 		logLevel:      3,
-		enableLogging: true,
 	}
 }
 
 // WithBasicVolumeInfo adds the standard volume-related context to the metric context
 func (mc *CSIMetricContext) WithBasicVolumeInfo(resourceGroup, subscriptionID, source string) *CSIMetricContext {
-	mc.volumeContext["resource_group"] = strings.ToLower(resourceGroup)
-	mc.volumeContext["subscription_id"] = subscriptionID
-	mc.volumeContext["source"] = source
+	if resourceGroup != "" {
+		mc.volumeContext = append(mc.volumeContext, "resource_group", strings.ToLower(resourceGroup))
+	}
+	if subscriptionID != "" {
+		mc.volumeContext = append(mc.volumeContext, "subscription_id", subscriptionID)
+	}
+	if source != "" {
+		mc.volumeContext = append(mc.volumeContext, "source", source)
+	}
 	return mc
 }
 
 // WithAdditionalVolumeInfo adds additional volume-related context as key-value pairs
-// e.g., WithAdditionalVolumeInfo("volume_id", "vol-123")
+// e.g., WithAdditionalVolumeInfo("volumeid", "vol-123")
 func (mc *CSIMetricContext) WithAdditionalVolumeInfo(keyValuePairs ...string) *CSIMetricContext {
 	if len(keyValuePairs)%2 != 0 {
 		return mc
 	}
 	for i := 0; i < len(keyValuePairs); i += 2 {
-		mc.volumeContext[keyValuePairs[i]] = keyValuePairs[i+1]
+		mc.volumeContext = append(mc.volumeContext, keyValuePairs[i], keyValuePairs[i+1])
 	}
 	return mc
 }
@@ -126,20 +130,12 @@ func (mc *CSIMetricContext) WithLogLevel(level int32) *CSIMetricContext {
 	return mc
 }
 
-// WithLogging enables or disables latency logging
-func (mc *CSIMetricContext) WithLogging(enabled bool) *CSIMetricContext {
-	mc.enableLogging = enabled
-	return mc
-}
-
 // Observe records the operation result and duration
 func (mc *CSIMetricContext) Observe(success bool) {
 	duration := time.Since(mc.start).Seconds()
-	successStr := "true"
-	resultCode := "succeeded"
-	if !success {
-		successStr = "false"
-		resultCode = "failed_" + mc.operation
+	successStr := "false"
+	if success {
+		successStr = "true"
 	}
 
 	// Always record basic metrics
@@ -161,20 +157,19 @@ func (mc *CSIMetricContext) Observe(success bool) {
 		).Observe(duration)
 	}
 
-	if mc.enableLogging {
-		logger := klog.Background().WithName("logLatency")
-		keysAndValues := []interface{}{"latency_seconds", duration, "request", subSystem + "_" + mc.operation, "result_code", resultCode}
-		for k, v := range mc.volumeContext {
-			keysAndValues = append(keysAndValues, k, v)
-		}
-		logger.V(int(mc.logLevel)).Info("Observed Request Latency", keysAndValues...)
+	logger := klog.Background().WithName("logLatency").V(int(mc.logLevel))
+	if !logger.Enabled() {
+		return
 	}
+
+	keysAndValues := []interface{}{"latency_seconds", duration, "request", subSystem + "_" + mc.operation, "success", successStr}
+	logger.Info("Observed Request Latency", append(keysAndValues, mc.volumeContext...)...)
 }
 
 // ObserveWithLabels records the operation with provided label pairs
 func (mc *CSIMetricContext) ObserveWithLabels(success bool, labelPairs ...string) {
-	if len(labelPairs) == 0 || len(labelPairs)%2 != 0 {
-		// No label pairs or invalid label pairs, just observe without labels
+	if len(labelPairs)%2 != 0 {
+		// Invalid label pairs, just observe without labels
 		mc.Observe(success)
 		return
 	}
