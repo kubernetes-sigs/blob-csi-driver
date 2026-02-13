@@ -27,6 +27,11 @@ import (
 
 const (
 	subSystem = "blob_csi_driver"
+
+	// Label keys for metrics
+	Protocol           = "protocol"
+	StorageAccountType = "storage_account_type"
+	IsHnsEnabled       = "is_hns_enabled"
 )
 
 var (
@@ -49,7 +54,7 @@ var (
 			Buckets:        []float64{0.1, 0.2, 0.5, 1, 5, 10, 15, 20, 30, 40, 50, 60, 100, 200, 300},
 			StabilityLevel: metrics.ALPHA,
 		},
-		[]string{"operation", "success", "protocol", "storage_account_type", "is_hns_enabled"},
+		[]string{"operation", "success", Protocol, StorageAccountType, IsHnsEnabled},
 	)
 
 	operationTotal = metrics.NewCounterVec(
@@ -144,9 +149,9 @@ func (mc *CSIMetricContext) Observe(success bool) {
 
 	// Record detailed metrics if labels are present
 	if len(mc.labels) > 0 {
-		protocol := mc.labels["protocol"]
-		storageAccountType := mc.labels["storage_account_type"]
-		isHnsEnabled := mc.labels["is_hns_enabled"]
+		protocol := mc.labels[Protocol]
+		storageAccountType := mc.labels[StorageAccountType]
+		isHnsEnabled := mc.labels[IsHnsEnabled]
 
 		operationDurationWithLabels.WithLabelValues(
 			mc.operation,

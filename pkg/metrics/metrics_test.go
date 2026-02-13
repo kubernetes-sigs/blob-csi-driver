@@ -151,9 +151,9 @@ func TestCSIMetricContext_ObserveWithLabels(t *testing.T) {
 
 	// Test observation with labels
 	mc.ObserveWithLabels(true,
-		"protocol", "fuse",
-		"storage_account_type", "Standard_LRS",
-		"is_hns_enabled", "false")
+		Protocol, "fuse",
+		StorageAccountType, "Standard_LRS",
+		IsHnsEnabled, "false")
 
 	// Verify that both basic and labeled metrics were recorded
 	families, err := legacyregistry.DefaultGatherer.Gather()
@@ -183,9 +183,9 @@ func TestCSIMetricContext_ObserveWithLabels(t *testing.T) {
 					labelMap[label.GetName()] = label.GetValue()
 				}
 
-				if labelMap["protocol"] != "fuse" ||
-					labelMap["storage_account_type"] != "Standard_LRS" ||
-					labelMap["is_hns_enabled"] != "false" {
+				if labelMap[Protocol] != "fuse" ||
+					labelMap[StorageAccountType] != "Standard_LRS" ||
+					labelMap[IsHnsEnabled] != "false" {
 					t.Errorf("expected labeled metric with correct labels, got: %v", labelMap)
 				}
 			}
@@ -208,7 +208,7 @@ func TestCSIMetricContext_ObserveWithInvalidLabels(t *testing.T) {
 	mc := NewCSIMetricContext("test_operation").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 
 	// Test with odd number of label parameters (should fallback to basic observe)
-	mc.ObserveWithLabels(true, "protocol", "fuse", "orphan_key")
+	mc.ObserveWithLabels(true, Protocol, "fuse", "orphan_key")
 
 	// Should still record basic metrics but not labeled metrics
 	families, err := legacyregistry.DefaultGatherer.Gather()
@@ -413,9 +413,9 @@ func BenchmarkCSIMetricContext_ObserveWithLabels(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		mc := NewCSIMetricContext("benchmark_test").WithBasicVolumeInfo("test-rg", "test-sub", "test-source")
 		mc.ObserveWithLabels(true,
-			"protocol", "fuse",
-			"storage_account_type", "Standard_LRS",
-			"is_hns_enabled", "false")
+			Protocol, "fuse",
+			StorageAccountType, "Standard_LRS",
+			IsHnsEnabled, "false")
 	}
 }
 

@@ -155,7 +155,6 @@ const (
 	pvNameMetadata       = "${pv.metadata.name}"
 
 	VolumeID = "volumeid"
-	Protocol = "protocol"
 
 	defaultStorageEndPointSuffix = "core.windows.net"
 
