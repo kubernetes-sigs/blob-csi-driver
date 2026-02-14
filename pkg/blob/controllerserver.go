@@ -395,12 +395,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	defer d.volumeLocks.Release(volName)
 
 	var volumeID string
-	csiMC := csiMetrics.NewCSIMetricContext(requestName)
+	csiMC := csiMetrics.NewCSIMetricContext(requestName).WithBasicVolumeInfo(d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
 	isOperationSucceeded := false
 	defer func() {
-		csiMC.ObserveWithLabels(isOperationSucceeded,
-			"storage_account_type", storageAccountType,
-			"protocol", protocol)
+		csiMC.WithAdditionalVolumeInfo(VolumeID, volumeID).ObserveWithLabels(isOperationSucceeded, csiMetrics.StorageAccountType, storageAccountType, csiMetrics.Protocol, protocol)
 	}()
 
 	var accountKey string
@@ -564,10 +562,10 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		}
 	}
 
-	csiMC := csiMetrics.NewCSIMetricContext("controller_delete_volume")
+	csiMC := csiMetrics.NewCSIMetricContext("controller_delete_volume").WithBasicVolumeInfo(d.cloud.ResourceGroup, d.cloud.SubscriptionID, d.Name)
 	isOperationSucceeded := false
 	defer func() {
-		csiMC.Observe(isOperationSucceeded)
+		csiMC.WithAdditionalVolumeInfo(VolumeID, volumeID).Observe(isOperationSucceeded)
 	}()
 
 	if resourceGroupName == "" {
