@@ -2525,7 +2525,7 @@ func TestGetAuthEnvEmptyContainerName(t *testing.T) {
 	}
 	volumeID := "unique-volume-id"
 
-	_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+	_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "could not find containerName")
 }
@@ -2547,7 +2547,7 @@ func TestGetAuthEnvWithSPNCredentials(t *testing.T) {
 	}
 	volumeID := "rg#accountname#containername"
 
-	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
 	assert.NoError(t, err)
 
 	foundClientID := false
@@ -2583,7 +2583,7 @@ func TestGetAuthEnvWithSasToken(t *testing.T) {
 	}
 	volumeID := "rg#accountname#containername"
 
-	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
 	assert.NoError(t, err)
 
 	foundSasToken := false
@@ -2610,7 +2610,7 @@ func TestGetAuthEnvWithMsiSecret(t *testing.T) {
 	}
 	volumeID := "rg#accountname#containername"
 
-	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
 	assert.NoError(t, err)
 
 	foundMsiSecret := false
@@ -2642,7 +2642,7 @@ func TestGetAuthEnvMSIAuthTypeSkipsIdentityEnvIfAlreadySet(t *testing.T) {
 	}
 	volumeID := "rg#accountname#containername"
 
-	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
 	assert.NoError(t, err)
 
 	count := 0
