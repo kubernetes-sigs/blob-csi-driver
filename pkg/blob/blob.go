@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -174,6 +175,8 @@ var (
 	// set --s2s-preserve-access-tier=false to avoid BlobAccessTierNotSupportedForAccountType error in azcopy
 	azcopyCloneVolumeOptions  = []string{"--recursive", "--check-length=false", "--s2s-preserve-access-tier=false", "--log-level=ERROR"}
 	defaultAzureOAuthTokenDir = "/var/lib/kubelet/plugins/" + DefaultDriverName
+
+	subscriptionIDRegex = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 )
 
 // DriverOptions defines driver parameters specified in driver deployment
@@ -437,8 +440,12 @@ func GetContainerInfo(id string) (string, string, string, string, string, error)
 	if len(segments) > 4 {
 		secretNamespace = segments[4]
 	}
-	if len(segments) > 5 {
-		subsID = segments[5]
+	if len(segments) > 5 && segments[5] != "" {
+		if isValidSubscriptionID(segments[5]) {
+			subsID = segments[5]
+		} else {
+			klog.Warningf("the subscription ID %s parsed from volume ID %s is not valid, ignore it", segments[5], id)
+		}
 	}
 	return segments[0], segments[1], segments[2], secretNamespace, subsID, nil
 }
@@ -1283,4 +1290,8 @@ func isValidTokenFileName(fileName string) bool {
 		}
 	}
 	return true
+}
+
+func isValidSubscriptionID(subsID string) bool {
+	return subscriptionIDRegex.MatchString(subsID)
 }

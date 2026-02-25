@@ -270,20 +270,20 @@ func TestGetContainerInfo(t *testing.T) {
 			expectedError: fmt.Errorf("error parsing volume id: \"\", should at least contain two #"),
 		},
 		{
-			volumeID:      "rg#f5713de20cde511e8ba4900#container#uuid#namespace#subsID",
+			volumeID:      "rg#f5713de20cde511e8ba4900#container#uuid#namespace#01234567-89AB-CDEF-0123-456789ABCDEF",
 			rg:            "rg",
 			account:       "f5713de20cde511e8ba4900",
 			container:     "container",
 			namespace:     "namespace",
-			subsID:        "subsID",
+			subsID:        "01234567-89AB-CDEF-0123-456789ABCDEF",
 			expectedError: nil,
 		},
 		{
-			volumeID:      "rg#f5713de20cde511e8ba4900#container###subsID",
+			volumeID:      "rg#f5713de20cde511e8ba4900#container###01234567-89AB-CDEF-0123-456789ABCDEF",
 			rg:            "rg",
 			account:       "f5713de20cde511e8ba4900",
 			container:     "container",
-			subsID:        "subsID",
+			subsID:        "01234567-89AB-CDEF-0123-456789ABCDEF",
 			expectedError: nil,
 		},
 		{
@@ -2279,8 +2279,7 @@ func TestGetAuthEnvWithMountWithWIToken(t *testing.T) {
 				volumeID := "rg#accountname#containername"
 
 				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
-				expectedErr := fmt.Errorf("mountWithWorkloadIdentityToken is true but clientID is not specified")
-				assert.Equal(t, expectedErr, err)
+				assert.EqualError(t, err, "mountWithWorkloadIdentityToken is true but clientID is not specified")
 			},
 		},
 		{
@@ -2662,4 +2661,87 @@ func TestGetAuthEnvMSIAuthTypeSkipsIdentityEnvIfAlreadySet(t *testing.T) {
 		}
 	}
 	assert.True(t, found, "Explicit AZURE_STORAGE_IDENTITY_CLIENT_ID should be preserved")
+}
+
+func TestIsValidSubscriptionID(t *testing.T) {
+	tests := []struct {
+		desc           string
+		subsID         string
+		expectedResult bool
+	}{
+		{
+			desc:           "valid subscription ID (lowercase)",
+			subsID:         "01234567-89ab-cdef-0123-456789abcdef",
+			expectedResult: true,
+		},
+		{
+			desc:           "valid subscription ID (uppercase)",
+			subsID:         "01234567-89AB-CDEF-0123-456789ABCDEF",
+			expectedResult: true,
+		},
+		{
+			desc:           "valid subscription ID (mixed case)",
+			subsID:         "a1b2c3d4-e5F6-7890-AbCd-EF1234567890",
+			expectedResult: true,
+		},
+		{
+			desc:           "empty string",
+			subsID:         "",
+			expectedResult: false,
+		},
+		{
+			desc:           "missing hyphens",
+			subsID:         "0123456789abcdef0123456789abcdef",
+			expectedResult: false,
+		},
+		{
+			desc:           "wrong segment lengths",
+			subsID:         "0123456-89ab-cdef-0123-456789abcdef",
+			expectedResult: false,
+		},
+		{
+			desc:           "contains invalid characters",
+			subsID:         "g1234567-89ab-cdef-0123-456789abcdef",
+			expectedResult: false,
+		},
+		{
+			desc:           "too short",
+			subsID:         "01234567-89ab-cdef-0123",
+			expectedResult: false,
+		},
+		{
+			desc:           "too long",
+			subsID:         "01234567-89ab-cdef-0123-456789abcdef0",
+			expectedResult: false,
+		},
+		{
+			desc:           "extra hyphens",
+			subsID:         "01234567-89ab-cdef-0123-456789ab-cdef",
+			expectedResult: false,
+		},
+		{
+			desc:           "spaces in string",
+			subsID:         "01234567-89ab-cdef-0123-456789abcde ",
+			expectedResult: false,
+		},
+		{
+			desc:           "all zeros",
+			subsID:         "00000000-0000-0000-0000-000000000000",
+			expectedResult: true,
+		},
+		{
+			desc:           "all f's",
+			subsID:         "ffffffff-ffff-ffff-ffff-ffffffffffff",
+			expectedResult: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			result := isValidSubscriptionID(test.subsID)
+			if result != test.expectedResult {
+				t.Errorf("isValidSubscriptionID(%q) returned %v, expected %v", test.subsID, result, test.expectedResult)
+			}
+		})
+	}
 }
