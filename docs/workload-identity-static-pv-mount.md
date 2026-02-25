@@ -83,7 +83,7 @@ cat <<EOF | kubectl apply -f -
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: blob-fuse
+  name: blob-fuse-wi
 provisioner: blob.csi.azure.com
 parameters:
   storageaccount: $ACCOUNT # required
@@ -141,7 +141,7 @@ spec:
     - metadata:
         name: persistent-storage
       spec:
-        storageClassName: blob-fuse
+        storageClassName: blob-fuse-wi
         accessModes: ["ReadWriteMany"]
         resources:
           requests:
