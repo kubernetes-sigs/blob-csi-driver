@@ -89,6 +89,7 @@ parameters:
   storageaccount: $ACCOUNT # required
   clientID: $USER_ASSIGNED_CLIENT_ID # required, $USER_ASSIGNED_CLIENT_ID is only for mount auth, make sure you CSI driver controller pod has `Contributor` role on the specified account
   resourcegroup: $STORAGE_RESOURCE_GROUP # optional, specified when the storage account is not under AKS node resource group(which is prefixed with "MC_")
+  mountWithWorkloadIdentityToken: "true" # only supported from CSI driver v1.27.0
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 allowVolumeExpansion: true
