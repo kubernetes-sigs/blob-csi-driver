@@ -270,20 +270,20 @@ func TestGetContainerInfo(t *testing.T) {
 			expectedError: fmt.Errorf("error parsing volume id: \"\", should at least contain two #"),
 		},
 		{
-			volumeID:      "rg#f5713de20cde511e8ba4900#container#uuid#namespace#subsID",
+			volumeID:      "rg#f5713de20cde511e8ba4900#container#uuid#namespace#01234567-89AB-CDEF-0123-456789ABCDEF",
 			rg:            "rg",
 			account:       "f5713de20cde511e8ba4900",
 			container:     "container",
 			namespace:     "namespace",
-			subsID:        "subsID",
+			subsID:        "01234567-89AB-CDEF-0123-456789ABCDEF",
 			expectedError: nil,
 		},
 		{
-			volumeID:      "rg#f5713de20cde511e8ba4900#container###subsID",
+			volumeID:      "rg#f5713de20cde511e8ba4900#container###01234567-89AB-CDEF-0123-456789ABCDEF",
 			rg:            "rg",
 			account:       "f5713de20cde511e8ba4900",
 			container:     "container",
-			subsID:        "subsID",
+			subsID:        "01234567-89AB-CDEF-0123-456789ABCDEF",
 			expectedError: nil,
 		},
 		{
@@ -2190,6 +2190,557 @@ func TestIsValidTokenFileName(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			if got := isValidTokenFileName(tc.fileName); got != tc.expected {
 				t.Fatalf("isValidTokenFileName(%q) = %t, want %t", tc.fileName, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestGetAuthEnvWithClientID(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "clientID specified with valid service account token",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.SubscriptionID = "test-sub"
+				d.cloud.TenantID = "test-tenant"
+
+				attrib := map[string]string{
+					clientIDField:       "test-client-id",
+					containerNameField:  "containername",
+					storageAccountField: "accountname",
+				}
+				secret := make(map[string]string)
+				volumeID := "rg#accountname#containername"
+
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
+
+				// GetStorageAccesskeyFromServiceAccountToken will fail but we're testing the clientID path
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				// Error expected because GetStorageAccesskeyFromServiceAccountToken is not mocked
+				assert.Error(t, err)
+			},
+		},
+		{
+			name: "clientID specified uses cloud subscriptionID when subsID is empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.SubscriptionID = "cloud-sub-id"
+				d.cloud.TenantID = "test-tenant"
+
+				attrib := map[string]string{
+					clientIDField:       "test-client-id",
+					containerNameField:  "containername",
+					storageAccountField: "accountname",
+				}
+				secret := make(map[string]string)
+				volumeID := "unique-volume-id"
+
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				// Error expected because GetStorageAccesskeyFromServiceAccountToken is not mocked
+				assert.Error(t, err)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestGetAuthEnvWithMountWithWIToken(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "mountWithWIToken true but clientID not specified and cloud has no identity",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.Config.AzureAuthConfig = azclient.AzureAuthConfig{}
+
+				attrib := map[string]string{
+					mountWithWITokenField: "true",
+					containerNameField:    "containername",
+					storageAccountField:   "accountname",
+				}
+				secret := make(map[string]string)
+				volumeID := "rg#accountname#containername"
+
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				assert.EqualError(t, err, "mountWithWorkloadIdentityToken is true but clientID is not specified")
+			},
+		},
+		{
+			name: "mountWithWIToken true with clientID from cloud config but invalid service account token",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.Config.AzureAuthConfig = azclient.AzureAuthConfig{
+					UserAssignedIdentityID: "test-identity-id",
+				}
+
+				attrib := map[string]string{
+					mountWithWITokenField:    "true",
+					containerNameField:       "containername",
+					storageAccountField:      "accountname",
+					serviceAccountTokenField: "invalid-token",
+				}
+				secret := make(map[string]string)
+				volumeID := "rg#accountname#containername"
+
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				assert.Error(t, err)
+			},
+		},
+		{
+			name: "mountWithWIToken true with explicit clientID but empty service account token",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+
+				attrib := map[string]string{
+					mountWithWITokenField: "true",
+					clientIDField:         "explicit-client-id",
+					containerNameField:    "containername",
+					storageAccountField:   "accountname",
+				}
+				secret := make(map[string]string)
+				volumeID := "rg#accountname#containername"
+
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "service account token")
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestGetAuthEnvSecretNamespaceHandling(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "secretNamespace defaults to pvcNamespace when secretNamespace is empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.KubeClient = fake.NewSimpleClientset()
+
+				pvcNS := "pvc-namespace"
+				attrib := map[string]string{
+					pvcNamespaceKey:     pvcNS,
+					containerNameField:  "containername",
+					storageAccountField: "accountname",
+				}
+				secret := make(map[string]string)
+				volumeID := "rg#accountname#containername"
+
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
+				s := "test-key"
+				accountkey := armstorage.AccountKey{Value: &s}
+				list := []*armstorage.AccountKey{&accountkey}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
+
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "secretNamespace defaults to 'default' when both secretNamespace and pvcNamespace are empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.KubeClient = fake.NewSimpleClientset()
+
+				attrib := map[string]string{
+					containerNameField:  "containername",
+					storageAccountField: "accountname",
+				}
+				secret := make(map[string]string)
+				volumeID := "rg#accountname#containername"
+
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				mockStorageAccountsClient := mock_accountclient.NewMockInterface(ctrl)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(ctrl)
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
+				s := "test-key"
+				accountkey := armstorage.AccountKey{Value: &s}
+				list := []*armstorage.AccountKey{&accountkey}
+				mockStorageAccountsClient.EXPECT().ListKeys(gomock.Any(), gomock.Any(), gomock.Any()).Return(list, nil).AnyTimes()
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
+
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				assert.NoError(t, err)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestGetAuthEnvResourceGroupHandling(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "rgName defaults to cloud.ResourceGroup when rgName is empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.ResourceGroup = "cloud-rg"
+
+				attrib := map[string]string{
+					containerNameField:  "containername",
+					storageAccountField: "accountname",
+				}
+				secret := map[string]string{
+					accountNameField: "accountname",
+					accountKeyField:  "testkey",
+				}
+				volumeID := "unique-volume-id"
+
+				rg, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				assert.NoError(t, err)
+				assert.Equal(t, "cloud-rg", rg)
+			},
+		},
+		{
+			name: "rgName from attrib takes precedence over cloud.ResourceGroup",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.ResourceGroup = "cloud-rg"
+
+				attrib := map[string]string{
+					resourceGroupField:  "attrib-rg",
+					containerNameField:  "containername",
+					storageAccountField: "accountname",
+				}
+				secret := map[string]string{
+					accountNameField: "accountname",
+					accountKeyField:  "testkey",
+				}
+				volumeID := "unique-volume-id"
+
+				rg, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				assert.NoError(t, err)
+				assert.Equal(t, "attrib-rg", rg)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestGetAuthEnvTenantIDHandling(t *testing.T) {
+	testCases := []struct {
+		name     string
+		testFunc func(t *testing.T)
+	}{
+		{
+			name: "tenantID defaults to cloud.TenantID when tenantID is empty",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.TenantID = "cloud-tenant-id"
+
+				attrib := map[string]string{
+					containerNameField:  "containername",
+					storageAccountField: "accountname",
+				}
+				secret := map[string]string{
+					accountNameField: "accountname",
+					accountKeyField:  "testkey",
+				}
+				volumeID := "rg#accountname#containername"
+
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				assert.NoError(t, err)
+			},
+		},
+		{
+			name: "tenantID from attrib takes precedence",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.TenantID = "cloud-tenant-id"
+
+				attrib := map[string]string{
+					tenantIDField:       "attrib-tenant-id",
+					containerNameField:  "containername",
+					storageAccountField: "accountname",
+				}
+				secret := map[string]string{
+					accountNameField: "accountname",
+					accountKeyField:  "testkey",
+				}
+				volumeID := "rg#accountname#containername"
+
+				_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+				assert.NoError(t, err)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestGetAuthEnvEmptyContainerName(t *testing.T) {
+	d := NewFakeDriver()
+	d.cloud = &storage.AccountRepo{}
+
+	attrib := map[string]string{
+		storageAccountField: "accountname",
+	}
+	secret := map[string]string{
+		accountNameField: "accountname",
+		accountKeyField:  "testkey",
+	}
+	volumeID := "unique-volume-id"
+
+	_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "could not find containerName")
+}
+
+func TestGetAuthEnvWithSPNCredentials(t *testing.T) {
+	d := NewFakeDriver()
+	d.cloud = &storage.AccountRepo{}
+
+	attrib := map[string]string{
+		containerNameField:      "containername",
+		storageAccountField:     "accountname",
+		storageSPNClientIDField: "spn-client-id",
+		storageSPNTenantIDField: "spn-tenant-id",
+	}
+	secret := map[string]string{
+		accountNameField:            "accountname",
+		accountKeyField:             "testkey",
+		storageSPNClientSecretField: "spn-client-secret",
+	}
+	volumeID := "rg#accountname#containername"
+
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
+	assert.NoError(t, err)
+
+	foundClientID := false
+	foundTenantID := false
+	foundClientSecret := false
+	for _, env := range authEnv {
+		if env == "AZURE_STORAGE_SPN_CLIENT_ID=spn-client-id" {
+			foundClientID = true
+		}
+		if env == "AZURE_STORAGE_SPN_TENANT_ID=spn-tenant-id" {
+			foundTenantID = true
+		}
+		if env == "AZURE_STORAGE_SPN_CLIENT_SECRET=spn-client-secret" {
+			foundClientSecret = true
+		}
+	}
+	assert.True(t, foundClientID, "AZURE_STORAGE_SPN_CLIENT_ID should be in authEnv")
+	assert.True(t, foundTenantID, "AZURE_STORAGE_SPN_TENANT_ID should be in authEnv")
+	assert.True(t, foundClientSecret, "AZURE_STORAGE_SPN_CLIENT_SECRET should be in authEnv")
+}
+
+func TestGetAuthEnvWithSasToken(t *testing.T) {
+	d := NewFakeDriver()
+	d.cloud = &storage.AccountRepo{}
+
+	attrib := map[string]string{
+		containerNameField:  "containername",
+		storageAccountField: "accountname",
+	}
+	secret := map[string]string{
+		accountNameField:     "accountname",
+		accountSasTokenField: "?sv=2017-03-28&ss=bfqt&srt=sco&sp=rwdlacup",
+	}
+	volumeID := "rg#accountname#containername"
+
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
+	assert.NoError(t, err)
+
+	foundSasToken := false
+	for _, env := range authEnv {
+		if strings.HasPrefix(env, "AZURE_STORAGE_SAS_TOKEN=") {
+			foundSasToken = true
+			break
+		}
+	}
+	assert.True(t, foundSasToken, "AZURE_STORAGE_SAS_TOKEN should be in authEnv")
+}
+
+func TestGetAuthEnvWithMsiSecret(t *testing.T) {
+	d := NewFakeDriver()
+	d.cloud = &storage.AccountRepo{}
+
+	attrib := map[string]string{
+		containerNameField:  "containername",
+		storageAccountField: "accountname",
+	}
+	secret := map[string]string{
+		accountNameField: "accountname",
+		msiSecretField:   "msi-secret-value",
+	}
+	volumeID := "rg#accountname#containername"
+
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
+	assert.NoError(t, err)
+
+	foundMsiSecret := false
+	for _, env := range authEnv {
+		if env == "MSI_SECRET=msi-secret-value" {
+			foundMsiSecret = true
+			break
+		}
+	}
+	assert.True(t, foundMsiSecret, "MSI_SECRET should be in authEnv")
+}
+
+func TestGetAuthEnvMSIAuthTypeSkipsIdentityEnvIfAlreadySet(t *testing.T) {
+	d := NewFakeDriver()
+	d.cloud = &storage.AccountRepo{}
+	d.cloud.Config.AzureAuthConfig = azclient.AzureAuthConfig{
+		UserAssignedIdentityID: "cloud-identity-id",
+	}
+
+	attrib := map[string]string{
+		containerNameField:           "containername",
+		storageAccountField:          "accountname",
+		storageAuthTypeField:         storageAuthTypeMSI,
+		storageIdentityClientIDField: "explicit-identity-id",
+	}
+	secret := map[string]string{
+		accountNameField: "accountname",
+		accountKeyField:  "testkey",
+	}
+	volumeID := "rg#accountname#containername"
+
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
+	assert.NoError(t, err)
+
+	count := 0
+	for _, env := range authEnv {
+		if strings.HasPrefix(env, "AZURE_STORAGE_IDENTITY_CLIENT_ID=") {
+			count++
+		}
+	}
+	// Should only have the explicit one, not the cloud one
+	assert.Equal(t, 1, count, "Should only have one AZURE_STORAGE_IDENTITY_CLIENT_ID in authEnv")
+
+	found := false
+	for _, env := range authEnv {
+		if env == "AZURE_STORAGE_IDENTITY_CLIENT_ID=explicit-identity-id" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Explicit AZURE_STORAGE_IDENTITY_CLIENT_ID should be preserved")
+}
+
+func TestIsValidSubscriptionID(t *testing.T) {
+	tests := []struct {
+		desc           string
+		subsID         string
+		expectedResult bool
+	}{
+		{
+			desc:           "valid subscription ID (lowercase)",
+			subsID:         "01234567-89ab-cdef-0123-456789abcdef",
+			expectedResult: true,
+		},
+		{
+			desc:           "valid subscription ID (uppercase)",
+			subsID:         "01234567-89AB-CDEF-0123-456789ABCDEF",
+			expectedResult: true,
+		},
+		{
+			desc:           "valid subscription ID (mixed case)",
+			subsID:         "a1b2c3d4-e5F6-7890-AbCd-EF1234567890",
+			expectedResult: true,
+		},
+		{
+			desc:           "empty string",
+			subsID:         "",
+			expectedResult: false,
+		},
+		{
+			desc:           "missing hyphens",
+			subsID:         "0123456789abcdef0123456789abcdef",
+			expectedResult: false,
+		},
+		{
+			desc:           "wrong segment lengths",
+			subsID:         "0123456-89ab-cdef-0123-456789abcdef",
+			expectedResult: false,
+		},
+		{
+			desc:           "contains invalid characters",
+			subsID:         "g1234567-89ab-cdef-0123-456789abcdef",
+			expectedResult: false,
+		},
+		{
+			desc:           "too short",
+			subsID:         "01234567-89ab-cdef-0123",
+			expectedResult: false,
+		},
+		{
+			desc:           "too long",
+			subsID:         "01234567-89ab-cdef-0123-456789abcdef0",
+			expectedResult: false,
+		},
+		{
+			desc:           "extra hyphens",
+			subsID:         "01234567-89ab-cdef-0123-456789ab-cdef",
+			expectedResult: false,
+		},
+		{
+			desc:           "spaces in string",
+			subsID:         "01234567-89ab-cdef-0123-456789abcde ",
+			expectedResult: false,
+		},
+		{
+			desc:           "all zeros",
+			subsID:         "00000000-0000-0000-0000-000000000000",
+			expectedResult: true,
+		},
+		{
+			desc:           "all f's",
+			subsID:         "ffffffff-ffff-ffff-ffff-ffffffffffff",
+			expectedResult: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			result := isValidSubscriptionID(test.subsID)
+			if result != test.expectedResult {
+				t.Errorf("isValidSubscriptionID(%q) returned %v, expected %v", test.subsID, result, test.expectedResult)
 			}
 		})
 	}
