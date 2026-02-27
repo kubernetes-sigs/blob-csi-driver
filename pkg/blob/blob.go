@@ -30,7 +30,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage/v2"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
