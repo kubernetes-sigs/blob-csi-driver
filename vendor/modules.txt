@@ -1395,7 +1395,7 @@ k8s.io/kubectl/pkg/util/podutils
 ## explicit; go 1.25.0
 k8s.io/kubelet/pkg/apis
 k8s.io/kubelet/pkg/apis/stats/v1alpha1
-# k8s.io/kubernetes v1.35.0
+# k8s.io/kubernetes v1.35.2
 ## explicit; go 1.25.0
 k8s.io/kubernetes/pkg/api/legacyscheme
 k8s.io/kubernetes/pkg/api/service
@@ -1463,7 +1463,7 @@ k8s.io/kubernetes/test/utils
 k8s.io/kubernetes/test/utils/format
 k8s.io/kubernetes/test/utils/image
 k8s.io/kubernetes/test/utils/kubeconfig
-# k8s.io/mount-utils v0.35.0
+# k8s.io/mount-utils v0.35.2
 ## explicit; go 1.25.0
 k8s.io/mount-utils
 # k8s.io/pod-security-admission v0.35.0 => k8s.io/pod-security-admission v0.35.0
