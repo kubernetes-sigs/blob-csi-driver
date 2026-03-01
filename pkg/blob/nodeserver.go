@@ -77,17 +77,21 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		return nil, status.Error(codes.InvalidArgument, "Target path not provided")
 	}
 
+	secrets := req.GetSecrets()
+
 	mountPermissions := d.mountPermissions
 	context := req.GetVolumeContext()
+	serviceAccountTokens := getServiceAccountTokens(secrets, context)
 	if context != nil {
 		// token request
-		if context[serviceAccountTokenField] != "" && useWorkloadIdentity(context) {
+		if serviceAccountTokens != "" && useWorkloadIdentity(context) {
 			klog.V(2).Infof("NodePublishVolume: volume(%s) mount on %s with service account token, clientID: %s", volumeID, target, getValueInMap(context, clientIDField))
 			_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
 				StagingTargetPath: target,
 				VolumeContext:     context,
 				VolumeCapability:  volCap,
 				VolumeId:          volumeID,
+				Secrets:           secrets,
 			})
 			return &csi.NodePublishVolumeResponse{}, err
 		}
@@ -292,8 +296,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	volumeMountGroup := req.GetVolumeCapability().GetMount().GetVolumeMountGroup()
 	attrib := req.GetVolumeContext()
 	secrets := req.GetSecrets()
+	serviceAccountTokens := getServiceAccountTokens(secrets, attrib)
 
-	if useWorkloadIdentity(attrib) && attrib[serviceAccountTokenField] == "" {
+	if useWorkloadIdentity(attrib) && serviceAccountTokens == "" {
 		klog.V(2).Infof("Skip NodeStageVolume for volume(%s) since clientID %s is provided but service account token is empty", volumeID, getValueInMap(attrib, clientIDField))
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
@@ -788,4 +793,17 @@ func useWorkloadIdentity(attrib map[string]string) bool {
 		return true
 	}
 	return false
+}
+
+// getServiceAccountTokens retrieves service account tokens from the CSI request.
+// It first checks the secrets map (new behavior when driver opts in to
+// serviceAccountTokenInSecrets in Kubernetes 1.35+), then falls back to checking
+// volumeContext for backward compatibility.
+func getServiceAccountTokens(secrets, volumeContext map[string]string) string {
+	// Check secrets field first (new behavior when driver opts in)
+	if tokens, ok := secrets[serviceAccountTokenField]; ok {
+		return tokens
+	}
+	// Fallback to volume context for backward compatibility
+	return getValueInMap(volumeContext, serviceAccountTokenField)
 }
