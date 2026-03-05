@@ -84,8 +84,8 @@ spec:
             - "--extra-create-metadata=true"
             - "--kube-api-qps=50"
             - "--kube-api-burst=100"
-            - "--feature-gates=HonorPVReclaimPolicy=true"
             - "--retry-interval-max=30m"
+            - "--feature-gates=VolumeAttributesClass=false"
           env:
             - name: ADDRESS
               value: /csi/csi.sock
@@ -223,6 +223,7 @@ spec:
             - "-leader-election"
             - "--leader-election-namespace={{ .Release.Namespace }}"
             - '-handle-volume-inuse-error=false'
+            - "--feature-gates=VolumeAttributesClass=false"
           env:
             - name: ADDRESS
               value: /csi/csi.sock
