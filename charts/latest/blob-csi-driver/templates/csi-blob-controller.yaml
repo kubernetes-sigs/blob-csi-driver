@@ -84,7 +84,7 @@ spec:
             - "--extra-create-metadata=true"
             - "--kube-api-qps=50"
             - "--kube-api-burst=100"
-            - "--feature-gates=HonorPVReclaimPolicy=true,VolumeAttributesClass=false"
+            - "--feature-gates=VolumeAttributesClass=false"
             - "--retry-interval-max=30m"
           env:
             - name: ADDRESS
