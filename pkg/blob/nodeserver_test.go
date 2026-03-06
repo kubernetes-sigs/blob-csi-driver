@@ -1235,3 +1235,60 @@ func TestUseWorkloadIdentity(t *testing.T) {
 		})
 	}
 }
+
+func TestGetServiceAccountTokens(t *testing.T) {
+	tests := []struct {
+		name          string
+		secrets       map[string]string
+		volumeContext map[string]string
+		expected      string
+	}{
+		{
+			name: "token from secrets field (new behavior)",
+			secrets: map[string]string{
+				serviceAccountTokenField: "token-from-secrets",
+			},
+			volumeContext: map[string]string{
+				serviceAccountTokenField: "token-from-context",
+			},
+			expected: "token-from-secrets",
+		},
+		{
+			name:    "token from volume context (backward compatible)",
+			secrets: map[string]string{},
+			volumeContext: map[string]string{
+				serviceAccountTokenField: "token-from-context",
+			},
+			expected: "token-from-context",
+		},
+		{
+			name:          "no token available",
+			secrets:       map[string]string{},
+			volumeContext: map[string]string{},
+			expected:      "",
+		},
+		{
+			name:    "nil secrets falls back to volume context",
+			secrets: nil,
+			volumeContext: map[string]string{
+				serviceAccountTokenField: "token-from-context",
+			},
+			expected: "token-from-context",
+		},
+		{
+			name: "nil volume context with secrets",
+			secrets: map[string]string{
+				serviceAccountTokenField: "token-from-secrets",
+			},
+			volumeContext: nil,
+			expected:      "token-from-secrets",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := getServiceAccountTokens(test.secrets, test.volumeContext)
+			assert.Equal(t, test.expected, result)
+		})
+	}
+}
