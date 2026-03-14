@@ -307,13 +307,13 @@ spec:
 {{- end }}
         - name: host-usr
           hostPath:
-            path: /usr
+            path: {{ .Values.node.hostPaths.usr }}
         - name: host-usr-local
           hostPath:
-            path: /usr/local
+            path: {{ .Values.node.hostPaths.usrLocal }}
         - name: host-etc
           hostPath:
-            path: /etc
+            path: {{ .Values.node.hostPaths.etc }}
         - hostPath:
             path: {{ .Values.linux.kubelet }}/plugins/{{ .Values.driver.name }}
             type: DirectoryOrCreate
