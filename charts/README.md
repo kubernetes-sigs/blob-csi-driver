@@ -151,6 +151,9 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `workloadIdentity.clientID` | client ID of workload identity | ''
 | `workloadIdentity.tenantID` | [optional] If the AAD application or user-assigned managed identity is not in the same tenant as the cluster then set tenantID with the AAD application or user-assigned managed identity tenant ID | ''
 | `node.enableAznfsMount` | enable [AZNFS mount helper](https://github.com/Azure/AZNFS-mount/) for NFS protocol | true
+| `node.hostPath.usr` | host path for the `host-usr` volume; also used to set the init container mountPath to `/host{path}` | `/usr`
+| `node.hostPath.usrLocal` | host path for the `host-usr-local` volume; also used to set the init container mountPath to `/host{path}` | `/usr/local`
+| `node.hostPath.etc` | host path for the `host-etc` volume; also used to set the init container mountPath to `/host{path}` | `/etc`
 
 ## troubleshooting
  - Add `--wait -v=5 --debug` in `helm install` command to get detailed error
