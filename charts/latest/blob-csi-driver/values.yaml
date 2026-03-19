@@ -167,6 +167,10 @@ node:
     usr: /usr
     usrLocal: /usr/local
     etc: /etc
+    # Mount path overrides for the volumeMounts inside the install-blobfuse-proxy init container
+    usrMountPath: /host/usr
+    usrLocalMountPath: /host/usr/local
+    etcMountPath: /host/etc
   # Additional volumes to be added to the DaemonSet
   additionalVolumes: []
   # - name: custom-config

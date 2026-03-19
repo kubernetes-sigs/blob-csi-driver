@@ -154,6 +154,9 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.hostPaths.usr` | host path for the `host-usr` volume (mounted into the install-blobfuse-proxy init container) | `/usr`
 | `node.hostPaths.usrLocal` | host path for the `host-usr-local` volume (mounted into the install-blobfuse-proxy init container) | `/usr/local`
 | `node.hostPaths.etc` | host path for the `host-etc` volume (mounted into the install-blobfuse-proxy init container) | `/etc`
+| `node.hostPaths.usrMountPath` | mount path for the `host-usr` volumeMount inside the install-blobfuse-proxy init container | `/host/usr`
+| `node.hostPaths.usrLocalMountPath` | mount path for the `host-usr-local` volumeMount inside the install-blobfuse-proxy init container | `/host/usr/local`
+| `node.hostPaths.etcMountPath` | mount path for the `host-etc` volumeMount inside the install-blobfuse-proxy init container | `/host/etc`
 
 ## troubleshooting
  - Add `--wait -v=5 --debug` in `helm install` command to get detailed error
