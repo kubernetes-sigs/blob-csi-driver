@@ -129,6 +129,7 @@ node:
     migrateK8sRepo: false
     setReadAheadSize: true
     allowPackageInstallDowngrade: true
+    aptHttpTimeout: 300
   blobfuseCachePath: /mnt
   appendTimeStampInCacheDir: false
   mountPermissions: 0777
