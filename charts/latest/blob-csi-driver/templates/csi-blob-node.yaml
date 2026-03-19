@@ -116,11 +116,11 @@ spec:
               mountPath: /host/var/bin
 {{- end }}
             - name: host-usr
-              mountPath: /host/usr
+              mountPath: /host{{ .Values.node.hostPath.usr }}
             - name: host-usr-local
-              mountPath: /host/usr/local
+              mountPath: /host{{ .Values.node.hostPath.usrLocal }}
             - name: host-etc
-              mountPath: /host/etc
+              mountPath: /host{{ .Values.node.hostPath.etc }}
 {{- if .Values.node.additionalVolumeMounts }}
 {{- toYaml .Values.node.additionalVolumeMounts | nindent 12 }}
 {{- end }}
@@ -307,13 +307,13 @@ spec:
 {{- end }}
         - name: host-usr
           hostPath:
-            path: /usr
+            path: {{ .Values.node.hostPath.usr }}
         - name: host-usr-local
           hostPath:
-            path: /usr/local
+            path: {{ .Values.node.hostPath.usrLocal }}
         - name: host-etc
           hostPath:
-            path: /etc
+            path: {{ .Values.node.hostPath.etc }}
         - hostPath:
             path: {{ .Values.linux.kubelet }}/plugins/{{ .Values.driver.name }}
             type: DirectoryOrCreate
