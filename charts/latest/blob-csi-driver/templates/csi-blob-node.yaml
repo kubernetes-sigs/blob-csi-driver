@@ -116,11 +116,11 @@ spec:
               mountPath: /host/var/bin
 {{- end }}
             - name: host-usr
-              mountPath: {{ .Values.node.hostPaths.usrMountPath }}
+              mountPath: /host{{ .Values.node.hostPaths.usr }}
             - name: host-usr-local
-              mountPath: {{ .Values.node.hostPaths.usrLocalMountPath }}
+              mountPath: /host{{ .Values.node.hostPaths.usrLocal }}
             - name: host-etc
-              mountPath: {{ .Values.node.hostPaths.etcMountPath }}
+              mountPath: /host{{ .Values.node.hostPaths.etc }}
 {{- if .Values.node.additionalVolumeMounts }}
 {{- toYaml .Values.node.additionalVolumeMounts | nindent 12 }}
 {{- end }}
