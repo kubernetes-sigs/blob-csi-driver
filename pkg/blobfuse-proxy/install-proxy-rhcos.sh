@@ -21,7 +21,8 @@ if [ -z "${CUSTOM_BIN_PATH:-}" ] ; then
     "cos")
       BIN_PATH="/home/kubernetes/bin" ;;
     "gardenlinux" | "flatcar" | "azurecontainerlinux")
-      BIN_PATH="/var/bin" ;;
+      BIN_PATH="/var/bin"
+      mkdir -p /host${BIN_PATH} ;;
     *)
       BIN_PATH=${BIN_PATH:-/usr/local/bin} ;;
   esac
