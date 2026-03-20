@@ -185,11 +185,13 @@ func ConvertTagsToMap(tags string, tagsDelimiter string) (map[string]string, err
 type OsInfo struct {
 	Distro  string
 	Version string
+	Variant string
 }
 
 const (
 	keyID        = "ID"
 	keyVersionID = "VERSION_ID"
+	keyVariantID = "VARIANT_ID"
 )
 
 func GetOSInfo(f interface{}) (*OsInfo, error) {
@@ -201,6 +203,7 @@ func GetOSInfo(f interface{}) (*OsInfo, error) {
 	oi := &OsInfo{}
 	oi.Distro = cfg.Section("").Key(keyID).String()
 	oi.Version = cfg.Section("").Key(keyVersionID).String()
+	oi.Variant = cfg.Section("").Key(keyVariantID).String()
 
 	klog.V(2).Infof("get OS info: %v", oi)
 	return oi, nil

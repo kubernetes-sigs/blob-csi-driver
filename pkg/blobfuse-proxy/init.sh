@@ -34,12 +34,19 @@ fi
 HOST_CMD="nsenter --mount=/proc/1/ns/mnt"
 
 DISTRIBUTION=$($HOST_CMD cat /etc/os-release | grep ^ID= | cut -d'=' -f2 | tr -d '"')
+VARIANT=$($HOST_CMD cat /etc/os-release | grep ^VARIANT_ID= | cut -d'=' -f2 | tr -d '"' || true)
 ARCH=$($HOST_CMD uname -m)
+
+# ACL reports ID=azurelinux but needs rhcos-like handling
+if [ "$VARIANT" = "azurecontainerlinux" ]; then
+  DISTRIBUTION="azurecontainerlinux"
+fi
+
 echo "Linux distribution: $DISTRIBUTION, Arch: $ARCH"
 
 # install blobfuse-proxy and blobfuse/blobfuse2 if needed
 case "${DISTRIBUTION}" in
-  "rhcos" | "rhel" | "cos" | "gardenlinux" | "flatcar")
+  "rhcos" | "rhel" | "cos" | "gardenlinux" | "flatcar" | "azurecontainerlinux")
     . ./blobfuse-proxy/install-proxy-rhcos.sh
     ;;
   *)
