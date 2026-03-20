@@ -43,7 +43,9 @@ then
 
   # when running dpkg -i /etc/packages-microsoft-prod.deb, need to enter y to continue. 
   # refer to https://stackoverflow.com/questions/45349571/how-to-install-deb-with-dpkg-non-interactively
-  yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt update
+  # set HTTP/HTTPS timeouts to avoid hanging indefinitely when the package server is unreachable
+  APT_HTTP_TIMEOUT=${APT_HTTP_TIMEOUT:-300}
+  yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
 
   pkg_list=""
   # blobfuse
@@ -93,7 +95,7 @@ then
   fi
 
   echo "begin to install ${pkg_list}"
-  $HOST_CMD apt-get install -y $pkg_list
+  $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" install -y $pkg_list
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
