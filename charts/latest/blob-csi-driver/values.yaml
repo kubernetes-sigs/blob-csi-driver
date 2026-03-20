@@ -162,6 +162,12 @@ node:
   tolerations:
     - operator: "Exists"
   enableAznfsMount: true
+  # Host path overrides for the volumes mounted into the install-blobfuse-proxy init container
+  # The mountPath inside the init container is automatically set to /host{path} (e.g. /host/usr)
+  hostPath:
+    usr: /usr
+    usrLocal: /usr/local
+    etc: /etc
   # Additional volumes to be added to the DaemonSet
   additionalVolumes: []
   # - name: custom-config
