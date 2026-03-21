@@ -312,6 +312,18 @@ func TestGetOSInfo(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "parse os info with variant",
+			args: args{
+				f: []byte("ID=azurelinux\nVERSION_ID=3.0\nVARIANT_ID=azurecontainerlinux"),
+			},
+			want: &OsInfo{
+				Distro:  "azurelinux",
+				Version: "3.0",
+				Variant: "azurecontainerlinux",
+			},
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
