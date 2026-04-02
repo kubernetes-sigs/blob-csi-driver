@@ -89,7 +89,7 @@ Install the driver on a Kubernetes cluster:
 Execute the following command to install a specific version of blobfuse v2 once the driver is running on the agent node:
 
 ```console
-kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.5.2"}],"name":"install-blobfuse-proxy"}]}}}}'
+kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"spec":{"initContainers":[{"env":[{"name":"INSTALL_BLOBFUSE2","value":"true"},{"name":"BLOBFUSE2_VERSION","value":"2.5.3"}],"name":"install-blobfuse-proxy"}]}}}}'
 ```
 
 To install a lower version of blobfuse2 than the current version, add `--allow-downgrades` to the `BLOBFUSE2_VERSION` value:
