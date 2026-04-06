@@ -11,8 +11,8 @@ cyphar.com/go-pathrs/procfs
 ## explicit
 github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/version
-# github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
-## explicit; go 1.23.0
+# github.com/Azure/azure-sdk-for-go/sdk/azcore v1.21.0
+## explicit; go 1.24.0
 github.com/Azure/azure-sdk-for-go/sdk/azcore
 github.com/Azure/azure-sdk-for-go/sdk/azcore/arm
 github.com/Azure/azure-sdk-for-go/sdk/azcore/arm/internal/resource
@@ -50,9 +50,9 @@ github.com/Azure/azure-sdk-for-go/sdk/internal/uuid
 # github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2 v2.2.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2
-# github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6 v6.4.0
-## explicit; go 1.23.0
-github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6
+# github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7 v7.3.0
+## explicit; go 1.24.0
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7
 # github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry v1.2.0
 ## explicit; go 1.18
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerregistry/armcontainerregistry
@@ -339,7 +339,7 @@ github.com/munnerz/goautoneg
 # github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f
 ## explicit
 github.com/mxk/go-flowrate/flowrate
-# github.com/onsi/ginkgo/v2 v2.27.3
+# github.com/onsi/ginkgo/v2 v2.27.5
 ## explicit; go 1.23.0
 github.com/onsi/ginkgo/v2
 github.com/onsi/ginkgo/v2/config
@@ -363,7 +363,7 @@ github.com/onsi/ginkgo/v2/internal/reporters
 github.com/onsi/ginkgo/v2/internal/testingtproxy
 github.com/onsi/ginkgo/v2/reporters
 github.com/onsi/ginkgo/v2/types
-# github.com/onsi/gomega v1.38.3
+# github.com/onsi/gomega v1.39.0
 ## explicit; go 1.23.0
 github.com/onsi/gomega
 github.com/onsi/gomega/format
@@ -1493,7 +1493,7 @@ sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/client/metrics
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/pkg/common/metrics
 sigs.k8s.io/apiserver-network-proxy/konnectivity-client/proto/client
-# sigs.k8s.io/cloud-provider-azure v1.29.1-0.20260227033058-651886e6d87b
+# sigs.k8s.io/cloud-provider-azure v1.29.1-0.20260405034709-416612e9ec01
 ## explicit; go 1.25.0
 sigs.k8s.io/cloud-provider-azure/pkg/cache
 sigs.k8s.io/cloud-provider-azure/pkg/consts
@@ -1523,8 +1523,8 @@ sigs.k8s.io/cloud-provider-azure/pkg/util/string
 sigs.k8s.io/cloud-provider-azure/pkg/util/taints
 sigs.k8s.io/cloud-provider-azure/pkg/util/vm
 sigs.k8s.io/cloud-provider-azure/pkg/version
-# sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.13.0
-## explicit; go 1.24.6
+# sigs.k8s.io/cloud-provider-azure/pkg/azclient v0.14.3
+## explicit; go 1.25.0
 sigs.k8s.io/cloud-provider-azure/pkg/azclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient
 sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient/mock_accountclient
