@@ -123,6 +123,11 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.allowInlineVolumeKeyAccessWithIdentity`         | Whether allow accessing storage account key using cluster identity for inline volume          | `false`
 | `node.maxUnavailable`                                 | `maxUnavailable` value of driver node daemonset       | `1`
 | `node.livenessProbe.healthPort `                      | health check port for liveness probe                  | `29633` |
+| `nodeDriverRegistrar.healthPort`                        | health check port for node-driver-registrar liveness probe                                                 | `29637`                                                 |
+| `nodeDriverRegistrar.livenessProbe.initialDelaySeconds` | node-driver-registrar liveness probe initialDelaySeconds                                                   | `20`                                                    |
+| `nodeDriverRegistrar.livenessProbe.timeoutSeconds`      | node-driver-registrar liveness probe timeoutSeconds                                                        | `10`                                                    |
+| `nodeDriverRegistrar.livenessProbe.periodSeconds`       | node-driver-registrar liveness probe periodSeconds                                                         | `5`                                                     |
+| `nodeDriverRegistrar.livenessProbe.failureThreshold`    | node-driver-registrar liveness probe failureThreshold                                                      | `2`                                                     |
 | `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
 | `node.mountPermissions`                               | mounted folder permissions (only applies for NFS)                 | `0777`
 | `node.enableBlobfuseProxy`                            | enable blobfuse-proxy on agent node                           | `false`                                                          |

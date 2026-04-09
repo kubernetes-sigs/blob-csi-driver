@@ -102,6 +102,7 @@ spec:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
             - --v=2
+            - --http-endpoint=localhost:29637
           env:
             - name: ADDRESS
               value: /csi/csi.sock
@@ -118,6 +119,19 @@ spec:
             requests:
               cpu: 10m
               memory: 20Mi
+          ports:
+            - name: healthz
+              containerPort: 29637
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              host: localhost
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 20
+            timeoutSeconds: 10
+            periodSeconds: 5
+            failureThreshold: 2
           securityContext:
             capabilities:
               drop:
