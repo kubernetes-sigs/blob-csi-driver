@@ -157,7 +157,7 @@ spec:
             - --csi-address=$(ADDRESS)
             - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
             - --v=2
-            - --http-endpoint=localhost:{{ .Values.nodeDriverRegistrar.healthPort }}
+            - --http-endpoint=localhost:{{ .Values.node.nodeDriverRegistrar.healthPort }}
           env:
             - name: ADDRESS
               value: /csi/csi.sock
@@ -171,17 +171,17 @@ spec:
           resources: {{- toYaml .Values.node.resources.nodeDriverRegistrar | nindent 12 }}
           ports:
             - name: healthz
-              containerPort: {{ .Values.nodeDriverRegistrar.healthPort }}
+              containerPort: {{ .Values.node.nodeDriverRegistrar.healthPort }}
               protocol: TCP
           livenessProbe:
             httpGet:
               host: localhost
               path: /healthz
               port: healthz
-            initialDelaySeconds: {{ .Values.nodeDriverRegistrar.livenessProbe.initialDelaySeconds }}
-            timeoutSeconds: {{ .Values.nodeDriverRegistrar.livenessProbe.timeoutSeconds }}
-            periodSeconds: {{ .Values.nodeDriverRegistrar.livenessProbe.periodSeconds }}
-            failureThreshold: {{ .Values.nodeDriverRegistrar.livenessProbe.failureThreshold }}
+            initialDelaySeconds: {{ .Values.node.nodeDriverRegistrar.livenessProbe.initialDelaySeconds }}
+            timeoutSeconds: {{ .Values.node.nodeDriverRegistrar.livenessProbe.timeoutSeconds }}
+            periodSeconds: {{ .Values.node.nodeDriverRegistrar.livenessProbe.periodSeconds }}
+            failureThreshold: {{ .Values.node.nodeDriverRegistrar.livenessProbe.failureThreshold }}
           securityContext:
             capabilities:
               drop:
