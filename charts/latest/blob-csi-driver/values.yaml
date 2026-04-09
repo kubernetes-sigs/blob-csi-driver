@@ -21,14 +21,6 @@ image:
     tag: v2.1.0
     pullPolicy: IfNotPresent
 
-nodeDriverRegistrar:
-  healthPort: 29637
-  livenessProbe:
-    initialDelaySeconds: 20
-    timeoutSeconds: 10
-    periodSeconds: 5
-    failureThreshold: 2
-
 cloud: AzurePublicCloud
 
 ## Reference to one or more secrets to be used when pulling images
@@ -125,6 +117,13 @@ node:
   metricsPort: 29635
   livenessProbe:
     healthPort: 29633
+  nodeDriverRegistrar:
+    healthPort: 29637
+    livenessProbe:
+      initialDelaySeconds: 20
+      timeoutSeconds: 10
+      periodSeconds: 5
+      failureThreshold: 2
   logLevel: 5
   enableBlobfuseProxy: true
   blobfuseProxy:
