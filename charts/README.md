@@ -100,7 +100,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.livenessProbe.healthPort `                | health check port for liveness probe                   | `29632` |
 | `controller.runOnMaster`                              | run controller on master node                         | `false`                                                          |
 | `controller.runOnControlPlane`                        | run controller on control plane node                                                          |`false`                                                           |
-| `controller.logLevel`                                 | controller driver log level                           | `5`                                                            |
+| `controller.logLevel`                                 | controller driver log level                           | `20`                                                            |
 | `controller.resources.csiProvisioner.limits.memory`   | csi-provisioner memory limits                         | 100Mi                                                          |
 | `controller.resources.csiProvisioner.requests.cpu`    | csi-provisioner cpu requests                   | 10m                                                            |
 | `controller.resources.csiProvisioner.requests.memory` | csi-provisioner memory requests                | 20Mi                                                           |
@@ -123,7 +123,12 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.allowInlineVolumeKeyAccessWithIdentity`         | Whether allow accessing storage account key using cluster identity for inline volume          | `false`
 | `node.maxUnavailable`                                 | `maxUnavailable` value of driver node daemonset       | `1`
 | `node.livenessProbe.healthPort `                      | health check port for liveness probe                  | `29633` |
-| `node.logLevel`                                       | node driver log level                                 | `5`                                                            |
+| `node.nodeDriverRegistrar.healthPort`                        | health check port for node-driver-registrar liveness probe                                                 | `29637`                                                 |
+| `node.nodeDriverRegistrar.livenessProbe.initialDelaySeconds` | node-driver-registrar liveness probe initialDelaySeconds                                                   | `20`                                                    |
+| `node.nodeDriverRegistrar.livenessProbe.timeoutSeconds`      | node-driver-registrar liveness probe timeoutSeconds                                                        | `10`                                                    |
+| `node.nodeDriverRegistrar.livenessProbe.periodSeconds`       | node-driver-registrar liveness probe periodSeconds                                                         | `20`                                                     |
+| `node.nodeDriverRegistrar.livenessProbe.failureThreshold`    | node-driver-registrar liveness probe failureThreshold                                                      | `2`                                                     |
+| `node.logLevel`                                       | node driver log level                                 | `20`                                                            |
 | `node.mountPermissions`                               | mounted folder permissions (only applies for NFS)                 | `0777`
 | `node.enableBlobfuseProxy`                            | enable blobfuse-proxy on agent node                           | `false`                                                          |
 | `node.blobfuseProxy.installBlobfuse`                  | whether blobfuse should be installed on agent node| `true`                                                          |
