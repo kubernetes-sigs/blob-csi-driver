@@ -95,7 +95,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	}
 	var storageAccountType, subsID, resourceGroup, location, account, containerName, containerNamePrefix, protocol, customTags, secretName, secretNamespace, pvcNamespace, tagValueDelimiter string
 	var isHnsEnabled, requireInfraEncryption, enableBlobVersioning, createPrivateEndpoint, enableNfsV3, allowSharedKeyAccess *bool
-	var vnetResourceGroup, vnetName, vnetLinkName, publicNetworkAccess, subnetName, accessTier, networkEndpointType, storageEndpointSuffix, fsGroupChangePolicy, srcAccountName string
+	var vnetResourceGroup, vnetName, vnetLinkName, publicNetworkAccess, subnetName, accessTier, networkEndpointType, storageEndpointSuffix, fsGroupChangePolicy, srcAccountName, privateDNSZoneResourceGroup string
 	var matchTags, useDataPlaneAPI, getLatestAccountKey bool
 	var softDeleteBlobs, softDeleteContainers int32
 	var vnetResourceIDs []string
@@ -213,6 +213,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			accessTier = v
 		case networkEndpointTypeField:
 			networkEndpointType = v
+		case privateDNSZoneResourceGroupField:
+			privateDNSZoneResourceGroup = v
 		case mountPermissionsField:
 			// only do validations here, used in NodeStageVolume, NodePublishVolume
 			if v != "" {
@@ -283,6 +285,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			return nil, status.Errorf(codes.InvalidArgument, "subnetName(%s) can only contain one subnet for private endpoint", subnetName)
 		}
 		createPrivateEndpoint = ptr.To(true)
+	} else {
+		if privateDNSZoneResourceGroup != "" {
+			return nil, status.Errorf(codes.InvalidArgument, "privateDNSZoneResourceGroup(%s) is only supported with private endpoint", privateDNSZoneResourceGroup)
+		}
 	}
 	accountKind := string(armstorage.KindStorageV2)
 	if isNFSProtocol(protocol) {
@@ -364,6 +370,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		SubnetName:                      subnetName,
 		AccessTier:                      accessTier,
 		CreatePrivateEndpoint:           createPrivateEndpoint,
+		PrivateDNSZoneResourceGroup:     privateDNSZoneResourceGroup,
 		StorageType:                     storage.StorageTypeBlob,
 		StorageEndpointSuffix:           storageEndpointSuffix,
 		EnableBlobVersioning:            enableBlobVersioning,
@@ -407,7 +414,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if v, ok := d.volMap.Load(volName); ok {
 			accountName = v.(string)
 		} else {
-			lockKey := fmt.Sprintf("%s%s%s%s%s%v", storageAccountType, accountKind, resourceGroup, location, protocol, ptr.Deref(createPrivateEndpoint, false))
+			lockKey := fmt.Sprintf("%s%s%s%s%s%s%v", storageAccountType, accountKind, resourceGroup, location, protocol, privateDNSZoneResourceGroup, ptr.Deref(createPrivateEndpoint, false))
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(ctx, lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
