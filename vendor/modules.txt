@@ -323,7 +323,7 @@ github.com/kylelemons/godebug/pretty
 github.com/mailru/easyjson/buffer
 github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
-# github.com/moby/spdystream v0.5.0
+# github.com/moby/spdystream v0.5.1
 ## explicit; go 1.13
 github.com/moby/spdystream
 github.com/moby/spdystream/spdy
@@ -1399,7 +1399,7 @@ k8s.io/kubectl/pkg/util/podutils
 ## explicit; go 1.25.0
 k8s.io/kubelet/pkg/apis
 k8s.io/kubelet/pkg/apis/stats/v1alpha1
-# k8s.io/kubernetes v1.35.3
+# k8s.io/kubernetes v1.35.4
 ## explicit; go 1.25.0
 k8s.io/kubernetes/pkg/api/legacyscheme
 k8s.io/kubernetes/pkg/api/service
@@ -1467,7 +1467,7 @@ k8s.io/kubernetes/test/utils
 k8s.io/kubernetes/test/utils/format
 k8s.io/kubernetes/test/utils/image
 k8s.io/kubernetes/test/utils/kubeconfig
-# k8s.io/mount-utils v0.35.3
+# k8s.io/mount-utils v0.35.4
 ## explicit; go 1.25.0
 k8s.io/mount-utils
 # k8s.io/pod-security-admission v0.35.0 => k8s.io/pod-security-admission v0.35.0
