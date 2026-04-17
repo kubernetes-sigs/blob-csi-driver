@@ -423,6 +423,29 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "privateDNSZoneResourceGroup without private endpoint",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				mp := map[string]string{
+					privateDNSZoneResourceGroupField: "dns-rg",
+				}
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				expectedErr := status.Errorf(codes.InvalidArgument, "privateDNSZoneResourceGroup(%s) is only supported with private endpoint", "dns-rg")
+				_, err := d.CreateVolume(context.Background(), req)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("Unexpected error: %v", err)
+				}
+			},
+		},
+		{
 			name: "Update service endpoints failed (protocol = nfs)",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
