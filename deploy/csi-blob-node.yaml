@@ -75,6 +75,8 @@ spec:
               mountPath: /host/usr/local
             - name: host-etc
               mountPath: /host/etc
+            - name: host-opt
+              mountPath: /host/opt
       containers:
         - name: liveness-probe
           volumeMounts:
@@ -235,6 +237,9 @@ spec:
         - name: host-etc
           hostPath:
             path: /etc
+        - name: host-opt
+          hostPath:
+            path: /opt
         - hostPath:
             path: /var/lib/kubelet/plugins/blob.csi.azure.com
             type: DirectoryOrCreate
