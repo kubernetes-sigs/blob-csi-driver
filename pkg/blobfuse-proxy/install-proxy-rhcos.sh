@@ -20,8 +20,11 @@ if [ -z "${CUSTOM_BIN_PATH:-}" ] ; then
   case "${DISTRIBUTION}" in
     "cos")
       BIN_PATH="/home/kubernetes/bin" ;;
-    "gardenlinux" | "flatcar" | "azurecontainerlinux")
+    "gardenlinux" | "flatcar")
       BIN_PATH="/var/bin"
+      mkdir -p /host${BIN_PATH} ;;
+    "azurecontainerlinux")
+      BIN_PATH="/opt/blobcsi/bin"
       mkdir -p /host${BIN_PATH} ;;
     *)
       BIN_PATH=${BIN_PATH:-/usr/local/bin} ;;
@@ -33,7 +36,14 @@ echo "set BIN_PATH to ${BIN_PATH}"
 
 #copy blobfuse2 binary to BIN_PATH/blobfuse2
 updateBlobfuse2="true"
-if [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
+if [ "$DISTRIBUTION" = "azurecontainerlinux" ]; then
+  echo "skip blobfuse2 install for Azure Container Linux (pre-installed)"
+  if [ ! -f "/host/usr/bin/blobfuse2" ]; then
+    echo "ERROR: blobfuse2 not found at /host/usr/bin/blobfuse2 on Azure Container Linux"
+    exit 1
+  fi
+  updateBlobfuse2="false"
+elif [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
   if [ -f "/host${BIN_PATH}/blobfuse2" ];then
     if [ "$DISTRIBUTION" = "flatcar" ] ; then
@@ -101,8 +111,8 @@ if [ "${INSTALL_BLOBFUSE_PROXY}" = "true" ];then
   echo "change from /usr/bin/blobfuse-proxy to ${BIN_PATH}/blobfuse-proxy in blobfuse-proxy.service"
   sed -i "s|/usr/bin/blobfuse-proxy|${BIN_PATH}/blobfuse-proxy|g" /blobfuse-proxy/blobfuse-proxy.service
   if [ "${BIN_PATH}" != "/usr/local/bin" ]; then
-    echo "add \"Environment=PATH=${BIN_PATH}:\$PATH\" in blobfuse-proxy.service."
-    sed -i "/^\\[Service\\]/a Environment=\"PATH=${BIN_PATH}:\$PATH\"" /blobfuse-proxy/blobfuse-proxy.service
+    echo "add \"Environment=PATH=${BIN_PATH}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin\" in blobfuse-proxy.service."
+    sed -i "/^\\[Service\\]/a Environment=\"PATH=${BIN_PATH}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin\"" /blobfuse-proxy/blobfuse-proxy.service
   fi
   if [ -f "/host/etc/systemd/system/blobfuse-proxy.service" ];then
     old=$(sha256sum /host/etc/systemd/system/blobfuse-proxy.service | awk '{print $1}')

@@ -176,6 +176,7 @@ node:
     usr: /usr
     usrLocal: /usr/local
     etc: /etc
+    opt: /opt
   # Additional volumes to be added to the DaemonSet
   additionalVolumes: []
   # - name: custom-config
