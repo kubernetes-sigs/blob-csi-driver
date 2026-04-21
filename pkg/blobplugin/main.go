@@ -52,6 +52,8 @@ var (
 func init() {
 	klog.InitFlags(nil)
 	_ = flag.Set("logtostderr", "true")
+	_ = flag.Set("legacy_stderr_threshold_behavior", "false")
+	_ = flag.Set("stderrthreshold", "INFO")
 	driverOptions.AddFlags()
 }
 
