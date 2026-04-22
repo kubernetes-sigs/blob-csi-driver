@@ -35,6 +35,8 @@ var (
 func main() {
 	klog.InitFlags(nil)
 	_ = flag.Set("logtostderr", "true")
+	_ = flag.Set("legacy_stderr_threshold_behavior", "false")
+	_ = flag.Set("stderrthreshold", "INFO")
 	flag.Parse()
 	proto, addr, err := csicommon.ParseEndpoint(*blobfuseProxyEndpoint)
 	if err != nil {
