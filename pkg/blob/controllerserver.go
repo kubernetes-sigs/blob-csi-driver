@@ -22,7 +22,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"sort"
+	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
@@ -415,7 +415,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if v, ok := d.volMap.Load(volName); ok {
 			accountName = v.(string)
 		} else {
-			lockKey := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s|%s|%v|%v|%v|%v|%v|%v|%v|%s|%v|%d|%d|%s|%s|%s|%s|%v|%v|%s",
+			lockKey := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s|%s|%v|%v|%v|%v|%v|%v|%v|%v|%v|%d|%d|%s|%s|%s|%s|%v|%v|%s",
 				storageAccountType, accountKind, resourceGroup, location, protocol, subsID, accessTier, privateDNSZoneResourceGroup,
 				ptr.Deref(createPrivateEndpoint, false), ptr.Deref(allowBlobPublicAccess, false),
 				ptr.Deref(requireInfraEncryption, false), ptr.Deref(allowSharedKeyAccess, true),
@@ -1068,18 +1068,12 @@ func (d *Driver) generateSASToken(ctx context.Context, accountName, accountKey, 
 
 // serializeTags produces a deterministic string representation of a tags map
 // by sorting keys and joining as "k1=v1,k2=v2".
+// serializeTags produces a deterministic string representation of a tags map.
+// Uses json.Marshal which sorts keys and properly escapes values.
 func serializeTags(tags map[string]string) string {
 	if len(tags) == 0 {
 		return ""
 	}
-	keys := make([]string, 0, len(tags))
-	for k := range tags {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	pairs := make([]string, 0, len(tags))
-	for _, k := range keys {
-		pairs = append(pairs, k+"="+tags[k])
-	}
-	return strings.Join(pairs, ",")
+	b, _ := json.Marshal(tags)
+	return string(b)
 }
