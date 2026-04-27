@@ -2711,7 +2711,7 @@ func TestGetAuthEnvMSIWarningWhenNoIdentityAvailable(t *testing.T) {
 	volumeID := "rg#accountname#containername"
 
 	_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
-	assert.NoError(t, err) // should not error, falls back to IMDS
+	assert.NoError(t, err)                                                           // should not error, falls back to IMDS
 }
 
 func TestGetAuthEnvMSIUppercase(t *testing.T) {
