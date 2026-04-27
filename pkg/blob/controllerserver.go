@@ -415,7 +415,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if v, ok := d.volMap.Load(volName); ok {
 			accountName = v.(string)
 		} else {
-			lockKey := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s|%s|%v|%v|%v|%v|%v|%v|%v|%v|%v|%d|%d|%s|%s|%s|%s|%v|%v|%s",
+			lockKey := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s|%s|%v|%v|%v|%v|%v|%v|%v|%v|%v|%d|%d|%s|%s|%s|%s|%v|%v|%s|%s",
 				storageAccountType, accountKind, resourceGroup, location, protocol, subsID, accessTier, privateDNSZoneResourceGroup,
 				ptr.Deref(createPrivateEndpoint, false), ptr.Deref(allowBlobPublicAccess, false),
 				ptr.Deref(requireInfraEncryption, false), ptr.Deref(allowSharedKeyAccess, true),
@@ -423,7 +423,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 				enableHTTPSTrafficOnly, publicNetworkAccess,
 				ptr.Deref(enableBlobVersioning, false), softDeleteBlobs, softDeleteContainers,
 				vnetResourceGroup, vnetName, vnetLinkName, subnetName,
-				matchTags, serializeTags(tags), storageEndpointSuffix)
+				matchTags, serializeTags(tags), storageEndpointSuffix, srcAccountName)
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(ctx, lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
