@@ -33,7 +33,7 @@ Create a [new storage account and container](https://learn.microsoft.com/en-us/a
 ```bash
 export STORAGE_RESOURCE_GROUP=<your storage account resource group>
 export ACCOUNT=<your storage account name>
-export CONTAINER=<your storage container name>  # optional for dynamic provisioning
+export CONTAINER=<your storage container name>  # required for static provisioning, optional for dynamic
 ```
 
 ### 3. Create a managed identity and assign a role
@@ -207,6 +207,7 @@ spec:
       containerName: $CONTAINER                  # required
       clientID: $USER_ASSIGNED_CLIENT_ID         # required
       resourcegroup: $STORAGE_RESOURCE_GROUP     # optional, needed if account is outside MC_ resource group
+      # mountWithWorkloadIdentityToken: "true"   # uncomment for token-only mode (Preview, v1.27.0+); requires Storage Blob Data Contributor role
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
