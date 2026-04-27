@@ -6,6 +6,23 @@ This guide demonstrates how to use blobfuse mount with a user-assigned managed i
 
 ## Prerequisites
 
+### 0. Set environment variables
+
+```bash
+# Resource group where the managed identity resides
+# (for kubelet identity, this is the node resource group, e.g., MC_myRG_myCluster_eastus)
+export IDENTITY_RESOURCE_GROUP=<identity resource group>
+
+# Name of the managed identity
+export IDENTITY_NAME=<managed identity name>
+
+# Resource group where the storage account resides (may differ from IDENTITY_RESOURCE_GROUP)
+export STORAGE_RESOURCE_GROUP=<storage account resource group>
+
+# Storage account name
+export STORAGE_ACCOUNT_NAME=<storage account name>
+```
+
 ### 1. Assign the `Storage Blob Data Contributor` role to the managed identity
 
 The managed identity must have the **`Storage Blob Data Contributor`** role.
@@ -14,20 +31,20 @@ The managed identity must have the **`Storage Blob Data Contributor`** role.
 
 ```bash
 # Get the principal ID of the managed identity
-mid="$(az identity show -g "$resourcegroup" --name "$identityname" --query principalId -o tsv)"
+mid="$(az identity show -g "$IDENTITY_RESOURCE_GROUP" --name "$IDENTITY_NAME" --query principalId -o tsv)"
 
 # Get the storage account resource ID
-said="$(az storage account show -g "$resourcegroup" --name "$storageaccountname" --query id -o tsv)"
+said="$(az storage account show -g "$STORAGE_RESOURCE_GROUP" --name "$STORAGE_ACCOUNT_NAME" --query id -o tsv)"
 
 # Assign the role on the storage account
 az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$said"
 ```
 
-**For dynamic provisioning** (driver creates the storage account) — assign the role on the **resource group**:
+**For dynamic provisioning** (driver creates the storage account) — assign the role on the **resource group** where the storage account will be created:
 
 ```bash
-mid="$(az identity show -g "$resourcegroup" --name "$identityname" --query principalId -o tsv)"
-rgid="$(az group show -n "$resourcegroup" --query id -o tsv)"
+mid="$(az identity show -g "$IDENTITY_RESOURCE_GROUP" --name "$IDENTITY_NAME" --query principalId -o tsv)"
+rgid="$(az group show -n "$STORAGE_RESOURCE_GROUP" --query id -o tsv)"
 
 az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$rgid"
 ```
@@ -37,7 +54,7 @@ az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data 
 > If you are using the kubelet identity, it is named `{aks-cluster-name}-agentpool` and located in the node resource group.
 
 ```bash
-AzureStorageIdentityClientID=$(az identity show -g "$resourcegroup" --name "$identityname" --query clientId -o tsv)
+AzureStorageIdentityClientID=$(az identity show -g "$IDENTITY_RESOURCE_GROUP" --name "$IDENTITY_NAME" --query clientId -o tsv)
 ```
 
 ---
