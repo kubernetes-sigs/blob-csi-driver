@@ -14,14 +14,16 @@
 
 ## Prerequisites
 
-### 1. Create an AKS cluster with OIDC issuer enabled
+### 1. Create an AKS cluster with OIDC issuer enabled and get credentials
 
 Refer to the [documentation](https://learn.microsoft.com/en-us/azure/aks/use-oidc-issuer#create-an-aks-cluster-with-oidc-issuer) for creating a cluster with the `--enable-oidc-issuer` parameter.
 
 ```bash
 export RESOURCE_GROUP=<your resource group name>
 export CLUSTER_NAME=<your cluster name>
-export REGION=<your region>
+
+# Get cluster credentials for kubectl
+az aks get-credentials --resource-group $RESOURCE_GROUP --name $CLUSTER_NAME
 ```
 
 ### 2. Bring your own storage account
@@ -43,22 +45,23 @@ export UAMI=<your managed identity name>
 az identity create --name $UAMI --resource-group $RESOURCE_GROUP
 
 export USER_ASSIGNED_CLIENT_ID="$(az identity show -g $RESOURCE_GROUP --name $UAMI --query 'clientId' -o tsv)"
-export IDENTITY_TENANT=$(az aks show --name $CLUSTER_NAME --resource-group $RESOURCE_GROUP --query identity.tenantId -o tsv)
 export ACCOUNT_SCOPE=$(az storage account show --name $ACCOUNT --query id -o tsv)
 ```
 
 Choose **one** of the following role assignments:
 
-| Option | Role | Use Case |
-|--------|------|----------|
-| **Option 1** (default) | `Storage Account Contributor` | Retrieves account key for mount |
-| **Option 2** (token-only) | `Storage Blob Data Contributor` | Mounts using workload identity token only (Preview, v1.27.0+) |
+| Mode | Role | Use Case |
+|------|------|----------|
+| **Account-key mode** (default) | `Storage Account Contributor` | Retrieves account key for mount |
+| **Token-only mode** (Preview) | `Storage Blob Data Contributor` | Mounts using workload identity token only (v1.27.0+) |
 
+**Account-key mode** (default):
 ```bash
-# Option 1: account key based (default)
 az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
+```
 
-# Option 2: workload identity token only (Preview)
+**Token-only mode** (Preview, v1.27.0+):
+```bash
 az role assignment create --role "Storage Blob Data Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
 
@@ -94,11 +97,13 @@ az identity federated-credential create --name $FEDERATED_IDENTITY_NAME \
 
 ---
 
-## Option 1: Dynamic Provisioning with StorageClass
+## Dynamic Provisioning with StorageClass
 
 > The CSI driver control plane identity must have the **`Storage Account Contributor`** role on the storage account (or resource group if the account is created by the driver).
 >
 > AKS cluster control plane identity is assigned this role on the node resource group by default.
+
+> **Note:** The example below uses `mountWithWorkloadIdentityToken: "true"` (token-only mode). If you chose this mode, make sure you assigned the `Storage Blob Data Contributor` role in step 3. If you prefer account-key mode (default), remove the `mountWithWorkloadIdentityToken` line.
 
 ```yaml
 cat <<EOF | kubectl apply -f -
@@ -111,7 +116,7 @@ parameters:
   storageaccount: $ACCOUNT                    # required
   clientID: $USER_ASSIGNED_CLIENT_ID          # required (for mount auth only)
   resourcegroup: $STORAGE_RESOURCE_GROUP      # optional, needed if account is outside MC_ resource group
-  mountWithWorkloadIdentityToken: "true"      # only supported from v1.27.0
+  mountWithWorkloadIdentityToken: "true"      # token-only mode (Preview, v1.27.0+); remove for account-key mode
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 allowVolumeExpansion: true
@@ -173,7 +178,7 @@ EOF
 
 ---
 
-## Option 2: Static Provisioning with PersistentVolume
+## Static Provisioning with PersistentVolume
 
 ```yaml
 cat <<EOF | kubectl apply -f -
