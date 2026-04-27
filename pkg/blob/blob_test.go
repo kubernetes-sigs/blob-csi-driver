@@ -2710,7 +2710,7 @@ func TestGetAuthEnvMSIErrorWhenNoIdentityAvailable(t *testing.T) {
 	}
 	volumeID := "rg#accountname#containername"
 
-	_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+	_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no identity client ID is provided and kubelet identity is not available")
 }
