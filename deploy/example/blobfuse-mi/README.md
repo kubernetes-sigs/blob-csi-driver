@@ -1,42 +1,61 @@
-# Mount Azure blob storage with managed identity
+# Mount Azure Blob Storage with Managed Identity
 
-This article demonstrates the process of utilizing blobfuse mount with user-assigned managed identity.
-> you could leverage the built-in user assigned managed identity(kubelet identity) bound to the AKS agent node pool(with naming rule [`AKS Cluster Name-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)), if you have created your own managed identity, make sure the managed identity is bound to the agent node pool.
+This guide demonstrates how to use blobfuse mount with a user-assigned managed identity.
 
-## Before you begin
- - Make sure the managed identity assigned the `Storage Blob Data Contributor` role for the storage account
- > here is an example that uses Azure CLI commands to assign the `Storage Blob Data Contributor` role to the managed identity for the storage account. If the storage account is created by the driver(dynamic provisioning), then you need to grant `Storage Blob Data Contributor` role on the resource group where the storage account is located
+> **Tip:** You can use the built-in kubelet identity bound to the AKS agent node pool (named [`{AKS-Cluster-Name}-agentpool`](https://docs.microsoft.com/en-us/azure/aks/use-managed-identity#summary-of-managed-identities)). If you use your own managed identity, make sure it is assigned to the agent node pool.
+
+## Prerequisites
+
+### 1. Assign the `Storage Blob Data Contributor` role to the managed identity
+
+The managed identity must have the **`Storage Blob Data Contributor`** role on the storage account (for static provisioning / bring-your-own storage account) or on the resource group (for dynamic provisioning where the driver creates the storage account).
 
 ```bash
+# Get the principal ID of the managed identity
 mid="$(az identity list -g "$resourcegroup" --query "[?name == 'managedIdentityName'].principalId" -o tsv)"
+
+# Get the storage account resource ID
 said="$(az storage account list -g "$resourcegroup" --query "[?name == '$storageaccountname'].id" -o tsv)"
+
+# Assign the role
 az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$said"
 ```
 
- - Retrieve the clientID of managed identity.
- > If you are using kubelet identity, the identity will be named `{aks-cluster-name}-agentpool` and located in the node resource group.
-```bash
-AzureStorageIdentityClientID=`az identity list -g "$resourcegroup" --query "[?name == '$identityname'].clientId" -o tsv`
-```
-    
-## Dynamic Provisioning
-- Ensure that the identity of your CSI driver control plane is assigned the `Storage Account Contributor role` for the storage account.
- > if the storage account is created by the driver, then you need to grant `Storage Account Contributor` role to the resource group where the storage account is located.
- > 
- > AKS cluster control plane identity is assigned the `Storage Account Contributor role` on the node resource group for the storage account by default.
+### 2. Retrieve the client ID of the managed identity
 
-1. Create a storage class
-    ```yml
+> If you are using the kubelet identity, it is named `{aks-cluster-name}-agentpool` and located in the node resource group.
+
+```bash
+AzureStorageIdentityClientID=$(az identity list -g "$resourcegroup" --query "[?name == '$identityname'].clientId" -o tsv)
+```
+
+---
+
+## Dynamic Provisioning
+
+> The driver creates the storage account and container automatically.
+
+### Additional role requirement
+
+The CSI driver control plane identity must have the **`Storage Account Contributor`** role on the resource group where the storage account is located.
+
+> AKS cluster control plane identity is assigned the `Storage Account Contributor` role on the node resource group by default.
+
+### Steps
+
+1. Create a StorageClass:
+
+    ```yaml
     apiVersion: storage.k8s.io/v1
     kind: StorageClass
     metadata:
       name: blob-fuse
     provisioner: blob.csi.azure.com
     parameters:
-      skuName: Premium_LRS 
+      skuName: Premium_LRS
       protocol: fuse
-      resourceGroup: EXISTING_RESOURCE_GROUP_NAME   # optional, node resource group by default if it's not provided
-      storageAccount: EXISTING_STORAGE_ACCOUNT_NAME # optional, a new account will be created if it's not provided
+      resourceGroup: EXISTING_RESOURCE_GROUP_NAME    # optional, node resource group by default
+      storageAccount: EXISTING_STORAGE_ACCOUNT_NAME  # optional, a new account will be created if not provided
       AzureStorageAuthType: MSI
       AzureStorageIdentityClientID: "xxxxx-xxxx-xxx-xxx-xxxxxxx"
     reclaimPolicy: Delete
@@ -54,26 +73,23 @@ AzureStorageIdentityClientID=`az identity list -g "$resourcegroup" --query "[?na
       - --cache-size-mb=1000  # Default will be 80% of available memory, eviction will happen beyond that.
     ```
 
-1. create a statefulset with volume mount
-```bash
-kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
-```
+2. Create a StatefulSet with volume mount:
+
+    ```bash
+    kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/statefulset.yaml
+    ```
+
+---
 
 ## Static Provisioning
 
-> bring your own storage account
+> Bring your own storage account and container.
 
-### Prerequisites
-- The managed identity must have the **`Storage Blob Data Contributor`** role assigned on the storage account.
+### Steps
 
-```bash
-mid="$(az identity list -g "$resourcegroup" --query "[?name == 'managedIdentityName'].principalId" -o tsv)"
-said="$(az storage account list -g "$resourcegroup" --query "[?name == '$storageaccountname'].id" -o tsv)"
-az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$said"
-```
+1. Create a PV with the storage account name and managed identity client ID:
 
-1. create PV with specified account name and AzureStorageIdentityClientID
-    ```yml
+    ```yaml
     apiVersion: v1
     kind: PersistentVolume
     metadata:
@@ -83,7 +99,7 @@ az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data 
         storage: 100Gi
       accessModes:
         - ReadWriteMany
-      persistentVolumeReclaimPolicy: Retain  # If set as "Delete" container would be removed after pvc deletion
+      persistentVolumeReclaimPolicy: Retain  # "Delete" removes the container after PVC deletion
       storageClassName: blob-fuse
       mountOptions:
         - -o allow_other
@@ -94,13 +110,14 @@ az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data 
         volumeHandle: "{resource-group-name}#{account-name}#{container-name}"
         volumeAttributes:
           protocol: fuse
-          resourceGroup: EXISTING_RESOURCE_GROUP_NAME   # optional, node resource group if it's not provided
+          resourceGroup: EXISTING_RESOURCE_GROUP_NAME    # optional, node resource group if not provided
           storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
           AzureStorageAuthType: MSI
           AzureStorageIdentityClientID: "xxxxx-xxxx-xxx-xxx-xxxxxxx"
     ```
 
-1. create a pvc and a deployment with volume mount
-    ```console
+2. Create a PVC and a Deployment with volume mount:
+
+    ```bash
     kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/deploy/example/deployment.yaml
     ```
