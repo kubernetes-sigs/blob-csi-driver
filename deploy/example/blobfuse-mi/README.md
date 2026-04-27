@@ -63,6 +63,15 @@ kubectl create -f https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-dri
 
 > bring your own storage account
 
+### Prerequisites
+- The managed identity must have the **`Storage Blob Data Contributor`** role assigned on the storage account.
+
+```bash
+mid="$(az identity list -g "$resourcegroup" --query "[?name == 'managedIdentityName'].principalId" -o tsv)"
+said="$(az storage account list -g "$resourcegroup" --query "[?name == '$storageaccountname'].id" -o tsv)"
+az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$said"
+```
+
 1. create PV with specified account name and AzureStorageIdentityClientID
     ```yml
     apiVersion: v1
