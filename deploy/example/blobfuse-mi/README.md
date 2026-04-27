@@ -8,17 +8,28 @@ This guide demonstrates how to use blobfuse mount with a user-assigned managed i
 
 ### 1. Assign the `Storage Blob Data Contributor` role to the managed identity
 
-The managed identity must have the **`Storage Blob Data Contributor`** role on the storage account (for static provisioning / bring-your-own storage account) or on the resource group (for dynamic provisioning where the driver creates the storage account).
+The managed identity must have the **`Storage Blob Data Contributor`** role.
+
+**For static provisioning** (bring your own storage account) — assign the role on the **storage account**:
 
 ```bash
 # Get the principal ID of the managed identity
-mid="$(az identity list -g "$resourcegroup" --query "[?name == 'managedIdentityName'].principalId" -o tsv)"
+mid="$(az identity show -g "$resourcegroup" --name "$identityname" --query principalId -o tsv)"
 
 # Get the storage account resource ID
-said="$(az storage account list -g "$resourcegroup" --query "[?name == '$storageaccountname'].id" -o tsv)"
+said="$(az storage account show -g "$resourcegroup" --name "$storageaccountname" --query id -o tsv)"
 
-# Assign the role
+# Assign the role on the storage account
 az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$said"
+```
+
+**For dynamic provisioning** (driver creates the storage account) — assign the role on the **resource group**:
+
+```bash
+mid="$(az identity show -g "$resourcegroup" --name "$identityname" --query principalId -o tsv)"
+rgid="$(az group show -n "$resourcegroup" --query id -o tsv)"
+
+az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$rgid"
 ```
 
 ### 2. Retrieve the client ID of the managed identity
@@ -26,7 +37,7 @@ az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data 
 > If you are using the kubelet identity, it is named `{aks-cluster-name}-agentpool` and located in the node resource group.
 
 ```bash
-AzureStorageIdentityClientID=$(az identity list -g "$resourcegroup" --query "[?name == '$identityname'].clientId" -o tsv)
+AzureStorageIdentityClientID=$(az identity show -g "$resourcegroup" --name "$identityname" --query clientId -o tsv)
 ```
 
 ---
