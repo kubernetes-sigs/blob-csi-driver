@@ -18,6 +18,7 @@ package blob
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -414,7 +415,15 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		if v, ok := d.volMap.Load(volName); ok {
 			accountName = v.(string)
 		} else {
-			lockKey := fmt.Sprintf("%s%s%s%s%s%s%v", storageAccountType, accountKind, resourceGroup, location, protocol, privateDNSZoneResourceGroup, ptr.Deref(createPrivateEndpoint, false))
+			lockKey := fmt.Sprintf("%s|%s|%s|%s|%s|%s|%s|%s|%v|%v|%v|%v|%v|%v|%v|%v|%v|%d|%d|%s|%s|%s|%s|%v|%v|%s|%s",
+				storageAccountType, accountKind, resourceGroup, location, protocol, subsID, accessTier, privateDNSZoneResourceGroup,
+				ptr.Deref(createPrivateEndpoint, false), ptr.Deref(allowBlobPublicAccess, false),
+				ptr.Deref(requireInfraEncryption, false), ptr.Deref(allowSharedKeyAccess, true),
+				ptr.Deref(isHnsEnabled, false), ptr.Deref(enableNfsV3, false),
+				enableHTTPSTrafficOnly, publicNetworkAccess,
+				ptr.Deref(enableBlobVersioning, false), softDeleteBlobs, softDeleteContainers,
+				vnetResourceGroup, vnetName, vnetLinkName, subnetName,
+				matchTags, serializeTags(tags), storageEndpointSuffix, srcAccountName)
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(ctx, lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
@@ -1055,4 +1064,19 @@ func (d *Driver) generateSASToken(ctx context.Context, accountName, accountKey, 
 	sasToken := "?" + u.RawQuery
 	d.azcopySasTokenCache.Set(accountName, sasToken)
 	return sasToken, nil
+}
+
+// serializeTags returns a deterministic JSON string for a tags map.
+// json.Marshal sorts map keys and escapes special characters in values.
+func serializeTags(tags map[string]string) string {
+	if len(tags) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(tags)
+	if err != nil {
+		// json.Marshal on map[string]string should never fail,
+		// but return empty string rather than non-deterministic output
+		return ""
+	}
+	return string(b)
 }
