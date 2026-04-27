@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -422,7 +423,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 				enableHTTPSTrafficOnly, publicNetworkAccess,
 				ptr.Deref(enableBlobVersioning, false), softDeleteBlobs, softDeleteContainers,
 				vnetResourceGroup, vnetName, vnetLinkName, subnetName,
-				matchTags, tags, storageEndpointSuffix)
+				matchTags, serializeTags(tags), storageEndpointSuffix)
 			// search in cache first
 			cache, err := d.accountSearchCache.Get(ctx, lockKey, azcache.CacheReadTypeDefault)
 			if err != nil {
@@ -1063,4 +1064,22 @@ func (d *Driver) generateSASToken(ctx context.Context, accountName, accountKey, 
 	sasToken := "?" + u.RawQuery
 	d.azcopySasTokenCache.Set(accountName, sasToken)
 	return sasToken, nil
+}
+
+// serializeTags produces a deterministic string representation of a tags map
+// by sorting keys and joining as "k1=v1,k2=v2".
+func serializeTags(tags map[string]string) string {
+	if len(tags) == 0 {
+		return ""
+	}
+	keys := make([]string, 0, len(tags))
+	for k := range tags {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	pairs := make([]string, 0, len(tags))
+	for _, k := range keys {
+		pairs = append(pairs, k+"="+tags[k])
+	}
+	return strings.Join(pairs, ",")
 }
