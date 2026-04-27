@@ -1066,8 +1066,6 @@ func (d *Driver) generateSASToken(ctx context.Context, accountName, accountKey, 
 	return sasToken, nil
 }
 
-// serializeTags produces a deterministic string representation of a tags map
-// by sorting keys and joining as "k1=v1,k2=v2".
 // serializeTags returns a deterministic JSON string for a tags map.
 // json.Marshal sorts map keys and escapes special characters in values.
 func serializeTags(tags map[string]string) string {
