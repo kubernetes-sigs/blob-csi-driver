@@ -764,10 +764,14 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 				break
 			}
 		}
-		if !containsIdentityEnv && d.cloud != nil && d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID != "" {
-			klog.V(2).Infof("azureStorageAuthType is set to %s, add AZURE_STORAGE_IDENTITY_CLIENT_ID(%s) into authEnv",
-				azureStorageAuthType, d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID)
-			authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_CLIENT_ID="+d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID)
+		if !containsIdentityEnv {
+			if d.cloud != nil && d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID != "" {
+				klog.V(2).Infof("MSI auth: AzureStorageIdentityClientID not specified, default to kubelet identity (%s)",
+					d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID)
+				authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_CLIENT_ID="+d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID)
+			} else {
+				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("MSI auth is specified but no identity client ID is provided and kubelet identity is not available, please specify AzureStorageIdentityClientID")
+			}
 		}
 	}
 
