@@ -112,6 +112,7 @@ The CSI driver control plane identity must have the **`Storage Account Contribut
           protocol: fuse
           resourceGroup: EXISTING_RESOURCE_GROUP_NAME    # optional, node resource group if not provided
           storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
+          containerName: EXISTING_CONTAINER_NAME
           AzureStorageAuthType: MSI
           AzureStorageIdentityClientID: "xxxxx-xxxx-xxx-xxx-xxxxxxx"
     ```
