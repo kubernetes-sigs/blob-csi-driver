@@ -754,14 +754,18 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		authEnv = append(authEnv, "AZURE_STORAGE_SPN_TENANT_ID="+storageSPNTenantID)
 	}
 
-	if azureStorageAuthType == storageAuthTypeMSI {
-		// check whether authEnv contains AZURE_STORAGE_IDENTITY_ prefix
+	if strings.EqualFold(azureStorageAuthType, storageAuthTypeMSI) {
+		// check whether authEnv contains a non-empty AZURE_STORAGE_IDENTITY_ value
 		containsIdentityEnv := false
 		for _, env := range authEnv {
 			if strings.HasPrefix(env, "AZURE_STORAGE_IDENTITY_") {
-				klog.V(2).Infof("AZURE_STORAGE_IDENTITY_ is already set in authEnv, skip setting it again")
-				containsIdentityEnv = true
-				break
+				// skip empty values like "AZURE_STORAGE_IDENTITY_CLIENT_ID="
+				parts := strings.SplitN(env, "=", 2)
+				if len(parts) == 2 && parts[1] != "" {
+					klog.V(2).Infof("AZURE_STORAGE_IDENTITY_ is already set in authEnv, skip setting it again")
+					containsIdentityEnv = true
+					break
+				}
 			}
 		}
 		if !containsIdentityEnv {
@@ -770,7 +774,7 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 					d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID)
 				authEnv = append(authEnv, "AZURE_STORAGE_IDENTITY_CLIENT_ID="+d.cloud.Config.AzureAuthConfig.UserAssignedIdentityID)
 			} else {
-				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("MSI auth is specified but no identity client ID is provided and kubelet identity is not available, please specify AzureStorageIdentityClientID")
+				klog.Warningf("MSI auth: no identity client ID provided and kubelet identity not available, MSI/IMDS will be used as fallback")
 			}
 		}
 	}
