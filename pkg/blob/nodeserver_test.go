@@ -167,6 +167,7 @@ func TestNodePublishVolume(t *testing.T) {
 		req         *csi.NodePublishVolumeRequest
 		expectedErr error
 		cleanup     func(*Driver)
+		postCheck   func(*testing.T, *csi.NodePublishVolumeRequest)
 	}{
 		{
 			desc:        "Volume capabilities missing",
@@ -304,6 +305,14 @@ func TestNodePublishVolume(t *testing.T) {
 				},
 			},
 			expectedErr: nil,
+			postCheck: func(t *testing.T, req *csi.NodePublishVolumeRequest) {
+				if sa := req.VolumeContext["storageaccount"]; sa != "teststorageaccount" {
+					t.Errorf("expected storageaccount to be preserved as 'teststorageaccount', got '%s'", sa)
+				}
+				if v := req.VolumeContext["getaccountkeyfromsecret"]; v == "true" {
+					t.Errorf("expected getaccountkeyfromsecret to NOT be forced for WI ephemeral volume, but got 'true'")
+				}
+			},
 		},
 		{
 			desc: "Volume already mounted",
@@ -396,6 +405,9 @@ func TestNodePublishVolume(t *testing.T) {
 
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("Desc: %s - Unexpected error: %v - Expected: %v", test.desc, err, test.expectedErr)
+		}
+		if test.postCheck != nil {
+			test.postCheck(t, test.req)
 		}
 		if test.cleanup != nil {
 			test.cleanup(d)
