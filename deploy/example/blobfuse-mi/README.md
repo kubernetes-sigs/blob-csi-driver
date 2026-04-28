@@ -61,7 +61,7 @@ AzureStorageIdentityClientID=$(az identity show -g "$IDENTITY_RESOURCE_GROUP" --
 
 ## Dynamic Provisioning
 
-> The driver creates the storage account and container automatically.
+> The driver creates the container automatically. If `storageAccount` is not specified in the StorageClass, the driver also creates a new storage account.
 
 ### Additional role requirement
 
@@ -135,6 +135,7 @@ The CSI driver control plane identity must have the **`Storage Account Contribut
       csi:
         driver: blob.csi.azure.com
         # make sure this volumeid is unique in the cluster
+        # Note: the container name in volumeHandle must match containerName in volumeAttributes
         volumeHandle: "{resource-group-name}#{account-name}#{container-name}"
         volumeAttributes:
           protocol: fuse
