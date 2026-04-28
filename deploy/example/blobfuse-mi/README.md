@@ -136,7 +136,7 @@ The CSI driver control plane identity must have the **`Storage Account Contribut
         - --file-cache-timeout-in-seconds=120
       csi:
         driver: blob.csi.azure.com
-        # make sure this volumeid is unique in the cluster
+        # make sure this volumeHandle is unique in the cluster
         # Note: the container name in volumeHandle must match containerName in volumeAttributes
         volumeHandle: "{resource-group-name}#{account-name}#{container-name}"
         volumeAttributes:
