@@ -285,6 +285,28 @@ func TestNodePublishVolume(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			desc: "Valid request with ephemeral volume and workload identity should preserve storageAccount",
+			setup: func(d *Driver) {
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					"csi.storage.k8s.io/ephemeral":            "true",
+					"csi.storage.k8s.io/pod.namespace":        "test-namespace",
+					"csi.storage.k8s.io/serviceAccount.tokens": `{"api://AzureADTokenExchange":{"token":"fake-token","expirationTimestamp":"2026-01-01T00:00:00Z"}}`,
+					"containername":                           "test-container",
+					"storageaccount":                          "teststorageaccount",
+					"clientid":                                "test-client-id",
+				},
+			},
+			expectedErr: nil,
+		},
+		{
 			desc: "Volume already mounted",
 			setup: func(_ *Driver) {
 				// Create the directory and ensure it's seen as already mounted
