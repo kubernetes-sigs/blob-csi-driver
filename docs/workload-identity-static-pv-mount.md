@@ -7,7 +7,7 @@
 - **NFS mount is not supported** — NFS does not require credentials during mount, so workload identity is not applicable.
 - By default, this feature retrieves the storage account key using federated identity credentials.
 - **Mount with workload identity token only (Preview):** Supported from v1.27.0. To enable:
-  - Set `mountWithWorkloadIdentityToken: "true"` in `parameters` of the StorageClass or PersistentVolume
+  - Set `mountWithWorkloadIdentityToken: "true"` in `parameters` of the StorageClass or `volumeAttributes` of the PersistentVolume
   - Grant **`Storage Blob Data Contributor`** role (instead of `Storage Account Contributor`) to the managed identity
 
 ---
@@ -45,7 +45,7 @@ export UAMI=<your managed identity name>
 az identity create --name $UAMI --resource-group $RESOURCE_GROUP
 
 export USER_ASSIGNED_CLIENT_ID="$(az identity show -g $RESOURCE_GROUP --name $UAMI --query 'clientId' -o tsv)"
-export ACCOUNT_SCOPE=$(az storage account show --name $ACCOUNT --query id -o tsv)
+export ACCOUNT_SCOPE=$(az storage account show --name $ACCOUNT --resource-group $STORAGE_RESOURCE_GROUP --query id -o tsv)
 ```
 
 Choose **one** of the following role assignments:
