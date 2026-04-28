@@ -115,7 +115,7 @@ The CSI driver control plane identity must have the **`Storage Account Contribut
 
 ### Steps
 
-1. Create a PV with the storage account name and managed identity client ID:
+1. Create a PV with the storage account name, container name, and managed identity client ID:
 
     ```yaml
     apiVersion: v1
