@@ -6,7 +6,7 @@ This guide demonstrates how to use blobfuse mount with a user-assigned managed i
 
 ## Prerequisites
 
-### 0. Set environment variables
+### 1. Set environment variables
 
 ```bash
 # Resource group where the managed identity resides
@@ -23,7 +23,7 @@ export STORAGE_RESOURCE_GROUP=<storage account resource group>
 export STORAGE_ACCOUNT_NAME=<storage account name>
 ```
 
-### 1. Assign the `Storage Blob Data Contributor` role to the managed identity
+### 2. Assign the `Storage Blob Data Contributor` role to the managed identity
 
 The managed identity must have the **`Storage Blob Data Contributor`** role.
 
@@ -49,7 +49,7 @@ rgid="$(az group show -n "$STORAGE_RESOURCE_GROUP" --query id -o tsv)"
 az role assignment create --assignee-object-id "$mid" --role "Storage Blob Data Contributor" --scope "$rgid"
 ```
 
-### 2. Retrieve the client ID of the managed identity
+### 3. Retrieve the client ID of the managed identity
 
 > If you are using the kubelet identity, it is named `{aks-cluster-name}-agentpool` and located in the node resource group.
 
@@ -65,7 +65,7 @@ AzureStorageIdentityClientID=$(az identity show -g "$IDENTITY_RESOURCE_GROUP" --
 
 ### Additional role requirement
 
-The CSI driver control plane identity must have the **`Storage Account Contributor`** role on the resource group where the storage account is located.
+The CSI driver control plane identity must have the **`Storage Account Contributor`** role on the storage account (or on the resource group if the driver creates the storage account).
 
 > AKS cluster control plane identity is assigned the `Storage Account Contributor` role on the node resource group by default.
 
@@ -112,6 +112,8 @@ The CSI driver control plane identity must have the **`Storage Account Contribut
 ## Static Provisioning
 
 > Bring your own storage account and container.
+
+> **Prerequisite:** The managed identity must have the **`Storage Blob Data Contributor`** role on the storage account (see [step 2 above](#2-assign-the-storage-blob-data-contributor-role-to-the-managed-identity)).
 
 ### Steps
 
