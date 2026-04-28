@@ -46,6 +46,17 @@ const (
 	BlobfuseV2
 )
 
+func (v BlobfuseVersion) String() string {
+	switch v {
+	case BlobfuseV1:
+		return "v1"
+	case BlobfuseV2:
+		return "v2"
+	default:
+		return fmt.Sprintf("unknown(%d)", int(v))
+	}
+}
+
 type MountServer struct {
 	blobfuseVersion BlobfuseVersion
 	mount_azure_blob.UnimplementedMountServiceServer
@@ -67,11 +78,15 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 	args := req.GetMountArgs()
 	authEnv := req.GetAuthEnv()
 	protocol := req.GetProtocol()
-	klog.V(2).Infof("received mount request: protocol: %s, server default blobfuseVersion: %v, mount args %v \n", protocol, server.blobfuseVersion, args)
+	klog.V(2).Infof("received mount request: protocol: %s, server default blobfuseVersion: %s, mount args %v \n", protocol, server.blobfuseVersion, args)
 
 	var cmd *exec.Cmd
 	var result mount_azure_blob.MountAzureBlobResponse
 	if protocol == blob.Fuse2 || server.blobfuseVersion == BlobfuseV2 {
+		useV2Reason := "server default"
+		if protocol == blob.Fuse2 {
+			useV2Reason = fmt.Sprintf("protocol=%s", protocol)
+		}
 		args = "mount " + args
 		// add this arg for blobfuse2 to solve the issue:
 		// https://github.com/Azure/azure-storage-fuse/issues/1015
@@ -86,11 +101,11 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 		// Adding telemetry tag to know that blob is been mounted through AKS CSI Driver
 		args = addTelemetryTagToArgs(args)
 		args = util.TrimDuplicatedSpace(args)
-		klog.V(2).Infof("mount with v2, protocol: %s, args: %s", protocol, args)
+		klog.V(2).Infof("mount with blobfuse2 (reason: %s), args: %s", useV2Reason, args)
 		cmd = server.exec("blobfuse2", strings.Split(args, " ")...)
 	} else {
 		args = util.TrimDuplicatedSpace(args)
-		klog.V(2).Infof("mount with v1, protocol: %s, args: %s", protocol, args)
+		klog.V(2).Infof("mount with blobfuse (v1), args: %s", args)
 		cmd = server.exec("blobfuse", strings.Split(args, " ")...)
 	}
 
