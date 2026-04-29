@@ -167,6 +167,7 @@ func TestNodePublishVolume(t *testing.T) {
 		req         *csi.NodePublishVolumeRequest
 		expectedErr error
 		cleanup     func(*Driver)
+		postCheck   func(*testing.T, *csi.NodePublishVolumeRequest)
 	}{
 		{
 			desc:        "Volume capabilities missing",
@@ -285,6 +286,65 @@ func TestNodePublishVolume(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			desc: "Valid request with ephemeral volume and workload identity (clientID) should preserve storageAccount",
+			setup: func(d *Driver) {
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					"csi.storage.k8s.io/ephemeral":     "true",
+					"csi.storage.k8s.io/pod.namespace": "test-namespace",
+					containerNameField:                 "test-container",
+					storageAccountField:                "teststorageaccount",
+					clientIDField:                      "test-client-id",
+				},
+			},
+			expectedErr: nil,
+			postCheck: func(t *testing.T, req *csi.NodePublishVolumeRequest) {
+				if sa := req.VolumeContext[storageAccountField]; sa != "teststorageaccount" {
+					t.Errorf("expected storageaccount to be preserved as 'teststorageaccount', got '%s'", sa)
+				}
+				if v := req.VolumeContext[getAccountKeyFromSecretField]; v == trueValue {
+					t.Errorf("expected getaccountkeyfromsecret to NOT be forced for WI ephemeral volume, but got 'true'")
+				}
+			},
+		},
+		{
+			desc: "Valid request with ephemeral volume and mountWithWorkloadIdentityToken should preserve storageAccount",
+			setup: func(d *Driver) {
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					"csi.storage.k8s.io/ephemeral":     "true",
+					"csi.storage.k8s.io/pod.namespace": "test-namespace",
+					containerNameField:                 "test-container",
+					storageAccountField:                "teststorageaccount",
+					clientIDField:                      "test-client-id",
+					mountWithWITokenField:              trueValue,
+				},
+			},
+			expectedErr: nil,
+			postCheck: func(t *testing.T, req *csi.NodePublishVolumeRequest) {
+				if sa := req.VolumeContext[storageAccountField]; sa != "teststorageaccount" {
+					t.Errorf("expected storageaccount to be preserved as 'teststorageaccount', got '%s'", sa)
+				}
+				if v := req.VolumeContext[getAccountKeyFromSecretField]; v == trueValue {
+					t.Errorf("expected getaccountkeyfromsecret to NOT be forced for WI ephemeral volume, but got 'true'")
+				}
+			},
+		},
+		{
 			desc: "Volume already mounted",
 			setup: func(_ *Driver) {
 				// Create the directory and ensure it's seen as already mounted
@@ -375,6 +435,9 @@ func TestNodePublishVolume(t *testing.T) {
 
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("Desc: %s - Unexpected error: %v - Expected: %v", test.desc, err, test.expectedErr)
+		}
+		if test.postCheck != nil {
+			test.postCheck(t, test.req)
 		}
 		if test.cleanup != nil {
 			test.cleanup(d)
