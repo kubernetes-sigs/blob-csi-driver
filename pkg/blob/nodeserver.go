@@ -95,7 +95,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		// ephemeral volume
 		if strings.EqualFold(context[ephemeralField], trueValue) {
 			setKeyValueInMap(context, secretNamespaceField, context[podNamespaceField])
-			if !d.allowInlineVolumeKeyAccessWithIdentity {
+			if !d.allowInlineVolumeKeyAccessWithIdentity && !useWorkloadIdentity(context) {
 				// only get storage account from secret
 				setKeyValueInMap(context, getAccountKeyFromSecretField, trueValue)
 				setKeyValueInMap(context, storageAccountField, "")
