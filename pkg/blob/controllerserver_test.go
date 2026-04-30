@@ -723,7 +723,7 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud.SubscriptionID = "subID"
 
 				mp := make(map[string]string)
-				mp[protocolField] = "fuse"
+				mp[protocolField] = "nfs"
 				mp[skuNameField] = "unit-test"
 				mp[storageAccountTypeField] = "unit-test"
 				mp[locationField] = "unit-test"
@@ -742,13 +742,12 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				// Should NOT get "storeAccountKey is not supported" error because
-				// storageAuthType=MSI implies storeAccountKey=false
+				// storageAuthType=MSI implies storeAccountKey=false.
+				// With NFS protocol, it will fail later with "networkClientFactory is nil".
 				_, err := d.CreateVolume(context.Background(), req)
-				if err != nil {
-					invalidArgErr := status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
-					if reflect.DeepEqual(err, invalidArgErr) {
-						t.Errorf("storageAuthType=MSI should have disabled storeAccountKey, but got: %v", err)
-					}
+				invalidArgErr := status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
+				if reflect.DeepEqual(err, invalidArgErr) {
+					t.Errorf("storageAuthType=MSI should have disabled storeAccountKey, but got: %v", err)
 				}
 			},
 		},
@@ -760,7 +759,7 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud.SubscriptionID = "subID"
 
 				mp := make(map[string]string)
-				mp[protocolField] = "fuse"
+				mp[protocolField] = "nfs"
 				mp[skuNameField] = "unit-test"
 				mp[storageAccountTypeField] = "unit-test"
 				mp[locationField] = "unit-test"
@@ -779,13 +778,12 @@ func TestCreateVolume(t *testing.T) {
 				}
 
 				// Should NOT get "storeAccountKey is not supported" error because
-				// mountWithWorkloadIdentityToken=true implies storeAccountKey=false
+				// mountWithWorkloadIdentityToken=true implies storeAccountKey=false.
+				// With NFS protocol, it will fail later with "networkClientFactory is nil".
 				_, err := d.CreateVolume(context.Background(), req)
-				if err != nil {
-					invalidArgErr := status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
-					if reflect.DeepEqual(err, invalidArgErr) {
-						t.Errorf("mountWithWIToken=true should have disabled storeAccountKey, but got: %v", err)
-					}
+				invalidArgErr := status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
+				if reflect.DeepEqual(err, invalidArgErr) {
+					t.Errorf("mountWithWIToken=true should have disabled storeAccountKey, but got: %v", err)
 				}
 			},
 		},
