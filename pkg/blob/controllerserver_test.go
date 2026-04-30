@@ -739,6 +739,80 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "storageAuthType=MSI should skip storeAccountKey even with allowSharedKeyAccess=false",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.SubscriptionID = "subID"
+
+				mp := make(map[string]string)
+				mp[protocolField] = "fuse"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unittest"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[storageAuthTypeField] = "MSI"
+				mp[allowSharedKeyAccessField] = falseValue
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				// Should NOT get "storeAccountKey is not supported" error because
+				// storageAuthType=MSI implies storeAccountKey=false
+				_, err := d.CreateVolume(context.Background(), req)
+				if err != nil {
+					invalidArgErr := status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
+					if reflect.DeepEqual(err, invalidArgErr) {
+						t.Errorf("storageAuthType=MSI should have disabled storeAccountKey, but got: %v", err)
+					}
+				}
+			},
+		},
+		{
+			name: "mountWithWorkloadIdentityToken=true should skip storeAccountKey even with allowSharedKeyAccess=false",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				d.cloud.SubscriptionID = "subID"
+
+				mp := make(map[string]string)
+				mp[protocolField] = "fuse"
+				mp[skuNameField] = "unit-test"
+				mp[storageAccountTypeField] = "unit-test"
+				mp[locationField] = "unit-test"
+				mp[storageAccountField] = "unittest"
+				mp[resourceGroupField] = "unit-test"
+				mp[containerNameField] = "unit-test"
+				mp[mountWithWITokenField] = "true"
+				mp[allowSharedKeyAccessField] = falseValue
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+
+				// Should NOT get "storeAccountKey is not supported" error because
+				// mountWithWorkloadIdentityToken=true implies storeAccountKey=false
+				_, err := d.CreateVolume(context.Background(), req)
+				if err != nil {
+					invalidArgErr := status.Errorf(codes.InvalidArgument, "storeAccountKey is not supported for account with shared access key disabled")
+					if reflect.DeepEqual(err, invalidArgErr) {
+						t.Errorf("mountWithWIToken=true should have disabled storeAccountKey, but got: %v", err)
+					}
+				}
+			},
+		},
+		{
 			name: "Successful I/O",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
