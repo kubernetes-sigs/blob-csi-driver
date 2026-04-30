@@ -189,11 +189,17 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			containerNameReplaceMap[pvNameMetadata] = v
 		case serverNameField:
 		case storageAuthTypeField:
+			if strings.EqualFold(v, "MSI") {
+				storeAccountKey = false
+			}
 		case storageIdentityClientIDField:
 		case storageIdentityObjectIDField:
 		case storageIdentityResourceIDField:
 		case clientIDField:
 		case mountWithWITokenField:
+			if strings.EqualFold(v, trueValue) {
+				storeAccountKey = false
+			}
 		case tenantIDField:
 		case msiEndpointField:
 		case storageAADEndpointField:
