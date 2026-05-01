@@ -102,6 +102,8 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 		clientID, err := azureClient.EnsureNodeStorageBlobDataRole(ctx, creds.ResourceGroup)
 		if err != nil {
 			log.Printf("WARNING: failed to assign Storage Blob Data Contributor role to node identity: %v", err)
+		} else if clientID == "" {
+			log.Printf("WARNING: MI role assignment succeeded but no usable client ID was found")
 		} else {
 			miRoleSetupSucceeded = true
 			miClientID = clientID
@@ -125,12 +127,17 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	}
 	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
 
-	// Pass MI client ID to all Ginkgo processes via the data channel
-	return []byte(miClientID)
+	// Pass MI setup result to all Ginkgo processes via the data channel
+	// Format: "ok:<clientID>" on success, empty on failure/skip
+	var miData string
+	if miRoleSetupSucceeded {
+		miData = "ok:" + miClientID
+	}
+	return []byte(miData)
 }, func(_ ginkgo.SpecContext, data []byte) {
-	// Receive MI client ID from process 1
-	if len(data) > 0 {
-		miClientID = string(data)
+	// Receive MI setup result from process 1
+	if s := string(data); strings.HasPrefix(s, "ok:") {
+		miClientID = strings.TrimPrefix(s, "ok:")
 		miRoleSetupSucceeded = true
 		log.Printf("Received MI client ID from process 1: %s", miClientID)
 	}
