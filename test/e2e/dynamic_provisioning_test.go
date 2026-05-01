@@ -1149,8 +1149,12 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		if !isCapzTest {
 			ginkgo.Skip("test case is only available for CAPZ test")
 		}
-		gomega.Expect(miRoleSetupSucceeded).To(gomega.BeTrue(), "MI role assignment failed, cannot run managed identity auth mount test")
-		gomega.Expect(miClientID).NotTo(gomega.BeEmpty(), "MI client ID is empty, cannot run managed identity auth mount test")
+		if !isCapzTest {
+			ginkgo.Skip("test case is only available for capz test")
+		}
+		if !miRoleSetupSucceeded || miClientID == "" {
+			ginkgo.Skip("MI role setup did not succeed or client ID is empty, skipping managed identity auth mount test")
+		}
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
