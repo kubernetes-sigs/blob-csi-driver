@@ -326,10 +326,9 @@ func (az *Client) EnsureNodeStorageBlobDataRole(ctx context.Context, resourceGro
 		}
 	}
 	if firstClientID == "" {
-		err := fmt.Errorf("successfully assigned Storage Blob Data Contributor role to %d node identities in resource group %s, but no usable node identity client ID was found", len(identities), resourceGroup)
-		log.Printf("%v", err)
-		return "", err
+		log.Printf("WARNING: assigned Storage Blob Data Contributor role to %d node identities in resource group %s, but no user-assigned identity client ID was found (system-assigned MI may still work)", len(identities), resourceGroup)
+	} else {
+		log.Printf("Successfully assigned Storage Blob Data Contributor role to all %d node identities and found client ID %s", len(identities), firstClientID)
 	}
-	log.Printf("Successfully assigned Storage Blob Data Contributor role to all %d node identities and found client ID %s", len(identities), firstClientID)
 	return firstClientID, nil
 }
