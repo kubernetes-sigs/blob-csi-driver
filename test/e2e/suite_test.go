@@ -50,8 +50,11 @@ const (
 )
 
 var isAzureStackCloud = strings.EqualFold(os.Getenv("AZURE_CLOUD_NAME"), "AZURESTACKCLOUD")
+var isCapzTest = os.Getenv("NODE_MACHINE_TYPE") != ""
 var blobDriver *blob.Driver
 var projectRoot string
+var miRoleSetupSucceeded bool
+var miClientID string
 
 type testCmd struct {
 	command  string
@@ -92,6 +95,19 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	_, err = azureClient.EnsureResourceGroup(ctx, creds.ResourceGroup, creds.Location, nil)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+	// Assign Storage Blob Data Contributor role to node identities
+	// This is required for managed identity auth mount e2e tests (CAPZ only)
+	if isCapzTest {
+		clientID, err := azureClient.EnsureNodeStorageBlobDataRole(ctx, creds.ResourceGroup)
+		if err != nil {
+			log.Printf("WARNING: failed to assign Storage Blob Data Contributor role to node identity: %v", err)
+		} else {
+			miRoleSetupSucceeded = true
+			miClientID = clientID
+			log.Printf("MI role setup succeeded, clientID=%s", clientID)
+		}
+	}
 
 	// Install Azure Blob Storage CSI driver on cluster from project root
 	e2eBootstrap := testCmd{
