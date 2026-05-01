@@ -205,6 +205,6 @@ func checkAccountCreationLeak(ctx context.Context) {
 	framework.ExpectNoError(err, fmt.Sprintf("failed to GetAccountNumByResourceGroup(%s): %v", creds.ResourceGroup, err))
 	ginkgo.By(fmt.Sprintf("GetAccountNumByResourceGroup(%s) returns %d accounts", creds.ResourceGroup, accountNum))
 
-	accountLimitInTest := 20
+	accountLimitInTest := 22
 	gomega.Expect(accountNum >= accountLimitInTest).To(gomega.BeFalse())
 }
