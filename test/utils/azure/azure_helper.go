@@ -179,8 +179,8 @@ type NodeIdentityInfo struct {
 	ClientID    string
 }
 
-// GetNodeIdentityInfo retrieves the principal IDs and client IDs of managed identities from VMSS and VMs in the resource group.
-// Returns the first user-assigned identity's client ID for use in e2e tests.
+// GetNodeIdentityInfo retrieves managed identity information from VMSS and VMs in the resource group.
+// It returns a slice of NodeIdentityInfo containing principal IDs and client IDs where available.
 func (az *Client) GetNodeIdentityInfo(ctx context.Context, resourceGroup string) ([]NodeIdentityInfo, error) {
 	var identities []NodeIdentityInfo
 
@@ -325,6 +325,11 @@ func (az *Client) EnsureNodeStorageBlobDataRole(ctx context.Context, resourceGro
 			firstClientID = identity.ClientID
 		}
 	}
-	log.Printf("Successfully assigned Storage Blob Data Contributor role to all %d node identities", len(identities))
+	if firstClientID == "" {
+		err := fmt.Errorf("successfully assigned Storage Blob Data Contributor role to %d node identities in resource group %s, but no usable node identity client ID was found", len(identities), resourceGroup)
+		log.Printf("%v", err)
+		return "", err
+	}
+	log.Printf("Successfully assigned Storage Blob Data Contributor role to all %d node identities and found client ID %s", len(identities), firstClientID)
 	return firstClientID, nil
 }
