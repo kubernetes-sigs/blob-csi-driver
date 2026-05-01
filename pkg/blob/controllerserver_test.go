@@ -713,7 +713,7 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud.SubscriptionID = "subID"
 
 				mp := make(map[string]string)
-				mp[protocolField] = "nfs"
+				mp[protocolField] = "fuse"
 				mp[skuNameField] = "unit-test"
 				mp[storageAccountTypeField] = "unit-test"
 				mp[locationField] = "unit-test"
@@ -782,7 +782,7 @@ func TestCreateVolume(t *testing.T) {
 				d.cloud.SubscriptionID = "subID"
 
 				mp := make(map[string]string)
-				mp[protocolField] = "fuse"
+				mp[protocolField] = "nfs"
 				mp[skuNameField] = "unit-test"
 				mp[storageAccountTypeField] = "unit-test"
 				mp[locationField] = "unit-test"
