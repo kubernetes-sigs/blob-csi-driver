@@ -124,8 +124,16 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 		endLog:   "metrics service created",
 	}
 	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
-	return nil
-}, func(_ ginkgo.SpecContext, _ []byte) {
+
+	// Pass MI client ID to all Ginkgo processes via the data channel
+	return []byte(miClientID)
+}, func(_ ginkgo.SpecContext, data []byte) {
+	// Receive MI client ID from process 1
+	if len(data) > 0 {
+		miClientID = string(data)
+		miRoleSetupSucceeded = true
+		log.Printf("Received MI client ID from process 1: %s", miClientID)
+	}
 	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
 	// it does not fall back to defaults
 	if os.Getenv(kubeconfigEnvVar) == "" {
