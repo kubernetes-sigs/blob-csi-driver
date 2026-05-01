@@ -1171,10 +1171,10 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		scParameters := map[string]string{
-			"skuName":                       "Premium_LRS",
-			"protocol":                      "fuse",
-			"AzureStorageAuthType":          "MSI",
-			"AzureStorageIdentityClientID":  miClientID,
+			"skuName":                      "Premium_LRS",
+			"protocol":                     "fuse",
+			"AzureStorageAuthType":         "MSI",
+			"AzureStorageIdentityClientID": miClientID,
 		}
 		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
 			CSIDriver:              testDriver,
