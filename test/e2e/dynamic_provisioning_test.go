@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/blob-csi-driver/test/e2e/testsuites"
 
 	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
@@ -1140,6 +1141,45 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"skuName":  "Premium_LRS",
 				"protocol": "fuse2",
 			},
+		}
+		test.Run(ctx, cs, ns)
+	})
+
+	ginkgo.It("should create a volume on demand with managed identity auth mount [blob.csi.azure.com]", func(ctx ginkgo.SpecContext) {
+		if !isCapzTest {
+			ginkgo.Skip("test case is only available for CAPZ test")
+		}
+		gomega.Expect(miRoleSetupSucceeded).To(gomega.BeTrue(), "MI role assignment failed, cannot run managed identity auth mount test")
+		gomega.Expect(miClientID).NotTo(gomega.BeEmpty(), "MI client ID is empty, cannot run managed identity auth mount test")
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"-o allow_other",
+							"--file-cache-timeout-in-seconds=120",
+							"--cancel-list-on-mount-seconds=0",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		scParameters := map[string]string{
+			"skuName":                       "Premium_LRS",
+			"protocol":                      "fuse",
+			"AzureStorageAuthType":          "MSI",
+			"AzureStorageIdentityClientID":  miClientID,
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver:              testDriver,
+			Pods:                   pods,
+			StorageClassParameters: scParameters,
 		}
 		test.Run(ctx, cs, ns)
 	})
