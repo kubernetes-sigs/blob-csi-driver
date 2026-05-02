@@ -107,7 +107,9 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 		} else {
 			miRoleSetupSucceeded = true
 			miClientID = clientID
-			log.Printf("MI role setup succeeded, clientID=%s", clientID)
+			log.Printf("MI role setup succeeded, clientID=%s. Waiting 60s for RBAC propagation ...", clientID)
+			time.Sleep(60 * time.Second)
+			log.Printf("RBAC propagation wait complete")
 		}
 	}
 
