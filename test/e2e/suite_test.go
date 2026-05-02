@@ -53,8 +53,6 @@ var isAzureStackCloud = strings.EqualFold(os.Getenv("AZURE_CLOUD_NAME"), "AZURES
 var isCapzTest = os.Getenv("NODE_MACHINE_TYPE") != "" || os.Getenv("AZURE_NODE_MACHINE_TYPE") != ""
 var blobDriver *blob.Driver
 var projectRoot string
-var miRoleSetupSucceeded bool
-var miClientID string
 
 type testCmd struct {
 	command  string
@@ -96,23 +94,6 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	_, err = azureClient.EnsureResourceGroup(ctx, creds.ResourceGroup, creds.Location, nil)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	// Assign Storage Blob Data Contributor role to node identities
-	// This is required for managed identity auth mount e2e tests (CAPZ only)
-	if isCapzTest {
-		clientID, err := azureClient.EnsureNodeStorageBlobDataRole(ctx, creds.ResourceGroup)
-		if err != nil {
-			log.Printf("WARNING: failed to assign Storage Blob Data Contributor role to node identity: %v", err)
-		} else if clientID == "" {
-			log.Printf("WARNING: MI role assignment succeeded but no usable client ID was found")
-		} else {
-			miRoleSetupSucceeded = true
-			miClientID = clientID
-			log.Printf("MI role setup succeeded, clientID=%s. Waiting 60s for RBAC propagation ...", clientID)
-			time.Sleep(60 * time.Second)
-			log.Printf("RBAC propagation wait complete")
-		}
-	}
-
 	// Install Azure Blob Storage CSI driver on cluster from project root
 	e2eBootstrap := testCmd{
 		command:  "make",
@@ -128,21 +109,8 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 		endLog:   "metrics service created",
 	}
 	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
-
-	// Pass MI setup result to all Ginkgo processes via the data channel
-	// Format: "ok:<clientID>" on success, empty on failure/skip
-	var miData string
-	if miRoleSetupSucceeded {
-		miData = "ok:" + miClientID
-	}
-	return []byte(miData)
-}, func(_ ginkgo.SpecContext, data []byte) {
-	// Receive MI setup result from process 1
-	if s := string(data); strings.HasPrefix(s, "ok:") {
-		miClientID = strings.TrimPrefix(s, "ok:")
-		miRoleSetupSucceeded = true
-		log.Printf("Received MI client ID from process 1: %s", miClientID)
-	}
+	return nil
+}, func(_ ginkgo.SpecContext, _ []byte) {
 	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
 	// it does not fall back to defaults
 	if os.Getenv(kubeconfigEnvVar) == "" {

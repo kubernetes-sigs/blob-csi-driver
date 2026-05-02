@@ -22,8 +22,11 @@ import (
 
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
 	"sigs.k8s.io/blob-csi-driver/test/e2e/testsuites"
+	"sigs.k8s.io/blob-csi-driver/test/utils/azure"
+	"sigs.k8s.io/blob-csi-driver/test/utils/credentials"
 
 	"github.com/onsi/ginkgo/v2"
+	"github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
@@ -1148,9 +1151,13 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		if !isCapzTest {
 			ginkgo.Skip("test case is only available for CAPZ test")
 		}
-		if !miRoleSetupSucceeded || miClientID == "" {
-			ginkgo.Skip("MI role setup did not succeed or client ID is empty, skipping managed identity auth mount test")
-		}
+		creds, err := credentials.CreateAzureCredentialFile()
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret, creds.AADFederatedTokenFile)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		miClientID, err := azureClient.EnsureNodeStorageBlobDataRole(ctx, creds.ResourceGroup)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to assign Storage Blob Data Contributor role to node identity")
+		gomega.Expect(miClientID).NotTo(gomega.BeEmpty(), "no user-assigned identity client ID found")
 		pods := []testsuites.PodDetails{
 			{
 				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
