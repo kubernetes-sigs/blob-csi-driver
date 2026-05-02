@@ -1148,9 +1148,6 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		if !isCapzTest {
 			ginkgo.Skip("test case is only available for CAPZ test")
 		}
-		if !isCapzTest {
-			ginkgo.Skip("test case is only available for capz test")
-		}
 		if !miRoleSetupSucceeded || miClientID == "" {
 			ginkgo.Skip("MI role setup did not succeed or client ID is empty, skipping managed identity auth mount test")
 		}
