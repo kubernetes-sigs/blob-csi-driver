@@ -219,8 +219,8 @@ func checkAccountCreationLeak(ctx context.Context) {
 const (
 	wiServiceAccountName         = "blob-wi-test-sa"
 	wiServiceAccountNamespace    = "default"
-	wiFederatedCredentialName    = "blob-e2e-wi-fic"
 	wiStorageBlobDataContributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" // Storage Blob Data Contributor role GUID
+	wiPropagationWait            = 60 * time.Second
 )
 
 // setupWorkloadIdentity configures workload identity for e2e tests:
@@ -255,9 +255,10 @@ func setupWorkloadIdentity(ctx context.Context, cs clientset.Interface, azureCli
 	identityName := parts[8]
 	log.Printf("Identity resource group: %s, name: %s", identityRG, identityName)
 
-	// Step 3: Create federated identity credential
+	// Step 3: Create federated identity credential with unique name to avoid conflicts in concurrent CI
+	ficName := fmt.Sprintf("blob-e2e-wi-%s", uuid.NewRandom().String()[:8])
 	subject := fmt.Sprintf("system:serviceaccount:%s:%s", wiServiceAccountNamespace, wiServiceAccountName)
-	err = azureClient.CreateFederatedIdentityCredential(ctx, identityRG, identityName, wiFederatedCredentialName, oidcIssuerURL, subject)
+	err = azureClient.CreateFederatedIdentityCredential(ctx, identityRG, identityName, ficName, oidcIssuerURL, subject)
 	if err != nil {
 		return fmt.Errorf("failed to create federated identity credential: %v", err)
 	}
@@ -303,6 +304,10 @@ func setupWorkloadIdentity(ctx context.Context, cs clientset.Interface, azureCli
 		return fmt.Errorf("failed to assign Storage Blob Data Contributor role: %v", err)
 	}
 	log.Printf("Assigned Storage Blob Data Contributor role to identity")
+
+	// Wait for ARM eventual consistency (FIC + RBAC propagation)
+	log.Printf("Waiting %v for FIC and RBAC propagation...", wiPropagationWait)
+	time.Sleep(wiPropagationWait)
 
 	return nil
 }
