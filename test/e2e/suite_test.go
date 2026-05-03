@@ -232,14 +232,7 @@ const (
 func setupWorkloadIdentity(ctx context.Context, cs clientset.Interface, azureClient *azure.Client, creds *credentials.Credentials) error {
 	log.Println("Setting up workload identity for e2e tests...")
 
-	// Step 1: Discover OIDC issuer URL from kube-apiserver
-	oidcIssuerURL, err := discoverOIDCIssuer(ctx, cs)
-	if err != nil {
-		return fmt.Errorf("failed to discover OIDC issuer: %v", err)
-	}
-	log.Printf("Discovered OIDC issuer URL: %s", oidcIssuerURL)
-
-	// Step 2: Get node identity info
+	// Step 1: Get node identity info (needed early to derive identity RG for OIDC discovery)
 	identityInfo, err := azureClient.GetFirstUserAssignedIdentity(ctx, creds.ResourceGroup)
 	if err != nil {
 		return fmt.Errorf("failed to get node identity: %v", err)
@@ -254,6 +247,21 @@ func setupWorkloadIdentity(ctx context.Context, cs clientset.Interface, azureCli
 	identityRG := parts[4]
 	identityName := parts[8]
 	log.Printf("Identity resource group: %s, name: %s", identityRG, identityName)
+
+	// Step 2: Discover OIDC issuer URL.
+	// First try the CAPZ OIDC storage account in the identity resource group (capz-wi-*),
+	// which hosts OIDC documents on a publicly reachable static website endpoint.
+	// The kube-apiserver's /.well-known/openid-configuration may return an internal URL
+	// (e.g., https://kubernetes.default.svc.cluster.local) that AAD cannot reach.
+	oidcIssuerURL, err := azureClient.DiscoverOIDCIssuerFromStorageAccount(ctx, identityRG)
+	if err != nil {
+		log.Printf("WARNING: failed to discover OIDC issuer from storage account: %v, falling back to kube-apiserver", err)
+		oidcIssuerURL, err = discoverOIDCIssuer(ctx, cs)
+		if err != nil {
+			return fmt.Errorf("failed to discover OIDC issuer: %v", err)
+		}
+	}
+	log.Printf("Using OIDC issuer URL: %s", oidcIssuerURL)
 
 	// Step 3: Create federated identity credential with deterministic name.
 	// Use a fixed name so that concurrent/repeated runs reuse the same FIC
