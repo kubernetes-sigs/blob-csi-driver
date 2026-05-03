@@ -2663,6 +2663,120 @@ func TestGetAuthEnvMSIAuthTypeSkipsIdentityEnvIfAlreadySet(t *testing.T) {
 	assert.True(t, found, "Explicit AZURE_STORAGE_IDENTITY_CLIENT_ID should be preserved")
 }
 
+func TestGetAuthEnvMSIDefaultsToKubeletIdentity(t *testing.T) {
+	d := NewFakeDriver()
+	d.cloud = &storage.AccountRepo{}
+	d.cloud.Config.AzureAuthConfig = azclient.AzureAuthConfig{
+		UserAssignedIdentityID: "kubelet-identity-client-id",
+	}
+
+	attrib := map[string]string{
+		containerNameField:   "containername",
+		storageAccountField:  "accountname",
+		storageAuthTypeField: storageAuthTypeMSI,
+	}
+	secret := map[string]string{
+		accountNameField: "accountname",
+		accountKeyField:  "testkey",
+	}
+	volumeID := "rg#accountname#containername"
+
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
+	assert.NoError(t, err)
+
+	found := false
+	for _, env := range authEnv {
+		if env == "AZURE_STORAGE_IDENTITY_CLIENT_ID=kubelet-identity-client-id" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Should default to kubelet identity when AzureStorageIdentityClientID is not specified")
+}
+
+func TestGetAuthEnvMSIWarningWhenNoIdentityAvailable(t *testing.T) {
+	d := NewFakeDriver()
+	d.cloud = &storage.AccountRepo{}
+	// UserAssignedIdentityID is empty — no kubelet identity available, falls back to IMDS
+
+	attrib := map[string]string{
+		containerNameField:   "containername",
+		storageAccountField:  "accountname",
+		storageAuthTypeField: storageAuthTypeMSI,
+	}
+	secret := map[string]string{
+		accountNameField: "accountname",
+		accountKeyField:  "testkey",
+	}
+	volumeID := "rg#accountname#containername"
+
+	_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
+	assert.NoError(t, err)                                                           // should not error, falls back to IMDS
+}
+
+func TestGetAuthEnvMSIUppercase(t *testing.T) {
+	d := NewFakeDriver()
+	d.cloud = &storage.AccountRepo{}
+	d.cloud.Config.AzureAuthConfig = azclient.AzureAuthConfig{
+		UserAssignedIdentityID: "kubelet-identity-client-id",
+	}
+
+	attrib := map[string]string{
+		containerNameField:   "containername",
+		storageAccountField:  "accountname",
+		storageAuthTypeField: "MSI", // uppercase as commonly used in docs/examples
+	}
+	secret := map[string]string{
+		accountNameField: "accountname",
+		accountKeyField:  "testkey",
+	}
+	volumeID := "rg#accountname#containername"
+
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
+	assert.NoError(t, err)
+
+	found := false
+	for _, env := range authEnv {
+		if env == "AZURE_STORAGE_IDENTITY_CLIENT_ID=kubelet-identity-client-id" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Should default to kubelet identity even with uppercase MSI")
+}
+
+func TestGetAuthEnvMSIEmptyClientIDFallsBackToKubelet(t *testing.T) {
+	d := NewFakeDriver()
+	d.cloud = &storage.AccountRepo{}
+	d.cloud.Config.AzureAuthConfig = azclient.AzureAuthConfig{
+		UserAssignedIdentityID: "kubelet-identity-client-id",
+	}
+
+	attrib := map[string]string{
+		containerNameField:           "containername",
+		storageAccountField:          "accountname",
+		storageAuthTypeField:         storageAuthTypeMSI,
+		storageIdentityClientIDField: "", // empty value
+	}
+	secret := map[string]string{
+		accountNameField: "accountname",
+		accountKeyField:  "testkey",
+	}
+	volumeID := "rg#accountname#containername"
+
+	_, _, _, _, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret) //nolint:dogsled
+	assert.NoError(t, err)
+
+	found := false
+	for _, env := range authEnv {
+		if env == "AZURE_STORAGE_IDENTITY_CLIENT_ID=kubelet-identity-client-id" {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Empty AzureStorageIdentityClientID should fall back to kubelet identity")
+}
+
 func TestIsValidSubscriptionID(t *testing.T) {
 	tests := []struct {
 		desc           string
