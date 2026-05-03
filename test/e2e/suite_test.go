@@ -237,9 +237,9 @@ func checkAccountCreationLeak(ctx context.Context) {
 }
 
 const (
-	wiServiceAccountName        = "blob-wi-test-sa"
-	wiServiceAccountNamespace   = "default"
-	wiFederatedCredentialName   = "blob-e2e-wi-fic"
+	wiServiceAccountName         = "blob-wi-test-sa"
+	wiServiceAccountNamespace    = "default"
+	wiFederatedCredentialName    = "blob-e2e-wi-fic"
 	wiStorageBlobDataContributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" // Storage Blob Data Contributor role GUID
 )
 

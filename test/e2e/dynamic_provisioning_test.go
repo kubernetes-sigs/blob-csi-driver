@@ -1218,9 +1218,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			},
 		}
 		scParameters := map[string]string{
-			"skuName":                           "Premium_LRS",
-			"protocol":                          "fuse2",
-			"mountWithWorkloadIdentityToken":    "true",
+			"skuName":                        "Premium_LRS",
+			"protocol":                       "fuse2",
+			"mountWithWorkloadIdentityToken": "true",
 		}
 		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
 			CSIDriver:              testDriver,
