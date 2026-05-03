@@ -1196,7 +1196,13 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		if !isCapzTest {
 			ginkgo.Skip("test case is only available for CAPZ test")
 		}
-		gomega.Expect(wiSetupSucceeded).To(gomega.BeTrue(), "Workload identity setup failed, cannot run WI mount test")
+		creds, err := credentials.CreateAzureCredentialFile()
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret, creds.AADFederatedTokenFile)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+		err = setupWorkloadIdentity(ctx, cs, azureClient, creds)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to set up workload identity")
 
 		pods := []testsuites.PodDetails{
 			{

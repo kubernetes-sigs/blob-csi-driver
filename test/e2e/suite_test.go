@@ -58,7 +58,6 @@ var isAzureStackCloud = strings.EqualFold(os.Getenv("AZURE_CLOUD_NAME"), "AZURES
 var isCapzTest = os.Getenv("NODE_MACHINE_TYPE") != "" || os.Getenv("AZURE_NODE_MACHINE_TYPE") != ""
 var blobDriver *blob.Driver
 var projectRoot string
-var wiSetupSucceeded bool
 
 type testCmd struct {
 	command  string
@@ -115,25 +114,6 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 		endLog:   "metrics service created",
 	}
 	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
-
-	// Set up workload identity for mountWithWorkloadIdentityToken e2e tests (CAPZ only)
-	if isCapzTest {
-		kubeConfig, err := framework.LoadConfig()
-		if err != nil {
-			log.Printf("WARNING: failed to load kubeconfig for WI setup: %v", err)
-		} else {
-			wiCS, err := clientset.NewForConfig(kubeConfig)
-			if err != nil {
-				log.Printf("WARNING: failed to create clientset for WI setup: %v", err)
-			} else {
-				if err := setupWorkloadIdentity(ctx, wiCS, azureClient, creds); err != nil {
-					log.Printf("WARNING: workload identity setup failed: %v", err)
-				} else {
-					wiSetupSucceeded = true
-				}
-			}
-		}
-	}
 
 	return nil
 }, func(_ ginkgo.SpecContext, _ []byte) {
