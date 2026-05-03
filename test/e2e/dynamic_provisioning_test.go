@@ -28,6 +28,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 	admissionapi "k8s.io/pod-security-admission/api"
@@ -1189,5 +1190,53 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			StorageClassParameters: scParameters,
 		}
 		test.Run(ctx, cs, ns)
+	})
+
+	ginkgo.It("should create a volume on demand with workload identity token mount [blob.csi.azure.com]", ginkgo.Serial, func(ctx ginkgo.SpecContext) {
+		if !isCapzTest {
+			ginkgo.Skip("test case is only available for CAPZ test")
+		}
+		creds, err := credentials.CreateAzureCredentialFile()
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret, creds.AADFederatedTokenFile)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+
+		err = setupWorkloadIdentity(ctx, cs, azureClient, creds)
+		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to set up workload identity")
+
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"-o allow_other",
+							"--file-cache-timeout-in-seconds=120",
+							"--cancel-list-on-mount-seconds=0",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		scParameters := map[string]string{
+			"skuName":                        "Premium_LRS",
+			"protocol":                       "fuse2",
+			"mountWithWorkloadIdentityToken": "true",
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver:              testDriver,
+			Pods:                   pods,
+			StorageClassParameters: scParameters,
+			ServiceAccountName:     wiServiceAccountName,
+		}
+		// Use default namespace because the federated identity credential is bound to
+		// system:serviceaccount:default:<sa-name>, so the SA must be in default namespace
+		defaultNS := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
+		test.Run(ctx, cs, defaultNS)
 	})
 })

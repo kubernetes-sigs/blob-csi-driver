@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	armauthorization "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v2"
 	armcompute "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
+	armmsi "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	resources "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/google/uuid"
 	"sigs.k8s.io/blob-csi-driver/pkg/blob"
@@ -52,6 +53,7 @@ type Client struct {
 	vmssClient           *armcompute.VirtualMachineScaleSetsClient
 	vmClient             *armcompute.VirtualMachinesClient
 	roleClient           *armauthorization.RoleAssignmentsClient
+	ficClient            *armmsi.FederatedIdentityCredentialsClient
 }
 
 func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string, aadFederatedTokenFile string) (*Client, error) {
@@ -107,6 +109,10 @@ func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string, a
 	if err != nil {
 		return nil, fmt.Errorf("failed to create role assignments client: %v", err)
 	}
+	ficClient, err := armmsi.NewFederatedIdentityCredentialsClient(subscriptionID, cred, armClientOpts)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create federated identity credentials client: %v", err)
+	}
 
 	return &Client{
 		subscriptionID:       subscriptionID,
@@ -119,6 +125,7 @@ func GetClient(cloud, subscriptionID, clientID, tenantID, clientSecret string, a
 		vmssClient:           vmssClient,
 		vmClient:             vmClient,
 		roleClient:           roleAssignClient,
+		ficClient:            ficClient,
 	}, nil
 }
 
@@ -173,10 +180,11 @@ func (az *Client) GetAccountNumByResourceGroup(ctx context.Context, groupName st
 	return len(result), nil
 }
 
-// NodeIdentityInfo holds the principal ID and client ID of a managed identity.
+// NodeIdentityInfo holds the principal ID, client ID, and resource ID of a managed identity.
 type NodeIdentityInfo struct {
 	PrincipalID string
 	ClientID    string
+	ResourceID  string
 }
 
 // GetNodeIdentityInfo retrieves managed identity information from VMSS and VMs in the resource group.
@@ -214,7 +222,7 @@ func (az *Client) GetNodeIdentityInfo(ctx context.Context, resourceGroup string)
 						clientID = *uaIdentity.ClientID
 					}
 					log.Printf("VMSS %s: found user-assigned identity %s, principalID=%s, clientID=%s", name, uaID, *uaIdentity.PrincipalID, clientID)
-					identities = append(identities, NodeIdentityInfo{PrincipalID: *uaIdentity.PrincipalID, ClientID: clientID})
+					identities = append(identities, NodeIdentityInfo{PrincipalID: *uaIdentity.PrincipalID, ClientID: clientID, ResourceID: uaID})
 				}
 			}
 		}
@@ -250,7 +258,7 @@ func (az *Client) GetNodeIdentityInfo(ctx context.Context, resourceGroup string)
 						clientID = *uaIdentity.ClientID
 					}
 					log.Printf("VM %s: found user-assigned identity %s, principalID=%s, clientID=%s", name, uaID, *uaIdentity.PrincipalID, clientID)
-					identities = append(identities, NodeIdentityInfo{PrincipalID: *uaIdentity.PrincipalID, ClientID: clientID})
+					identities = append(identities, NodeIdentityInfo{PrincipalID: *uaIdentity.PrincipalID, ClientID: clientID, ResourceID: uaID})
 				}
 			}
 		}
@@ -331,4 +339,60 @@ func (az *Client) EnsureNodeStorageBlobDataRole(ctx context.Context, resourceGro
 		log.Printf("Successfully assigned Storage Blob Data Contributor role to all %d node identities and found client ID %s", len(identities), firstClientID)
 	}
 	return firstClientID, nil
+}
+
+// GetFirstUserAssignedIdentity returns the first user-assigned identity with both clientID and principalID.
+func (az *Client) GetFirstUserAssignedIdentity(ctx context.Context, resourceGroup string) (*NodeIdentityInfo, error) {
+	identities, err := az.GetNodeIdentityInfo(ctx, resourceGroup)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range identities {
+		if id.ClientID != "" && id.PrincipalID != "" && id.ResourceID != "" {
+			return &id, nil
+		}
+	}
+	return nil, fmt.Errorf("no user-assigned identity with clientID, principalID, and resourceID found in resource group %s", resourceGroup)
+}
+
+// CreateFederatedIdentityCredential creates or updates a federated identity credential
+// for workload identity authentication.
+func (az *Client) CreateFederatedIdentityCredential(ctx context.Context, identityRG, identityName, ficName, issuerURL, subject string) error {
+	_, err := az.ficClient.CreateOrUpdate(ctx, identityRG, identityName, ficName, armmsi.FederatedIdentityCredential{
+		Properties: &armmsi.FederatedIdentityCredentialProperties{
+			Issuer:    to.Ptr(issuerURL),
+			Subject:   to.Ptr(subject),
+			Audiences: []*string{to.Ptr("api://AzureADTokenExchange")},
+		},
+	}, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create/update federated identity credential %s: %v", ficName, err)
+	}
+	return nil
+}
+
+// DiscoverOIDCIssuerFromStorageAccount finds the CAPZ OIDC issuer URL by looking for
+// a storage account with the "capzoidc" prefix in the given resource group.
+// CAPZ creates a storage account (e.g., "capzoidcXXXX") configured as a static website
+// to host the OIDC discovery documents. The public endpoint is
+// https://<account>.blob.core.windows.net/$web
+// This is the correct issuer URL to use when creating federated identity credentials,
+// because AAD needs to reach the OIDC endpoint from the public internet.
+func (az *Client) DiscoverOIDCIssuerFromStorageAccount(ctx context.Context, resourceGroup string) (string, error) {
+	accounts, err := az.accountsClient.List(ctx, resourceGroup)
+	if err != nil {
+		return "", fmt.Errorf("failed to list storage accounts in %s: %v", resourceGroup, err)
+	}
+	for _, acct := range accounts {
+		if acct.Name == nil {
+			continue
+		}
+		if len(*acct.Name) > 8 && (*acct.Name)[:8] == "capzoidc" {
+			// CAPZ OIDC storage account static website endpoint
+			issuerURL := fmt.Sprintf("https://%s.blob.core.windows.net/$web", *acct.Name)
+			log.Printf("Found CAPZ OIDC storage account: %s, issuer URL: %s", *acct.Name, issuerURL)
+			return issuerURL, nil
+		}
+	}
+	return "", fmt.Errorf("no CAPZ OIDC storage account (capzoidc*) found in resource group %s", resourceGroup)
 }

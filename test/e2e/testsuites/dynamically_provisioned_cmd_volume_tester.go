@@ -33,6 +33,7 @@ type DynamicallyProvisionedCmdVolumeTest struct {
 	CSIDriver              driver.DynamicPVTestDriver
 	Pods                   []PodDetails
 	StorageClassParameters map[string]string
+	ServiceAccountName     string
 }
 
 func (t *DynamicallyProvisionedCmdVolumeTest) Run(ctx context.Context, client clientset.Interface, namespace *v1.Namespace) {
@@ -41,6 +42,11 @@ func (t *DynamicallyProvisionedCmdVolumeTest) Run(ctx context.Context, client cl
 		// defer must be called here for resources not get removed before using them
 		for i := range cleanup {
 			defer cleanup[i](ctx)
+		}
+
+		if t.ServiceAccountName != "" {
+			tpod.SetServiceAccountName(t.ServiceAccountName)
+			tpod.SetAutomountServiceAccountToken(true)
 		}
 
 		ginkgo.By("deploying the pod")
