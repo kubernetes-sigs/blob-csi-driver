@@ -374,8 +374,8 @@ func (az *Client) CreateFederatedIdentityCredential(ctx context.Context, identit
 // DiscoverOIDCIssuerFromStorageAccount finds the CAPZ OIDC issuer URL by looking for
 // a storage account with the "capzoidc" prefix in the given resource group.
 // CAPZ creates a storage account (e.g., "capzoidcXXXX") configured as a static website
-// to host the OIDC discovery documents. The public endpoint is:
-//   https://<account>.blob.core.windows.net/$web
+// to host the OIDC discovery documents. The public endpoint is
+// https://<account>.blob.core.windows.net/$web
 // This is the correct issuer URL to use when creating federated identity credentials,
 // because AAD needs to reach the OIDC endpoint from the public internet.
 func (az *Client) DiscoverOIDCIssuerFromStorageAccount(ctx context.Context, resourceGroup string) (string, error) {
