@@ -50,6 +50,7 @@ const (
 )
 
 var isAzureStackCloud = strings.EqualFold(os.Getenv("AZURE_CLOUD_NAME"), "AZURESTACKCLOUD")
+var isCapzTest = os.Getenv("NODE_MACHINE_TYPE") != "" || os.Getenv("AZURE_NODE_MACHINE_TYPE") != ""
 var blobDriver *blob.Driver
 var projectRoot string
 
