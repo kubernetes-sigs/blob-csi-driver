@@ -113,9 +113,13 @@ spec:
             - name: host-home-kubernetes-bin
               mountPath: /host/home/kubernetes/bin
 {{- end }}
-{{- if or (eq .Values.linux.distro "gardenlinux") (eq .Values.linux.distro "flatcar") (eq .Values.linux.distro "azurecontainerlinux") }}
+{{- if or (eq .Values.linux.distro "gardenlinux") (eq .Values.linux.distro "flatcar")}}
             - name: host-var-bin
               mountPath: /host/var/bin
+{{- end }}
+{{- if eq .Values.linux.distro "azurecontainerlinux" }}
+            - name: host-opt
+              mountPath: /host{{ .Values.node.hostPath.opt }}
 {{- end }}
             - name: host-usr
               mountPath: /host{{ .Values.node.hostPath.usr }}
@@ -316,10 +320,15 @@ spec:
           hostPath:
             path: /home/kubernetes/bin
 {{- end }}
-{{- if or (eq .Values.linux.distro "gardenlinux") (eq .Values.linux.distro "flatcar") (eq .Values.linux.distro "azurecontainerlinux") }}
+{{- if or (eq .Values.linux.distro "gardenlinux") (eq .Values.linux.distro "flatcar") }}
         - name: host-var-bin
           hostPath:
             path: /var/bin
+{{- end }}
+{{- if eq .Values.linux.distro "azurecontainerlinux" }}
+        - name: host-opt
+          hostPath:
+            path: {{ .Values.node.hostPath.opt }}
 {{- end }}
         - name: host-usr
           hostPath:
