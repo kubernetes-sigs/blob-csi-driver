@@ -1192,7 +1192,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a volume on demand with workload identity token mount [blob.csi.azure.com]", func(ctx ginkgo.SpecContext) {
+	ginkgo.It("should create a volume on demand with workload identity token mount [blob.csi.azure.com]", ginkgo.Serial, func(ctx ginkgo.SpecContext) {
 		if !isCapzTest {
 			ginkgo.Skip("test case is only available for CAPZ test")
 		}

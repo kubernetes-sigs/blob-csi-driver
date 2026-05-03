@@ -255,14 +255,23 @@ func setupWorkloadIdentity(ctx context.Context, cs clientset.Interface, azureCli
 	identityName := parts[8]
 	log.Printf("Identity resource group: %s, name: %s", identityRG, identityName)
 
-	// Step 3: Create federated identity credential with unique name to avoid conflicts in concurrent CI
-	ficName := fmt.Sprintf("blob-e2e-wi-%s", uuid.NewRandom().String()[:8])
+	// Step 3: Create federated identity credential with deterministic name.
+	// Use a fixed name so that concurrent/repeated runs reuse the same FIC
+	// instead of leaking new ones on every run. Handle 409 Conflict gracefully
+	// when the issuer+subject combination already exists.
+	ficName := "blob-e2e-wi-fic"
 	subject := fmt.Sprintf("system:serviceaccount:%s:%s", wiServiceAccountNamespace, wiServiceAccountName)
 	err = azureClient.CreateFederatedIdentityCredential(ctx, identityRG, identityName, ficName, oidcIssuerURL, subject)
 	if err != nil {
-		return fmt.Errorf("failed to create federated identity credential: %v", err)
+		// If the issuer+subject already exists (409 Conflict), it's safe to continue
+		if strings.Contains(err.Error(), "Conflict") || strings.Contains(err.Error(), "409") {
+			log.Printf("Federated identity credential already exists (issuer+subject match), reusing")
+		} else {
+			return fmt.Errorf("failed to create federated identity credential: %v", err)
+		}
+	} else {
+		log.Printf("Federated identity credential created: %s", ficName)
 	}
-	log.Printf("Federated identity credential created")
 
 	// Step 4: Create or update Kubernetes service account with WI annotation
 	sa := &corev1.ServiceAccount{
