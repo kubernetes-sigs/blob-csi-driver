@@ -38,10 +38,6 @@ echo "set BIN_PATH to ${BIN_PATH}"
 updateBlobfuse2="true"
 if [ "$DISTRIBUTION" = "azurecontainerlinux" ]; then
   echo "skip blobfuse2 install for Azure Container Linux (pre-installed)"
-  if [ ! -f "/host/usr/bin/blobfuse2" ]; then
-    echo "ERROR: blobfuse2 not found at /host/usr/bin/blobfuse2 on Azure Container Linux"
-    exit 1
-  fi
   updateBlobfuse2="false"
 elif [ "${INSTALL_BLOBFUSE}" = "true" ] || [ "${INSTALL_BLOBFUSE2}" = "true" ]
 then
