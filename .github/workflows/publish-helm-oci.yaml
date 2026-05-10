@@ -154,7 +154,7 @@ jobs:
           docker manifest create --amend "${IMAGE}:${VERSION}" \
             "${IMAGE}:${VERSION}-linux-amd64" \
             "${IMAGE}:${VERSION}-linux-arm64"
-          docker manifest push -p "${IMAGE}:${VERSION}"
+          docker manifest push --purge "${IMAGE}:${VERSION}"
           echo "Pushed manifest: ${IMAGE}:${VERSION}"
 
   # ── Publish Helm chart as OCI (independent of image builds) ────────────────
