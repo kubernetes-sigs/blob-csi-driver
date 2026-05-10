@@ -236,21 +236,27 @@ jobs:
             echo ""
             if [[ "$MANIFEST_RESULT" == "success" ]]; then
               echo "### ✅ Container Images"
+              echo ""
+              echo '```bash'
+              echo "docker pull ${REGISTRY}/${IMAGE_NAME}:${VERSION}"
+              echo '```'
             else
               echo "### ❌ Container Images (${MANIFEST_RESULT})"
+              echo ""
+              echo "Per-arch images may still be available:"
+              echo '```bash'
+              echo "docker pull ${REGISTRY}/${IMAGE_NAME}:${VERSION}-linux-amd64"
+              echo "docker pull ${REGISTRY}/${IMAGE_NAME}:${VERSION}-linux-arm64"
+              echo '```'
             fi
-            echo ""
-            echo '```bash'
-            echo "docker pull ${REGISTRY}/${IMAGE_NAME}:${VERSION}"
-            echo '```'
             echo ""
             if [[ "$HELM_RESULT" == "success" ]]; then
               echo "### ✅ Helm Chart (OCI)"
+              echo ""
+              echo '```bash'
+              echo "helm install blob-csi-driver oci://${REGISTRY}/${CHART_NAME} --version ${CHART_VERSION} -n kube-system"
+              echo '```'
             else
               echo "### ❌ Helm Chart (${HELM_RESULT})"
             fi
-            echo ""
-            echo '```bash'
-            echo "helm install blob-csi-driver oci://${REGISTRY}/${CHART_NAME} --version ${CHART_VERSION} -n kube-system"
-            echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
