@@ -52,7 +52,7 @@ jobs:
           fi
           # For workflow_dispatch, verify the tag exists in the remote
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if ! git ls-remote --exit-code --tags origin "refs/tags/${VERSION}" > /dev/null 2>&1; then
+            if ! git ls-remote --exit-code --tags "https://github.com/${{ github.repository }}" "refs/tags/${VERSION}" > /dev/null 2>&1; then
               echo "::error::Tag '${VERSION}' does not exist in the repository"
               exit 1
             fi
