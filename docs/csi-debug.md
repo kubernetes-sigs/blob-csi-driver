@@ -199,7 +199,6 @@ If IP was migrated successfully, you should find logs like:
  mountOptions:
    - --log-level=LOG_DEBUG
  ```
- > Refer to [storageclass-blobfuse2.yaml](../deploy/example/storageclass-blobfuse2.yaml) for a complete example.
 
 ### Tips
  - [Troubleshoot Azure Blob storage mount issues on AKS](http://aka.ms/blobmounterror)
