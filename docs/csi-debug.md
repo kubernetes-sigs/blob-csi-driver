@@ -198,7 +198,12 @@ ls $HOME/.blobfuse2/*.trace
 ```console
 blobfuse2 mount <mount-path> --log-level=LOG_DEBUG --log-file-path=/tmp/blobfuse2-debug.log <other-options>
 ```
-> For CSI driver managed mounts, you can enable debug logging by setting `--blobfuse2-args="--log-level=LOG_DEBUG"` in the StorageClass parameters or volume attributes.
+> For CSI driver managed mounts, you can set `--log-level=LOG_DEBUG` in the StorageClass `mountOptions`:
+> ```yaml
+> mountOptions:
+>   - --log-level=LOG_DEBUG
+> ```
+> Refer to [storageclass-blobfuse2.yaml](../deploy/example/storageclass-blobfuse2.yaml) for a complete example.
 
 ### Tips
  - [Troubleshoot Azure Blob storage mount issues on AKS](http://aka.ms/blobmounterror)
