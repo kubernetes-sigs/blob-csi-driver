@@ -194,7 +194,7 @@ ls $HOME/.blobfuse2/*.trace
 ```
 > The trace file follows the naming convention `<mount_path>.<pid>.trace`. Share this file for further investigation.
 
- - If the issue persists, enable debug logging by setting `--log-level=LOG_DEBUG` in the StorageClass `mountOptions`, reproduce the issue, and share the Blobfuse debug level logs:
+ - If the issue persists, enable debug logging by setting `--log-level=LOG_DEBUG` in the `mountOptions` of Persistent Volume, reproduce the issue, and share the Blobfuse debug level logs:
 ```yaml
 mountOptions:
   - --log-level=LOG_DEBUG
