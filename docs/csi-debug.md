@@ -188,11 +188,11 @@ If IP was migrated successfully, you should find logs like:
 ### Troubleshooting Blobfuse2 crash ("transport endpoint not connected")
 > If the issue is related to the Blobfuse2 binary crashing resulting in a `transport endpoint not connected` error:
 
- - Collect the stack trace file from the node at the following path:
+ - Collect the crash stack trace files from the `$HOME/.blobfuse2/` directory on the node. Multiple trace files may exist if there were multiple crashes:
 ```console
 ls $HOME/.blobfuse2/*.trace
 ```
-> The trace file follows the naming convention `<mount_path>.<pid>.trace`. Share this file for further investigation.
+> Each trace file follows the naming convention `<mount-path>.<pid>.trace`. Share the relevant trace file(s) for further investigation.
 
  - If the issue persists, enable debug logging by setting `--log-level=LOG_DEBUG` in the `mountOptions` of Persistent Volume, reproduce the issue, and share the Blobfuse debug level logs:
 ```yaml
