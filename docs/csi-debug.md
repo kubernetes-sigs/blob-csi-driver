@@ -185,5 +185,20 @@ If IP was migrated successfully, you should find logs like:
 
 </details>
 
+### Troubleshooting Blobfuse2 crash ("transport endpoint not connected")
+> If the issue is related to the Blobfuse2 binary crashing resulting in a `transport endpoint not connected` error:
+
+ - Collect the crash stack trace files from the `$HOME/.blobfuse2/` directory on the node. Multiple trace files may exist if there were multiple crashes:
+ ```console
+ ls $HOME/.blobfuse2/*.trace
+ ```
+ > Each trace file follows the naming convention `<mount-path>.<pid>.trace`. Share the relevant trace file(s) for further investigation.
+
+ - If the issue persists, enable Blobfuse2 debug logging by setting `--log-level=LOG_DEBUG` in `mountOptions` of the StorageClass (dynamic provisioning) or Persistent Volume (static provisioning), reproduce the issue, and share the debug logs:
+ ```yaml
+ mountOptions:
+   - --log-level=LOG_DEBUG
+ ```
+
 ### Tips
  - [Troubleshoot Azure Blob storage mount issues on AKS](http://aka.ms/blobmounterror)
