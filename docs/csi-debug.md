@@ -194,15 +194,11 @@ ls $HOME/.blobfuse2/*.trace
 ```
 > The trace file follows the naming convention `<mount_path>.<pid>.trace`. Share this file for further investigation.
 
- - If the issue persists, enable debug logging by adding `--log-level=LOG_DEBUG` to the mount command, reproduce the issue, and share the Blobfuse debug level logs:
-```console
-blobfuse2 mount <mount-path> --log-level=LOG_DEBUG --log-file-path=/tmp/blobfuse2-debug.log <other-options>
+ - If the issue persists, enable debug logging by setting `--log-level=LOG_DEBUG` in the StorageClass `mountOptions`, reproduce the issue, and share the Blobfuse debug level logs:
+```yaml
+mountOptions:
+  - --log-level=LOG_DEBUG
 ```
-> For CSI driver managed mounts, you can set `--log-level=LOG_DEBUG` in the StorageClass `mountOptions`:
-> ```yaml
-> mountOptions:
->   - --log-level=LOG_DEBUG
-> ```
 > Refer to [storageclass-blobfuse2.yaml](../deploy/example/storageclass-blobfuse2.yaml) for a complete example.
 
 ### Tips
