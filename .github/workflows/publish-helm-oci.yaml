@@ -210,8 +210,15 @@ jobs:
 
       - name: Package and push chart
         run: |
+          rm -rf /tmp/helm-pkg && mkdir -p /tmp/helm-pkg
           helm package "${{ steps.chart.outputs.chart_dir }}" --destination /tmp/helm-pkg
-          PACKAGE=$(ls /tmp/helm-pkg/${CHART_NAME}-*.tgz)
+          CHART_VERSION="${{ needs.validate.outputs.chart_version }}"
+          PACKAGE="/tmp/helm-pkg/${CHART_NAME}-${CHART_VERSION}.tgz"
+          if [[ ! -f "$PACKAGE" ]]; then
+            echo "::error::Expected package not found: ${PACKAGE}"
+            ls -la /tmp/helm-pkg/
+            exit 1
+          fi
           helm push "${PACKAGE}" "oci://${REGISTRY}"
 
       - name: Verify published chart
