@@ -194,7 +194,7 @@ If IP was migrated successfully, you should find logs like:
  ```
  > Each trace file follows the naming convention `<mount-path>.<pid>.trace`. Share the relevant trace file(s) for further investigation.
 
- - If the issue persists, enable debug logging by setting `--log-level=LOG_DEBUG` in the `mountOptions` of Persistent Volume, reproduce the issue, and share the Blobfuse debug level logs:
+ - If the issue persists, enable Blobfuse2 debug logging by setting `--log-level=LOG_DEBUG` in `mountOptions` of the StorageClass (dynamic provisioning) or Persistent Volume (static provisioning), reproduce the issue, and share the debug logs:
  ```yaml
  mountOptions:
    - --log-level=LOG_DEBUG
