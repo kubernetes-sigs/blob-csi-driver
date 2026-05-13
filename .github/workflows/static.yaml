@@ -2,6 +2,9 @@ name: Static Checks
 on:
     pull_request: {}
     push: {}
+permissions:
+  contents: read
+
 jobs:
     go_lint:
         name: Go Lint
