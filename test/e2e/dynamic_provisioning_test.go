@@ -1238,12 +1238,14 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		// Use default namespace because the federated identity credential is bound to
 		// system:serviceaccount:default:<sa-name>, so the SA must be in default namespace.
 		// Apply the privileged pod security label to avoid PodSecurity admission rejections.
-		defaultNS := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{
-			Name: "default",
-			Labels: map[string]string{
-				"pod-security.kubernetes.io/enforce": "privileged",
-			},
-		}}
+		defaultNS, err := cs.CoreV1().Namespaces().Get(ctx, "default", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		if defaultNS.Labels == nil {
+			defaultNS.Labels = make(map[string]string)
+		}
+		defaultNS.Labels["pod-security.kubernetes.io/enforce"] = "privileged"
+		defaultNS, err = cs.CoreV1().Namespaces().Update(ctx, defaultNS, metav1.UpdateOptions{})
+		Expect(err).NotTo(HaveOccurred())
 		test.Run(ctx, cs, defaultNS)
 	})
 })

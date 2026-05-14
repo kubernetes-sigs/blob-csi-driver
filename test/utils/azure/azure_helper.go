@@ -366,7 +366,7 @@ func (az *Client) CreateFederatedIdentityCredential(ctx context.Context, identit
 		},
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create/update federated identity credential %s: %v", ficName, err)
+		return fmt.Errorf("failed to create/update federated identity credential %s: %w", ficName, err)
 	}
 	return nil
 }
