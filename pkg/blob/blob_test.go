@@ -1467,6 +1467,11 @@ func TestSanitizeMountOptions(t *testing.T) {
 			expected: []string{"--use-https=true"},
 		},
 		{
+			name:     "--block-cache-path is stripped",
+			options:  []string{"--block-cache-path=/etc/kubernetes/manifests", "--use-https=true"},
+			expected: []string{"--use-https=true"},
+		},
+		{
 			name:     "--config-file is stripped",
 			options:  []string{"--config-file=/attacker/config", "--use-https=true"},
 			expected: []string{"--use-https=true"},
@@ -1477,8 +1482,8 @@ func TestSanitizeMountOptions(t *testing.T) {
 			expected: []string{"--log-file=/var/log/blobfuse.log", "--use-https=true"},
 		},
 		{
-			name:     "both blocked options are stripped together",
-			options:  []string{"--tmp-path=/etc/kubernetes/manifests", "--config-file=/evil", "--use-https=true"},
+			name:     "all three blocked options are stripped together",
+			options:  []string{"--tmp-path=/etc/kubernetes/manifests", "--block-cache-path=/etc/cron.d", "--config-file=/evil", "--use-https=true"},
 			expected: []string{"--use-https=true"},
 		},
 		{

@@ -1113,16 +1113,23 @@ func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName stri
 // blockedEphemeralMountOptions is the set of blobfuse2 options that users must not be able to
 // override via volumeAttributes.mountOptions on inline ephemeral volumes.
 //
-// --tmp-path: primary exploit vector. blobfuse2 writes blob content (attacker-controlled) into
-// this directory as root. Setting it to e.g. /etc/kubernetes/manifests allows the attacker to
-// land an arbitrary static Pod manifest, achieving host-level RCE.
+// --tmp-path: primary exploit vector (file-cache mode). blobfuse2 writes blob content
+// (attacker-controlled) into this directory as root. Setting it to e.g.
+// /etc/kubernetes/manifests allows the attacker to land an arbitrary static Pod manifest,
+// achieving host-level RCE.
 //
-// --config-file: two-step bypass for the --tmp-path block. An attacker can upload a blobfuse2
+// --block-cache-path: same exploit vector as --tmp-path but for block-cache mode. blobfuse2
+// persists downloaded blocks (attacker-controlled blob content) to this directory as root.
+// An ephemeral volume with --block-cache-path=/etc/kubernetes/manifests (optionally combined
+// with --block-cache=true) reproduces the same static-Pod-injection / host RCE primitive.
+//
+// --config-file: two-step bypass for the above blocks. An attacker can upload a blobfuse2
 // config YAML as a blob (step 1, normal mount caches it to /mnt/<volumeID>/evil.yaml), then
-// point a second ephemeral mount at that cached file via --config-file, which sets tmp-path
-// inside the config, reinstating the RCE path. The driver always generates its own safe config.
+// point a second ephemeral mount at that cached file via --config-file, which sets
+// file_cache.path or block_cache.path inside the config, reinstating the RCE path.
 var blockedEphemeralMountOptions = []string{
 	"--tmp-path",
+	"--block-cache-path",
 	"--config-file",
 }
 
