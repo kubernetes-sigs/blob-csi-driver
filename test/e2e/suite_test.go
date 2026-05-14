@@ -225,7 +225,7 @@ const (
 	wiServiceAccountName         = "blob-wi-test-sa"
 	wiServiceAccountNamespace    = "default"
 	wiStorageBlobDataContributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" // Storage Blob Data Contributor role GUID
-	wiPropagationWait            = 120 * time.Second
+	wiPropagationWait            = 5 * time.Minute
 )
 
 // setupWorkloadIdentity configures workload identity for e2e tests:
