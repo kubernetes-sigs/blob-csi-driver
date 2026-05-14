@@ -39,6 +39,7 @@ import (
 	"github.com/onsi/ginkgo/v2/reporters"
 	"github.com/onsi/gomega"
 	"github.com/pborman/uuid"
+	authv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -225,7 +226,9 @@ const (
 	wiServiceAccountName         = "blob-wi-test-sa"
 	wiServiceAccountNamespace    = "default"
 	wiStorageBlobDataContributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" // Storage Blob Data Contributor role GUID
-	wiPropagationWait            = 5 * time.Minute
+	// wiPropagationWait is the time to wait for ARM FIC + RBAC propagation.
+	// AAD OIDC metadata cache is handled separately by waitForAADTokenExchange.
+	wiPropagationWait = 2 * time.Minute
 )
 
 // setupWorkloadIdentity configures workload identity for e2e tests:
@@ -334,6 +337,14 @@ func setupWorkloadIdentity(ctx context.Context, cs clientset.Interface, azureCli
 		return "", fmt.Errorf("OIDC JWKS not ready: %v", err)
 	}
 
+	// Wait for AAD to accept token exchange. AAD caches OIDC metadata
+	// independently of endpoint availability, so even after JWKS is
+	// accessible, token exchanges may fail with AADSTS7000272 until
+	// AAD refreshes its internal cache.
+	if err := waitForAADTokenExchange(ctx, cs, identityInfo.ClientID, 10*time.Minute); err != nil {
+		return "", fmt.Errorf("AAD token exchange not ready: %v", err)
+	}
+
 	return identityInfo.ClientID, nil
 }
 
@@ -417,3 +428,90 @@ func waitForOIDCJWKS(issuerURL string, timeout time.Duration) error {
 	}
 	return fmt.Errorf("timed out waiting for OIDC JWKS: %v", lastErr)
 }
+
+// waitForAADTokenExchange polls AAD token exchange until it succeeds.
+// AAD independently caches OIDC metadata; even after the JWKS endpoint
+// returns keys, AAD may still reject token exchanges with AADSTS7000272
+// until its internal cache refreshes. This function creates a short-lived
+// service account token and attempts a client_credentials + client_assertion
+// exchange against the AAD token endpoint, retrying until success or timeout.
+func waitForAADTokenExchange(ctx context.Context, cs clientset.Interface, clientID string, timeout time.Duration) error {
+	log.Printf("Waiting up to %v for AAD to accept token exchange for client %s", timeout, clientID)
+
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+
+	for time.Now().Before(deadline) {
+		// Create a short-lived SA token via TokenRequest API
+		tokenReq := &authv1.TokenRequest{
+			Spec: authv1.TokenRequestSpec{
+				Audiences:         []string{"api://AzureADTokenExchange"},
+				ExpirationSeconds: int64Ptr(600),
+			},
+		}
+		tokenResp, err := cs.CoreV1().ServiceAccounts(wiServiceAccountNamespace).
+			CreateToken(ctx, wiServiceAccountName, tokenReq, metav1.CreateOptions{})
+		if err != nil {
+			lastErr = fmt.Errorf("creating SA token: %v", err)
+			log.Printf("Token exchange check: %v, retrying...", lastErr)
+			time.Sleep(15 * time.Second)
+			continue
+		}
+
+		saToken := tokenResp.Status.Token
+
+		// Try exchanging with AAD
+		// Use the well-known Azure AD v2 token endpoint
+		tenantID := os.Getenv("AZURE_TENANT_ID")
+		if tenantID == "" {
+			// Try to get from credentials file
+			creds, credErr := credentials.CreateAzureCredentialFile()
+			if credErr == nil {
+				tenantID = creds.TenantID
+			}
+		}
+		if tenantID == "" {
+			return fmt.Errorf("AZURE_TENANT_ID not set and not available from credentials")
+		}
+
+		tokenURL := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", tenantID)
+		data := fmt.Sprintf(
+			"grant_type=client_credentials&client_id=%s&scope=https://storage.azure.com/.default"+
+				"&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer"+
+				"&client_assertion=%s",
+			clientID, saToken)
+
+		resp, err := httpClient.Post(tokenURL, "application/x-www-form-urlencoded", strings.NewReader(data)) //nolint:gosec,noctx
+		if err != nil {
+			lastErr = fmt.Errorf("AAD token request: %v", err)
+			log.Printf("Token exchange check: %v, retrying...", lastErr)
+			time.Sleep(15 * time.Second)
+			continue
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		if resp.StatusCode == http.StatusOK {
+			log.Printf("AAD token exchange succeeded")
+			return nil
+		}
+
+		// Check if it's the expected AADSTS7000272 (OIDC not yet cached)
+		bodyStr := string(body)
+		if strings.Contains(bodyStr, "AADSTS7000272") {
+			lastErr = fmt.Errorf("AAD returned AADSTS7000272 (OIDC metadata not yet cached)")
+			log.Printf("Token exchange check: %v, retrying in 15s...", lastErr)
+			time.Sleep(15 * time.Second)
+			continue
+		}
+
+		// Other AAD error — log but keep retrying (could be transient)
+		lastErr = fmt.Errorf("AAD returned status %d: %s", resp.StatusCode, bodyStr)
+		log.Printf("Token exchange check: %v, retrying...", lastErr)
+		time.Sleep(15 * time.Second)
+	}
+	return fmt.Errorf("timed out waiting for AAD token exchange: %v", lastErr)
+}
+
+func int64Ptr(i int64) *int64 { return &i }
