@@ -39,7 +39,6 @@ import (
 	"github.com/onsi/ginkgo/v2/reporters"
 	"github.com/onsi/gomega"
 	"github.com/pborman/uuid"
-	authenticationv1 "k8s.io/api/authentication/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -335,14 +334,6 @@ func setupWorkloadIdentity(ctx context.Context, cs clientset.Interface, azureCli
 		return "", fmt.Errorf("OIDC JWKS not ready: %v", err)
 	}
 
-	// Validate that AAD can actually exchange a SA token for an access token.
-	// Even after JWKS is published, AAD may cache stale OIDC metadata for
-	// several minutes, causing AADSTS7000272 errors. This retry loop ensures
-	// the AAD cache is warm before the test creates pods.
-	if err := waitForAADTokenExchange(ctx, cs, creds.TenantID, identityInfo.ClientID, 10*time.Minute); err != nil {
-		return "", fmt.Errorf("AAD token exchange not ready: %v", err)
-	}
-
 	return identityInfo.ClientID, nil
 }
 
@@ -425,79 +416,4 @@ func waitForOIDCJWKS(issuerURL string, timeout time.Duration) error {
 		return nil
 	}
 	return fmt.Errorf("timed out waiting for OIDC JWKS: %v", lastErr)
-}
-
-// waitForAADTokenExchange validates that AAD can exchange a Kubernetes service
-// account token for an access token. AAD caches OIDC issuer metadata
-// independently of the JWKS endpoint, so even after waitForOIDCJWKS succeeds,
-// token exchange may fail with AADSTS7000272 for several minutes. This function
-// creates a short-lived SA token and attempts the client_credentials grant with
-// client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer
-// until it succeeds or times out.
-func waitForAADTokenExchange(ctx context.Context, cs clientset.Interface, tenantID, clientID string, timeout time.Duration) error {
-	log.Printf("Waiting up to %v for AAD token exchange to succeed...", timeout)
-
-	httpClient := &http.Client{
-		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12},
-		},
-	}
-
-	tokenURL := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0/token", tenantID)
-	deadline := time.Now().Add(timeout)
-	var lastErr error
-
-	for time.Now().Before(deadline) {
-		// Create a short-lived SA token via TokenRequest API
-		expSeconds := int64(600)
-		audiences := []string{"api://AzureADTokenExchange"}
-		tokenReq, err := cs.CoreV1().ServiceAccounts(wiServiceAccountNamespace).CreateToken(
-			ctx,
-			wiServiceAccountName,
-			&authenticationv1.TokenRequest{
-				Spec: authenticationv1.TokenRequestSpec{
-					Audiences:         audiences,
-					ExpirationSeconds: &expSeconds,
-				},
-			},
-			metav1.CreateOptions{},
-		)
-		if err != nil {
-			lastErr = fmt.Errorf("failed to create SA token: %v", err)
-			log.Printf("AAD token exchange: %v, retrying in 15s...", lastErr)
-			time.Sleep(15 * time.Second)
-			continue
-		}
-
-		// Attempt token exchange with AAD
-		data := fmt.Sprintf(
-			"grant_type=client_credentials&client_id=%s&scope=https://storage.azure.com/.default&client_assertion_type=urn:ietf:params:oauth:client-assertion-type:jwt-bearer&client_assertion=%s",
-			clientID, tokenReq.Status.Token,
-		)
-		resp, err := httpClient.Post(tokenURL, "application/x-www-form-urlencoded", strings.NewReader(data))
-		if err != nil {
-			lastErr = fmt.Errorf("AAD request failed: %v", err)
-			log.Printf("AAD token exchange: %v, retrying in 15s...", lastErr)
-			time.Sleep(15 * time.Second)
-			continue
-		}
-		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
-
-		if resp.StatusCode == http.StatusOK {
-			log.Printf("AAD token exchange succeeded")
-			return nil
-		}
-
-		lastErr = fmt.Errorf("AAD returned %d: %s", resp.StatusCode, string(body))
-		if strings.Contains(string(body), "AADSTS7000272") {
-			log.Printf("AAD OIDC metadata not yet cached, retrying in 15s...")
-		} else {
-			log.Printf("AAD token exchange: %v, retrying in 15s...", lastErr)
-		}
-		time.Sleep(15 * time.Second)
-	}
-
-	return fmt.Errorf("timed out waiting for AAD token exchange: %v", lastErr)
 }
