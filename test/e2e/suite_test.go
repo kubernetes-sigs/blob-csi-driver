@@ -34,11 +34,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/ginkgo/v2/reporters"
 	"github.com/onsi/gomega"
 	"github.com/pborman/uuid"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
