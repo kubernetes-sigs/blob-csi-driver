@@ -347,9 +347,9 @@ func (az *Client) GetFirstUserAssignedIdentity(ctx context.Context, resourceGrou
 	if err != nil {
 		return nil, err
 	}
-	for _, id := range identities {
-		if id.ClientID != "" && id.PrincipalID != "" && id.ResourceID != "" {
-			return &id, nil
+	for i := range identities {
+		if identities[i].ClientID != "" && identities[i].PrincipalID != "" && identities[i].ResourceID != "" {
+			return &identities[i], nil
 		}
 	}
 	return nil, fmt.Errorf("no user-assigned identity with clientID, principalID, and resourceID found in resource group %s", resourceGroup)

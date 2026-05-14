@@ -577,7 +577,7 @@ func (t *TestPod) SetServiceAccountName(name string) {
 }
 
 func (t *TestPod) SetAutomountServiceAccountToken(enabled bool) {
-	t.pod.Spec.AutomountServiceAccountToken = &enabled
+	t.pod.Spec.AutomountServiceAccountToken = ptr.To(enabled)
 }
 
 func (t *TestPod) Cleanup(ctx context.Context) {

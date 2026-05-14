@@ -1201,7 +1201,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret, creds.AADFederatedTokenFile)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-		err = setupWorkloadIdentity(ctx, cs, azureClient, creds)
+		clientID, err := setupWorkloadIdentity(ctx, cs, azureClient, creds)
 		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to set up workload identity")
 
 		pods := []testsuites.PodDetails{
@@ -1227,6 +1227,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			"skuName":                        "Premium_LRS",
 			"protocol":                       "fuse2",
 			"mountWithWorkloadIdentityToken": "true",
+			"clientID":                       clientID,
 		}
 		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
 			CSIDriver:              testDriver,
@@ -1235,8 +1236,14 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			ServiceAccountName:     wiServiceAccountName,
 		}
 		// Use default namespace because the federated identity credential is bound to
-		// system:serviceaccount:default:<sa-name>, so the SA must be in default namespace
-		defaultNS := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
+		// system:serviceaccount:default:<sa-name>, so the SA must be in default namespace.
+		// Apply the privileged pod security label to avoid PodSecurity admission rejections.
+		defaultNS := &v1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name: "default",
+			Labels: map[string]string{
+				"pod-security.kubernetes.io/enforce": "privileged",
+			},
+		}}
 		test.Run(ctx, cs, defaultNS)
 	})
 })
