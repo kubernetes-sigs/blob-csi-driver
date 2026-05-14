@@ -1239,13 +1239,13 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		// system:serviceaccount:default:<sa-name>, so the SA must be in default namespace.
 		// Apply the privileged pod security label to avoid PodSecurity admission rejections.
 		defaultNS, err := cs.CoreV1().Namespaces().Get(ctx, "default", metav1.GetOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		if defaultNS.Labels == nil {
 			defaultNS.Labels = make(map[string]string)
 		}
 		defaultNS.Labels["pod-security.kubernetes.io/enforce"] = "privileged"
 		defaultNS, err = cs.CoreV1().Namespaces().Update(ctx, defaultNS, metav1.UpdateOptions{})
-		Expect(err).NotTo(HaveOccurred())
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		test.Run(ctx, cs, defaultNS)
 	})
 })

@@ -341,7 +341,7 @@ func setupWorkloadIdentity(ctx context.Context, cs clientset.Interface, azureCli
 	// independently of endpoint availability, so even after JWKS is
 	// accessible, token exchanges may fail with AADSTS7000272 until
 	// AAD refreshes its internal cache.
-	if err := waitForAADTokenExchange(ctx, cs, identityInfo.ClientID, 20*time.Minute); err != nil {
+	if err := waitForAADTokenExchange(ctx, cs, identityInfo.ClientID, 30*time.Minute); err != nil {
 		return "", fmt.Errorf("AAD token exchange not ready: %v", err)
 	}
 
