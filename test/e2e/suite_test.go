@@ -18,10 +18,13 @@ package e2e
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -220,7 +223,7 @@ const (
 	wiServiceAccountName         = "blob-wi-test-sa"
 	wiServiceAccountNamespace    = "default"
 	wiStorageBlobDataContributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" // Storage Blob Data Contributor role GUID
-	wiPropagationWait            = 60 * time.Second
+	wiPropagationWait            = 120 * time.Second
 )
 
 // setupWorkloadIdentity configures workload identity for e2e tests:
@@ -318,6 +321,15 @@ func setupWorkloadIdentity(ctx context.Context, cs clientset.Interface, azureCli
 	log.Printf("Waiting %v for FIC and RBAC propagation...", wiPropagationWait)
 	time.Sleep(wiPropagationWait)
 
+	// Verify OIDC JWKS endpoint is accessible and contains signing keys.
+	// AAD validates SA tokens by fetching the JWKS from the OIDC issuer.
+	// In CAPZ clusters the JWKS is served from Azure Blob Storage and may
+	// not be immediately available after cluster creation, leading to
+	// AADSTS7000272 errors during token exchange.
+	if err := waitForOIDCJWKS(oidcIssuerURL, 5*time.Minute); err != nil {
+		return fmt.Errorf("OIDC JWKS not ready: %v", err)
+	}
+
 	return nil
 }
 
@@ -340,4 +352,64 @@ func discoverOIDCIssuer(ctx context.Context, cs clientset.Interface) (string, er
 		return "", fmt.Errorf("OIDC issuer URL is empty in cluster configuration")
 	}
 	return oidcConfig.Issuer, nil
+}
+
+// waitForOIDCJWKS polls the OIDC issuer's JWKS endpoint until it returns a
+// valid response containing at least one signing key. This guards against the
+// race where AAD tries to validate a SA token before the JWKS document is
+// published (AADSTS7000272).
+func waitForOIDCJWKS(issuerURL string, timeout time.Duration) error {
+	jwksURL := strings.TrimSuffix(issuerURL, "/") + "/openid/v1/jwks"
+	log.Printf("Waiting up to %v for OIDC JWKS to be available at %s", timeout, jwksURL)
+
+	httpClient := &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12},
+		},
+	}
+
+	deadline := time.Now().Add(timeout)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		resp, err := httpClient.Get(jwksURL) //nolint:gosec // URL is constructed from cluster OIDC issuer, not user input
+		if err != nil {
+			lastErr = fmt.Errorf("GET %s: %v", jwksURL, err)
+			log.Printf("JWKS not ready: %v, retrying...", lastErr)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		body, err := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if err != nil {
+			lastErr = fmt.Errorf("reading JWKS response: %v", err)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		if resp.StatusCode != http.StatusOK {
+			lastErr = fmt.Errorf("JWKS returned status %d", resp.StatusCode)
+			log.Printf("JWKS not ready: %v, retrying...", lastErr)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		var jwks struct {
+			Keys []json.RawMessage `json:"keys"`
+		}
+		if err := json.Unmarshal(body, &jwks); err != nil {
+			lastErr = fmt.Errorf("parsing JWKS: %v", err)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+		if len(jwks.Keys) == 0 {
+			lastErr = fmt.Errorf("JWKS contains no keys")
+			log.Printf("JWKS not ready: %v, retrying...", lastErr)
+			time.Sleep(10 * time.Second)
+			continue
+		}
+
+		log.Printf("OIDC JWKS is ready with %d key(s)", len(jwks.Keys))
+		return nil
+	}
+	return fmt.Errorf("timed out waiting for OIDC JWKS: %v", lastErr)
 }
