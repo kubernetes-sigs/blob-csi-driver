@@ -450,7 +450,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	// Get mountOptions that the volume will be formatted and mounted with
 	mountOptions := mountFlags
 	if ephemeralVol {
-		mountOptions = util.JoinMountOptions(mountOptions, strings.Split(ephemeralVolMountOptions, ","))
+		// Sanitize user-supplied mount options before use: strip options that are
+		// security-sensitive (e.g. --tmp-path) and must be driver-controlled.
+		sanitized := sanitizeMountOptions(strings.Split(ephemeralVolMountOptions, ","))
+		mountOptions = util.JoinMountOptions(mountOptions, sanitized)
 	}
 	if isHnsEnabled {
 		mountOptions = util.JoinMountOptions(mountOptions, []string{"--use-adls=true"})

@@ -1450,6 +1450,59 @@ func TestUseDataPlaneAPI(t *testing.T) {
 	}
 }
 
+func TestSanitizeMountOptions(t *testing.T) {
+	tests := []struct {
+		name     string
+		options  []string
+		expected []string
+	}{
+		{
+			name:     "no blocked options passes through unchanged",
+			options:  []string{"--use-https=true", "--cancel-list-on-mount-seconds=10"},
+			expected: []string{"--use-https=true", "--cancel-list-on-mount-seconds=10"},
+		},
+		{
+			name:     "--tmp-path is stripped",
+			options:  []string{"--use-https=true", "--tmp-path=/etc/kubernetes/manifests"},
+			expected: []string{"--use-https=true"},
+		},
+		{
+			name:     "--config-file is stripped",
+			options:  []string{"--config-file=/attacker/config", "--use-https=true"},
+			expected: []string{"--use-https=true"},
+		},
+		{
+			name:     "--log-file is NOT blocked and passes through",
+			options:  []string{"--log-file=/var/log/blobfuse.log", "--use-https=true"},
+			expected: []string{"--log-file=/var/log/blobfuse.log", "--use-https=true"},
+		},
+		{
+			name:     "both blocked options are stripped together",
+			options:  []string{"--tmp-path=/etc/kubernetes/manifests", "--config-file=/evil", "--use-https=true"},
+			expected: []string{"--use-https=true"},
+		},
+		{
+			name:     "empty input returns empty output",
+			options:  []string{},
+			expected: []string{},
+		},
+		{
+			name:     "option with leading whitespace is still blocked",
+			options:  []string{" --tmp-path=/etc/kubernetes/manifests"},
+			expected: []string{},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := sanitizeMountOptions(test.options)
+			if !reflect.DeepEqual(result, test.expected) {
+				t.Errorf("sanitizeMountOptions(%v) = %v, want %v", test.options, result, test.expected)
+			}
+		})
+	}
+}
+
 func TestAppendDefaultMountOptions(t *testing.T) {
 	tests := []struct {
 		options       []string

@@ -1110,6 +1110,43 @@ func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName stri
 	return false
 }
 
+// blockedEphemeralMountOptions is the set of blobfuse2 options that users must not be able to
+// override via volumeAttributes.mountOptions on inline ephemeral volumes.
+//
+// --tmp-path: primary exploit vector. blobfuse2 writes blob content (attacker-controlled) into
+// this directory as root. Setting it to e.g. /etc/kubernetes/manifests allows the attacker to
+// land an arbitrary static Pod manifest, achieving host-level RCE.
+//
+// --config-file: two-step bypass for the --tmp-path block. An attacker can upload a blobfuse2
+// config YAML as a blob (step 1, normal mount caches it to /mnt/<volumeID>/evil.yaml), then
+// point a second ephemeral mount at that cached file via --config-file, which sets tmp-path
+// inside the config, reinstating the RCE path. The driver always generates its own safe config.
+var blockedEphemeralMountOptions = []string{
+	"--tmp-path",
+	"--config-file",
+}
+
+// sanitizeMountOptions removes options from the provided list that are in the
+// blockedEphemeralMountOptions denylist. It is called when processing user-supplied mount options
+// for inline ephemeral CSI volumes before the driver appends its own safe defaults.
+func sanitizeMountOptions(mountOptions []string) []string {
+	filtered := make([]string, 0, len(mountOptions))
+	for _, opt := range mountOptions {
+		blocked := false
+		for _, blockedPrefix := range blockedEphemeralMountOptions {
+			if strings.HasPrefix(strings.TrimSpace(opt), blockedPrefix) {
+				klog.Warningf("mount option %q is not allowed for ephemeral volumes and will be ignored", opt)
+				blocked = true
+				break
+			}
+		}
+		if !blocked {
+			filtered = append(filtered, opt)
+		}
+	}
+	return filtered
+}
+
 // appendDefaultMountOptions return mount options combined with mountOptions and defaultMountOptions
 func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName string) []string {
 	var defaultMountOptions = map[string]string{
