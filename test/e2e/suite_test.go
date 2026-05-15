@@ -65,6 +65,11 @@ var isCapzTest = os.Getenv("NODE_MACHINE_TYPE") != "" || os.Getenv("AZURE_NODE_M
 var blobDriver *blob.Driver
 var projectRoot string
 
+// wiClientID is pre-populated during SynchronizedBeforeSuite so that the
+// AAD OIDC cache warm-up happens in parallel with the CSI driver bootstrap,
+// avoiding a ~20 min delay when the WI test actually runs.
+var wiClientID string
+
 type testCmd struct {
 	command  string
 	args     []string
@@ -121,8 +126,35 @@ var _ = ginkgo.SynchronizedBeforeSuite(func(ctx ginkgo.SpecContext) []byte {
 	}
 	execTestCmd([]testCmd{e2eBootstrap, createMetricsSVC})
 
-	return nil
-}, func(_ ginkgo.SpecContext, _ []byte) {
+	// Pre-warm AAD OIDC cache for workload identity test.
+	// AAD independently caches OIDC metadata and can take ~20 min to
+	// accept token exchanges for a new OIDC issuer (AADSTS7000272).
+	// By starting the setup here (after cluster bootstrap), the cache
+	// warm-up happens in parallel with the rest of the test suite,
+	// so the WI test doesn't have to wait when it eventually runs.
+	var clientID string
+	if isCapzTest {
+		kubeconfig := os.Getenv(kubeconfigEnvVar)
+		if kubeconfig == "" {
+			kubeconfig = filepath.Join(os.Getenv("HOME"), ".kube", "config")
+		}
+		cs, csErr := util.GetKubeClient(kubeconfig, 25.0, 50, "")
+		gomega.Expect(csErr).NotTo(gomega.HaveOccurred())
+		clientID, err = setupWorkloadIdentity(ctx, cs, azureClient, creds)
+		if err != nil {
+			log.Printf("WARNING: WI pre-warm failed (test will retry): %v", err)
+			clientID = ""
+		}
+	}
+
+	return []byte(clientID)
+}, func(_ ginkgo.SpecContext, data []byte) {
+	// Store pre-warmed WI client ID from node 1
+	if len(data) > 0 {
+		wiClientID = string(data)
+		log.Printf("Received pre-warmed WI clientID: %s", wiClientID)
+	}
+
 	// k8s.io/kubernetes/test/e2e/framework requires env KUBECONFIG to be set
 	// it does not fall back to defaults
 	if os.Getenv(kubeconfigEnvVar) == "" {

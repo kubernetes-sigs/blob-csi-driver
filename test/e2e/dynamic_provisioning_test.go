@@ -1196,13 +1196,20 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		if !isCapzTest {
 			ginkgo.Skip("test case is only available for CAPZ test")
 		}
-		creds, err := credentials.CreateAzureCredentialFile()
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret, creds.AADFederatedTokenFile)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-		clientID, err := setupWorkloadIdentity(ctx, cs, azureClient, creds)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to set up workload identity")
+		// Use pre-warmed client ID from SynchronizedBeforeSuite if available.
+		// This avoids the ~20 min AAD OIDC cache delay by leveraging the
+		// warm-up that ran in parallel with other tests during bootstrap.
+		clientID := wiClientID
+		if clientID == "" {
+			// Fallback: run setup inline (e.g. if pre-warm failed)
+			creds, err := credentials.CreateAzureCredentialFile()
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret, creds.AADFederatedTokenFile)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			clientID, err = setupWorkloadIdentity(ctx, cs, azureClient, creds)
+			gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to set up workload identity")
+		}
 
 		pods := []testsuites.PodDetails{
 			{
