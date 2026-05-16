@@ -576,7 +576,6 @@ func (t *TestPod) SetServiceAccountName(name string) {
 	t.pod.Spec.ServiceAccountName = name
 }
 
-
 func (t *TestPod) Cleanup(ctx context.Context) {
 	cleanupPodOrFail(ctx, t.client, t.pod.Name, t.namespace.Name)
 }
