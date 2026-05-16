@@ -293,9 +293,6 @@ const (
 	wiServiceAccountName         = "blob-wi-test-sa"
 	wiServiceAccountNamespace    = "default"
 	wiStorageBlobDataContributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" // Storage Blob Data Contributor role GUID
-	// wiPropagationWait is the time to wait for ARM FIC + RBAC propagation.
-	// AAD OIDC metadata cache is handled separately by waitForAADTokenExchange.
-	wiPropagationWait = 2 * time.Minute
 )
 
 // configureWorkloadIdentity sets up workload identity resources (fast, sync):
@@ -406,9 +403,9 @@ func configureWorkloadIdentity(ctx context.Context, cs clientset.Interface, azur
 	}
 	log.Printf("Assigned Storage Blob Data Contributor role to identity")
 
-	// Wait for ARM eventual consistency (FIC + RBAC propagation)
-	log.Printf("Waiting %v for FIC and RBAC propagation...", wiPropagationWait)
-	time.Sleep(wiPropagationWait)
+	// Skip static sleep for FIC/RBAC propagation — the token exchange retry
+	// loop (waitForAADTokenExchange) naturally handles FIC propagation delay,
+	// and RBAC propagation completes well before the actual CSI mount runs.
 
 	// Verify OIDC JWKS endpoint is accessible and contains signing keys.
 	// AAD validates SA tokens by fetching the JWKS from the OIDC issuer.
