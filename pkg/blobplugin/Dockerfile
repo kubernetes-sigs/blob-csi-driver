@@ -35,7 +35,7 @@ RUN aznfsTarPkgName=aznfs-${aznfsVer}-1.x86_64; \
     curl -Ls https://github.com/Azure/AZNFS-mount/releases/download/${aznfsVer}/${aznfsTarPkgName}.tar.gz | tar xvzf - -C / --keep-directory-symlink
 
 # install azcopy
-RUN curl -Ls https://github.com/Azure/azure-storage-azcopy/releases/download/v10.32.4/azcopy_linux_${TARGETARCH}_10.32.4.tar.gz \
+RUN curl -Ls https://github.com/Azure/azure-storage-azcopy/releases/download/v10.32.4/azcopy_linux_${ARCH}_10.32.4.tar.gz \
         | tar xvzf - --strip-components=1 -C /usr/local/bin/ --wildcards "*/azcopy"
 
 # download blobfuse deb
