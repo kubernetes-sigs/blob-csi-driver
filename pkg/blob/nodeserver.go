@@ -753,12 +753,14 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode) (bool, error)
 }
 
 func waitForMount(path string, intervel, timeout time.Duration) error {
-	timeAfter := time.After(timeout)
-	timeTick := time.Tick(intervel)
+	timer := time.NewTimer(timeout)
+	defer timer.Stop()
+	ticker := time.NewTicker(intervel)
+	defer ticker.Stop()
 
 	for {
 		select {
-		case <-timeTick:
+		case <-ticker.C:
 			notMount, err := mount.New("").IsLikelyNotMountPoint(path)
 			if err != nil {
 				return err
@@ -767,7 +769,7 @@ func waitForMount(path string, intervel, timeout time.Duration) error {
 				klog.V(2).Infof("blobfuse mount at %s success", path)
 				return nil
 			}
-		case <-timeAfter:
+		case <-timer.C:
 			return fmt.Errorf("timeout waiting for mount %s", path)
 		}
 	}
