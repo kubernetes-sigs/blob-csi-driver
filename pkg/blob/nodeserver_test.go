@@ -1160,6 +1160,78 @@ func TestMountBlobfuseWithProxy(t *testing.T) {
 	}
 }
 
+// blockingMountServiceServer blocks in MountAzureBlob until the request
+// context is cancelled, so we can verify caller-side cancellation is
+// propagated through to the gRPC call.
+type blockingMountServiceServer struct {
+	mount_azure_blob.MountServiceServer
+	started chan struct{}
+}
+
+func (s *blockingMountServiceServer) MountAzureBlob(ctx context.Context, _ *mount_azure_blob.MountAzureBlobRequest) (*mount_azure_blob.MountAzureBlobResponse, error) {
+	close(s.started)
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+// TestMountBlobfuseWithProxy_ContextCancellation verifies that cancelling
+// the context passed into mountBlobfuseWithProxy propagates to the
+// MountAzureBlob gRPC call. Without context propagation the call would
+// run until blobfuseProxyConnTimeout (which previously only applied to
+// the dial, not to the RPC), so a hung proxy would block indefinitely.
+func TestMountBlobfuseWithProxy_ContextCancellation(t *testing.T) {
+	srv := &blockingMountServiceServer{started: make(chan struct{})}
+
+	lis, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+	mount_azure_blob.RegisterMountServiceServer(s, srv)
+	go func() {
+		if err := s.Serve(lis); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
+			t.Logf("server exited with error: %v", err)
+		}
+	}()
+	defer s.Stop()
+	defer lis.Close()
+
+	d := NewFakeDriver()
+	d.blobfuseProxyEndpoint = lis.Addr().String()
+	// Generous dial timeout so the test fails on missing cancellation,
+	// not on the dial deadline expiring.
+	d.blobfuseProxyConnTimeout = 30
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := d.mountBlobfuseWithProxy(ctx, "--tmp-path /tmp", Fuse, []string{"username=blob"})
+		done <- err
+	}()
+
+	// Wait for the server to enter MountAzureBlob, then cancel.
+	select {
+	case <-srv.started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("server never received MountAzureBlob call")
+	}
+	cancel()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("expected error from cancelled MountAzureBlob, got nil")
+		}
+		if !strings.Contains(err.Error(), "Canceled") && !strings.Contains(err.Error(), "canceled") {
+			t.Fatalf("expected context-cancelled error, got: %v", err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("mountBlobfuseWithProxy did not return after context cancellation")
+	}
+}
+
 func TestMountBlobfuseInsideDriver(t *testing.T) {
 	args := "--tmp-path /tmp"
 	authEnv := []string{"username=blob", "authkey=blob"}
