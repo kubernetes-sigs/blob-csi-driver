@@ -18,6 +18,7 @@ package e2e
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"sigs.k8s.io/blob-csi-driver/test/e2e/driver"
@@ -28,6 +29,7 @@ import (
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 	admissionapi "k8s.io/pod-security-admission/api"
@@ -1189,5 +1191,84 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			StorageClassParameters: scParameters,
 		}
 		test.Run(ctx, cs, ns)
+	})
+
+	ginkgo.It("should create a volume on demand with workload identity token mount [blob.csi.azure.com]", ginkgo.Serial, func(ctx ginkgo.SpecContext) {
+		if !isCapzTest {
+			ginkgo.Skip("test case is only available for CAPZ test")
+		}
+
+		// Wait for background AAD OIDC cache warm-up to finish.
+		// The warm-up goroutine started during SynchronizedBeforeSuite and
+		// runs in parallel with other tests, so by the time this Serial
+		// test runs (last), the AAD cache is usually already warm.
+		ginkgo.By("Waiting for AAD OIDC cache warm-up to complete")
+		<-wiReady
+
+		gomega.Expect(wiClientID).NotTo(gomega.BeEmpty(), "WI client ID not set after background warm-up")
+		gomega.Expect(errWISetup).NotTo(gomega.HaveOccurred(),
+			"background AAD OIDC warm-up failed; WI mount will not work")
+		clientID := wiClientID
+
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"-o allow_other",
+							"--file-cache-timeout-in-seconds=120",
+							"--cancel-list-on-mount-seconds=0",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		scParameters := map[string]string{
+			"skuName":                        "Premium_LRS",
+			"protocol":                       "fuse2",
+			"mountWithWorkloadIdentityToken": "true",
+			"clientID":                       clientID,
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver:              testDriver,
+			Pods:                   pods,
+			StorageClassParameters: scParameters,
+			ServiceAccountName:     wiServiceAccountName,
+		}
+		// Use default namespace because the federated identity credential is bound to
+		// system:serviceaccount:default:<sa-name>, so the SA must be in default namespace.
+		// Apply the privileged pod security label to avoid PodSecurity admission rejections.
+		defaultNS, err := cs.CoreV1().Namespaces().Get(ctx, "default", metav1.GetOptions{})
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		if defaultNS.Labels == nil {
+			defaultNS.Labels = make(map[string]string)
+		}
+		originalEnforce, hadLabel := defaultNS.Labels["pod-security.kubernetes.io/enforce"]
+		defaultNS.Labels["pod-security.kubernetes.io/enforce"] = "privileged"
+		defaultNS, err = cs.CoreV1().Namespaces().Update(ctx, defaultNS, metav1.UpdateOptions{})
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		defer func() {
+			nsToRestore, restoreErr := cs.CoreV1().Namespaces().Get(ctx, "default", metav1.GetOptions{})
+			if restoreErr != nil {
+				log.Printf("WARNING: failed to get default namespace for label restore: %v", restoreErr)
+				return
+			}
+			if hadLabel {
+				nsToRestore.Labels["pod-security.kubernetes.io/enforce"] = originalEnforce
+			} else {
+				delete(nsToRestore.Labels, "pod-security.kubernetes.io/enforce")
+			}
+			_, restoreErr = cs.CoreV1().Namespaces().Update(ctx, nsToRestore, metav1.UpdateOptions{})
+			if restoreErr != nil {
+				log.Printf("WARNING: failed to restore pod-security label on default namespace: %v", restoreErr)
+			}
+		}()
+		test.Run(ctx, cs, defaultNS)
 	})
 })
