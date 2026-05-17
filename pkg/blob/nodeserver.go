@@ -166,7 +166,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	return &csi.NodePublishVolumeResponse{}, nil
 }
 
-func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string) (string, error) {
+func (d *Driver) mountBlobfuseWithProxy(ctx context.Context, args, protocol string, authEnv []string) (string, error) {
 	mc := csiMetrics.NewCSIMetricContext("node_blobfuse_proxy_mount")
 	isOperationSucceeded := false
 	defer func() {
@@ -174,10 +174,10 @@ func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string)
 	}()
 
 	connectionTimeout := time.Duration(d.blobfuseProxyConnTimeout) * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
-	defer cancel()
+	dialCtx, dialCancel := context.WithTimeout(ctx, connectionTimeout)
+	defer dialCancel()
 	klog.V(2).Infof("start connecting to blobfuse proxy, protocol: %s, args: %s", protocol, args)
-	conn, err := grpc.DialContext(ctx, d.blobfuseProxyEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.DialContext(dialCtx, d.blobfuseProxyEndpoint, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		klog.Errorf("failed to connect to blobfuse proxy: %v", err)
 		return "", err
@@ -195,7 +195,7 @@ func (d *Driver) mountBlobfuseWithProxy(args, protocol string, authEnv []string)
 		AuthEnv:   authEnv,
 	}
 	klog.V(2).Infof("begin to mount with blobfuse proxy, protocol: %s, args: %s", protocol, args)
-	resp, err := mountClient.service.MountAzureBlob(context.TODO(), &mountreq)
+	resp, err := mountClient.service.MountAzureBlob(ctx, &mountreq)
 	if err != nil {
 		klog.Error("GRPC call returned with an error:", err)
 	}
@@ -491,7 +491,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	var output string
 	if d.enableBlobfuseProxy {
-		output, err = d.mountBlobfuseWithProxy(args, protocol, authEnv)
+		output, err = d.mountBlobfuseWithProxy(ctx, args, protocol, authEnv)
 	} else {
 		output, err = d.mountBlobfuseInsideDriver(args, protocol, authEnv)
 	}
