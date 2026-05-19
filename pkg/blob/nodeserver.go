@@ -303,6 +303,19 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return &csi.NodeStageVolumeResponse{}, nil
 	}
 
+	// Kubernetes 1.35+ may deliver the service account token via Secrets
+	// (CSIDriver.spec.serviceAccountTokenInSecrets) instead of VolumeContext.
+	// GetAuthEnv reads serviceAccountTokenField from attrib only, so propagate
+	// the resolved token into a copy of attrib without mutating the request map.
+	if serviceAccountTokens != "" && getValueInMap(attrib, serviceAccountTokenField) == "" {
+		attribWithServiceAccountToken := make(map[string]string, len(attrib)+1)
+		for k, v := range attrib {
+			attribWithServiceAccountToken[k] = v
+		}
+		attribWithServiceAccountToken[serviceAccountTokenField] = serviceAccountTokens
+		attrib = attribWithServiceAccountToken
+	}
+
 	var serverAddress, storageEndpointSuffix, protocol, ephemeralVolMountOptions, blobStorageAccountType string
 	var ephemeralVol, isHnsEnabled bool
 

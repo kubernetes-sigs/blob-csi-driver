@@ -266,6 +266,33 @@ func TestNodePublishVolume(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
+			desc: "Valid request with service account token from secrets and clientID",
+			setup: func(d *Driver) {
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				defaultAzureOAuthTokenDir = "./blob.csi.azure.com/"
+				_ = makeDir(defaultAzureOAuthTokenDir)
+			},
+			cleanup: func(_ *Driver) {
+				_ = os.RemoveAll(defaultAzureOAuthTokenDir)
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					mountWithWITokenField:   "true",
+					clientIDField:           "client-id-value",
+					storageAccountNameField: "test-account",
+				},
+				Secrets: map[string]string{
+					serviceAccountTokenField: `{"api://AzureADTokenExchange":{"token":"test-token","expirationTimestamp":"2023-01-01T00:00:00Z"}}`,
+				},
+			},
+			expectedErr: nil,
+		},
+		{
 			desc: "Valid request with ephemeral volume",
 			setup: func(d *Driver) {
 				// Mock NodeStageVolume to return success
@@ -822,6 +849,42 @@ func TestNodeStageVolume(t *testing.T) {
 
 				_, err := d.NodeStageVolume(context.TODO(), req)
 				//expectedErr := nil
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, nil)
+				}
+			},
+		},
+		{
+			name: "service account token from secrets is propagated to attrib",
+			testFunc: func(t *testing.T) {
+				defaultAzureOAuthTokenDir = "./blob.csi.azure.com/"
+				_ = makeDir(defaultAzureOAuthTokenDir)
+				defer func() { _ = os.RemoveAll(defaultAzureOAuthTokenDir) }()
+
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						mountWithWITokenField:   "true",
+						clientIDField:           "client-id-value",
+						storageAccountNameField: "test-account",
+					},
+					Secrets: map[string]string{
+						serviceAccountTokenField: `{"api://AzureADTokenExchange":{"token":"test-token","expirationTimestamp":"2023-01-01T00:00:00Z"}}`,
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
 				if !reflect.DeepEqual(err, nil) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, nil)
 				}
