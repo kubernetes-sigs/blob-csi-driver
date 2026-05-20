@@ -13,7 +13,7 @@ spec:
     - Persistent
     - Ephemeral
   requiresRepublish: {{ .Values.feature.requiresRepublish }}
-  {{- if .Values.feature.requiresRepublish }}
+  {{- if .Values.feature.serviceAccountTokenInSecrets }}
   serviceAccountTokenInSecrets: true
   {{- end }}
   tokenRequests:
