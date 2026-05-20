@@ -396,6 +396,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	// replace pv/pvc name namespace metadata in subDir
 	containerName = replaceWithMap(containerName, containerNameReplaceMap)
 
+	// Validate containerName against Azure naming rules. A value
+	// containing spaces cannot match the regex and is rejected before it reaches
+	// the blobfuse2 args string.
+	if err := ValidateContainerName(containerName); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+	}
+
 	if strings.TrimSpace(storageEndpointSuffix) == "" {
 		storageEndpointSuffix = d.getStorageEndPointSuffix()
 	}
@@ -468,7 +475,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	// Get mountOptions that the volume will be formatted and mounted with
 	mountOptions := mountFlags
 	if ephemeralVol {
-		mountOptions = util.JoinMountOptions(mountOptions, strings.Split(ephemeralVolMountOptions, ","))
+		// Reject any user-supplied mount options that are security-sensitive and
+		// must be driver-controlled (e.g. --tmp-path). Return InvalidArgument so
+		// the caller knows their requested behaviour was not applied.
+		sanitized, err := SanitizeMountOptions(tokenizeMountOptionsString(ephemeralVolMountOptions))
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+		}
+		mountOptions = util.JoinMountOptions(mountOptions, sanitized)
 	}
 	if isHnsEnabled {
 		mountOptions = util.JoinMountOptions(mountOptions, []string{"--use-adls=true"})
@@ -484,6 +498,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		tmpPath += fmt.Sprintf("#%d", time.Now().Unix())
 	}
 	mountOptions = appendDefaultMountOptions(mountOptions, tmpPath, containerName)
+
+	// Last-resort check: ensure no value in the final mount options contains a
+	// space. The proxy splits the flat args string on spaces; a space inside any
+	// value would be treated as a flag separator.
+	if err := ValidateMountArgValues(mountOptions); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+	}
 
 	args := targetPath
 	for _, opt := range mountOptions {
