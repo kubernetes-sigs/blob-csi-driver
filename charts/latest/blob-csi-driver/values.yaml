@@ -197,6 +197,7 @@ feature:
   fsGroupPolicy: ReadWriteOnceWithFSType
   requiresRepublish: true
   enableGetVolumeStats: false
+  serviceAccountTokenInSecrets: false
 
 driver:
   name: blob.csi.azure.com

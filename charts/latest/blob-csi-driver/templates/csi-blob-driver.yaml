@@ -13,6 +13,9 @@ spec:
     - Persistent
     - Ephemeral
   requiresRepublish: {{ .Values.feature.requiresRepublish }}
+  {{- if .Values.feature.serviceAccountTokenInSecrets }}
+  serviceAccountTokenInSecrets: true
+  {{- end }}
   tokenRequests:
     - audience: api://AzureADTokenExchange
       expirationSeconds: 3600
