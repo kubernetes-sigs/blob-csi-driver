@@ -101,7 +101,7 @@ mount | grep blobfuse | uniq
 ### Troubleshooting connection failure on agent node
 > You can verify if the mount will work on the agent node by running the following commands to check if the storage account name, key, and container name are correct. If any of these details are incorrect, the blobfuse mount will not be successful.
 > 
-> You can find more detailed information about blobfuse environment variables at https://github.com/Azure/azure-storage-fuse#environment-variables.
+> You can find more detailed information about blobfuse environment variables at https://github.com/Azure/azure-storage-fuse/tree/blobfuse2-2.5.2
 
  - Check whether blob storage account is accessible on the node
 ```console
@@ -125,6 +125,18 @@ mkdir test
 export AZURE_STORAGE_ACCOUNT=<account-name>
 export AZURE_STORAGE_AUTH_TYPE=MSI
 export AZURE_STORAGE_IDENTITY_CLIENT_ID=<client-id>
+# only for sovereign cloud
+# export AZURE_STORAGE_BLOB_ENDPOINT=accountname.blob.core.chinacloudapi.cn
+blobfuse2 test --container-name=CONTAINER-NAME --tmp-path=/tmp/blobfuse -o allow_other --file-cache-timeout-in-seconds=120
+```
+
+ - blobfuse mount with service principle authentication
+ ```console
+mkdir test
+export AZURE_STORAGE_ACCOUNT=<account-name>
+export AZURE_STORAGE_AUTH_TYPE=SPN
+export AZURE_STORAGE_SPN_CLIENT_ID=<client-id>
+export AZURE_STORAGE_SPN_CLIENT_SECRET=<spn-secret>
 # only for sovereign cloud
 # export AZURE_STORAGE_BLOB_ENDPOINT=accountname.blob.core.chinacloudapi.cn
 blobfuse2 test --container-name=CONTAINER-NAME --tmp-path=/tmp/blobfuse -o allow_other --file-cache-timeout-in-seconds=120
