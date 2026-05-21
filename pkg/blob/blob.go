@@ -29,6 +29,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
@@ -256,6 +257,35 @@ var (
 		"--wait-for-mount":                 {},
 		"--workers":                        {},
 	}
+
+	// allowedLogLevels is the set of valid values for the --log-level flag.
+	// Source: blobfuse2 mount --help and shell-completion list.
+	allowedLogLevels = map[string]struct{}{
+		"LOG_OFF":     {},
+		"LOG_CRIT":    {},
+		"LOG_ERR":     {},
+		"LOG_WARNING": {},
+		"LOG_INFO":    {},
+		"LOG_TRACE":   {},
+		"LOG_DEBUG":   {},
+	}
+
+	// allowedLogTypes is the set of valid values for the --log-type flag.
+	// Source: blobfuse2 mount --help.
+	allowedLogTypes = map[string]struct{}{
+		"silent": {},
+		"syslog": {},
+		"base":   {},
+	}
+
+	// subdirectoryRegex matches valid Azure blob path prefixes: alphanumerics,
+	// hyphens, underscores, dots, and forward slashes. Spaces and other
+	// characters that could interfere with arg parsing are excluded.
+	subdirectoryRegex = regexp.MustCompile(`^[a-zA-Z0-9._/-]+$`)
+
+	// filterRegex matches valid blobfuse2 blob-filter patterns: alphanumerics,
+	// hyphens, underscores, dots, forward slashes, and glob wildcards (* ?).
+	filterRegex = regexp.MustCompile(`^[a-zA-Z0-9._/*?-]+$`)
 )
 
 // DriverOptions defines driver parameters specified in driver deployment
@@ -1189,26 +1219,27 @@ func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName stri
 }
 
 // ValidateMountArgValues checks that no value in the mountOptions slice contains
-// a space. A space inside a value would be misinterpreted as a flag separator,
-// allowing arbitrary blobfuse2 flags to be passed. This check is a
-// last-resort safety net applied after all other validations
+// whitespace. Whitespace inside a value would be misinterpreted as a flag
+// separator by the blobfuse-proxy or blobfuse2's own argument parser. This
+// check is a last-resort safety net applied after all other validations
 // (SanitizeMountOptions, ValidateContainerName) and after
 // appendDefaultMountOptions has added driver-controlled defaults.
 func ValidateMountArgValues(mountOptions []string) error {
 	for _, opt := range mountOptions {
 		// Split on the first "=" to isolate the value.
 		parts := strings.SplitN(strings.TrimSpace(opt), "=", 2)
-		if len(parts) == 2 && strings.Contains(parts[1], " ") {
-			return fmt.Errorf("mount option %q has an invalid value: spaces are not permitted", parts[0])
+		if len(parts) == 2 && strings.ContainsAny(parts[1], " \t\n\v\f\r") {
+			return fmt.Errorf("mount option %q has an invalid value: whitespace is not permitted", parts[0])
 		}
 	}
 	return nil
 }
 
-// ValidateContainerName rejects any containerName that does not match the
-// Azure Blob Storage naming rules. This also prevents invalid names from
-// value containing spaces cannot match the regex and is rejected before it
-// reaches the blobfuse2 args string that the proxy splits on whitespace.
+// ValidateContainerName rejects any containerName that does not conform to
+// Azure Blob Storage naming rules. Because the regex only permits lowercase
+// alphanumeric characters and hyphens, names containing spaces or other special
+// characters are rejected before the value is included in the blobfuse2 args
+// string that the proxy splits on whitespace.
 func ValidateContainerName(containerName string) error {
 	// Empty is allowed: some flows (e.g. workload identity) resolve the container
 	// name later; an empty value cannot inject any arguments.
@@ -1241,10 +1272,26 @@ func tokenizeMountOptionsString(s string) []string {
 		return nil
 	}
 	if strings.Contains(s, ",") {
-		// Comma-separated format: trim each token.
+		// Comma-separated format: trim each token and reject any token that
+		// contains internal whitespace. TrimSpace only strips leading/trailing
+		// whitespace; a tab or newline embedded inside a value (e.g.
+		// "--cache-size-mb=512\t--tmp-path=/etc") would survive and reach the
+		// validators as a single token, bypassing the per-flag checks.
+		//
+		// Exception: the single space in a valid "-o <value>" token is expected
+		// (SanitizeMountOptions validates the value part separately).
 		var tokens []string
 		for _, t := range strings.Split(s, ",") {
 			if t = strings.TrimSpace(t); t != "" {
+				if strings.HasPrefix(t, "-o ") {
+					// The space between "-o" and its value is expected; reject
+					// any further whitespace embedded in the value part.
+					if strings.IndexFunc(t[3:], unicode.IsSpace) >= 0 {
+						return nil
+					}
+				} else if strings.IndexFunc(t, unicode.IsSpace) >= 0 {
+					return nil
+				}
 				tokens = append(tokens, t)
 			}
 		}
@@ -1279,26 +1326,55 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 		}
 		// "-o <fuse_option>[=value]" tokens are FUSE passthrough options handled
 		// by the kernel mount layer; they do not redirect host paths.
+		// A bare "-o" with no FUSE option value is always invalid: the proxy
+		// joins all tokens with spaces, so "-o" at the end of the user slice
+		// would consume the next driver-controlled flag as its argument.
 		if trimmed == "-o" {
-			sanitized = append(sanitized, trimmed)
-			continue
+			return nil, fmt.Errorf("mount option \"-o\" requires a FUSE option value")
 		}
 		if strings.HasPrefix(trimmed, "-o ") {
-			// Reject if the FUSE option value contains a space: the proxy splits
-			// the flat args string on whitespace, so "-o foo --tmp-path=/invalid/path"
-			// would embed "--tmp-path=/invalid/path" as a real blobfuse2 flag, bypassing
-			// the allowlist entirely.
+			// Reject if the FUSE option value contains any whitespace. The proxy
+			// splits the flat args string on spaces; any whitespace character
+			// (tab, LF, CR, FF) that survives is normalised to a space by
+			// TrimDuplicatedSpace before the split, producing injected argv elements.
 			rest := strings.TrimSpace(trimmed[3:])
-			if strings.Contains(rest, " ") {
-				return nil, fmt.Errorf("mount option %q: FUSE -o options must not contain spaces", trimmed)
+			if strings.IndexFunc(rest, unicode.IsSpace) >= 0 {
+				return nil, fmt.Errorf("mount option %q: FUSE -o options must not contain whitespace", trimmed)
 			}
 			sanitized = append(sanitized, trimmed)
 			continue
 		}
 		// Extract the flag name: the part before "=" (or the whole token if no "=").
-		flagName := strings.SplitN(trimmed, "=", 2)[0]
+		parts := strings.SplitN(trimmed, "=", 2)
+		flagName := parts[0]
 		if _, ok := allowedEphemeralMountOptions[flagName]; !ok {
 			return nil, fmt.Errorf("mount option %q is not allowed for ephemeral volumes", flagName)
+		}
+		// Validate enum-typed flags when a value is present.
+		if len(parts) == 2 {
+			flagValue := parts[1]
+			switch flagName {
+			case "--log-level":
+				if _, ok := allowedLogLevels[flagValue]; !ok {
+					return nil, fmt.Errorf("mount option --log-level has invalid value %q: "+
+						"allowed values are LOG_OFF, LOG_CRIT, LOG_ERR, LOG_WARNING, LOG_INFO, LOG_TRACE, LOG_DEBUG", flagValue)
+				}
+			case "--log-type":
+				if _, ok := allowedLogTypes[flagValue]; !ok {
+					return nil, fmt.Errorf("mount option --log-type has invalid value %q: "+
+						"allowed values are silent, syslog, base", flagValue)
+				}
+			case "--subdirectory":
+				if !subdirectoryRegex.MatchString(flagValue) {
+					return nil, fmt.Errorf("mount option --subdirectory has invalid value %q: "+
+						"only alphanumerics, hyphens, underscores, dots, and slashes are permitted", flagValue)
+				}
+			case "--filter":
+				if !filterRegex.MatchString(flagValue) {
+					return nil, fmt.Errorf("mount option --filter has invalid value %q: "+
+						"only alphanumerics, hyphens, underscores, dots, slashes, and glob wildcards (* ?) are permitted", flagValue)
+				}
+			}
 		}
 		sanitized = append(sanitized, trimmed)
 	}

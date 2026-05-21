@@ -1508,6 +1508,16 @@ func TestTokenizeMountOptionsString(t *testing.T) {
 			input:    "--log-level=LOG_WARNING -o",
 			expected: []string{"--log-level=LOG_WARNING", "-o"},
 		},
+		{
+			name:     "comma-separated token with internal tab returns nil",
+			input:    "--cache-size-mb=512\t--tmp-path=/etc,--log-level=LOG_WARNING",
+			expected: nil,
+		},
+		{
+			name:     "comma-separated token with internal newline returns nil",
+			input:    "--log-level=LOG_WARNING,--cache-size-mb=512\n--tmp-path=/etc",
+			expected: nil,
+		},
 	}
 
 	for _, test := range tests {
@@ -1638,6 +1648,16 @@ func TestSanitizeMountOptions(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "-o option with embedded tab is rejected",
+			options: []string{"-o allow_other\t--config-file=/etc/blobfuse.cfg"},
+			wantErr: true,
+		},
+		{
+			name:    "-o option with embedded newline is rejected",
+			options: []string{"-o allow_other\n--config-file=/etc/blobfuse.cfg"},
+			wantErr: true,
+		},
+		{
 			name:     "-o option without extra space is still allowed",
 			options:  []string{"-o allow_other"},
 			wantErr:  false,
@@ -1648,6 +1668,115 @@ func TestSanitizeMountOptions(t *testing.T) {
 			options:  []string{"-o attr_timeout=120"},
 			wantErr:  false,
 			expected: []string{"-o attr_timeout=120"},
+		},
+		{
+			name:    "bare -o with no FUSE value is rejected",
+			options: []string{"-o"},
+			wantErr: true,
+		},
+		{
+			name:    "bare -o in a list is rejected",
+			options: []string{"--log-level=LOG_WARNING", "-o"},
+			wantErr: true,
+		},
+		// --log-level enum validation
+		{
+			name:     "--log-level=LOG_WARNING is valid",
+			options:  []string{"--log-level=LOG_WARNING"},
+			wantErr:  false,
+			expected: []string{"--log-level=LOG_WARNING"},
+		},
+		{
+			name:     "--log-level=LOG_DEBUG is valid",
+			options:  []string{"--log-level=LOG_DEBUG"},
+			wantErr:  false,
+			expected: []string{"--log-level=LOG_DEBUG"},
+		},
+		{
+			name:     "--log-level=LOG_TRACE is valid",
+			options:  []string{"--log-level=LOG_TRACE"},
+			wantErr:  false,
+			expected: []string{"--log-level=LOG_TRACE"},
+		},
+		{
+			name:    "--log-level with unknown value is rejected",
+			options: []string{"--log-level=VERBOSE"},
+			wantErr: true,
+		},
+		{
+			name:    "--log-level with lowercase value is rejected",
+			options: []string{"--log-level=log_warning"},
+			wantErr: true,
+		},
+		// --log-type enum validation
+		{
+			name:     "--log-type=syslog is valid",
+			options:  []string{"--log-type=syslog"},
+			wantErr:  false,
+			expected: []string{"--log-type=syslog"},
+		},
+		{
+			name:     "--log-type=silent is valid",
+			options:  []string{"--log-type=silent"},
+			wantErr:  false,
+			expected: []string{"--log-type=silent"},
+		},
+		{
+			name:     "--log-type=base is valid",
+			options:  []string{"--log-type=base"},
+			wantErr:  false,
+			expected: []string{"--log-type=base"},
+		},
+		{
+			name:    "--log-type with unknown value is rejected",
+			options: []string{"--log-type=file"},
+			wantErr: true,
+		},
+		// --subdirectory regex validation
+		{
+			name:     "--subdirectory with simple name is valid",
+			options:  []string{"--subdirectory=mydata"},
+			wantErr:  false,
+			expected: []string{"--subdirectory=mydata"},
+		},
+		{
+			name:     "--subdirectory with nested path is valid",
+			options:  []string{"--subdirectory=images/2024/january"},
+			wantErr:  false,
+			expected: []string{"--subdirectory=images/2024/january"},
+		},
+		{
+			name:    "--subdirectory with space in value is rejected",
+			options: []string{"--subdirectory=my folder"},
+			wantErr: true,
+		},
+		{
+			name:    "--subdirectory with shell special chars is rejected",
+			options: []string{"--subdirectory=foo;bar"},
+			wantErr: true,
+		},
+		// --filter regex validation
+		{
+			name:     "--filter with glob wildcard is valid",
+			options:  []string{"--filter=*.txt"},
+			wantErr:  false,
+			expected: []string{"--filter=*.txt"},
+		},
+		{
+			name:     "--filter with path pattern is valid",
+			options:  []string{"--filter=images/*.jpg"},
+			wantErr:  false,
+			expected: []string{"--filter=images/*.jpg"},
+		},
+		{
+			name:    "--filter with space in value is rejected",
+			options: []string{"--filter=foo bar"},
+			wantErr: true,
+		},
+		{
+			name:    "--filter with shell special chars is rejected",
+			options: []string{"--filter=foo;rm -rf /"},
+			wantErr: true,
 		},
 	}
 
@@ -1754,6 +1883,16 @@ func TestValidateMountArgValues(t *testing.T) {
 		{
 			name:    "value containing a space is rejected",
 			options: []string{"--subdirectory=foo bar"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing a tab is rejected",
+			options: []string{"--subdirectory=foo\tbar"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing a newline is rejected",
+			options: []string{"--subdirectory=foo\nbar"},
 			wantErr: true,
 		},
 		{
