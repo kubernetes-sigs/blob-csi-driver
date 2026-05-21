@@ -1228,7 +1228,7 @@ func ValidateMountArgValues(mountOptions []string) error {
 	for _, opt := range mountOptions {
 		// Split on the first "=" to isolate the value.
 		parts := strings.SplitN(strings.TrimSpace(opt), "=", 2)
-		if len(parts) == 2 && strings.ContainsAny(parts[1], " \t\n\v\f\r") {
+		if len(parts) == 2 && strings.IndexFunc(parts[1], unicode.IsSpace) >= 0 {
 			return fmt.Errorf("mount option %q has an invalid value: whitespace is not permitted", parts[0])
 		}
 	}
@@ -1287,10 +1287,10 @@ func tokenizeMountOptionsString(s string) []string {
 					// The space between "-o" and its value is expected; reject
 					// any further whitespace embedded in the value part.
 					if strings.IndexFunc(t[3:], unicode.IsSpace) >= 0 {
-						return nil
+						return []string{t}
 					}
 				} else if strings.IndexFunc(t, unicode.IsSpace) >= 0 {
-					return nil
+					return []string{t}
 				}
 				tokens = append(tokens, t)
 			}

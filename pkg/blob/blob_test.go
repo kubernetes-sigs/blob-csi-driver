@@ -1509,14 +1509,16 @@ func TestTokenizeMountOptionsString(t *testing.T) {
 			expected: []string{"--log-level=LOG_WARNING", "-o"},
 		},
 		{
-			name:     "comma-separated token with internal tab returns nil",
+			// Bad token is returned as-is so SanitizeMountOptions / ValidateMountArgValues
+			// can produce an explicit InvalidArgument error rather than silently dropping input.
+			name:     "comma-separated token with internal tab returns the bad token",
 			input:    "--cache-size-mb=512\t--tmp-path=/etc,--log-level=LOG_WARNING",
-			expected: nil,
+			expected: []string{"--cache-size-mb=512\t--tmp-path=/etc"},
 		},
 		{
-			name:     "comma-separated token with internal newline returns nil",
+			name:     "comma-separated token with internal newline returns the bad token",
 			input:    "--log-level=LOG_WARNING,--cache-size-mb=512\n--tmp-path=/etc",
-			expected: nil,
+			expected: []string{"--cache-size-mb=512\n--tmp-path=/etc"},
 		},
 	}
 
@@ -1908,6 +1910,13 @@ func TestValidateMountArgValues(t *testing.T) {
 		{
 			name:    "first clean then one with space is rejected",
 			options: []string{"--log-level=LOG_WARNING", "--cache-size-mb=512 --tmp-path=/etc"},
+			wantErr: true,
+		},
+		{
+			// U+00A0 NBSP is Unicode whitespace; the proxy's \s+ regexp normalises it
+			// to a space before strings.Split, so it must be caught here.
+			name:    "value containing NBSP (U+00A0) is rejected",
+			options: []string{"--cache-size-mb=512\u00a0--tmp-path=/etc"},
 			wantErr: true,
 		},
 	}
