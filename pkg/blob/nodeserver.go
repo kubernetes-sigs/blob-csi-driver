@@ -491,6 +491,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
 		}
 		mountOptions = util.JoinMountOptions(mountOptions, sanitized)
+
+		// Validate that no sanitized ephemeral mount option value contains
+		// whitespace. Only applied to inline volumes because mountOptions for
+		// PV/SC-backed volumes come from trusted cluster-admin configuration and
+		// should not be broken by this check.
+		if err := ValidateMountArgValues(sanitized); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+		}
 	}
 	if isHnsEnabled {
 		mountOptions = util.JoinMountOptions(mountOptions, []string{"--use-adls=true"})
@@ -506,13 +514,6 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		tmpPath += fmt.Sprintf("#%d", time.Now().Unix())
 	}
 	mountOptions = appendDefaultMountOptions(mountOptions, tmpPath, containerName)
-
-	// Last-resort check: ensure no value in the final mount options contains a
-	// space. The proxy splits the flat args string on spaces; a space inside any
-	// value would be treated as a flag separator.
-	if err := ValidateMountArgValues(mountOptions); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
-	}
 
 	args := targetPath
 	for _, opt := range mountOptions {
