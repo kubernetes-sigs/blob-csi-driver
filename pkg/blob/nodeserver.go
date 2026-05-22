@@ -505,6 +505,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 
 	if !checkGidPresentInMountFlags(mountFlags) && volumeMountGroup != "" {
+
+		// Validate as an unsigned integer (the POSIX GID type) before formatting it into
+		// the args string. This is a defence-in-depth check; do not rely on apiserver
+		// admission for a CSI-layer invariant.
+		if _, err := strconv.ParseUint(volumeMountGroup, 10, 32); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument,
+				"invalid volumeMountGroup %q: must be an unsigned 32-bit integer (POSIX GID)", volumeMountGroup)
+		}
 		klog.V(2).Infof("append volumeMountGroup %s", volumeMountGroup)
 		mountOptions = append(mountOptions, fmt.Sprintf("-o gid=%s", volumeMountGroup))
 	}

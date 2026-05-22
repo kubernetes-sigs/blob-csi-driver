@@ -1810,6 +1810,46 @@ func TestSanitizeMountOptions(t *testing.T) {
 			options: []string{"--filter=foo;rm -rf /"},
 			wantErr: true,
 		},
+		{
+			name:    "rejects -o smuggling --tmp-path",
+			options: []string{"-o --tmp-path"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --config-file",
+			options: []string{"-o --config-file=/tmp/x.yaml"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --passphrase",
+			options: []string{"-o --passphrase=secret"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --container-name",
+			options: []string{"-o --container-name=evil"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --log-file-path",
+			options: []string{"-o --log-file-path=/etc/cron.d/x"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --block-cache-path",
+			options: []string{"-o --block-cache-path=/var/lib/x"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --secure-config",
+			options: []string{"-o --secure-config"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling via comma carrier",
+			options: []string{"--cache-size-mb=512,-o --config-file=/tmp/x"},
+			wantErr: true,
+		},
 	}
 
 	for _, test := range tests {

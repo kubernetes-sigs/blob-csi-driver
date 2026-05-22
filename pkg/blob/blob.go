@@ -1341,6 +1341,13 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 			if strings.IndexFunc(rest, unicode.IsSpace) >= 0 {
 				return nil, fmt.Errorf("mount option %q: FUSE -o options must not contain whitespace", trimmed)
 			}
+			// FUSE -o options (allow_other, ro, rw, umask=…, uid=…, …) never start
+			// with "-". A leading "-" means the user is smuggling a blobfuse2 CLI
+			// flag through the passthrough, which the proxy will hand to blobfuse2
+			// as a top-level argument after splitting on whitespace.
+			if strings.HasPrefix(rest, "-") {
+				return nil, fmt.Errorf("mount option %q: -o values must be FUSE options, not CLI flags", trimmed)
+			}
 			sanitized = append(sanitized, trimmed)
 			continue
 		}
@@ -1353,6 +1360,14 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 		// Validate enum-typed flags when a value is present.
 		if len(parts) == 2 {
 			flagValue := parts[1]
+			// Reject any whitespace in the value. The proxy joins all tokens
+			// with single spaces and then splits on " " to build argv; any
+			// whitespace surviving inside a value (e.g. "--cache-size-mb=512,-o --config-file=/tmp/x")
+			// is normalised to a space by TrimDuplicatedSpace and split off
+			// into an injected argv element (here: "--config-file=/tmp/x").
+			if strings.IndexFunc(flagValue, unicode.IsSpace) >= 0 {
+				return nil, fmt.Errorf("mount option %q: value must not contain whitespace", trimmed)
+			}
 			switch flagName {
 			case "--log-level":
 				if _, ok := allowedLogLevels[flagValue]; !ok {
@@ -1408,13 +1423,19 @@ func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName str
 	allMountOptions := mountOptions
 
 	for k, v := range defaultMountOptions {
-		if _, isIncluded := included[k]; !isIncluded {
-			if v != "" {
-				allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%s", k, v))
-			} else {
-				allMountOptions = append(allMountOptions, k)
-			}
+		if included[k] {
+			continue
 		}
+		if v == "" {
+			// Defensive: a bare default flag would consume the next argv element
+			// as its value when blobfuse2 parses the split args string. None of
+			// the current defaults legitimately use empty values; if a future
+			// default needs a bare flag, move it to a separate boolean-flags
+			// slice rather than going through this map.
+			klog.Warningf("skipping default mount option %q with empty value", k)
+			continue
+		}
+		allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	return allMountOptions
