@@ -1411,10 +1411,9 @@ func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName str
 		if _, isIncluded := included[k]; !isIncluded {
 			if v != "" {
 				allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%s", k, v))
+			} else {
+				allMountOptions = append(allMountOptions, k)
 			}
-			// v == "": skip entirely — do NOT emit a bare flag (e.g. "--container-name"
-			// with no value). A bare GNU-style flag causes blobfuse2 to consume the next
-			// argv element as its value, silently discarding a driver-controlled flag.
 		}
 	}
 

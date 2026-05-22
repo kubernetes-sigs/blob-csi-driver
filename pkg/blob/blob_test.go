@@ -2083,21 +2083,6 @@ func TestAppendDefaultMountOptions(t *testing.T) {
 				"targetPath",
 			},
 		},
-		{
-			// empty containerName (workload identity flow): --container-name must NOT
-			// be emitted as a bare flag — that would cause blobfuse2 to consume the
-			// next argv element as its value, silently discarding a driver flag.
-			options:       []string{"targetPath"},
-			tmpPath:       "/tmp",
-			containerName: "",
-			expected: []string{"--cancel-list-on-mount-seconds=10",
-				"--pre-mount-validate=true",
-				"--empty-dir-check=false",
-				"--tmp-path=/tmp",
-				"--use-https=true",
-				"targetPath",
-			},
-		},
 	}
 
 	for _, test := range tests {

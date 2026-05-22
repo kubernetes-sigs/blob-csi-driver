@@ -890,6 +890,34 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "[Error] ephemeral volume with empty containerName is rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc##ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						"csi.storage.k8s.io/ephemeral": "true",
+						// containerName intentionally absent — simulates user omitting it
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "NodeStageVolume: containerName must be specified for ephemeral volumes")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)

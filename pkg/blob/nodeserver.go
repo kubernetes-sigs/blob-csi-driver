@@ -369,6 +369,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Errorf(codes.InvalidArgument, "fsGroupChangePolicy(%s) is not supported, supported fsGroupChangePolicy list: %v", fsGroupChangePolicy, supportedFSGroupChangePolicyList)
 	}
 
+	// For ephemeral inline volumes the user controls volumeAttributes; an empty
+	// containerName would cause appendDefaultMountOptions to emit a bare
+	// "--container-name" flag, which shifts blobfuse2's argv and disables
+	// driver-controlled flags. Fail fast before any I/O.
+	if ephemeralVol && getValueInMap(attrib, containerNameField) == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: containerName must be specified for ephemeral volumes")
+	}
+
 	mc := csiMetrics.NewCSIMetricContext("node_stage_volume").WithBasicVolumeInfo(d.cloud.ResourceGroup, "", d.Name)
 	isOperationSucceeded := false
 	defer func() {
