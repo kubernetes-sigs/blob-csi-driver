@@ -1520,6 +1520,21 @@ func TestTokenizeMountOptionsString(t *testing.T) {
 			input:    "--log-level=LOG_WARNING,--cache-size-mb=512\n--tmp-path=/etc",
 			expected: []string{"--cache-size-mb=512\n--tmp-path=/etc"},
 		},
+		{
+			name:     "comma token with internal CR returns bad token",
+			input:    "--cache-size-mb=512\r--tmp-path=/etc,--read-only",
+			expected: []string{"--cache-size-mb=512\r--tmp-path=/etc"},
+		},
+		{
+			name:     "comma token with internal FF returns bad token",
+			input:    "--cache-size-mb=512\f--tmp-path=/etc,--read-only",
+			expected: []string{"--cache-size-mb=512\f--tmp-path=/etc"},
+		},
+		{
+			name:     "comma token with internal VT returns bad token",
+			input:    "--cache-size-mb=512\v--tmp-path=/etc,--read-only",
+			expected: []string{"--cache-size-mb=512\v--tmp-path=/etc"},
+		},
 	}
 
 	for _, test := range tests {
@@ -1657,6 +1672,21 @@ func TestSanitizeMountOptions(t *testing.T) {
 		{
 			name:    "-o option with embedded newline is rejected",
 			options: []string{"-o allow_other\n--config-file=/etc/blobfuse.cfg"},
+			wantErr: true,
+		},
+		{
+			name:    "-o value containing CR is rejected",
+			options: []string{"-o allow_other\rro"},
+			wantErr: true,
+		},
+		{
+			name:    "-o value containing FF is rejected",
+			options: []string{"-o allow_other\fro"},
+			wantErr: true,
+		},
+		{
+			name:    "-o value containing VT is rejected",
+			options: []string{"-o allow_other\vro"},
 			wantErr: true,
 		},
 		{
@@ -1917,6 +1947,21 @@ func TestValidateMountArgValues(t *testing.T) {
 			// to a space before strings.Split, so it must be caught here.
 			name:    "value containing NBSP (U+00A0) is rejected",
 			options: []string{"--cache-size-mb=512\u00a0--tmp-path=/etc"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing CR is rejected",
+			options: []string{"--subdirectory=foo\rbar"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing FF is rejected",
+			options: []string{"--subdirectory=foo\fbar"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing VT is rejected",
+			options: []string{"--subdirectory=foo\vbar"},
 			wantErr: true,
 		},
 	}
