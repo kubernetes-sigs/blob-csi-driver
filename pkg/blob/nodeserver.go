@@ -369,6 +369,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Errorf(codes.InvalidArgument, "fsGroupChangePolicy(%s) is not supported, supported fsGroupChangePolicy list: %v", fsGroupChangePolicy, supportedFSGroupChangePolicyList)
 	}
 
+	// For ephemeral inline volumes the user controls volumeAttributes; an empty
+	// containerName would cause appendDefaultMountOptions to emit a bare
+	// "--container-name" flag, which shifts blobfuse2's argv and disables
+	// driver-controlled flags. Fail fast before any I/O.
+	if ephemeralVol && getValueInMap(attrib, containerNameField) == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: containerName must be specified for ephemeral volumes")
+	}
+
 	mc := csiMetrics.NewCSIMetricContext("node_stage_volume").WithBasicVolumeInfo(d.cloud.ResourceGroup, "", d.Name)
 	isOperationSucceeded := false
 	defer func() {
@@ -395,6 +403,13 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	// replace pv/pvc name namespace metadata in subDir
 	containerName = replaceWithMap(containerName, containerNameReplaceMap)
+
+	// Validate containerName against Azure naming rules. A value
+	// containing spaces cannot match the regex and is rejected before it reaches
+	// the blobfuse2 args string.
+	if err := ValidateContainerName(containerName); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+	}
 
 	if strings.TrimSpace(storageEndpointSuffix) == "" {
 		storageEndpointSuffix = d.getStorageEndPointSuffix()
@@ -468,13 +483,36 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	// Get mountOptions that the volume will be formatted and mounted with
 	mountOptions := mountFlags
 	if ephemeralVol {
-		mountOptions = util.JoinMountOptions(mountOptions, strings.Split(ephemeralVolMountOptions, ","))
+		// Reject any user-supplied mount options that are security-sensitive and
+		// must be driver-controlled (e.g. --tmp-path). Return InvalidArgument so
+		// the caller knows their requested behaviour was not applied.
+		sanitized, err := SanitizeMountOptions(tokenizeMountOptionsString(ephemeralVolMountOptions))
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "%v", err)
+		}
+		mountOptions = util.JoinMountOptions(mountOptions, sanitized)
+
+		// Validate that no sanitized ephemeral mount option value contains
+		// whitespace. Only applied to inline volumes because mountOptions for
+		// PV/SC-backed volumes come from trusted cluster-admin configuration and
+		// should not be broken by this check.
+		if err := ValidateMountArgValues(sanitized); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+		}
 	}
 	if isHnsEnabled {
 		mountOptions = util.JoinMountOptions(mountOptions, []string{"--use-adls=true"})
 	}
 
 	if !checkGidPresentInMountFlags(mountFlags) && volumeMountGroup != "" {
+
+		// Validate as an unsigned integer (the POSIX GID type) before formatting it into
+		// the args string. This is a defence-in-depth check; do not rely on apiserver
+		// admission for a CSI-layer invariant.
+		if _, err := strconv.ParseUint(volumeMountGroup, 10, 32); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument,
+				"invalid volumeMountGroup %q: must be an unsigned 32-bit integer (POSIX GID)", volumeMountGroup)
+		}
 		klog.V(2).Infof("append volumeMountGroup %s", volumeMountGroup)
 		mountOptions = append(mountOptions, fmt.Sprintf("-o gid=%s", volumeMountGroup))
 	}

@@ -29,6 +29,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
@@ -178,6 +179,113 @@ var (
 	defaultAzureOAuthTokenDir = "/var/lib/kubelet/plugins/" + DefaultDriverName
 
 	subscriptionIDRegex = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+	// containerNameRegex enforces Azure Blob Storage container naming rules.
+	// Names containing spaces or special characters cannot match and are
+	// rejected before reaching the blobfuse2 args string.
+	containerNameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$`)
+
+	// allowedEphemeralMountOptions is the allowlist of blobfuse2 CLI flags that
+	// may appear in volumeAttributes.mountOptions for an ephemeral inline volume.
+	// Any flag NOT in this map is rejected by SanitizeMountOptions.
+	//
+	// Verified against: blobfuse2 mount --help (v2.x)
+	//
+	// Intentionally absent (must remain driver-controlled):
+	//   --tmp-path          — redirects file-cache root to arbitrary host path
+	//   --block-cache-path  — same primitive for block-cache mode
+	//   --config-file       — loads arbitrary blobfuse2 config from host
+	//   --log-file-path     — root-owned log writes to arbitrary host path
+	//   --container-name    — driver sets this from the validated containerName
+	//                         volumeAttribute; allowing it in mountOptions would
+	//                         override that validation entirely
+	//   --passphrase        — decrypts --secure-config files; enables config-file
+	//                         attack path indirectly
+	//   --secure-config     — enables encrypted config loading; combined with
+	//                         --passphrase reinstates the --config-file attack
+	//
+	// Note: FUSE passthrough tokens "-o <option>[=value]" are always permitted;
+	// they are handled separately in SanitizeMountOptions.
+	allowedEphemeralMountOptions = map[string]struct{}{
+		"--allow-other":                    {},
+		"--attr-cache-timeout":             {},
+		"--attr-timeout":                   {},
+		"--block-cache":                    {},
+		"--block-cache-block-size":         {},
+		"--block-cache-disk-size":          {},
+		"--block-cache-disk-timeout":       {},
+		"--block-cache-parallelism":        {},
+		"--block-cache-pool-size":          {},
+		"--block-cache-prefetch":           {},
+		"--block-cache-prefetch-on-open":   {},
+		"--block-cache-strong-consistency": {},
+		"--block-size-mb":                  {},
+		"--cache-size-mb":                  {},
+		"--cap-iops":                       {},
+		"--cap-mbps-read":                  {},
+		"--cleanup-on-start":               {},
+		"--cpk-enabled":                    {},
+		"--disable-compression":            {},
+		"--disable-kernel-cache":           {},
+		"--disable-version-check":          {},
+		"--disable-writeback-cache":        {},
+		"--cancel-list-on-mount-seconds":   {},
+		"--entry-timeout":                  {},
+		"--file-cache-timeout":             {},
+		"--file-cache-timeout-in-seconds":  {},
+		"--filter":                         {},
+		"--foreground":                     {},
+		"--hard-limit":                     {},
+		"--high-disk-threshold":            {},
+		"--ignore-open-flags":              {},
+		"--ignore-sync":                    {},
+		"--list-cache-timeout":             {},
+		"--log-goroutine-id":               {},
+		"--log-level":                      {},
+		"--log-type":                       {},
+		"--low-disk-threshold":             {},
+		"--negative-timeout":               {},
+		"--no-symlinks":                    {},
+		"--pool-size":                      {},
+		"--preload":                        {},
+		"--preserve-acl":                   {},
+		"--read-only":                      {},
+		"--subdirectory":                   {},
+		"--sync-to-flush":                  {},
+		"--use-attr-cache":                 {},
+		"--virtual-directory":              {},
+		"--wait-for-mount":                 {},
+		"--workers":                        {},
+	}
+
+	// allowedLogLevels is the set of valid values for the --log-level flag.
+	// Source: blobfuse2 mount --help and shell-completion list.
+	allowedLogLevels = map[string]struct{}{
+		"LOG_OFF":     {},
+		"LOG_CRIT":    {},
+		"LOG_ERR":     {},
+		"LOG_WARNING": {},
+		"LOG_INFO":    {},
+		"LOG_TRACE":   {},
+		"LOG_DEBUG":   {},
+	}
+
+	// allowedLogTypes is the set of valid values for the --log-type flag.
+	// Source: blobfuse2 mount --help.
+	allowedLogTypes = map[string]struct{}{
+		"silent": {},
+		"syslog": {},
+		"base":   {},
+	}
+
+	// subdirectoryRegex matches valid Azure blob path prefixes: alphanumerics,
+	// hyphens, underscores, dots, and forward slashes. Spaces and other
+	// characters that could interfere with arg parsing are excluded.
+	subdirectoryRegex = regexp.MustCompile(`^[a-zA-Z0-9._/-]+$`)
+
+	// filterRegex matches valid blobfuse2 blob-filter patterns: alphanumerics,
+	// hyphens, underscores, dots, forward slashes, and glob wildcards (* ?).
+	filterRegex = regexp.MustCompile(`^[a-zA-Z0-9._/*?-]+$`)
 )
 
 // DriverOptions defines driver parameters specified in driver deployment
@@ -1110,6 +1218,184 @@ func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName stri
 	return false
 }
 
+// ValidateMountArgValues checks that no value in the mountOptions slice contains
+// whitespace. Whitespace inside a value would be misinterpreted as a flag
+// separator by the blobfuse-proxy or blobfuse2's own argument parser. This
+// check is a last-resort safety net applied after all other validations
+// (SanitizeMountOptions, ValidateContainerName) and after
+// appendDefaultMountOptions has added driver-controlled defaults.
+func ValidateMountArgValues(mountOptions []string) error {
+	for _, opt := range mountOptions {
+		// Split on the first "=" to isolate the value.
+		parts := strings.SplitN(strings.TrimSpace(opt), "=", 2)
+		if len(parts) == 2 && strings.IndexFunc(parts[1], unicode.IsSpace) >= 0 {
+			return fmt.Errorf("mount option %q has an invalid value: whitespace is not permitted", parts[0])
+		}
+	}
+	return nil
+}
+
+// ValidateContainerName rejects any containerName that does not conform to
+// Azure Blob Storage naming rules. Because the regex only permits lowercase
+// alphanumeric characters and hyphens, names containing spaces or other special
+// characters are rejected before the value is included in the blobfuse2 args
+// string that the proxy splits on whitespace.
+func ValidateContainerName(containerName string) error {
+	// Empty is allowed: some flows (e.g. workload identity) resolve the container
+	// name later; an empty value cannot inject any arguments.
+	if containerName == "" {
+		return nil
+	}
+	if !containerNameRegex.MatchString(containerName) {
+		return fmt.Errorf("invalid containerName %q: must be 3–63 lowercase alphanumeric/hyphen characters, "+
+			"start and end with a letter or digit, and contain no consecutive hyphens", containerName)
+	}
+	if strings.Contains(containerName, "--") {
+		return fmt.Errorf("invalid containerName %q: consecutive hyphens are not allowed", containerName)
+	}
+	return nil
+}
+
+// tokenizeMountOptionsString splits a mountOptions string from volumeAttributes
+// into individual option tokens. It supports two formats:
+//
+//   - Comma-separated: "--log-level=LOG_WARNING,--cache-size-mb=100,-o allow_other"
+//   - Space-separated: "-o allow_other --file-cache-timeout-in-seconds=240"
+//
+// When the string contains no comma the space-separated path is used. In that
+// case "-o FUSE_OPT" pairs (where the FUSE option is the token immediately
+// following "-o") are kept as a single element so they satisfy the form
+// expected by SanitizeMountOptions.
+func tokenizeMountOptionsString(s string) []string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	if strings.Contains(s, ",") {
+		// Comma-separated format: trim each token and reject any token that
+		// contains internal whitespace. TrimSpace only strips leading/trailing
+		// whitespace; a tab or newline embedded inside a value (e.g.
+		// "--cache-size-mb=512\t--tmp-path=/etc") would survive and reach the
+		// validators as a single token, bypassing the per-flag checks.
+		//
+		// Exception: the single space in a valid "-o <value>" token is expected
+		// (SanitizeMountOptions validates the value part separately).
+		var tokens []string
+		for _, t := range strings.Split(s, ",") {
+			if t = strings.TrimSpace(t); t != "" {
+				if strings.HasPrefix(t, "-o ") {
+					// The space between "-o" and its value is expected; reject
+					// any further whitespace embedded in the value part.
+					if strings.IndexFunc(t[3:], unicode.IsSpace) >= 0 {
+						return []string{t}
+					}
+				} else if strings.IndexFunc(t, unicode.IsSpace) >= 0 {
+					return []string{t}
+				}
+				tokens = append(tokens, t)
+			}
+		}
+		return tokens
+	}
+	// Space-separated format: reassemble "-o FUSE_OPT" pairs so that each
+	// "-o" and its argument are kept as one element ("-o allow_other").
+	fields := strings.Fields(s)
+	tokens := make([]string, 0, len(fields))
+	for i := 0; i < len(fields); i++ {
+		if fields[i] == "-o" && i+1 < len(fields) {
+			tokens = append(tokens, "-o "+fields[i+1])
+			i++
+		} else {
+			tokens = append(tokens, fields[i])
+		}
+	}
+	return tokens
+}
+
+// SanitizeMountOptions validates that every blobfuse2 flag in mountOptions
+// appears in the allowedEphemeralMountOptions allowlist. It is called only for
+// ephemeral inline volumes where volumeAttributes.mountOptions is user-supplied.
+// FUSE passthrough tokens ("-o <option>") are always permitted.
+func SanitizeMountOptions(mountOptions []string) ([]string, error) {
+	sanitized := make([]string, 0, len(mountOptions))
+	for _, opt := range mountOptions {
+		trimmed := strings.TrimSpace(opt)
+		// Skip empty entries (e.g. from splitting an empty mountOptions string).
+		if trimmed == "" {
+			continue
+		}
+		// "-o <fuse_option>[=value]" tokens are FUSE passthrough options handled
+		// by the kernel mount layer; they do not redirect host paths.
+		// A bare "-o" with no FUSE option value is always invalid: the proxy
+		// joins all tokens with spaces, so "-o" at the end of the user slice
+		// would consume the next driver-controlled flag as its argument.
+		if trimmed == "-o" {
+			return nil, fmt.Errorf("mount option \"-o\" requires a FUSE option value")
+		}
+		if strings.HasPrefix(trimmed, "-o ") {
+			// Reject if the FUSE option value contains any whitespace. The proxy
+			// splits the flat args string on spaces; any whitespace character
+			// (tab, LF, CR, FF) that survives is normalised to a space by
+			// TrimDuplicatedSpace before the split, producing injected argv elements.
+			rest := strings.TrimSpace(trimmed[3:])
+			if strings.IndexFunc(rest, unicode.IsSpace) >= 0 {
+				return nil, fmt.Errorf("mount option %q: FUSE -o options must not contain whitespace", trimmed)
+			}
+			// FUSE -o options (allow_other, ro, rw, umask=…, uid=…, …) never start
+			// with "-". A leading "-" means the user is smuggling a blobfuse2 CLI
+			// flag through the passthrough, which the proxy will hand to blobfuse2
+			// as a top-level argument after splitting on whitespace.
+			if strings.HasPrefix(rest, "-") {
+				return nil, fmt.Errorf("mount option %q: -o values must be FUSE options, not CLI flags", trimmed)
+			}
+			sanitized = append(sanitized, trimmed)
+			continue
+		}
+		// Extract the flag name: the part before "=" (or the whole token if no "=").
+		parts := strings.SplitN(trimmed, "=", 2)
+		flagName := parts[0]
+		if _, ok := allowedEphemeralMountOptions[flagName]; !ok {
+			return nil, fmt.Errorf("mount option %q is not allowed for ephemeral volumes", flagName)
+		}
+		// Validate enum-typed flags when a value is present.
+		if len(parts) == 2 {
+			flagValue := parts[1]
+			// Reject any whitespace in the value. The proxy joins all tokens
+			// with single spaces and then splits on " " to build argv; any
+			// whitespace surviving inside a value (e.g. "--cache-size-mb=512,-o --config-file=/tmp/x")
+			// is normalised to a space by TrimDuplicatedSpace and split off
+			// into an injected argv element (here: "--config-file=/tmp/x").
+			if strings.IndexFunc(flagValue, unicode.IsSpace) >= 0 {
+				return nil, fmt.Errorf("mount option %q: value must not contain whitespace", trimmed)
+			}
+			switch flagName {
+			case "--log-level":
+				if _, ok := allowedLogLevels[flagValue]; !ok {
+					return nil, fmt.Errorf("mount option --log-level has invalid value %q: "+
+						"allowed values are LOG_OFF, LOG_CRIT, LOG_ERR, LOG_WARNING, LOG_INFO, LOG_TRACE, LOG_DEBUG", flagValue)
+				}
+			case "--log-type":
+				if _, ok := allowedLogTypes[flagValue]; !ok {
+					return nil, fmt.Errorf("mount option --log-type has invalid value %q: "+
+						"allowed values are silent, syslog, base", flagValue)
+				}
+			case "--subdirectory":
+				if !subdirectoryRegex.MatchString(flagValue) {
+					return nil, fmt.Errorf("mount option --subdirectory has invalid value %q: "+
+						"only alphanumerics, hyphens, underscores, dots, and slashes are permitted", flagValue)
+				}
+			case "--filter":
+				if !filterRegex.MatchString(flagValue) {
+					return nil, fmt.Errorf("mount option --filter has invalid value %q: "+
+						"only alphanumerics, hyphens, underscores, dots, slashes, and glob wildcards (* ?) are permitted", flagValue)
+				}
+			}
+		}
+		sanitized = append(sanitized, trimmed)
+	}
+	return sanitized, nil
+}
+
 // appendDefaultMountOptions return mount options combined with mountOptions and defaultMountOptions
 func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName string) []string {
 	var defaultMountOptions = map[string]string{
@@ -1137,13 +1423,19 @@ func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName str
 	allMountOptions := mountOptions
 
 	for k, v := range defaultMountOptions {
-		if _, isIncluded := included[k]; !isIncluded {
-			if v != "" {
-				allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%s", k, v))
-			} else {
-				allMountOptions = append(allMountOptions, k)
-			}
+		if included[k] {
+			continue
 		}
+		if v == "" {
+			// Defensive: a bare default flag would consume the next argv element
+			// as its value when blobfuse2 parses the split args string. None of
+			// the current defaults legitimately use empty values; if a future
+			// default needs a bare flag, move it to a separate boolean-flags
+			// slice rather than going through this map.
+			klog.Warningf("skipping default mount option %q with empty value", k)
+			continue
+		}
+		allMountOptions = append(allMountOptions, fmt.Sprintf("%s=%s", k, v))
 	}
 
 	return allMountOptions
