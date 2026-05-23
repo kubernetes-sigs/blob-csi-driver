@@ -581,6 +581,140 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "TestKnownVolumeMountGroupBypass",
+			testFunc: func(t *testing.T) {
+				maliciousGroups := []struct {
+					name  string
+					value string
+				}{
+					{name: "C1_whitespace_tab", value: "1000\t--tmp-path=/etc"},
+					{name: "C1_whitespace_space", value: "1000 --tmp-path=/etc"},
+					{name: "C2_fstab_comma_config_file", value: ",--config-file"},
+					{name: "C2_fstab_comma_prefixed_gid", value: "1000,--config-file"},
+					{name: "C2_fstab_comma_tmp_path", value: "0,--tmp-path=/etc/shadow"},
+					{name: "negative_gid", value: "-1"},
+					{name: "non_numeric", value: "root"},
+				}
+				for _, mg := range maliciousGroups {
+					t.Run(mg.name, func(t *testing.T) {
+						req := &csi.NodeStageVolumeRequest{
+							VolumeId:          "rg#acc#cont#ns",
+							StagingTargetPath: targetTest,
+							VolumeCapability: &csi.VolumeCapability{
+								AccessMode: &volumeCap,
+								AccessType: &csi.VolumeCapability_Mount{
+									Mount: &csi.VolumeCapability_MountVolume{
+										VolumeMountGroup: mg.value,
+									},
+								},
+							},
+							VolumeContext: map[string]string{
+								mountPermissionsField: "0755",
+								protocolField:         "fuse2",
+							},
+							Secrets: map[string]string{},
+						}
+						d := NewFakeDriver()
+						d.cloud.ResourceGroup = "rg"
+						d.enableBlobMockMount = true
+						fakeMounter := &fakeMounter{}
+						fakeExec := &testingexec.FakeExec{}
+						d.mounter = &mount.SafeFormatAndMount{
+							Interface: fakeMounter,
+							Exec:      fakeExec,
+						}
+
+						keyList := make([]*armstorage.AccountKey, 1)
+						fakeKey := "fakeKey"
+						fakeValue := "fakeValue"
+						keyList[0] = (&armstorage.AccountKey{
+							KeyName: &fakeKey,
+							Value:   &fakeValue,
+						})
+						mockStorageAccountsClient := NewMockSAClient(context.Background(), gomock.NewController(t), "subID", "unit-test", "unit-test", keyList)
+						d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(gomock.NewController(t))
+						d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClient().Return(mockStorageAccountsClient).AnyTimes()
+						d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).EXPECT().GetAccountClientForSub(gomock.Any()).Return(mockStorageAccountsClient, nil).AnyTimes()
+
+						_, err := d.NodeStageVolume(context.TODO(), req)
+						if err == nil {
+							t.Fatalf("expected InvalidArgument error for malicious volumeMountGroup %q, got nil", mg.value)
+						}
+						if status.Code(err) != codes.InvalidArgument {
+							t.Fatalf("expected codes.InvalidArgument for %q, got: %v", mg.value, err)
+						}
+						if !strings.Contains(err.Error(), "volumeMountGroup") {
+							t.Fatalf("expected error to mention volumeMountGroup for %q, got: %v", mg.value, err)
+						}
+					})
+				}
+			},
+		},
+		{
+			name: "service account token from secrets is propagated to attrib",
+			testFunc: func(t *testing.T) {
+				defaultAzureOAuthTokenDir = "./blob.csi.azure.com/"
+				_ = makeDir(defaultAzureOAuthTokenDir)
+				defer func() { _ = os.RemoveAll(defaultAzureOAuthTokenDir) }()
+
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						mountWithWITokenField:   "true",
+						clientIDField:           "client-id-value",
+						storageAccountNameField: "test-account",
+					},
+					Secrets: map[string]string{
+						serviceAccountTokenField: `{"api://AzureADTokenExchange":{"token":"test-token","expirationTimestamp":"2023-01-01T00:00:00Z"}}`,
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, nil)
+				}
+			},
+		},
+		{
+			name: "[Error] ephemeral volume with empty containerName is rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc##ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						"csi.storage.k8s.io/ephemeral": "true",
+						// containerName intentionally absent — simulates user omitting it
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "NodeStageVolume: containerName must be specified for ephemeral volumes")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)

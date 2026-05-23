@@ -1450,6 +1450,678 @@ func TestUseDataPlaneAPI(t *testing.T) {
 	}
 }
 
+func TestTokenizeMountOptionsString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "empty string returns nil",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:     "whitespace-only returns nil",
+			input:    "   ",
+			expected: nil,
+		},
+		// Comma-separated format
+		{
+			name:     "comma-separated flags",
+			input:    "--log-level=LOG_WARNING,--cache-size-mb=100",
+			expected: []string{"--log-level=LOG_WARNING", "--cache-size-mb=100"},
+		},
+		{
+			name:     "comma-separated with -o token",
+			input:    "-o allow_other,--file-cache-timeout-in-seconds=120",
+			expected: []string{"-o allow_other", "--file-cache-timeout-in-seconds=120"},
+		},
+		{
+			name:     "comma-separated trims spaces around tokens",
+			input:    "--log-level=LOG_WARNING, --cache-size-mb=100",
+			expected: []string{"--log-level=LOG_WARNING", "--cache-size-mb=100"},
+		},
+		{
+			name:     "comma-separated skips empty tokens",
+			input:    "--log-level=LOG_WARNING,,--cache-size-mb=100",
+			expected: []string{"--log-level=LOG_WARNING", "--cache-size-mb=100"},
+		},
+		// Space-separated format (the pre-existing format users had before comma support)
+		{
+			name:     "space-separated reassembles -o pair",
+			input:    "-o allow_other --file-cache-timeout-in-seconds=240",
+			expected: []string{"-o allow_other", "--file-cache-timeout-in-seconds=240"},
+		},
+		{
+			name:     "space-separated single flag",
+			input:    "--log-level=LOG_WARNING",
+			expected: []string{"--log-level=LOG_WARNING"},
+		},
+		{
+			name:     "space-separated multiple -o pairs",
+			input:    "-o allow_other -o attr_timeout=120 --cache-size-mb=100",
+			expected: []string{"-o allow_other", "-o attr_timeout=120", "--cache-size-mb=100"},
+		},
+		{
+			name:     "trailing -o with no argument is kept as-is",
+			input:    "--log-level=LOG_WARNING -o",
+			expected: []string{"--log-level=LOG_WARNING", "-o"},
+		},
+		{
+			// Bad token is returned as-is so SanitizeMountOptions / ValidateMountArgValues
+			// can produce an explicit InvalidArgument error rather than silently dropping input.
+			name:     "comma-separated token with internal tab returns the bad token",
+			input:    "--cache-size-mb=512\t--tmp-path=/etc,--log-level=LOG_WARNING",
+			expected: []string{"--cache-size-mb=512\t--tmp-path=/etc"},
+		},
+		{
+			name:     "comma-separated token with internal newline returns the bad token",
+			input:    "--log-level=LOG_WARNING,--cache-size-mb=512\n--tmp-path=/etc",
+			expected: []string{"--cache-size-mb=512\n--tmp-path=/etc"},
+		},
+		{
+			name:     "comma token with internal CR returns bad token",
+			input:    "--cache-size-mb=512\r--tmp-path=/etc,--read-only",
+			expected: []string{"--cache-size-mb=512\r--tmp-path=/etc"},
+		},
+		{
+			name:     "comma token with internal FF returns bad token",
+			input:    "--cache-size-mb=512\f--tmp-path=/etc,--read-only",
+			expected: []string{"--cache-size-mb=512\f--tmp-path=/etc"},
+		},
+		{
+			name:     "comma token with internal VT returns bad token",
+			input:    "--cache-size-mb=512\v--tmp-path=/etc,--read-only",
+			expected: []string{"--cache-size-mb=512\v--tmp-path=/etc"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result := tokenizeMountOptionsString(test.input)
+			if !reflect.DeepEqual(result, test.expected) {
+				t.Errorf("tokenizeMountOptionsString(%q) = %v, want %v", test.input, result, test.expected)
+			}
+		})
+	}
+}
+
+func TestSanitizeMountOptions(t *testing.T) {
+	tests := []struct {
+		name     string
+		options  []string
+		wantErr  bool
+		expected []string
+	}{
+		{
+			name:     "allowlisted flag passes through unchanged",
+			options:  []string{"--log-level=LOG_WARNING", "--cache-size-mb=1000"},
+			wantErr:  false,
+			expected: []string{"--log-level=LOG_WARNING", "--cache-size-mb=1000"},
+		},
+		{
+			name:     "-o FUSE passthrough token is always allowed",
+			options:  []string{"-o allow_other", "--log-level=LOG_WARNING"},
+			wantErr:  false,
+			expected: []string{"-o allow_other", "--log-level=LOG_WARNING"},
+		},
+		{
+			name:    "--tmp-path is rejected",
+			options: []string{"--log-level=LOG_WARNING", "--tmp-path=/var/data/cache"},
+			wantErr: true,
+		},
+		{
+			name:    "bare --tmp-path token is rejected (space-separated value)",
+			options: []string{"--tmp-path", "/var/data/cache"},
+			wantErr: true,
+		},
+		{
+			name:    "--block-cache-path is rejected",
+			options: []string{"--block-cache-path=/var/data/cache"},
+			wantErr: true,
+		},
+		{
+			name:    "bare --block-cache-path token is rejected",
+			options: []string{"--block-cache-path", "/var/data/cache"},
+			wantErr: true,
+		},
+		{
+			name:    "--config-file is rejected",
+			options: []string{"--config-file=/var/data/custom.cfg"},
+			wantErr: true,
+		},
+		{
+			name:    "bare --config-file token is rejected",
+			options: []string{"--config-file", "/var/data/custom.cfg"},
+			wantErr: true,
+		},
+		{
+			name:    "--log-file-path is rejected",
+			options: []string{"--log-file-path=/var/log/blobfuse.log"},
+			wantErr: true,
+		},
+		{
+			name:    "--container-name is rejected (driver-controlled)",
+			options: []string{"--container-name=custom-value"},
+			wantErr: true,
+		},
+		{
+			name:    "--passphrase is rejected",
+			options: []string{"--passphrase=secret"},
+			wantErr: true,
+		},
+		{
+			name:    "--secure-config is rejected",
+			options: []string{"--secure-config"},
+			wantErr: true,
+		},
+		{
+			name:    "unknown flag not in allowlist is rejected",
+			options: []string{"--unknown-flag=value"},
+			wantErr: true,
+		},
+		{
+			name:    "first disallowed option in a list causes rejection",
+			options: []string{"--log-level=LOG_WARNING", "--tmp-path=/var/data/cache", "--cache-size-mb=1000"},
+			wantErr: true,
+		},
+		{
+			name:     "empty input returns empty output",
+			options:  []string{},
+			wantErr:  false,
+			expected: []string{},
+		},
+		{
+			name:     "slice with single empty string (from splitting empty mountOptions) is treated as empty",
+			options:  []string{""},
+			wantErr:  false,
+			expected: []string{},
+		},
+		{
+			name:    "option with leading whitespace is still rejected if not allowlisted",
+			options: []string{"--tmp-path=/var/data/cache"},
+			wantErr: true,
+		},
+		// Flags present in official example StorageClass YAMLs that were missing
+		// from the initial allowlist.
+		{
+			name:     "--file-cache-timeout-in-seconds is allowed (used in official SC examples)",
+			options:  []string{"--file-cache-timeout-in-seconds=120"},
+			wantErr:  false,
+			expected: []string{"--file-cache-timeout-in-seconds=120"},
+		},
+		{
+			name:     "--cancel-list-on-mount-seconds is allowed (overrides driver default of 10)",
+			options:  []string{"--cancel-list-on-mount-seconds=60"},
+			wantErr:  false,
+			expected: []string{"--cancel-list-on-mount-seconds=60"},
+		},
+		// -o FUSE passthrough: a space after -o would be treated as additional flags
+		// by the proxy, so the value must be a single token.
+		{
+			name:    "-o option with multiple tokens is rejected",
+			options: []string{"-o allow_other --tmp-path=/var/data/cache"},
+			wantErr: true,
+		},
+		{
+			name:    "-o option with embedded tab is rejected",
+			options: []string{"-o allow_other\t--config-file=/etc/blobfuse.cfg"},
+			wantErr: true,
+		},
+		{
+			name:    "-o option with embedded newline is rejected",
+			options: []string{"-o allow_other\n--config-file=/etc/blobfuse.cfg"},
+			wantErr: true,
+		},
+		{
+			name:    "-o value containing CR is rejected",
+			options: []string{"-o allow_other\rro"},
+			wantErr: true,
+		},
+		{
+			name:    "-o value containing FF is rejected",
+			options: []string{"-o allow_other\fro"},
+			wantErr: true,
+		},
+		{
+			name:    "-o value containing VT is rejected",
+			options: []string{"-o allow_other\vro"},
+			wantErr: true,
+		},
+		{
+			name:     "-o option without extra space is still allowed",
+			options:  []string{"-o allow_other"},
+			wantErr:  false,
+			expected: []string{"-o allow_other"},
+		},
+		{
+			name:     "-o option with =value and no space is still allowed",
+			options:  []string{"-o attr_timeout=120"},
+			wantErr:  false,
+			expected: []string{"-o attr_timeout=120"},
+		},
+		{
+			name:    "bare -o with no FUSE value is rejected",
+			options: []string{"-o"},
+			wantErr: true,
+		},
+		{
+			name:    "bare -o in a list is rejected",
+			options: []string{"--log-level=LOG_WARNING", "-o"},
+			wantErr: true,
+		},
+		// --log-level enum validation
+		{
+			name:     "--log-level=LOG_WARNING is valid",
+			options:  []string{"--log-level=LOG_WARNING"},
+			wantErr:  false,
+			expected: []string{"--log-level=LOG_WARNING"},
+		},
+		{
+			name:     "--log-level=LOG_DEBUG is valid",
+			options:  []string{"--log-level=LOG_DEBUG"},
+			wantErr:  false,
+			expected: []string{"--log-level=LOG_DEBUG"},
+		},
+		{
+			name:     "--log-level=LOG_TRACE is valid",
+			options:  []string{"--log-level=LOG_TRACE"},
+			wantErr:  false,
+			expected: []string{"--log-level=LOG_TRACE"},
+		},
+		{
+			name:    "--log-level with unknown value is rejected",
+			options: []string{"--log-level=VERBOSE"},
+			wantErr: true,
+		},
+		{
+			name:    "--log-level with lowercase value is rejected",
+			options: []string{"--log-level=log_warning"},
+			wantErr: true,
+		},
+		// --log-type enum validation
+		{
+			name:     "--log-type=syslog is valid",
+			options:  []string{"--log-type=syslog"},
+			wantErr:  false,
+			expected: []string{"--log-type=syslog"},
+		},
+		{
+			name:     "--log-type=silent is valid",
+			options:  []string{"--log-type=silent"},
+			wantErr:  false,
+			expected: []string{"--log-type=silent"},
+		},
+		{
+			name:     "--log-type=base is valid",
+			options:  []string{"--log-type=base"},
+			wantErr:  false,
+			expected: []string{"--log-type=base"},
+		},
+		{
+			name:    "--log-type with unknown value is rejected",
+			options: []string{"--log-type=file"},
+			wantErr: true,
+		},
+		// --subdirectory regex validation
+		{
+			name:     "--subdirectory with simple name is valid",
+			options:  []string{"--subdirectory=mydata"},
+			wantErr:  false,
+			expected: []string{"--subdirectory=mydata"},
+		},
+		{
+			name:     "--subdirectory with nested path is valid",
+			options:  []string{"--subdirectory=images/2024/january"},
+			wantErr:  false,
+			expected: []string{"--subdirectory=images/2024/january"},
+		},
+		{
+			name:    "--subdirectory with space in value is rejected",
+			options: []string{"--subdirectory=my folder"},
+			wantErr: true,
+		},
+		{
+			name:    "--subdirectory with shell special chars is rejected",
+			options: []string{"--subdirectory=foo;bar"},
+			wantErr: true,
+		},
+		// --filter regex validation
+		{
+			name:     "--filter with glob wildcard is valid",
+			options:  []string{"--filter=*.txt"},
+			wantErr:  false,
+			expected: []string{"--filter=*.txt"},
+		},
+		{
+			name:     "--filter with path pattern is valid",
+			options:  []string{"--filter=images/*.jpg"},
+			wantErr:  false,
+			expected: []string{"--filter=images/*.jpg"},
+		},
+		{
+			name:    "--filter with space in value is rejected",
+			options: []string{"--filter=foo bar"},
+			wantErr: true,
+		},
+		{
+			name:    "--filter with shell special chars is rejected",
+			options: []string{"--filter=foo;rm -rf /"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --tmp-path",
+			options: []string{"-o --tmp-path"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --config-file",
+			options: []string{"-o --config-file=/tmp/x.yaml"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --passphrase",
+			options: []string{"-o --passphrase=secret"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --container-name",
+			options: []string{"-o --container-name=evil"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --log-file-path",
+			options: []string{"-o --log-file-path=/etc/cron.d/x"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --block-cache-path",
+			options: []string{"-o --block-cache-path=/var/lib/x"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling --secure-config",
+			options: []string{"-o --secure-config"},
+			wantErr: true,
+		},
+		{
+			name:    "rejects -o smuggling via comma carrier",
+			options: []string{"--cache-size-mb=512,-o --config-file=/tmp/x"},
+			wantErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, err := SanitizeMountOptions(test.options)
+			if test.wantErr {
+				if err == nil {
+					t.Errorf("sanitizeMountOptions(%v) expected error, got nil", test.options)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("sanitizeMountOptions(%v) unexpected error: %v", test.options, err)
+				}
+				if !reflect.DeepEqual(result, test.expected) {
+					t.Errorf("sanitizeMountOptions(%v) = %v, want %v", test.options, result, test.expected)
+				}
+			}
+		})
+	}
+}
+
+// TestSanitizeMountOptionsPipeline tests the tokenize→sanitize pipeline that
+// nodeserver.go uses, covering the real-world space-separated format that was
+// broken by the initial security fix.
+func TestSanitizeMountOptionsPipeline(t *testing.T) {
+	tests := []struct {
+		name        string
+		input       string // raw volumeAttributes.mountOptions string
+		wantErr     bool
+		expectedLen int // number of tokens in sanitized output (-1 = don't check)
+	}{
+		{
+			name:        "real-world space-separated: -o allow_other + allowlisted flag",
+			input:       "-o allow_other --file-cache-timeout-in-seconds=240",
+			wantErr:     false,
+			expectedLen: 2,
+		},
+		{
+			name:        "real-world comma-separated: same options",
+			input:       "-o allow_other,--file-cache-timeout-in-seconds=240",
+			wantErr:     false,
+			expectedLen: 2,
+		},
+		{
+			name:    "disallowed flag is blocked via space-separated format",
+			input:   "-o allow_other --tmp-path=/var/data/cache",
+			wantErr: true,
+		},
+		{
+			name:    "disallowed flag is blocked via space-separated format (config-file)",
+			input:   "--file-cache-timeout-in-seconds=120 --config-file=/var/data/custom.cfg",
+			wantErr: true,
+		},
+		{
+			name:        "empty string passes",
+			input:       "",
+			wantErr:     false,
+			expectedLen: 0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			tokens := tokenizeMountOptionsString(test.input)
+			result, err := SanitizeMountOptions(tokens)
+			if test.wantErr {
+				if err == nil {
+					t.Errorf("pipeline(%q) expected error, got nil (tokens: %v)", test.input, tokens)
+				}
+			} else {
+				if err != nil {
+					t.Errorf("pipeline(%q) unexpected error: %v (tokens: %v)", test.input, err, tokens)
+				}
+				if test.expectedLen >= 0 && len(result) != test.expectedLen {
+					t.Errorf("pipeline(%q) got %d tokens, want %d: %v", test.input, len(result), test.expectedLen, result)
+				}
+			}
+		})
+	}
+}
+
+func TestValidateMountArgValues(t *testing.T) {
+	tests := []struct {
+		name    string
+		options []string
+		wantErr bool
+	}{
+		{
+			name:    "clean options without values pass",
+			options: []string{"--read-only", "--foreground"},
+			wantErr: false,
+		},
+		{
+			name:    "options with values that contain no spaces pass",
+			options: []string{"--log-level=LOG_WARNING", "--cache-size-mb=512"},
+			wantErr: false,
+		},
+		{
+			name:    "empty input passes",
+			options: []string{},
+			wantErr: false,
+		},
+		{
+			name:    "value containing a space is rejected",
+			options: []string{"--subdirectory=foo bar"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing a tab is rejected",
+			options: []string{"--subdirectory=foo\tbar"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing a newline is rejected",
+			options: []string{"--subdirectory=foo\nbar"},
+			wantErr: true,
+		},
+		{
+			name:    "option with space in value is rejected",
+			options: []string{"--subdirectory=mydir --tmp-path=/var/data/cache"},
+			wantErr: true,
+		},
+		{
+			name:    "option with space only in key (no =) is not flagged",
+			options: []string{"--read-only"},
+			wantErr: false,
+		},
+		{
+			name:    "first clean then one with space is rejected",
+			options: []string{"--log-level=LOG_WARNING", "--cache-size-mb=512 --tmp-path=/etc"},
+			wantErr: true,
+		},
+		{
+			// U+00A0 NBSP is Unicode whitespace; the proxy's \s+ regexp normalises it
+			// to a space before strings.Split, so it must be caught here.
+			name:    "value containing NBSP (U+00A0) is rejected",
+			options: []string{"--cache-size-mb=512\u00a0--tmp-path=/etc"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing CR is rejected",
+			options: []string{"--subdirectory=foo\rbar"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing FF is rejected",
+			options: []string{"--subdirectory=foo\fbar"},
+			wantErr: true,
+		},
+		{
+			name:    "value containing VT is rejected",
+			options: []string{"--subdirectory=foo\vbar"},
+			wantErr: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := ValidateMountArgValues(test.options)
+			if test.wantErr && err == nil {
+				t.Errorf("ValidateMountArgValues(%v) expected error, got nil", test.options)
+			}
+			if !test.wantErr && err != nil {
+				t.Errorf("ValidateMountArgValues(%v) unexpected error: %v", test.options, err)
+			}
+		})
+	}
+}
+
+func TestValidateContainerName(t *testing.T) {
+	tests := []struct {
+		name          string
+		containerName string
+		wantErr       bool
+	}{
+		// valid names
+		{
+			name:          "simple valid name",
+			containerName: "pocfuse",
+			wantErr:       false,
+		},
+		{
+			name:          "minimum length (3 chars)",
+			containerName: "abc",
+			wantErr:       false,
+		},
+		{
+			name:          "maximum length (63 chars)",
+			containerName: "a123456789012345678901234567890123456789012345678901234567890ab",
+			wantErr:       false,
+		},
+		{
+			name:          "hyphens in the middle are allowed",
+			containerName: "my-storage-container",
+			wantErr:       false,
+		},
+		{
+			name:          "digits allowed",
+			containerName: "container123",
+			wantErr:       false,
+		},
+		{
+			name:          "name with spaces is rejected",
+			containerName: "pocfuse --tmp-path=/var/data/cache",
+			wantErr:       true,
+		},
+		{
+			name:          "name starting with -- is rejected",
+			containerName: "--tmp-path=/var/data",
+			wantErr:       true,
+		},
+		{
+			name:          "newline in name is rejected",
+			containerName: "poc\nfuse",
+			wantErr:       true,
+		},
+		{
+			name:          "consecutive hyphens are rejected",
+			containerName: "poc--fuse",
+			wantErr:       true,
+		},
+		{
+			name:          "leading hyphen is rejected",
+			containerName: "-pocfuse",
+			wantErr:       true,
+		},
+		{
+			name:          "trailing hyphen is rejected",
+			containerName: "pocfuse-",
+			wantErr:       true,
+		},
+		{
+			name:          "too short (2 chars) is rejected",
+			containerName: "ab",
+			wantErr:       true,
+		},
+		{
+			name:          "too long (64 chars) is rejected",
+			containerName: "a1234567890123456789012345678901234567890123456789012345678901ab",
+			wantErr:       true,
+		},
+		{
+			name:          "uppercase letters are rejected",
+			containerName: "MyContainer",
+			wantErr:       true,
+		},
+		{
+			name:          "underscore is rejected",
+			containerName: "my_container",
+			wantErr:       true,
+		},
+		{
+			name:          "empty string is allowed (workload identity paths have no container yet)",
+			containerName: "",
+			wantErr:       false,
+		},
+		// invalid names — naming rule violations
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := ValidateContainerName(test.containerName)
+			if test.wantErr && err == nil {
+				t.Errorf("ValidateContainerName(%q) expected error, got nil", test.containerName)
+			}
+			if !test.wantErr && err != nil {
+				t.Errorf("ValidateContainerName(%q) unexpected error: %v", test.containerName, err)
+			}
+		})
+	}
+}
+
 func TestAppendDefaultMountOptions(t *testing.T) {
 	tests := []struct {
 		options       []string
