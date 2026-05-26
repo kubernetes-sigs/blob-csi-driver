@@ -20,7 +20,8 @@ FROM ${BASE_IMAGE} AS base
 
 FROM --platform=$BUILDPLATFORM ${BASE_IMAGE} AS builder
 
-ARG TARGETARCH=amd64
+ARG ARCH
+ARG TARGETARCH=${ARCH}
 
 RUN apt update \
     && apt install -y curl
