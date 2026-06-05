@@ -855,6 +855,112 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "non-inline volume skips containerName validation",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						containerNameField:    "MyContainer",
+						mountPermissionsField: "0755",
+						protocolField:         "fuse2",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if err != nil {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, nil)
+				}
+			},
+		},
+		{
+			name: "[Error] inline volume with invalid containerName is rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:        "true",
+						containerNameField:    "MyContainer",
+						mountPermissionsField: "0755",
+						protocolField:         "fuse2",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if err == nil {
+					t.Fatal("expected InvalidArgument error for inline volume with invalid containerName, got nil")
+				}
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+				if !strings.Contains(err.Error(), "invalid containerName") {
+					t.Fatalf("expected error to mention invalid containerName, got: %v", err)
+				}
+			},
+		},
+		{
+			name: "[Error] inline NFS volume with invalid containerName is rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:        "true",
+						containerNameField:    "MyContainer",
+						mountPermissionsField: "0755",
+						protocolField:         "nfs",
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if err == nil {
+					t.Fatal("expected InvalidArgument error for inline NFS volume with invalid containerName, got nil")
+				}
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+				if !strings.Contains(err.Error(), "invalid containerName") {
+					t.Fatalf("expected error to mention invalid containerName, got: %v", err)
+				}
+			},
+		},
+		{
 			name: "TestKnownVolumeMountGroupBypass",
 			testFunc: func(t *testing.T) {
 				maliciousGroups := []struct {
