@@ -404,11 +404,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	// replace pv/pvc name namespace metadata in subDir
 	containerName = replaceWithMap(containerName, containerNameReplaceMap)
 
-	// Validate containerName against Azure naming rules. A value
-	// containing spaces cannot match the regex and is rejected before it reaches
-	// the blobfuse2 args string.
-	if err := ValidateContainerName(containerName); err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+	// Inline volume attributes are user-controlled; validate containerName
+	// before it is appended to the blobfuse2 args string.
+	if ephemeralVol {
+		if err := ValidateContainerName(containerName); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+		}
 	}
 
 	if strings.TrimSpace(storageEndpointSuffix) == "" {
