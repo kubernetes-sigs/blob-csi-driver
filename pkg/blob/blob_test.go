@@ -2106,6 +2106,27 @@ func TestValidateContainerName(t *testing.T) {
 			containerName: "",
 			wantErr:       false,
 		},
+		// Azure system containers
+		{
+			name:          "$web system container is allowed",
+			containerName: "$web",
+			wantErr:       false,
+		},
+		{
+			name:          "$root system container is allowed",
+			containerName: "$root",
+			wantErr:       false,
+		},
+		{
+			name:          "$logs system container is allowed",
+			containerName: "$logs",
+			wantErr:       false,
+		},
+		{
+			name:          "$blobchangefeed system container is allowed",
+			containerName: "$blobchangefeed",
+			wantErr:       false,
+		},
 		// invalid names — naming rule violations
 	}
 
