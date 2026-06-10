@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  annotations:
+    pv.kubernetes.io/provisioned-by: blob.csi.azure.com
+  name: pv-blob
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: blob-nfs
+  mountOptions:
+    - nconnect=4  # Azure Linux node does not support nconnect option
+  csi:
+    driver: blob.csi.azure.com
+    # make sure volumeHandle is unique for every storage blob container in the cluster
+    volumeHandle: "{resource-group-name}#{account-name}#{container-name}"
+    volumeAttributes:
+      resourceGroup: EXISTING_RESOURCE_GROUP_NAME
+      storageAccount: EXISTING_STORAGE_ACCOUNT_NAME
+      containerName: EXISTING_CONTAINER_NAME
+      protocol: nfs

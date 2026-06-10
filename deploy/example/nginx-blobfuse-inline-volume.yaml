@@ -1,0 +1,27 @@
+---
+kind: Pod
+apiVersion: v1
+metadata:
+  name: nginx-blobfuse-inline-volume
+spec:
+  nodeSelector:
+    "kubernetes.io/os": linux
+  containers:
+    - image: mcr.microsoft.com/mirror/docker/library/nginx:1.23
+      name: nginx-blobfuse
+      command:
+        - "/bin/bash"
+        - "-c"
+        - set -euo pipefail; while true; do echo $(date) >> /mnt/blobfuse/outfile; sleep 1; done
+      volumeMounts:
+        - name: persistent-storage
+          mountPath: "/mnt/blobfuse"
+          readOnly: false
+  volumes:
+    - name: persistent-storage
+      csi:
+        driver: blob.csi.azure.com
+        volumeAttributes:
+          containerName: EXISTING_CONTAINER_NAME  # required
+          secretName: azure-secret  # required
+          mountOptions: "-o allow_other --file-cache-timeout-in-seconds=120"  # optional

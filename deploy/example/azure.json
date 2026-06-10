@@ -1,0 +1,12 @@
+{
+    "cloud":"AzurePublicCloud",
+    "tenantId": "xxxx-xxxx-xxxx-xxxx-xxxx",
+    "subscriptionId": "xxxx-xxxx-xxxx-xxxx-xxxx",
+    "resourceGroup": "resource-group-name",
+    "location": "eastus2",
+    "aadClientId": "xxxx-xxxx-xxxx-xxxx-xxxx",
+    "aadClientSecret": "xxxx-xxxx-xxxx-xxxx-xxxx",
+    "useManagedIdentityExtension": false,
+    "userAssignedIdentityID": "",
+    "useInstanceMetadata": true
+}

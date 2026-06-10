@@ -1,0 +1,217 @@
+/*
+Copyright 2021 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package server
+
+import (
+	"context"
+	"fmt"
+	"net"
+	"os"
+	"os/exec"
+	"strings"
+
+	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
+	"google.golang.org/grpc"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/blob-csi-driver/pkg/blob"
+	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
+	"sigs.k8s.io/blob-csi-driver/pkg/util"
+)
+
+var (
+	driverVersion string
+)
+
+// telemetryTagPrefix is used to identify the mounts done via blobcsi driver
+const telemetryTagPrefix = "blobpartner-csi/"
+
+type BlobfuseVersion int
+
+const (
+	BlobfuseV1 BlobfuseVersion = iota
+	BlobfuseV2
+)
+
+func (v BlobfuseVersion) String() string {
+	switch v {
+	case BlobfuseV1:
+		return "v1"
+	case BlobfuseV2:
+		return "v2"
+	default:
+		return fmt.Sprintf("unknown(%d)", int(v))
+	}
+}
+
+type MountServer struct {
+	blobfuseVersion BlobfuseVersion
+	mount_azure_blob.UnimplementedMountServiceServer
+	exec func(name string, arg ...string) *exec.Cmd
+}
+
+// NewMountServer returns a new Mountserver
+func NewMountServiceServer() *MountServer {
+	mountServer := &MountServer{}
+	mountServer.blobfuseVersion = getBlobfuseVersion()
+	mountServer.exec = exec.Command
+	return mountServer
+}
+
+// MountAzureBlob mounts an azure blob container to given location
+func (server *MountServer) MountAzureBlob(_ context.Context,
+	req *mount_azure_blob.MountAzureBlobRequest,
+) (resp *mount_azure_blob.MountAzureBlobResponse, err error) {
+	args := req.GetMountArgs()
+	authEnv := req.GetAuthEnv()
+	protocol := req.GetProtocol()
+	klog.V(2).Infof("received mount request: protocol: %s, server default blobfuseVersion: %s, mount args %v \n", protocol, server.blobfuseVersion, args)
+
+	var cmd *exec.Cmd
+	var result mount_azure_blob.MountAzureBlobResponse
+	if protocol == blob.Fuse2 || server.blobfuseVersion == BlobfuseV2 {
+		useV2Reason := "server default"
+		if protocol == blob.Fuse2 {
+			useV2Reason = fmt.Sprintf("protocol=%s", protocol)
+		}
+		args = "mount " + args
+		// add this arg for blobfuse2 to solve the issue:
+		// https://github.com/Azure/azure-storage-fuse/issues/1015
+		if !strings.Contains(args, "--ignore-open-flags") {
+			klog.V(2).Infof("append --ignore-open-flags=true to mount args")
+			args = args + " " + "--ignore-open-flags=true"
+		}
+		if !strings.Contains(args, "--disable-version-check") {
+			klog.V(2).Infof("append --disable-version-check to mount args")
+			args = args + " " + "--disable-version-check=true"
+		}
+		// Adding telemetry tag to know that blob is been mounted through AKS CSI Driver
+		args = addTelemetryTagToArgs(args)
+		args = util.TrimDuplicatedSpace(args)
+		klog.V(2).Infof("mount with blobfuse2 (reason: %s), args: %s", useV2Reason, args)
+		cmd = server.exec("blobfuse2", strings.Split(args, " ")...)
+	} else {
+		args = util.TrimDuplicatedSpace(args)
+		klog.V(2).Infof("mount with blobfuse (v1), args: %s", args)
+		cmd = server.exec("blobfuse", strings.Split(args, " ")...)
+	}
+
+	cmd.Env = append(os.Environ(), authEnv...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		klog.Error("blobfuse mount failed: with error:", err.Error())
+	} else {
+		klog.V(2).Infof("successfully mounted")
+	}
+	result.Output = string(output)
+	klog.V(2).Infof("blobfuse output: %s\n", result.Output)
+	if err != nil {
+		if strings.Contains(err.Error(), "executable file not found") {
+			return &result, fmt.Errorf("%w, PATH=%s, %s", err, os.Getenv("PATH"), result.Output)
+		}
+		return &result, fmt.Errorf("%w %s", err, result.Output)
+	}
+	return &result, nil
+}
+
+func RunGRPCServer(
+	mountServer mount_azure_blob.MountServiceServer,
+	enableTLS bool,
+	listener net.Listener,
+) error {
+	serverOptions := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(
+			grpcprom.NewServerMetrics().UnaryServerInterceptor(),
+		),
+	}
+
+	grpcServer := grpc.NewServer(serverOptions...)
+
+	mount_azure_blob.RegisterMountServiceServer(grpcServer, mountServer)
+
+	klog.V(2).Infof("Start GRPC server at %s, TLS = %t", listener.Addr().String(), enableTLS)
+	return grpcServer.Serve(listener)
+}
+
+func getBlobfuseVersion() BlobfuseVersion {
+	osinfo, err := util.GetOSInfo("/etc/os-release")
+	if err != nil {
+		klog.Warningf("failed to get OS info: %v, default using blobfuse v1", err)
+		return BlobfuseV1
+	}
+
+	if strings.EqualFold(osinfo.Distro, "azurelinux") && strings.EqualFold(osinfo.Variant, "azurecontainerlinux") {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on Azure Container Linux")
+		return BlobfuseV2
+	}
+
+	if (strings.EqualFold(osinfo.Distro, "mariner") || strings.EqualFold(osinfo.Distro, "azurelinux")) && osinfo.Version >= "2.0" {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on azurelinux(mariner) 2.0+")
+		return BlobfuseV2
+	}
+
+	if strings.EqualFold(osinfo.Distro, "rhcos") || strings.EqualFold(osinfo.Distro, "rhel") {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on RHCOS/RHEL")
+		return BlobfuseV2
+	}
+
+	if strings.EqualFold(osinfo.Distro, "ubuntu") && osinfo.Version >= "22.04" {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on Ubuntu 22.04+")
+		return BlobfuseV2
+	}
+
+	if strings.EqualFold(osinfo.Distro, "flatcar") {
+		klog.V(2).Info("proxy default using blobfuse V2 for mounting on Flatcar Container Linux")
+		return BlobfuseV2
+	}
+
+	klog.V(2).Info("proxy default using blobfuse V1 for mounting")
+	return BlobfuseV1
+}
+
+// Adding CSI driver specific telemetry tag if not present to
+// know that blob is been mounted through CSI Driver
+func addTelemetryTagToArgs(args string) string {
+	telemetryTag := telemetryTagPrefix + driverVersion
+	if !strings.Contains(args, "--telemetry") {
+		klog.V(2).Infof("append --telemetry=%s to mount args", telemetryTag)
+		args = args + " " + "--telemetry=" + telemetryTag
+	} else {
+		// If telemetry flag is already present, check for aks tag if not present
+		// then user might have their own telemetry tag append aks tag to it
+		if !strings.Contains(args, telemetryTagPrefix) {
+			argSlice := strings.Fields(args)
+			telemetryIndex := -1
+			for i, arg := range argSlice {
+				if strings.HasPrefix(arg, "--telemetry=") {
+					telemetryIndex = i
+					break
+				}
+			}
+			if telemetryIndex != -1 {
+				// Update the telemetry tag, appending our tag if not present
+				telemetryVal := strings.TrimPrefix(argSlice[telemetryIndex], "--telemetry=")
+				// Avoid duplicating the tag if already present
+				if !strings.Contains(telemetryVal, telemetryTag) {
+					argSlice[telemetryIndex] = "--telemetry=" + telemetryTag + "," + telemetryVal
+					args = strings.Join(argSlice, " ")
+					klog.V(2).Infof("updated --telemetry tag in mount args: %s", args)
+				}
+			}
+		}
+	}
+	return args
+}

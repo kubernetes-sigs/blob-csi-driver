@@ -1,0 +1,58 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    component: disable-updatedb
+  name: disable-updatedb
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      component: disable-updatedb
+      tier: node
+  template:
+    metadata:
+      labels:
+        component: disable-updatedb
+        tier: node
+    spec:
+      containers:
+        - command:
+            - nsenter
+            - --target
+            - "1"
+            - --mount
+            - --uts
+            - --ipc
+            - --net
+            - --pid
+            - --
+            - sh
+            - -c
+            - |
+              updateDBConfigPath="/etc/updatedb.conf"
+              echo "before changing ${updateDBConfigPath}:"
+              cat ${updateDBConfigPath}
+              sed -i 's/PRUNEPATHS="\/tmp/PRUNEPATHS="\/mnt \/var\/lib\/kubelet \/tmp/g' ${updateDBConfigPath}
+              sed -i 's/PRUNEFS="NFS/PRUNEFS="fuse blobfuse NFS/g' ${updateDBConfigPath}
+              echo "after change:"
+              cat ${updateDBConfigPath}
+              sleep 8640000000s
+          image: alpine
+          imagePullPolicy: IfNotPresent
+          name: disable-updatedb
+          resources:
+            requests:
+              cpu: 10m
+          securityContext:
+            privileged: true
+      hostPID: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+        - effect: NoSchedule
+          operator: Exists
+      restartPolicy: Always
+  updateStrategy:
+    type: OnDelete

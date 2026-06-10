@@ -1,0 +1,12 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blob-nfs
+provisioner: blob.csi.azure.com
+parameters:
+  protocol: nfs
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+mountOptions:
+  - nconnect=4  # Azure Linux node does not support nconnect option

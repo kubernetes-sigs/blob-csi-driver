@@ -1,0 +1,24 @@
+name: MacOS Build & Unit Test
+on:
+    pull_request: {}
+    push: {}
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-latest
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: ^1.16
+        id: go
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      - name: Build Test
+        run: |
+          make blob-darwin
+      - name: Run unit tests on MacOS
+        run: go test -v -race ./pkg/...

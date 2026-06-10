@@ -1,0 +1,42 @@
+name: Trivy vulnerability scanner
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.x
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version: 1.25.11
+        id: go
+
+      - name: Checkout code
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+      
+      - name: Build an image from Dockerfile
+        run: |
+          export PUBLISH=true
+          export REGISTRY=test
+          export IMAGE_VERSION=latest
+          export DOCKER_CLI_EXPERIMENTAL=enabled
+          make container
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: "public.ecr.aws/aquasecurity/trivy-db:2"
+        with:
+          image-ref: 'test/blob-csi:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH,MEDIUM,UNKNOWN'

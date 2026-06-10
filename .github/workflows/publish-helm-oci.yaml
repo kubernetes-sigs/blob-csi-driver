@@ -1,0 +1,270 @@
+# Publish blob-csi-driver container images and Helm chart to GHCR.
+#
+# Triggers:
+#   - Automatically on GitHub Release publish (tag must match v*)
+#   - Manually via workflow_dispatch with a version input
+#
+# Publishes:
+#   - Multi-arch container image: ghcr.io/kubernetes-sigs/blob-csi:<version>
+#     (linux/amd64, linux/arm64)
+#   - Helm chart (OCI): oci://ghcr.io/kubernetes-sigs/blob-csi-driver
+#
+name: Publish to GHCR
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., v1.27.4)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io/kubernetes-sigs
+  IMAGE_NAME: blob-csi
+  CHART_NAME: blob-csi-driver
+
+jobs:
+  # ── Validate version and compute outputs ───────────────────────────────────
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      chart_version: ${{ steps.version.outputs.chart_version }}
+    steps:
+      - name: Determine and validate version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${{ github.event.release.tag_name }}"
+          fi
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format: '${VERSION}'. Expected: v<major>.<minor>.<patch> (e.g., v1.27.4)"
+            exit 1
+          fi
+          # For workflow_dispatch, verify the tag exists in the remote
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if ! git ls-remote --exit-code --tags "https://github.com/${{ github.repository }}" "refs/tags/${VERSION}" > /dev/null 2>&1; then
+              echo "::error::Tag '${VERSION}' does not exist in the repository"
+              exit 1
+            fi
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "chart_version=${VERSION#v}" >> "$GITHUB_OUTPUT"
+          echo "Version: ${VERSION}"
+
+  # ── Build & push Linux container images ────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    needs: [validate]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goarch: amd64
+            platform: linux/amd64
+            suffix: linux-amd64
+          - goarch: arm64
+            platform: linux/arm64
+            suffix: linux-arm64
+    steps:
+      - name: Checkout at version tag
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ needs.validate.outputs.version }}
+
+      - name: Set up Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build binaries
+        env:
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+          GOOS: linux
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          GIT_COMMIT=$(git rev-parse HEAD)
+          BUILD_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          LDFLAGS="-X sigs.k8s.io/blob-csi-driver/pkg/blob.driverVersion=${VERSION} \
+                   -X sigs.k8s.io/blob-csi-driver/pkg/blob.gitCommit=${GIT_COMMIT} \
+                   -X sigs.k8s.io/blob-csi-driver/pkg/blob.buildDate=${BUILD_DATE} \
+                   -s -w -extldflags '-static'"
+          # Build blobplugin
+          mkdir -p "_output/${{ matrix.goarch }}"
+          go build -a -ldflags "${LDFLAGS}" -mod vendor \
+            -o "_output/${{ matrix.goarch }}/blobplugin" ./pkg/blobplugin
+          # Build blobfuse-proxy
+          PROXY_LDFLAGS="-s -w -X sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/server.driverVersion=${VERSION}"
+          go build -mod vendor -ldflags="${PROXY_LDFLAGS}" \
+            -o "_output/${{ matrix.goarch }}/blobfuse-proxy" ./pkg/blobfuse-proxy
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@06116385d9baf250c9f4dcb4858b16962ea869c3 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push ${{ matrix.platform }}
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          GIT_COMMIT=$(git rev-parse HEAD)
+          docker buildx build --pull --push \
+            --platform=${{ matrix.platform }} \
+            --build-arg ARCH=${{ matrix.goarch }} \
+            --provenance=false --sbom=false \
+            --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${VERSION}-${{ matrix.suffix }} \
+            --label org.opencontainers.image.revision=${GIT_COMMIT} \
+            --file ./pkg/blobplugin/Dockerfile \
+            .
+
+  # ── Create multi-arch manifest ─────────────────────────────────────────────
+  manifest:
+    runs-on: ubuntu-latest
+    needs: [validate, build-linux]
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push multi-arch manifest
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+        run: |
+          VERSION="${{ needs.validate.outputs.version }}"
+          IMAGE="${REGISTRY}/${IMAGE_NAME}"
+          docker manifest create --amend "${IMAGE}:${VERSION}" \
+            "${IMAGE}:${VERSION}-linux-amd64" \
+            "${IMAGE}:${VERSION}-linux-arm64"
+          docker manifest push --purge "${IMAGE}:${VERSION}"
+          echo "Pushed manifest: ${IMAGE}:${VERSION}"
+
+  # ── Publish Helm chart as OCI (independent of image builds) ────────────────
+  publish-helm:
+    runs-on: ubuntu-latest
+    needs: [validate]
+    outputs:
+      helm_chart_version: ${{ steps.verify_version.outputs.helm_chart_version }}
+    steps:
+      - name: Checkout at version tag
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          ref: ${{ needs.validate.outputs.version }}
+
+      - name: Validate chart directory
+        id: chart
+        run: |
+          CHART_DIR="charts/${{ needs.validate.outputs.version }}/${CHART_NAME}"
+          if [[ ! -f "${CHART_DIR}/Chart.yaml" ]]; then
+            echo "::error::Chart not found at ${CHART_DIR}/Chart.yaml"
+            echo "Available chart versions:"
+            ls -1 charts/ | grep '^v' || echo "  (none)"
+            exit 1
+          fi
+          echo "chart_dir=${CHART_DIR}" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Helm
+        uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v4
+        with:
+          version: v3.17.0
+
+      - name: Lint chart
+        run: helm lint "${{ steps.chart.outputs.chart_dir }}"
+
+      - name: Verify chart version matches
+        id: verify_version
+        run: |
+          YAML_VERSION=$(grep '^version:' "${{ steps.chart.outputs.chart_dir }}/Chart.yaml" | awk '{print $2}')
+          EXPECTED="${{ needs.validate.outputs.chart_version }}"
+          # Handle older charts that may have leading 'v' in Chart.yaml version
+          YAML_VERSION_STRIPPED="${YAML_VERSION#v}"
+          if [[ "$YAML_VERSION_STRIPPED" != "$EXPECTED" ]]; then
+            echo "::error::Chart.yaml version ($YAML_VERSION) != expected ($EXPECTED)"
+            exit 1
+          fi
+          echo "helm_chart_version=${YAML_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Login to GHCR (Helm)
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io \
+            --username "${{ github.actor }}" --password-stdin
+
+      - name: Package and push chart
+        run: |
+          rm -rf /tmp/helm-pkg && mkdir -p /tmp/helm-pkg
+          helm package "${{ steps.chart.outputs.chart_dir }}" --destination /tmp/helm-pkg
+          CHART_VERSION="${{ needs.validate.outputs.chart_version }}"
+          PACKAGE="/tmp/helm-pkg/${CHART_NAME}-${CHART_VERSION}.tgz"
+          if [[ ! -f "$PACKAGE" ]]; then
+            echo "::error::Expected package not found: ${PACKAGE}"
+            ls -la /tmp/helm-pkg/
+            exit 1
+          fi
+          helm push "${PACKAGE}" "oci://${REGISTRY}"
+
+      - name: Verify published chart
+        run: |
+          helm show chart "oci://${REGISTRY}/${CHART_NAME}" \
+            --version "${{ steps.verify_version.outputs.helm_chart_version }}"
+
+  # ── Summary ────────────────────────────────────────────────────────────────
+  summary:
+    runs-on: ubuntu-latest
+    needs: [validate, manifest, publish-helm]
+    if: always() && needs.validate.result == 'success'
+    steps:
+      - name: Job summary
+        env:
+          VERSION: ${{ needs.validate.outputs.version }}
+          CHART_VERSION: ${{ needs.publish-helm.outputs.helm_chart_version || needs.validate.outputs.chart_version }}
+        run: |
+          MANIFEST_RESULT="${{ needs.manifest.result }}"
+          HELM_RESULT="${{ needs.publish-helm.result }}"
+          {
+            echo "## Published to GHCR"
+            echo ""
+            if [[ "$MANIFEST_RESULT" == "success" ]]; then
+              echo "### ✅ Container Images"
+              echo ""
+              echo '```bash'
+              echo "docker pull ${REGISTRY}/${IMAGE_NAME}:${VERSION}"
+              echo '```'
+            else
+              echo "### ❌ Container Images (${MANIFEST_RESULT})"
+              echo ""
+              echo "Per-arch images may still be available:"
+              echo '```bash'
+              echo "docker pull ${REGISTRY}/${IMAGE_NAME}:${VERSION}-linux-amd64"
+              echo "docker pull ${REGISTRY}/${IMAGE_NAME}:${VERSION}-linux-arm64"
+              echo '```'
+            fi
+            echo ""
+            if [[ "$HELM_RESULT" == "success" ]]; then
+              echo "### ✅ Helm Chart (OCI)"
+              echo ""
+              echo '```bash'
+              echo "helm install blob-csi-driver oci://${REGISTRY}/${CHART_NAME} --version ${CHART_VERSION} -n kube-system"
+              echo '```'
+            else
+              echo "### ❌ Helm Chart (${HELM_RESULT})"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

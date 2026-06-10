@@ -1,0 +1,106 @@
+I0710 09:01:16.683008       1 blobfuse.go:67] 
+DRIVER INFORMATION:
+-------------------
+Build Date: "2019-05-05T03:37:21Z"
+Compiler: gc
+Driver Name: blobfuse.csi.azure.com
+Driver Version: v0.1.0-alpha
+Git Commit: 37bd2caab184f7205db2c6900a7c4d7453d3e3ae
+Go Version: go1.12.1
+Platform: linux/amd64
+
+Streaming logs below:
+I0710 09:01:16.683311       1 azure.go:31] AZURE_CREDENTIAL_FILE env var set as /etc/kubernetes/azure.json
+I0710 09:01:16.683827       1 azure_auth.go:81] azure: using client_id+client_secret to retrieve access token
+I0710 09:01:16.683998       1 azure.go:278] Azure cloudprovider (read ops) using rate limit config: QPS=3, bucket=10
+I0710 09:01:16.684082       1 azure.go:282] Azure cloudprovider (write ops) using rate limit config: QPS=1, bucket=5
+I0710 09:01:16.684167       1 azure.go:318] Azure cloudprovider using try backoff: retries=6, exponent=1.500000, duration=5, jitter=1.000000
+I0710 09:01:16.688206       1 mount_linux.go:166] Cannot run systemd-run, assuming non-systemd OS
+I0710 09:01:16.688235       1 mount_linux.go:167] systemd-run failed with: exit status 1
+I0710 09:01:16.688243       1 mount_linux.go:168] systemd-run output: Failed to create bus connection: No such file or directory
+I0710 09:01:16.688252       1 driver.go:80] Enabling controller service capability: CREATE_DELETE_VOLUME
+I0710 09:01:16.688256       1 driver.go:99] Enabling volume access mode: SINGLE_NODE_WRITER
+I0710 09:01:16.688259       1 driver.go:99] Enabling volume access mode: SINGLE_NODE_READER_ONLY
+I0710 09:01:16.688262       1 driver.go:99] Enabling volume access mode: MULTI_NODE_READER_ONLY
+I0710 09:01:16.688265       1 driver.go:99] Enabling volume access mode: MULTI_NODE_SINGLE_WRITER
+I0710 09:01:16.688268       1 driver.go:99] Enabling volume access mode: MULTI_NODE_MULTI_WRITER
+I0710 09:01:16.688271       1 driver.go:90] Enabling node service capability: UNKNOWN
+I0710 09:01:16.689101       1 server.go:104] Listening for connections on address: &net.UnixAddr{Name:"//csi/csi.sock", Net:"unix"}
+I0710 09:01:16.939283       1 utils.go:106] GRPC call: /csi.v1.Identity/GetPluginInfo
+I0710 09:01:16.939346       1 utils.go:107] GRPC request: 
+I0710 09:01:16.939486       1 identityserver.go:32] Using default GetPluginInfo
+I0710 09:01:16.939503       1 utils.go:112] GRPC response: name:"blobfuse.csi.azure.com" vendor_version:"v0.1.0-alpha" 
+I0710 09:01:16.991073       1 utils.go:106] GRPC call: /csi.v1.Node/NodeGetInfo
+I0710 09:01:16.991088       1 utils.go:107] GRPC request: 
+I0710 09:01:16.991107       1 nodeserver.go:224] Using default NodeGetInfo
+I0710 09:01:16.991112       1 utils.go:112] GRPC response: node_id:"aks-agentpool-41197296-0" 
+I0710 09:02:05.798886       1 utils.go:106] GRPC call: /csi.v1.Identity/GetPluginInfo
+I0710 09:02:05.798905       1 utils.go:107] GRPC request: 
+I0710 09:02:05.798994       1 identityserver.go:32] Using default GetPluginInfo
+I0710 09:02:05.798999       1 utils.go:112] GRPC response: name:"blobfuse.csi.azure.com" vendor_version:"v0.1.0-alpha" 
+I0710 09:02:05.801428       1 utils.go:106] GRPC call: /csi.v1.Identity/Probe
+I0710 09:02:05.801461       1 utils.go:107] GRPC request: 
+I0710 09:02:05.801477       1 utils.go:112] GRPC response: ready:<value:true > 
+I0710 09:02:12.172507       1 utils.go:106] GRPC call: /csi.v1.Node/NodeGetCapabilities
+I0710 09:02:12.172540       1 utils.go:107] GRPC request: 
+I0710 09:02:12.172563       1 nodeserver.go:215] Using default NodeGetCapabilities
+I0710 09:02:12.172568       1 utils.go:112] GRPC response: capabilities:<rpc:<> > 
+I0710 09:02:12.173683       1 utils.go:106] GRPC call: /csi.v1.Node/NodeGetCapabilities
+I0710 09:02:12.173692       1 utils.go:107] GRPC request: 
+I0710 09:02:12.173730       1 nodeserver.go:215] Using default NodeGetCapabilities
+I0710 09:02:12.173733       1 utils.go:112] GRPC response: capabilities:<rpc:<> > 
+I0710 09:02:12.177856       1 utils.go:106] GRPC call: /csi.v1.Node/NodePublishVolume
+I0710 09:02:12.177889       1 utils.go:107] GRPC request: volume_id:"mc_andy-virtualnode_andy-virtualnode_eastus2#f552731369e2711e986302a#test" target_path:"/var/lib/kubelet/pods/6308826c-a2f1-11e9-be56-6689d2cdf655/volumes/kubernetes.io~csi/pvc-51b82899-a2f1-11e9-be56-6689d2cdf655/mount" volume_capability:<mount:<fs_type:"ext4" > access_mode:<mode:MULTI_NODE_MULTI_WRITER > > volume_context:<key:"containerName" value:"test" > volume_context:<key:"skuName" value:"Standard_LRS" > volume_context:<key:"storage.kubernetes.io/csiProvisionerIdentity" value:"1562749264836-8081-blobfuse.csi.azure.com" > 
+I0710 09:02:12.584941       1 nodeserver.go:122] target /var/lib/kubelet/pods/6308826c-a2f1-11e9-be56-6689d2cdf655/volumes/kubernetes.io~csi/pvc-51b82899-a2f1-11e9-be56-6689d2cdf655/mount
+fstype ext4
+
+readonly false
+volumeId mc_andy-virtualnode_andy-virtualnode_eastus2#f552731369e2711e986302a#test
+context map[containerName:test skuName:Standard_LRS storage.kubernetes.io/csiProvisionerIdentity:1562749264836-8081-blobfuse.csi.azure.com]
+mountflags []
+mountOptions [--use-https=true]
+I0710 09:02:12.781883       1 utils.go:112] GRPC response: 
+I0710 09:02:35.802529       1 utils.go:106] GRPC call: /csi.v1.Identity/GetPluginInfo
+I0710 09:02:35.802885       1 utils.go:107] GRPC request: 
+I0710 09:02:35.803211       1 identityserver.go:32] Using default GetPluginInfo
+I0710 09:02:35.803619       1 utils.go:112] GRPC response: name:"blobfuse.csi.azure.com" vendor_version:"v0.1.0-alpha" 
+I0710 09:02:35.808976       1 utils.go:106] GRPC call: /csi.v1.Identity/Probe
+I0710 09:02:35.808989       1 utils.go:107] GRPC request: 
+I0710 09:02:35.809013       1 utils.go:112] GRPC response: ready:<value:true > 
+I0710 09:03:05.797751       1 utils.go:106] GRPC call: /csi.v1.Identity/GetPluginInfo
+I0710 09:03:05.797786       1 utils.go:107] GRPC request: 
+I0710 09:03:05.797962       1 identityserver.go:32] Using default GetPluginInfo
+I0710 09:03:05.797968       1 utils.go:112] GRPC response: name:"blobfuse.csi.azure.com" vendor_version:"v0.1.0-alpha" 
+I0710 09:03:05.799480       1 utils.go:106] GRPC call: /csi.v1.Identity/Probe
+I0710 09:03:05.799495       1 utils.go:107] GRPC request: 
+I0710 09:03:05.799520       1 utils.go:112] GRPC response: ready:<value:true > 
+I0710 09:03:32.835658       1 utils.go:106] GRPC call: /csi.v1.Node/NodeUnpublishVolume
+I0710 09:03:32.835675       1 utils.go:107] GRPC request: volume_id:"mc_andy-virtualnode_andy-virtualnode_eastus2#f552731369e2711e986302a#test" target_path:"/var/lib/kubelet/pods/6308826c-a2f1-11e9-be56-6689d2cdf655/volumes/kubernetes.io~csi/pvc-51b82899-a2f1-11e9-be56-6689d2cdf655/mount" 
+I0710 09:03:32.835717       1 mount_linux.go:203] Unmounting /var/lib/kubelet/pods/6308826c-a2f1-11e9-be56-6689d2cdf655/volumes/kubernetes.io~csi/pvc-51b82899-a2f1-11e9-be56-6689d2cdf655/mount
+I0710 09:03:32.852994       1 nodeserver.go:176] blobfuse: volume /var/lib/kubelet/pods/6308826c-a2f1-11e9-be56-6689d2cdf655/volumes/kubernetes.io~csi/pvc-51b82899-a2f1-11e9-be56-6689d2cdf655/mount/mc_andy-virtualnode_andy-virtualnode_eastus2#f552731369e2711e986302a#test has been unmounted.
+I0710 09:03:32.853017       1 utils.go:112] GRPC response: 
+I0710 09:03:32.940686       1 utils.go:106] GRPC call: /csi.v1.Node/NodeGetCapabilities
+I0710 09:03:32.940719       1 utils.go:107] GRPC request: 
+I0710 09:03:32.940753       1 nodeserver.go:215] Using default NodeGetCapabilities
+I0710 09:03:32.940758       1 utils.go:112] GRPC response: capabilities:<rpc:<> > 
+I0710 09:03:35.804719       1 utils.go:106] GRPC call: /csi.v1.Identity/GetPluginInfo
+I0710 09:03:35.804736       1 utils.go:107] GRPC request: 
+I0710 09:03:35.804786       1 identityserver.go:32] Using default GetPluginInfo
+I0710 09:03:35.804791       1 utils.go:112] GRPC response: name:"blobfuse.csi.azure.com" vendor_version:"v0.1.0-alpha" 
+I0710 09:03:35.808995       1 utils.go:106] GRPC call: /csi.v1.Identity/Probe
+I0710 09:03:35.809085       1 utils.go:107] GRPC request: 
+I0710 09:03:35.809183       1 utils.go:112] GRPC response: ready:<value:true > 
+I0710 09:04:05.797903       1 utils.go:106] GRPC call: /csi.v1.Identity/GetPluginInfo
+I0710 09:04:05.797923       1 utils.go:107] GRPC request: 
+I0710 09:04:05.797958       1 identityserver.go:32] Using default GetPluginInfo
+I0710 09:04:05.797963       1 utils.go:112] GRPC response: name:"blobfuse.csi.azure.com" vendor_version:"v0.1.0-alpha" 
+I0710 09:04:05.799271       1 utils.go:106] GRPC call: /csi.v1.Identity/Probe
+I0710 09:04:05.799294       1 utils.go:107] GRPC request: 
+I0710 09:04:05.799473       1 utils.go:112] GRPC response: ready:<value:true > 
+I0710 09:04:38.799086       1 utils.go:106] GRPC call: /csi.v1.Identity/GetPluginInfo
+I0710 09:04:38.799101       1 utils.go:107] GRPC request: 
+I0710 09:04:38.799136       1 identityserver.go:32] Using default GetPluginInfo
+I0710 09:04:38.799141       1 utils.go:112] GRPC response: name:"blobfuse.csi.azure.com" vendor_version:"v0.1.0-alpha" 
+I0710 09:04:38.800468       1 utils.go:106] GRPC call: /csi.v1.Identity/Probe
+I0710 09:04:38.800485       1 utils.go:107] GRPC request: 
+I0710 09:04:38.800532       1 utils.go:112] GRPC response: ready:<value:true > 
