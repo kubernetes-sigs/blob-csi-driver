@@ -2143,6 +2143,16 @@ func TestValidateContainerName(t *testing.T) {
 			containerName: "$logs\n--inject",
 			wantErr:       true,
 		},
+		{
+			name:          "$-prefix with form-feed is rejected",
+			containerName: "$web\f--tmp-path=/var/data",
+			wantErr:       true,
+		},
+		{
+			name:          "$-prefix with vertical-tab is rejected",
+			containerName: "$root\v--inject",
+			wantErr:       true,
+		},
 		// invalid names — naming rule violations
 	}
 

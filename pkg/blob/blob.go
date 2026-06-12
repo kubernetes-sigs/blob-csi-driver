@@ -1252,7 +1252,7 @@ func ValidateContainerName(containerName string) error {
 	// Allow Azure system containers that use "$" prefix (e.g. $web, $root, $logs).
 	// Still reject whitespace to prevent argument injection via blobfuse2 argv.
 	if strings.HasPrefix(containerName, "$") {
-		if strings.ContainsAny(containerName, " \t\n\r") {
+		if strings.ContainsAny(containerName, " \t\n\r\f\v") {
 			return fmt.Errorf("invalid containerName %q: whitespace characters are not allowed", containerName)
 		}
 		return nil
