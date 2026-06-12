@@ -2127,6 +2127,22 @@ func TestValidateContainerName(t *testing.T) {
 			containerName: "$blobchangefeed",
 			wantErr:       false,
 		},
+		// invalid names — $-prefix with whitespace (argv injection protection)
+		{
+			name:          "$-prefix with space is rejected",
+			containerName: "$web --tmp-path=/var/data",
+			wantErr:       true,
+		},
+		{
+			name:          "$-prefix with tab is rejected",
+			containerName: "$root\t--inject",
+			wantErr:       true,
+		},
+		{
+			name:          "$-prefix with newline is rejected",
+			containerName: "$logs\n--inject",
+			wantErr:       true,
+		},
 		// invalid names — naming rule violations
 	}
 
