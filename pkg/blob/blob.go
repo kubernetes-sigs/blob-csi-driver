@@ -252,6 +252,7 @@ var (
 		"--read-only":                      {},
 		"--subdirectory":                   {},
 		"--sync-to-flush":                  {},
+		"--use-adls":                       {},
 		"--use-attr-cache":                 {},
 		"--virtual-directory":              {},
 		"--wait-for-mount":                 {},
