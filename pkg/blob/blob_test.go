@@ -1657,6 +1657,12 @@ func TestSanitizeMountOptions(t *testing.T) {
 			wantErr:  false,
 			expected: []string{"--cancel-list-on-mount-seconds=60"},
 		},
+		{
+			name:     "--use-adls is allowed (used for ADLS Gen2/HNS accounts, see issue #2505)",
+			options:  []string{"--use-adls=true"},
+			wantErr:  false,
+			expected: []string{"--use-adls=true"},
+		},
 		// -o FUSE passthrough: a space after -o would be treated as additional flags
 		// by the proxy, so the value must be a single token.
 		{
