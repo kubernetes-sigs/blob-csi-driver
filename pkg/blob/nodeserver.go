@@ -138,7 +138,8 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		mountOptions = append(mountOptions, "ro")
 	}
 
-	// NodePublishVolume should not unmount during republish to prevent race conditions.
+	// Pass shouldUnmount=false: NodePublishVolume must not unmount a stale mount to
+	// prevent a race where the app container loses its volume mid-write.
 	mnt, err := d.ensureMountPoint(target, fs.FileMode(mountPermissions), false)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", target, err)
@@ -744,8 +745,12 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 	return resp, nil
 }
 
-// ensureMountPoint: create mount point if not exists
-// return <true, nil> if it's already a mounted point otherwise return <false, nil>
+// ensureMountPoint: create mount point if not exists.
+// When shouldUnmount is true (e.g. NodeStageVolume), a stale mount is unmounted so it can be
+// re-established. When shouldUnmount is false (e.g. NodePublishVolume), a stale mount is left
+// in place and the error is returned so kubelet can retry; this avoids a race where unmounting
+// during periodic republish causes data loss if the application container is writing.
+// Returns <true, nil> if already a healthy mounted point, otherwise <false, nil>.
 func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount bool) (bool, error) {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
@@ -804,10 +809,10 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 			notMnt = true
 			return !notMnt, err
 		}
-		// shouldUnmount is false (NodePublishVolume republish path):
-		// report as already mounted and let NodeUnpublishVolume handle cleanup.
-		klog.Warningf("ReadDir %s failed with %v, but skipping unmount during republish", target, err)
-		return !notMnt, nil
+		// shouldUnmount is false: skip unmount to avoid data-loss race, but return
+		// the error so kubelet can surface the failure and retry.
+		klog.Warningf("ReadDir %s failed with %v, skipping unmount (shouldUnmount=false)", target, err)
+		return !notMnt, err
 	}
 	if err := volumehelper.MakeDir(target, perm); err != nil {
 		klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
