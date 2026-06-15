@@ -134,7 +134,8 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		mountOptions = append(mountOptions, "ro")
 	}
 
-	mnt, err := d.ensureMountPoint(target, fs.FileMode(mountPermissions))
+	// NodePublishVolume should not unmount during republish to prevent race conditions.
+	mnt, err := d.ensureMountPoint(target, fs.FileMode(mountPermissions), false)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", target, err)
 	}
@@ -367,7 +368,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			csiMetrics.StorageAccountType, blobStorageAccountType,
 			csiMetrics.IsHnsEnabled, strconv.FormatBool(isHnsEnabled))
 	}()
-	mnt, err := d.ensureMountPoint(targetPath, fs.FileMode(mountPermissions))
+	mnt, err := d.ensureMountPoint(targetPath, fs.FileMode(mountPermissions), true)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", targetPath, err)
 	}
@@ -727,7 +728,7 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 
 // ensureMountPoint: create mount point if not exists
 // return <true, nil> if it's already a mounted point otherwise return <false, nil>
-func (d *Driver) ensureMountPoint(target string, perm os.FileMode) (bool, error) {
+func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount bool) (bool, error) {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
 		if IsCorruptedDir(target) {
@@ -775,14 +776,20 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode) (bool, error)
 			klog.V(2).Infof("already mounted to target %s", target)
 			return !notMnt, nil
 		}
-		// mount link is invalid, now unmount and remount later
-		klog.Warningf("ReadDir %s failed with %v, unmount this directory", target, err)
-		if err := d.mounter.Unmount(target); err != nil {
-			klog.Errorf("Unmount directory %s failed with %v", target, err)
+		if shouldUnmount {
+			// mount link is invalid, now unmount and remount later
+			klog.Warningf("ReadDir %s failed with %v, unmounting stale mount to fix it", target, err)
+			if err := d.mounter.Unmount(target); err != nil {
+				klog.Errorf("Unmount directory %s failed with %v", target, err)
+				return !notMnt, err
+			}
+			notMnt = true
 			return !notMnt, err
 		}
-		notMnt = true
-		return !notMnt, err
+		// shouldUnmount is false (NodePublishVolume republish path):
+		// report as already mounted and let NodeUnpublishVolume handle cleanup.
+		klog.Warningf("ReadDir %s failed with %v, but skipping unmount during republish", target, err)
+		return !notMnt, nil
 	}
 	if err := volumehelper.MakeDir(target, perm); err != nil {
 		klog.Errorf("MakeDir failed on target: %s (%v)", target, err)
