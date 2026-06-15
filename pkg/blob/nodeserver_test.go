@@ -133,8 +133,14 @@ func TestEnsureMountPoint(t *testing.T) {
 		}
 	}
 
+	// Test shouldUnmount=false: error is returned but unmount is not called.
+	_, err := d.ensureMountPoint(falseTarget, 0777, false)
+	if err == nil {
+		t.Errorf("[shouldUnmount=false] expected error for stale mount target, got nil")
+	}
+
 	// Clean up
-	err := os.RemoveAll(alreadyExistTarget)
+	err = os.RemoveAll(alreadyExistTarget)
 	assert.NoError(t, err)
 	err = os.RemoveAll(targetTest)
 	assert.NoError(t, err)
