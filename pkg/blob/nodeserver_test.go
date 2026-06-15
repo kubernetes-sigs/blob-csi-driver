@@ -127,7 +127,7 @@ func TestEnsureMountPoint(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := d.ensureMountPoint(test.target, 0777)
+		_, err := d.ensureMountPoint(test.target, 0777, true)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("[%s]: Unexpected Error: %v, expected error: %v", test.desc, err, test.expectedErr)
 		}
