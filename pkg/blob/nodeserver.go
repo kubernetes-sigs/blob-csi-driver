@@ -750,7 +750,11 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 // re-established. When shouldUnmount is false (e.g. NodePublishVolume), a stale mount is left
 // in place and the error is returned so kubelet can retry; this avoids a race where unmounting
 // during periodic republish causes data loss if the application container is writing.
-// Returns <true, nil> if already a healthy mounted point, otherwise <false, nil>.
+// Returns:
+//   - (true, nil) if the target is already a healthy mount point
+//   - (true, err) if the target is mounted but the health check failed (shouldUnmount=false)
+//   - (false, nil) if the target was freshly created or successfully unmounted
+//   - (false, err) on other failures
 func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount bool) (bool, error) {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
