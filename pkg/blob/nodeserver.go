@@ -134,7 +134,9 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		mountOptions = append(mountOptions, "ro")
 	}
 
-	mnt, err := d.ensureMountPoint(target, fs.FileMode(mountPermissions))
+	// Pass shouldUnmount=false: NodePublishVolume must not unmount a stale mount to
+	// prevent a race where the app container loses its volume mid-write.
+	mnt, err := d.ensureMountPoint(target, fs.FileMode(mountPermissions), false)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", target, err)
 	}
@@ -367,7 +369,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			csiMetrics.StorageAccountType, blobStorageAccountType,
 			csiMetrics.IsHnsEnabled, strconv.FormatBool(isHnsEnabled))
 	}()
-	mnt, err := d.ensureMountPoint(targetPath, fs.FileMode(mountPermissions))
+	mnt, err := d.ensureMountPoint(targetPath, fs.FileMode(mountPermissions), true)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", targetPath, err)
 	}
@@ -725,9 +727,17 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 	return resp, nil
 }
 
-// ensureMountPoint: create mount point if not exists
-// return <true, nil> if it's already a mounted point otherwise return <false, nil>
-func (d *Driver) ensureMountPoint(target string, perm os.FileMode) (bool, error) {
+// ensureMountPoint: create mount point if not exists.
+// When shouldUnmount is true (e.g. NodeStageVolume), a stale mount is unmounted so it can be
+// re-established. When shouldUnmount is false (e.g. NodePublishVolume), a stale mount is left
+// in place and the error is returned so kubelet can retry; this avoids a race where unmounting
+// during periodic republish causes data loss if the application container is writing.
+// Returns:
+//   - (true, nil) if the target is already a healthy mount point
+//   - (true, err) if the target is mounted but the health check failed (shouldUnmount=false)
+//   - (false, nil) if the target was freshly created or successfully unmounted
+//   - (false, err) on other failures
+func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount bool) (bool, error) {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
 		if IsCorruptedDir(target) {
@@ -775,13 +785,19 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode) (bool, error)
 			klog.V(2).Infof("already mounted to target %s", target)
 			return !notMnt, nil
 		}
-		// mount link is invalid, now unmount and remount later
-		klog.Warningf("ReadDir %s failed with %v, unmount this directory", target, err)
-		if err := d.mounter.Unmount(target); err != nil {
-			klog.Errorf("Unmount directory %s failed with %v", target, err)
+		if shouldUnmount {
+			// mount link is invalid, now unmount and remount later
+			klog.Warningf("ReadDir %s failed with %v, unmounting stale mount to fix it", target, err)
+			if err := d.mounter.Unmount(target); err != nil {
+				klog.Errorf("Unmount directory %s failed with %v", target, err)
+				return !notMnt, err
+			}
+			notMnt = true
 			return !notMnt, err
 		}
-		notMnt = true
+		// shouldUnmount is false: skip unmount to avoid data-loss race, but return
+		// the error so kubelet can surface the failure and retry.
+		klog.Warningf("ReadDir %s failed with %v, skipping unmount (shouldUnmount=false)", target, err)
 		return !notMnt, err
 	}
 	if err := volumehelper.MakeDir(target, perm); err != nil {

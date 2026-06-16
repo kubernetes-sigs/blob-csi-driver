@@ -25,6 +25,7 @@ import (
 
 type fakeMounter struct {
 	mount.FakeMounter
+	unmountCount int
 }
 
 // Mount overrides mount.FakeMounter.Mount.
@@ -57,4 +58,10 @@ func (f *fakeMounter) IsLikelyNotMountPoint(file string) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+// Unmount overrides mount.FakeMounter.Unmount.
+func (f *fakeMounter) Unmount(target string) error {
+	f.unmountCount++
+	return nil
 }
