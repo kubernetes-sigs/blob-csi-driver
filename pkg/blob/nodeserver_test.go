@@ -130,14 +130,24 @@ func TestEnsureMountPoint(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := d.ensureMountPoint(test.target, 0777)
+		_, err := d.ensureMountPoint(test.target, 0777, true)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("[%s]: Unexpected Error: %v, expected error: %v", test.desc, err, test.expectedErr)
 		}
 	}
 
+	// Test shouldUnmount=false: error is returned but unmount is not called.
+	unmountCountBefore := fakeMounter.unmountCount
+	_, err := d.ensureMountPoint(falseTarget, 0777, false)
+	if err == nil {
+		t.Errorf("[shouldUnmount=false] expected error for stale mount target, got nil")
+	}
+	if fakeMounter.unmountCount != unmountCountBefore {
+		t.Errorf("[shouldUnmount=false] expected no Unmount calls, but got %d", fakeMounter.unmountCount-unmountCountBefore)
+	}
+
 	// Clean up
-	err := os.RemoveAll(alreadyExistTarget)
+	err = os.RemoveAll(alreadyExistTarget)
 	assert.NoError(t, err)
 	err = os.RemoveAll(targetTest)
 	assert.NoError(t, err)
