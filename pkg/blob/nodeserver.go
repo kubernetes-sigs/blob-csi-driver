@@ -437,9 +437,26 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 		if volumeMountGroup != "" && fsGroupChangePolicy != FSGroupChangeNone {
 			klog.V(2).Infof("set gid of volume(%s) as %s using fsGroupChangePolicy(%s)", volumeID, volumeMountGroup, fsGroupChangePolicy)
-			if err := volumehelper.SetVolumeOwnership(targetPath, volumeMountGroup, fsGroupChangePolicy); err != nil {
+			start := time.Now()
+			done := make(chan struct{})
+			go func() {
+				ticker := time.NewTicker(30 * time.Second)
+				defer ticker.Stop()
+				for {
+					select {
+					case <-done:
+						return
+					case <-ticker.C:
+						klog.Infof("SetVolumeOwnership for volume(%s) on %s is still running (elapsed: %v)", volumeID, targetPath, time.Since(start).Round(time.Second))
+					}
+				}
+			}()
+			err := volumehelper.SetVolumeOwnership(targetPath, volumeMountGroup, fsGroupChangePolicy)
+			close(done)
+			if err != nil {
 				return nil, status.Error(codes.Internal, fmt.Sprintf("SetVolumeOwnership with volume(%s) on %s failed with %v", volumeID, targetPath, err))
 			}
+			klog.V(2).Infof("SetVolumeOwnership for volume(%s) on %s completed (elapsed: %v)", volumeID, targetPath, time.Since(start).Round(time.Second))
 		}
 
 		isOperationSucceeded = true
