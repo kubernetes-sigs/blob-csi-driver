@@ -465,6 +465,11 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 					case <-done:
 						return
 					case <-ticker.C:
+						select {
+						case <-done:
+							return
+						default:
+						}
 						klog.Infof("SetVolumeOwnership for volume(%s) on %s is still running (elapsed: %v)", volumeID, targetPath, time.Since(start).Round(time.Second))
 					}
 				}
@@ -474,7 +479,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			if err != nil {
 				return nil, status.Error(codes.Internal, fmt.Sprintf("SetVolumeOwnership with volume(%s) on %s failed with %v", volumeID, targetPath, err))
 			}
-			klog.V(2).Infof("SetVolumeOwnership for volume(%s) on %s completed (elapsed: %v)", volumeID, targetPath, time.Since(start).Round(time.Second))
+			klog.Infof("SetVolumeOwnership for volume(%s) on %s completed successfully (elapsed: %v)", volumeID, targetPath, time.Since(start).Round(time.Second))
 		}
 
 		isOperationSucceeded = true
