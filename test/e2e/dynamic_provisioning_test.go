@@ -567,7 +567,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		fsGroup := int64(1000)
 		pods := []testsuites.PodDetails{
 			{
-				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Cmd:     "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
 				FSGroup: &fsGroup,
 				Volumes: []testsuites.VolumeDetails{
 					{
