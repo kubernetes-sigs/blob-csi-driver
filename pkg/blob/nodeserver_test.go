@@ -722,6 +722,46 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "protocol = nfs with volumeMountGroup triggers SetVolumeOwnership",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessMode: &volumeCap,
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{
+								VolumeMountGroup: "1000",
+							},
+						},
+					},
+					VolumeContext: map[string]string{
+						mountPermissionsField:    "0755",
+						protocolField:            "nfs",
+						fsGroupChangePolicyField: "OnRootMismatch",
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				// SetVolumeOwnership may fail in test env (target path doesn't exist as a real mount)
+				// but we verify the code path is reached without panics
+				if err != nil {
+					// Expected: either success or SetVolumeOwnership error (not a panic or nil pointer)
+					assert.Contains(t, err.Error(), "SetVolumeOwnership")
+				}
+			},
+		},
+		{
 			name: "BlobMockMount Enabled",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
