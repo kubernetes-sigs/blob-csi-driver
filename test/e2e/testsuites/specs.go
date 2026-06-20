@@ -115,9 +115,10 @@ func (pod *PodDetails) SetupWithDynamicVolumes(ctx context.Context, client clien
 		}
 	}
 	if pod.FSGroup != nil {
-		tpod.pod.Spec.SecurityContext = &v1.PodSecurityContext{
-			FSGroup: pod.FSGroup,
+		if tpod.pod.Spec.SecurityContext == nil {
+			tpod.pod.Spec.SecurityContext = &v1.PodSecurityContext{}
 		}
+		tpod.pod.Spec.SecurityContext.FSGroup = pod.FSGroup
 	}
 	return tpod, cleanupFuncs
 }
