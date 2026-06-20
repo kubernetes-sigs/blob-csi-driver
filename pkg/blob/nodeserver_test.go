@@ -753,12 +753,11 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 
 				_, err := d.NodeStageVolume(context.TODO(), req)
-				// SetVolumeOwnership may fail in test env (target path doesn't exist as a real mount)
-				// but we verify the code path is reached without panics
-				if err != nil {
-					// Expected: either success or SetVolumeOwnership error (not a panic or nil pointer)
-					assert.Contains(t, err.Error(), "SetVolumeOwnership")
-				}
+				// In the test environment the staging target path is not a real mount,
+				// so SetVolumeOwnership must fail. Asserting a non-nil error that
+				// mentions SetVolumeOwnership proves the code path was reached.
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "SetVolumeOwnership")
 			},
 		},
 		{
