@@ -804,7 +804,7 @@ func TestNodeStageVolume(t *testing.T) {
 						AccessMode: &volumeCap,
 						AccessType: &csi.VolumeCapability_Mount{
 							Mount: &csi.VolumeCapability_MountVolume{
-								VolumeMountGroup: "1000",
+								VolumeMountGroup: "invalid-gid",
 							},
 						},
 					},
@@ -826,12 +826,10 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 
 				_, err := d.NodeStageVolume(context.TODO(), req)
-				// SetVolumeOwnership may succeed or fail depending on the test
-				// environment. When it fails, verify the error mentions
-				// SetVolumeOwnership to confirm the code path was reached.
-				if err != nil {
-					assert.Contains(t, err.Error(), "SetVolumeOwnership")
-				}
+				// "invalid-gid" cannot be parsed as an integer, so SetVolumeOwnership
+				// deterministically fails with a conversion error.
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "SetVolumeOwnership")
 			},
 		},
 		{
