@@ -33,6 +33,7 @@ import (
 type PodDetails struct {
 	Cmd     string
 	Volumes []VolumeDetails
+	FSGroup *int64
 }
 
 type VolumeDetails struct {
@@ -112,6 +113,12 @@ func (pod *PodDetails) SetupWithDynamicVolumes(ctx context.Context, client clien
 		} else {
 			tpod.SetupVolume(tpvc.persistentVolumeClaim, fmt.Sprintf("%s%d", v.VolumeMount.NameGenerate, n+1), fmt.Sprintf("%s%d", v.VolumeMount.MountPathGenerate, n+1), v.VolumeMount.ReadOnly)
 		}
+	}
+	if pod.FSGroup != nil {
+		if tpod.pod.Spec.SecurityContext == nil {
+			tpod.pod.Spec.SecurityContext = &v1.PodSecurityContext{}
+		}
+		tpod.pod.Spec.SecurityContext.FSGroup = pod.FSGroup
 	}
 	return tpod, cleanupFuncs
 }
