@@ -795,6 +795,44 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "protocol = nfs with volumeMountGroup triggers SetVolumeOwnership",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessMode: &volumeCap,
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{
+								VolumeMountGroup: "invalid-gid",
+							},
+						},
+					},
+					VolumeContext: map[string]string{
+						mountPermissionsField:    "0755",
+						protocolField:            "nfs",
+						fsGroupChangePolicyField: "OnRootMismatch",
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				// "invalid-gid" cannot be parsed as an integer, so SetVolumeOwnership
+				// deterministically fails with a conversion error.
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "SetVolumeOwnership")
+			},
+		},
+		{
 			name: "BlobMockMount Enabled",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
