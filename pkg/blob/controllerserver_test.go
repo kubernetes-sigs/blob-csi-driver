@@ -2284,3 +2284,159 @@ func TestSerializeTags(t *testing.T) {
 		}
 	}
 }
+
+// TestCleanupContainerOnFailure exercises the rollback helper introduced with
+// the CreateVolume failure cleanup path. It covers the three behaviours that
+// matter for correctness:
+//
+//	(1) user-specified container name (shouldCleanupContainer=false) => cleanup skipped
+//	(2) auto-generated container name + no live azcopy job => DeleteBlobContainer called
+//	(3) auto-generated container name + azcopy job Running or Completed => cleanup skipped
+//	    (so retries can resume, and to avoid racing with a copy that just finished)
+func TestCleanupContainerOnFailure(t *testing.T) {
+	const (
+		testContainer = "cleanuptest"
+		testAccount   = "acct"
+	)
+
+	// azcopy jobs list output shaped like what parseAzcopyJobList expects.
+	azcopyListOutput := func(status string) string {
+		return fmt.Sprintf("JobId: 11111111-2222-3333-4444-555555555555\n"+
+			"Start Time: Monday, 07-Aug-23 03:29:54 UTC\n"+
+			"Status: %s\n"+
+			"Command: copy https://src.blob.core.windows.net/src https://dst.blob.core.windows.net/%s --recursive\n", status, testContainer)
+	}
+
+	tests := []struct {
+		desc               string
+		shouldCleanup      bool
+		azcopyListOutput   string
+		azcopyListErr      error
+		azcopyShowExpected bool   // true when parseAzcopyJobList returns Running with a jobid => `azcopy jobs show` is invoked
+		azcopyShowOutput   string // stdout returned by the mocked `azcopy jobs show <jobid> | grep Percent`
+		expectDeleteCall   bool
+		deleteContainerErr error // returned by mocked DeleteContainer if it is called
+	}{
+		{
+			desc:             "user-specified container name skips cleanup",
+			shouldCleanup:    false,
+			expectDeleteCall: false,
+		},
+		{
+			desc:             "auto-generated container + no azcopy job => DeleteBlobContainer called",
+			shouldCleanup:    true,
+			azcopyListOutput: "",
+			azcopyListErr:    fmt.Errorf("exit status 1"), // grep-no-match, filtered inside GetAzcopyJob
+			expectDeleteCall: true,
+		},
+		{
+			desc:               "auto-generated container + azcopy job Running => cleanup skipped",
+			shouldCleanup:      true,
+			azcopyListOutput:   azcopyListOutput("InProgress"),
+			azcopyShowExpected: true,
+			azcopyShowOutput:   "Percent Complete (approx): 42.0\n",
+			expectDeleteCall:   false,
+		},
+		{
+			desc:             "auto-generated container + azcopy job Completed => cleanup skipped",
+			shouldCleanup:    true,
+			azcopyListOutput: azcopyListOutput("Completed"),
+			expectDeleteCall: false,
+		},
+		{
+			desc:             "auto-generated container + azcopy job CompletedWithErrors => cleanup skipped",
+			shouldCleanup:    true,
+			azcopyListOutput: azcopyListOutput("CompletedWithErrors"),
+			expectDeleteCall: false,
+		},
+		{
+			desc:             "auto-generated container + azcopy job CompletedWithSkipped => cleanup skipped",
+			shouldCleanup:    true,
+			azcopyListOutput: azcopyListOutput("CompletedWithSkipped"),
+			expectDeleteCall: false,
+		},
+		{
+			desc:             "auto-generated container + azcopy job CompletedWithErrorsAndSkipped => cleanup skipped",
+			shouldCleanup:    true,
+			azcopyListOutput: azcopyListOutput("CompletedWithErrorsAndSkipped"),
+			expectDeleteCall: false,
+		},
+		{
+			desc:             "auto-generated container + GetAzcopyJob errors out => cleanup skipped (conservative)",
+			shouldCleanup:    true,
+			azcopyListOutput: "",
+			azcopyListErr:    fmt.Errorf("azcopy binary not found"),
+			expectDeleteCall: false,
+		},
+		{
+			desc:               "auto-generated container + DeleteBlobContainer errors is swallowed (best-effort)",
+			shouldCleanup:      true,
+			azcopyListOutput:   "",
+			azcopyListErr:      fmt.Errorf("exit status 1"),
+			expectDeleteCall:   true,
+			deleteContainerErr: fmt.Errorf("transient dataplane error"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			d := NewFakeDriver()
+			d.cloud = &storage.AccountRepo{}
+
+			// Wire in the mock azcopy exec. GetAzcopyJob is invoked before any
+			// cleanup decision, so we only bother wiring it when cleanup is
+			// actually attempted (shouldCleanup=true).
+			if test.shouldCleanup {
+				execMock := util.NewMockEXEC(ctrl)
+				listCmd := fmt.Sprintf("azcopy jobs list | grep %s -B 3", testContainer)
+				execMock.EXPECT().
+					RunCommand(gomock.Eq(listCmd), gomock.Any()).
+					Return(test.azcopyListOutput, test.azcopyListErr).
+					Times(1)
+				// When parseAzcopyJobList returns Running (with a jobid) GetAzcopyJob
+				// makes a follow-up `azcopy jobs show <jobid> | grep Percent` call.
+				// Completed short-circuits at 100.0% and skips the follow-up; the
+				// no-job / user-container cases never call GetAzcopyJob past list.
+				if test.azcopyShowExpected {
+					execMock.EXPECT().
+						RunCommand(gomock.Not(gomock.Eq(listCmd)), gomock.Any()).
+						Return(test.azcopyShowOutput, nil).
+						Times(1)
+				}
+				d.azcopy.ExecCmd = execMock
+			}
+
+			// Set up the storage-client mocks so that DeleteBlobContainer can run
+			// (or, when we assert it must NOT run, fail the test if it does).
+			clientFactoryMock := mock_azclient.NewMockClientFactory(ctrl)
+			blobClientMock := mock_blobcontainerclient.NewMockInterface(ctrl)
+			accountClientMock := mock_accountclient.NewMockInterface(ctrl)
+			clientFactoryMock.EXPECT().GetAccountClientForSub(gomock.Any()).Return(accountClientMock, nil).AnyTimes()
+			clientFactoryMock.EXPECT().GetBlobContainerClientForSub(gomock.Any()).Return(blobClientMock, nil).AnyTimes()
+			d.clientFactory = clientFactoryMock
+
+			var deleteCalls int
+			expectedCalls := 0
+			if test.expectDeleteCall {
+				expectedCalls = 1
+			}
+			blobClientMock.EXPECT().
+				DeleteContainer(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Eq(testContainer)).
+				DoAndReturn(func(_ context.Context, _, _, _ string) error {
+					deleteCalls++
+					return test.deleteContainerErr
+				}).
+				Times(expectedCalls)
+
+			// Act. Must not panic even when the delete errors out (best-effort).
+			d.cleanupContainerOnFailure(test.shouldCleanup, "subsID", "rg", testAccount, testContainer, map[string]string{}, []string{}, "unit-test")
+
+			if deleteCalls != expectedCalls {
+				t.Errorf("DeleteContainer call count = %d, expected %d", deleteCalls, expectedCalls)
+			}
+		})
+	}
+}
