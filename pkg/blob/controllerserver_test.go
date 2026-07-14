@@ -2344,6 +2344,24 @@ func TestCleanupContainerOnFailure(t *testing.T) {
 			expectDeleteCall: false,
 		},
 		{
+			desc:             "auto-generated container + azcopy job CompletedWithErrors => cleanup skipped",
+			shouldCleanup:    true,
+			azcopyListOutput: azcopyListOutput("CompletedWithErrors"),
+			expectDeleteCall: false,
+		},
+		{
+			desc:             "auto-generated container + azcopy job CompletedWithSkipped => cleanup skipped",
+			shouldCleanup:    true,
+			azcopyListOutput: azcopyListOutput("CompletedWithSkipped"),
+			expectDeleteCall: false,
+		},
+		{
+			desc:             "auto-generated container + azcopy job CompletedWithErrorsAndSkipped => cleanup skipped",
+			shouldCleanup:    true,
+			azcopyListOutput: azcopyListOutput("CompletedWithErrorsAndSkipped"),
+			expectDeleteCall: false,
+		},
+		{
 			desc:               "auto-generated container + DeleteBlobContainer errors is swallowed (best-effort)",
 			shouldCleanup:      true,
 			azcopyListOutput:   "",
