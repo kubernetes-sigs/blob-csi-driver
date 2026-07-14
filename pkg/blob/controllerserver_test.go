@@ -2362,6 +2362,13 @@ func TestCleanupContainerOnFailure(t *testing.T) {
 			expectDeleteCall: false,
 		},
 		{
+			desc:             "auto-generated container + GetAzcopyJob errors out => cleanup skipped (conservative)",
+			shouldCleanup:    true,
+			azcopyListOutput: "",
+			azcopyListErr:    fmt.Errorf("azcopy binary not found"),
+			expectDeleteCall: false,
+		},
+		{
 			desc:               "auto-generated container + DeleteBlobContainer errors is swallowed (best-effort)",
 			shouldCleanup:      true,
 			azcopyListOutput:   "",
