@@ -2312,6 +2312,8 @@ func TestCleanupContainerOnFailure(t *testing.T) {
 		shouldCleanup      bool
 		azcopyListOutput   string
 		azcopyListErr      error
+		azcopyShowExpected bool   // true when parseAzcopyJobList returns Running with a jobid => `azcopy jobs show` is invoked
+		azcopyShowOutput   string // stdout returned by the mocked `azcopy jobs show <jobid> | grep Percent`
 		expectDeleteCall   bool
 		deleteContainerErr error // returned by mocked DeleteContainer if it is called
 	}{
@@ -2328,10 +2330,12 @@ func TestCleanupContainerOnFailure(t *testing.T) {
 			expectDeleteCall: true,
 		},
 		{
-			desc:             "auto-generated container + azcopy job Running => cleanup skipped",
-			shouldCleanup:    true,
-			azcopyListOutput: azcopyListOutput("InProgress"),
-			expectDeleteCall: false,
+			desc:               "auto-generated container + azcopy job Running => cleanup skipped",
+			shouldCleanup:      true,
+			azcopyListOutput:   azcopyListOutput("InProgress"),
+			azcopyShowExpected: true,
+			azcopyShowOutput:   "Percent Complete (approx): 42.0\n",
+			expectDeleteCall:   false,
 		},
 		{
 			desc:             "auto-generated container + azcopy job Completed => cleanup skipped",
@@ -2362,13 +2366,21 @@ func TestCleanupContainerOnFailure(t *testing.T) {
 			// actually attempted (shouldCleanup=true).
 			if test.shouldCleanup {
 				execMock := util.NewMockEXEC(ctrl)
+				listCmd := fmt.Sprintf("azcopy jobs list | grep %s -B 3", testContainer)
 				execMock.EXPECT().
-					RunCommand(fmt.Sprintf("azcopy jobs list | grep %s -B 3", testContainer), gomock.Any()).
+					RunCommand(gomock.Eq(listCmd), gomock.Any()).
 					Return(test.azcopyListOutput, test.azcopyListErr).
 					Times(1)
-				// If parseAzcopyJobList reports Running, cleanupContainerOnFailure
-				// bails out before calling `azcopy jobs show`, so no extra call is
-				// expected. Completed short-circuits inside GetAzcopyJob at 100.0%.
+				// When parseAzcopyJobList returns Running (with a jobid) GetAzcopyJob
+				// makes a follow-up `azcopy jobs show <jobid> | grep Percent` call.
+				// Completed short-circuits at 100.0% and skips the follow-up; the
+				// no-job / user-container cases never call GetAzcopyJob past list.
+				if test.azcopyShowExpected {
+					execMock.EXPECT().
+						RunCommand(gomock.Not(gomock.Eq(listCmd)), gomock.Any()).
+						Return(test.azcopyShowOutput, nil).
+						Times(1)
+				}
 				d.azcopy.ExecCmd = execMock
 			}
 
