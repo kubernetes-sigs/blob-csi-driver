@@ -502,7 +502,10 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		copyErr := d.copyVolume(ctx, req, accountName, accountSASToken, authAzcopyEnv, validContainerName, secretNamespace, accountOptions, storageEndpointSuffix)
 		if accountSASToken == "" && copyErr != nil && strings.Contains(copyErr.Error(), authorizationPermissionMismatch) {
 			klog.Warningf("azcopy copy failed with AuthorizationPermissionMismatch error, should assign \"Storage Blob Data Contributor\" role to controller identity, fall back to use sas token, original error: %v", copyErr)
-			accountSASToken, authAzcopyEnv, err := d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace, true)
+			// Reuse outer variables (=, not :=) so authAzcopyEnv reflects the fallback SAS-token
+			// attempt when we hit cleanupContainerOnFailure below; a shadowed inner-scope
+			// variable would leave the outer authAzcopyEnv pinned to the first auth attempt.
+			accountSASToken, authAzcopyEnv, err = d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace, true)
 			if err != nil {
 				d.cleanupContainerOnFailure(shouldCleanupContainer, subsID, resourceGroup, accountName, validContainerName, secrets, authAzcopyEnv, "fallback getAzcopyAuth failure")
 				return nil, status.Errorf(codes.Internal, "failed to getAzcopyAuth on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
@@ -588,8 +591,19 @@ func (d *Driver) cleanupContainerOnFailure(shouldCleanupContainer bool, subsID, 
 	// Check azcopy job state — if a job is still running or has completed for this container,
 	// skip cleanup to avoid orphaning a running job or deleting a container that was
 	// successfully copied (race between timeout and job completion).
+	//
+	// Conservative: if we cannot positively determine job state (GetAzcopyJob returned an
+	// error, e.g. `azcopy jobs list` blew up or the output was unparseable), skip cleanup
+	// too. The reasoning is that this helper's whole purpose is to protect against
+	// deleting a container that has an in-flight or just-finished copy; deleting on an
+	// indeterminate signal would defeat that. We only proceed with deletion when we can
+	// confirm there is no such job (state == NotFound with no error).
 	jobState, _, err := d.azcopy.GetAzcopyJob(containerName, authAzcopyEnv)
-	if err == nil && isAzcopyJobActiveOrCompleted(jobState) {
+	if err != nil {
+		klog.Warningf("skip cleanup of container(%s) on account(%s): failed to get azcopy job state: %v", containerName, accountName, err)
+		return
+	}
+	if isAzcopyJobActiveOrCompleted(jobState) {
 		klog.V(2).Infof("skip cleanup of container(%s) on account(%s): azcopy job state is %s", containerName, accountName, jobState)
 		return
 	}
