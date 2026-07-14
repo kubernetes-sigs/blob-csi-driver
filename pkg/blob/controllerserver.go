@@ -593,7 +593,7 @@ func (d *Driver) cleanupContainerOnFailure(shouldCleanupContainer bool, subsID, 
 	// successfully copied (race between timeout and job completion).
 	//
 	// Conservative: if we cannot positively determine job state (GetAzcopyJob returned an
-	// error, e.g. `azcopy jobs list` blew up or the output was unparseable), skip cleanup
+	// error, e.g. `azcopy jobs list` blew up or the output was unparsable), skip cleanup
 	// too. The reasoning is that this helper's whole purpose is to protect against
 	// deleting a container that has an in-flight or just-finished copy; deleting on an
 	// indeterminate signal would defeat that. We only proceed with deletion when we can
