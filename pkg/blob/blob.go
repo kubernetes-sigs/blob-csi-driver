@@ -238,8 +238,6 @@ var (
 		"--foreground":                     {},
 		"--hard-limit":                     {},
 		"--high-disk-threshold":            {},
-		"--http-proxy":                     {},
-		"--https-proxy":                    {},
 		"--ignore-open-flags":              {},
 		"--ignore-sync":                    {},
 		"--invalidate-on-sync":             {},
