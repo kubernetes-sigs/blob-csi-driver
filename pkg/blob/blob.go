@@ -205,6 +205,7 @@ var (
 	// they are handled separately in SanitizeMountOptions.
 	allowedEphemeralMountOptions = map[string]struct{}{
 		"--allow-other":                    {},
+		"--attr-cache-max-size-mb":         {},
 		"--attr-cache-timeout":             {},
 		"--attr-timeout":                   {},
 		"--background-download":            {},
@@ -244,6 +245,7 @@ var (
 		"--ignore-open-flags":              {},
 		"--ignore-sync":                    {},
 		"--invalidate-on-sync":             {},
+		"--kernel-list-cache-timeout":      {},
 		"--lazy-write":                     {},
 		"--list-cache-timeout":             {},
 		"--log-goroutine-id":               {},
