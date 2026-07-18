@@ -1561,6 +1561,12 @@ func TestSanitizeMountOptions(t *testing.T) {
 			expected: []string{"--log-level=LOG_WARNING", "--cache-size-mb=1000"},
 		},
 		{
+			name:     "newly allowed attr-cache-max-size-mb and kernel-list-cache-timeout pass through",
+			options:  []string{"--attr-cache-max-size-mb=256", "--kernel-list-cache-timeout=120"},
+			wantErr:  false,
+			expected: []string{"--attr-cache-max-size-mb=256", "--kernel-list-cache-timeout=120"},
+		},
+		{
 			name:     "-o FUSE passthrough token is always allowed",
 			options:  []string{"-o allow_other", "--log-level=LOG_WARNING"},
 			wantErr:  false,

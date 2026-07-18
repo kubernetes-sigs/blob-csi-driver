@@ -161,6 +161,11 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
  - blobfuse cache(`--tmp-path` [mount option](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#mount-options))
    - By default, the blobfuse cache is located in the `/mnt` directory. If the VM SKU provides a temporary disk, the `/mnt` directory is mounted on the temporary disk. However, if the VM SKU does not provide a temporary disk, the `/mnt` directory is mounted on the OS disk. 
    - with blobfuse-proxy deployment (default on AKS), user could set `--tmp-path=` mount option to specify a different cache directory
+ - blobfuse2 attribute cache and kernel list cache tuning (requires blobfuse2 v2.5.4+, shipped by default)
+   - `--attr-cache-max-size-mb=<sizeInMB>`: maximum memory in MB that the attribute cache can use (`0` = auto-tune to 1% of total RAM, clamped to `[64 MB, 1 GB]`). Increase for workloads with large directory trees or many distinct file paths.
+   - `--kernel-list-cache-timeout=<seconds>`: enable kernel caching of directory listings and set the TTL in seconds (fuse3 only). `0` = disabled. Reduces backend `readdir` traffic for read-heavy workloads.
+   - Both are passed via `mountOptions` on the PV/StorageClass, and are also permitted on ephemeral inline volumes.
+ - If there are CVEs in the `livenessprobe` and `csi-node-driver-registrar` sidecar images, you can run `kubectl edit ds -n kube-system csi-blob-node` to change the `imagePullPolicy` to `Always` for both sidecar containers. This will cause the CSI driver to restart and pull the latest patched images, thereby resolving the CVEs in these sidecar components.
  - [Mount Azure blob storage with managed identity](../deploy/example/blobfuse-mi)
  - [Blobfuse Performance and caching](https://github.com/Azure/azure-storage-fuse?tab=readme-ov-file#frequently-asked-questions)
  - [Blobfuse CLI Flag Options v1 & v2](https://github.com/Azure/azure-storage-fuse/blob/main/MIGRATION.md#blobfuse-cli-flag-options)
