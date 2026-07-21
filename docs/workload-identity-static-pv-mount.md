@@ -6,7 +6,7 @@
 
 - **NFS mount is not supported** — NFS does not require credentials during mount, so workload identity is not applicable.
 - By default, this feature retrieves the storage account key using federated identity credentials.
-- **Mount with workload identity token only (Preview):** Supported from v1.27.0. To enable:
+- **Mount with workload identity token only:** Supported from v1.27.0. To enable:
   - Set `mountWithWorkloadIdentityToken: "true"` in `parameters` of the StorageClass or `volumeAttributes` of the PersistentVolume
   - Grant **`Storage Blob Data Contributor`** role (instead of `Storage Account Contributor`) to the managed identity
 
@@ -53,14 +53,14 @@ Choose **one** of the following role assignments:
 | Mode | Role | Use Case |
 |------|------|----------|
 | **Account-key mode** (default) | `Storage Account Contributor` | Retrieves account key for mount |
-| **Token-only mode** (Preview) | `Storage Blob Data Contributor` | Mounts using workload identity token only (v1.27.0+) |
+| **Token-only mode** | `Storage Blob Data Contributor` | Mounts using workload identity token only (supported from v1.27.0) |
 
 **Account-key mode** (default):
 ```bash
 az role assignment create --role "Storage Account Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
 
-**Token-only mode** (Preview, v1.27.0+):
+**Token-only mode** (supported from v1.27.0):
 ```bash
 az role assignment create --role "Storage Blob Data Contributor" --assignee $USER_ASSIGNED_CLIENT_ID --scope $ACCOUNT_SCOPE
 ```
@@ -116,7 +116,7 @@ parameters:
   storageaccount: $ACCOUNT                    # required
   clientID: $USER_ASSIGNED_CLIENT_ID          # required (for mount auth only)
   resourcegroup: $STORAGE_RESOURCE_GROUP      # optional, needed if account is outside MC_ resource group
-  mountWithWorkloadIdentityToken: "true"      # token-only mode (Preview, v1.27.0+); remove for account-key mode
+  mountWithWorkloadIdentityToken: "true"      # token-only mode (supported from v1.27.0); remove for account-key mode
 reclaimPolicy: Delete
 volumeBindingMode: Immediate
 allowVolumeExpansion: true
@@ -207,7 +207,7 @@ spec:
       containerName: $CONTAINER                  # required
       clientID: $USER_ASSIGNED_CLIENT_ID         # required
       resourcegroup: $STORAGE_RESOURCE_GROUP     # optional, needed if account is outside MC_ resource group
-      # mountWithWorkloadIdentityToken: "true"   # uncomment for token-only mode (Preview, v1.27.0+); requires Storage Blob Data Contributor role
+      # mountWithWorkloadIdentityToken: "true"   # uncomment for token-only mode (supported from v1.27.0); requires Storage Blob Data Contributor role
 ---
 kind: PersistentVolumeClaim
 apiVersion: v1
