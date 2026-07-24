@@ -1265,10 +1265,21 @@ func ValidateMountArgValues(mountOptions []string) error {
 // alphanumeric characters and hyphens, names containing spaces or other special
 // characters are rejected before the value is included in the blobfuse2 args
 // string that the proxy splits on whitespace.
+//
+// Azure system containers (prefixed with "$") are allowed as they are created
+// by Azure services and are valid despite not matching standard naming rules.
 func ValidateContainerName(containerName string) error {
 	// Empty is allowed: some flows (e.g. workload identity) resolve the container
 	// name later; an empty value cannot inject any arguments.
 	if containerName == "" {
+		return nil
+	}
+	// Allow Azure system containers that use "$" prefix (e.g. $web, $root, $logs).
+	// Still reject whitespace to prevent argument injection via blobfuse2 argv.
+	if strings.HasPrefix(containerName, "$") {
+		if strings.ContainsAny(containerName, " \t\n\r\f\v") {
+			return fmt.Errorf("invalid containerName %q: whitespace characters are not allowed", containerName)
+		}
 		return nil
 	}
 	if !containerNameRegex.MatchString(containerName) {

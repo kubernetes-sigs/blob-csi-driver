@@ -2118,6 +2118,53 @@ func TestValidateContainerName(t *testing.T) {
 			containerName: "",
 			wantErr:       false,
 		},
+		// Azure system containers
+		{
+			name:          "$web system container is allowed",
+			containerName: "$web",
+			wantErr:       false,
+		},
+		{
+			name:          "$root system container is allowed",
+			containerName: "$root",
+			wantErr:       false,
+		},
+		{
+			name:          "$logs system container is allowed",
+			containerName: "$logs",
+			wantErr:       false,
+		},
+		{
+			name:          "$blobchangefeed system container is allowed",
+			containerName: "$blobchangefeed",
+			wantErr:       false,
+		},
+		// invalid names — $-prefix with whitespace (argv injection protection)
+		{
+			name:          "$-prefix with space is rejected",
+			containerName: "$web --tmp-path=/var/data",
+			wantErr:       true,
+		},
+		{
+			name:          "$-prefix with tab is rejected",
+			containerName: "$root\t--inject",
+			wantErr:       true,
+		},
+		{
+			name:          "$-prefix with newline is rejected",
+			containerName: "$logs\n--inject",
+			wantErr:       true,
+		},
+		{
+			name:          "$-prefix with form-feed is rejected",
+			containerName: "$web\f--tmp-path=/var/data",
+			wantErr:       true,
+		},
+		{
+			name:          "$-prefix with vertical-tab is rejected",
+			containerName: "$root\v--inject",
+			wantErr:       true,
+		},
 		// invalid names — naming rule violations
 	}
 
