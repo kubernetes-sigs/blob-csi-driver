@@ -241,7 +241,7 @@ func TestNodePublishVolume(t *testing.T) {
 				// Populate the fake mount table so the List()-based check
 				// detects the bind mount and skips ensureMountPoint.
 				targetAbs, _ := filepath.Abs("./false_is_likely_republish")
-				fm := d.mounter.(*mount.SafeFormatAndMount).Interface.(*fakeMounter)
+				fm := d.mounter.Interface.(*fakeMounter)
 				fm.MountPoints = append(fm.MountPoints, mount.MountPoint{Path: targetAbs})
 			},
 			req: &csi.NodePublishVolumeRequest{
@@ -254,7 +254,7 @@ func TestNodePublishVolume(t *testing.T) {
 			expectedErr: nil,
 			cleanup: func(d *Driver) {
 				_ = os.RemoveAll("./false_is_likely_republish")
-				fm := d.mounter.(*mount.SafeFormatAndMount).Interface.(*fakeMounter)
+				fm := d.mounter.Interface.(*fakeMounter)
 				fm.MountPoints = nil
 			},
 		},
