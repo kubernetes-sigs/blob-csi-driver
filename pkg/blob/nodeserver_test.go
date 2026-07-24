@@ -100,7 +100,7 @@ func TestEnsureMountPoint(t *testing.T) {
 		{
 			desc:        "[Error] Error opening file",
 			target:      falseTarget,
-			expectedErr: &os.PathError{Op: "open", Path: "./false_is_likely_target", Err: syscall.ENOENT},
+			expectedErr: syscall.ENOENT,
 		},
 		{
 			desc:        "[Error] Not a directory",

@@ -18,10 +18,8 @@ package blob
 
 import (
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -769,16 +767,17 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 
 // ensureMountPoint: create mount point if not exists.
 //
-// When shouldUnmount is true (NodeStageVolume path), a data-plane ReadDir(1)
-// probe is issued to detect stale blobfuse mounts; if the probe fails the
-// mount is unmounted so it can be remounted by the caller.
+// Uses a lightweight kernel-level probe (probeMount) to detect stale mounts.
+// On Linux this calls syscall.Statfs, which is served entirely by the kernel
+// FUSE layer without issuing any data-plane request to Azure Blob Storage.
+// On Windows it uses os.Lstat. Both detect the failure modes that matter:
+// ENOTCONN (blobfuse died), ESTALE, EIO.
 //
-// When shouldUnmount is false (NodePublishVolume republish path), the ReadDir
-// probe is skipped: the mount table entry is treated as authoritative for the
-// bind mount, so the function returns (true, nil) without contacting the
-// blobfuse data plane. This avoids issuing one ListBlobs REST call per
-// pod-volume on every kubelet republish (~1min when
-// CSIDriver.spec.requiresRepublish=true), which is expensive at scale.
+// When shouldUnmount is true (NodeStageVolume path), a failed probe triggers
+// an unmount so the mount can be recreated by the caller.
+//
+// When shouldUnmount is false (NodePublishVolume republish path), a failed
+// probe returns the error without unmounting to avoid a data-loss race.
 //
 // Returns:
 //   - (true, nil) if the target is already a healthy mount point
@@ -816,36 +815,23 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 	}
 
 	if !notMnt {
-		// For NodePublishVolume (shouldUnmount=false), skip the data-plane ReadDir(1)
-		// health probe: the mount table entry is authoritative for the bind mount, and
-		// kubelet republishes every ~1min due to CSIDriver.spec.requiresRepublish=true.
-		// A per-republish ReadDir would translate into a ListBlobs call per pod-volume
-		// even when the workload is idle, which is expensive at scale.
-		if !shouldUnmount {
-			klog.V(2).Infof("already mounted to target %s", target)
-			return !notMnt, nil
-		}
-
-		// testing original mount point, make sure the mount link is valid
-		// Use ReadDir(1) instead of full os.ReadDir to avoid expensive directory listing
-		// on blobfuse mounts with many files. ReadDir(1) makes only one BlockBlob.List()
-		// call (returning up to 5000 entries) regardless of directory size.
-		f, err := os.Open(target)
-		if err == nil {
-			defer f.Close()
-			_, err = f.ReadDir(1)
-			// EOF means empty directory, which is valid
-			if err == io.EOF {
-				err = nil
-			}
-		}
+		// testing original mount point, make sure the mount link is valid.
+		// Use a cheap kernel-level probe (probeMount) instead of ReadDir(1):
+		// on Linux this calls syscall.Statfs which is served entirely by the
+		// kernel FUSE layer, so it does not issue any data-plane request to
+		// Azure Blob Storage. ReadDir would translate into a BlockBlob.List()
+		// (ListBlobs) REST call which is expensive on large containers and
+		// adds unnecessary load on every mount health probe. The Statfs-based
+		// check still detects the failure modes we care about (ENOTCONN when
+		// the blobfuse process died, ESTALE, EIO on a broken mount).
+		err := probeMount(target)
 		if err == nil {
 			klog.V(2).Infof("already mounted to target %s", target)
 			return !notMnt, nil
 		}
 		if shouldUnmount {
 			// mount link is invalid, now unmount and remount later
-			klog.Warningf("ReadDir %s failed with %v, unmounting stale mount to fix it", target, err)
+			klog.Warningf("probeMount %s failed with %v, unmounting stale mount to fix it", target, err)
 			if err := d.mounter.Unmount(target); err != nil {
 				klog.Errorf("Unmount directory %s failed with %v", target, err)
 				return !notMnt, err
@@ -855,7 +841,7 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 		}
 		// shouldUnmount is false: skip unmount to avoid data-loss race, but return
 		// the error so kubelet can surface the failure and retry.
-		klog.Warningf("ReadDir %s failed with %v, skipping unmount (shouldUnmount=false)", target, err)
+		klog.Warningf("probeMount %s failed with %v, skipping unmount (shouldUnmount=false)", target, err)
 		return !notMnt, err
 	}
 	if err := volumehelper.MakeDir(target, perm); err != nil {
