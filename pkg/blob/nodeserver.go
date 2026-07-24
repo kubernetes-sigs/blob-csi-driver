@@ -936,10 +936,22 @@ func getServiceAccountTokens(secrets, volumeContext map[string]string) string {
 // the call entirely avoids that overhead.
 // The mountWithWIToken path is excluded so credential rotation continues on every
 // republish.
+//
+// A lightweight os.Lstat is used to detect stale/broken mounts (ENOTCONN, ESTALE)
+// so we don't mask failures by returning success on a dead mount.
 func (d *Driver) canSkipRepublishNodeStage(volumeContext map[string]string, target string) bool {
 	if strings.EqualFold(getValueInMap(volumeContext, mountWithWITokenField), trueValue) {
 		return false
 	}
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
-	return err == nil && !notMnt
+	if err != nil || notMnt {
+		return false
+	}
+	// Verify the mount is healthy: os.Lstat is served by the kernel VFS
+	// and returns ENOTCONN/ESTALE when the FUSE process died or the mount
+	// is broken, without issuing any data-plane request.
+	if _, err := os.Lstat(target); err != nil {
+		return false
+	}
+	return true
 }
