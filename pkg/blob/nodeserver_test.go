@@ -133,11 +133,13 @@ func TestEnsureMountPoint(t *testing.T) {
 		}
 	}
 
-	// Test shouldUnmount=false: error is returned but unmount is not called.
+	// Test shouldUnmount=false: mount table entry is authoritative, health probe
+	// is skipped to avoid a data-plane ListBlobs on every NodePublishVolume
+	// republish. Expect no error and no Unmount calls.
 	unmountCountBefore := fakeMounter.unmountCount
 	_, err := d.ensureMountPoint(falseTarget, 0777, false)
-	if err == nil {
-		t.Errorf("[shouldUnmount=false] expected error for stale mount target, got nil")
+	if err != nil {
+		t.Errorf("[shouldUnmount=false] expected no error when mount table entry is present, got %v", err)
 	}
 	if fakeMounter.unmountCount != unmountCountBefore {
 		t.Errorf("[shouldUnmount=false] expected no Unmount calls, but got %d", fakeMounter.unmountCount-unmountCountBefore)
