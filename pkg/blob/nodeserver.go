@@ -85,6 +85,10 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	if context != nil {
 		// token request
 		if serviceAccountTokens != "" && useWorkloadIdentity(context) {
+			if d.canSkipRepublishNodeStage(context, target) {
+				klog.V(2).Infof("NodePublishVolume: volume(%s) already mounted on %s with clientID auth, skipping NodeStageVolume (no time-bound credential to refresh)", volumeID, target)
+				return &csi.NodePublishVolumeResponse{}, nil
+			}
 			klog.V(2).Infof("NodePublishVolume: volume(%s) mount on %s with service account token, clientID: %s", volumeID, target, getValueInMap(context, clientIDField))
 			_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
 				StagingTargetPath: target,
@@ -103,6 +107,10 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 				// only get storage account from secret
 				setKeyValueInMap(context, getAccountKeyFromSecretField, trueValue)
 				setKeyValueInMap(context, storageAccountField, "")
+			}
+			if d.canSkipRepublishNodeStage(context, target) {
+				klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) already mounted on %s, skipping NodeStageVolume (no time-bound credential to refresh)", volumeID, target)
+				return &csi.NodePublishVolumeResponse{}, nil
 			}
 			klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) mount on %s", volumeID, target)
 			_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
@@ -916,4 +924,34 @@ func getServiceAccountTokens(secrets, volumeContext map[string]string) string {
 	}
 	// Fallback to volume context for backward compatibility
 	return getValueInMap(volumeContext, serviceAccountTokenField)
+}
+
+// canSkipRepublishNodeStage reports whether a NodePublishVolume call is a kubelet
+// requiresRepublish retry (target already mounted) whose auth mode has no time-bound
+// credential to refresh. When true, callers should return success without re-invoking
+// NodeStageVolume, avoiding wasteful ARM API calls (GetAccountInfo/ListKeys for
+// clientID-only mounts). Although NodeStageVolume would eventually return early
+// when it sees the mount is already present (mnt==true after ensureMountPoint),
+// it still performs GetAuthEnv and other setup work before that check — skipping
+// the call entirely avoids that overhead.
+// The mountWithWIToken path is excluded so credential rotation continues on every
+// republish.
+//
+// A lightweight os.Lstat is used to detect stale/broken mounts (ENOTCONN, ESTALE)
+// so we don't mask failures by returning success on a dead mount.
+func (d *Driver) canSkipRepublishNodeStage(volumeContext map[string]string, target string) bool {
+	if strings.EqualFold(getValueInMap(volumeContext, mountWithWITokenField), trueValue) {
+		return false
+	}
+	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
+	if err != nil || notMnt {
+		return false
+	}
+	// Verify the mount is healthy: os.Lstat is served by the kernel VFS
+	// and returns ENOTCONN/ESTALE when the FUSE process died or the mount
+	// is broken, without issuing any data-plane request.
+	if _, err := os.Lstat(target); err != nil {
+		return false
+	}
+	return true
 }
