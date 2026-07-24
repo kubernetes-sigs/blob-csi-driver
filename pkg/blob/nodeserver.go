@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -815,6 +816,16 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 	}
 
 	if !notMnt {
+		// For NodePublishVolume (shouldUnmount=false), skip the data-plane
+		// health probe: the mount table entry is authoritative for the bind
+		// mount, and kubelet republishes every ~1min due to
+		// CSIDriver.spec.requiresRepublish=true. A per-republish probe would
+		// be wasteful even though probeMount is cheap.
+		if !shouldUnmount {
+			klog.V(2).Infof("already mounted to target %s", target)
+			return !notMnt, nil
+		}
+
 		// testing original mount point, make sure the mount link is valid.
 		// Use a cheap kernel-level probe (probeMount) instead of ReadDir(1):
 		// on Linux this calls syscall.Statfs which is served entirely by the

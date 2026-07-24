@@ -19,15 +19,26 @@ limitations under the License.
 
 package blob
 
-import "os"
+import (
+	"errors"
+	"os"
+	"syscall"
+)
 
 // probeMount performs a lightweight mount-liveness check on target.
 //
 // blobfuse itself is Linux-only; on Windows the driver runs against SMB via
 // csi-proxy and there is no FUSE mount to probe. Fall back to os.Lstat, which
 // is a cheap kernel-level check that still detects a missing or broken
-// target path.
+// target path. We unwrap the PathError to return the underlying syscall
+// errno directly, keeping behavior consistent with the Linux Statfs path.
 func probeMount(target string) error {
 	_, err := os.Lstat(target)
+	if err != nil {
+		var errno syscall.Errno
+		if errors.As(err, &errno) {
+			return errno
+		}
+	}
 	return err
 }
