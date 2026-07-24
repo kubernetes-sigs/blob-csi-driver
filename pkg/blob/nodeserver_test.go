@@ -236,8 +236,13 @@ func TestNodePublishVolume(t *testing.T) {
 		},
 		{
 			desc: "[Success] Republish skips health probe when target is already mounted",
-			setup: func(_ *Driver) {
+			setup: func(d *Driver) {
 				_ = makeDir("./false_is_likely_republish")
+				// Populate the fake mount table so the List()-based check
+				// detects the bind mount and skips ensureMountPoint.
+				targetAbs, _ := filepath.Abs("./false_is_likely_republish")
+				fm := d.mounter.(*mount.SafeFormatAndMount).Interface.(*fakeMounter)
+				fm.MountPoints = append(fm.MountPoints, mount.MountPoint{Path: targetAbs})
 			},
 			req: &csi.NodePublishVolumeRequest{
 				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
@@ -247,8 +252,10 @@ func TestNodePublishVolume(t *testing.T) {
 				Readonly:          true,
 			},
 			expectedErr: nil,
-			cleanup: func(_ *Driver) {
+			cleanup: func(d *Driver) {
 				_ = os.RemoveAll("./false_is_likely_republish")
+				fm := d.mounter.(*mount.SafeFormatAndMount).Interface.(*fakeMounter)
+				fm.MountPoints = nil
 			},
 		},
 	}

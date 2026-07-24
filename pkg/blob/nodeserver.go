@@ -133,10 +133,16 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	// and kubelet republishes every ~1min due to CSIDriver.spec.requiresRepublish=true.
 	// A per-republish ReadDir would translate into a ListBlobs REST call per
 	// pod-volume even when the workload is idle, which is expensive at scale.
-	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
-	if err == nil && !notMnt {
-		klog.V(2).Infof("NodePublishVolume: volume %s is already mounted on %s, skipping health probe", volumeID, target)
-		return &csi.NodePublishVolumeResponse{}, nil
+	// Use mounter.List() instead of IsLikelyNotMountPoint because the latter
+	// cannot detect bind mounts reliably.
+	if mountList, err := d.mounter.List(); err == nil {
+		targetAbs, _ := filepath.Abs(target)
+		for _, mp := range mountList {
+			if mp.Path == targetAbs {
+				klog.V(2).Infof("NodePublishVolume: volume %s is already mounted on %s, skipping health probe", volumeID, target)
+				return &csi.NodePublishVolumeResponse{}, nil
+			}
+		}
 	}
 
 	mnt, err := d.ensureMountPoint(target, fs.FileMode(mountPermissions))
