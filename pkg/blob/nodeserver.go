@@ -930,12 +930,14 @@ func getServiceAccountTokens(secrets, volumeContext map[string]string) string {
 // requiresRepublish retry (target already mounted) whose auth mode has no time-bound
 // credential to refresh. When true, callers should return success without re-invoking
 // NodeStageVolume, avoiding wasteful ARM API calls (GetAccountInfo/ListKeys for
-// clientID-only mounts) whose result would be discarded because NodeStageVolume's
-// ensureMountPoint short-circuits on an existing mount.
+// clientID-only mounts). Although NodeStageVolume would eventually return early
+// when it sees the mount is already present (mnt==true after ensureMountPoint),
+// it still performs GetAuthEnv and other setup work before that check — skipping
+// the call entirely avoids that overhead.
 // The mountWithWIToken path is excluded so credential rotation continues on every
 // republish.
-func (d *Driver) canSkipRepublishNodeStage(context map[string]string, target string) bool {
-	if strings.EqualFold(getValueInMap(context, mountWithWITokenField), trueValue) {
+func (d *Driver) canSkipRepublishNodeStage(volumeContext map[string]string, target string) bool {
+	if strings.EqualFold(getValueInMap(volumeContext, mountWithWITokenField), trueValue) {
 		return false
 	}
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
