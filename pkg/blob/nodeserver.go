@@ -790,6 +790,16 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 	}
 
 	if !notMnt {
+		// For NodePublishVolume (shouldUnmount=false), skip the data-plane ReadDir(1)
+		// health probe: the mount table entry is authoritative for the bind mount, and
+		// kubelet republishes every ~1min due to CSIDriver.spec.requiresRepublish=true.
+		// A per-republish ReadDir would translate into a ListBlobs call per pod-volume
+		// even when the workload is idle, which is expensive at scale (see #issue).
+		if !shouldUnmount {
+			klog.V(2).Infof("already mounted to target %s", target)
+			return !notMnt, nil
+		}
+
 		// testing original mount point, make sure the mount link is valid
 		// Use ReadDir(1) instead of full os.ReadDir to avoid expensive directory listing
 		// on blobfuse mounts with many files. ReadDir(1) makes only one BlockBlob.List()
