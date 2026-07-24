@@ -692,16 +692,6 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 }
 
 // ensureMountPoint: create mount point if not exists.
-// When shouldUnmount is true (e.g. NodeStageVolume), a stale mount is unmounted so it can be
-// re-established. When shouldUnmount is false (e.g. NodePublishVolume), a stale mount is left
-// in place and the error is returned so kubelet can retry; this avoids a race where unmounting
-// during periodic republish causes data loss if the application container is writing.
-// Returns:
-//   - (true, nil) if the target is already a healthy mount point
-//   - (true, err) if the target is mounted but the health check failed (shouldUnmount=false)
-//   - (false, nil) if the target was freshly created or successfully unmounted
-//   - (false, err) on other failures
-// ensureMountPoint verifies that target is a valid mount point.
 //
 // When shouldUnmount is true (NodeStageVolume path), a data-plane ReadDir(1)
 // probe is issued to detect stale blobfuse mounts; if the probe fails the
@@ -713,6 +703,12 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 // blobfuse data plane. This avoids issuing one ListBlobs REST call per
 // pod-volume on every kubelet republish (~1min when
 // CSIDriver.spec.requiresRepublish=true), which is expensive at scale.
+//
+// Returns:
+//   - (true, nil) if the target is already a healthy mount point
+//   - (true, err) if the target is mounted but the health check failed (shouldUnmount=false)
+//   - (false, nil) if the target was freshly created or successfully unmounted
+//   - (false, err) on other failures
 func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount bool) (bool, error) {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
