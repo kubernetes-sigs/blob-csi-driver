@@ -136,11 +136,13 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	// Use mounter.List() instead of IsLikelyNotMountPoint because the latter
 	// cannot detect bind mounts reliably.
 	if mountList, err := d.mounter.List(); err == nil {
-		targetAbs, _ := filepath.Abs(target)
-		for _, mp := range mountList {
-			if mp.Path == targetAbs {
-				klog.V(2).Infof("NodePublishVolume: volume %s is already mounted on %s, skipping health probe", volumeID, target)
-				return &csi.NodePublishVolumeResponse{}, nil
+		targetAbs, absErr := filepath.Abs(target)
+		if absErr == nil {
+			for _, mp := range mountList {
+				if mp.Path == targetAbs {
+					klog.V(2).Infof("NodePublishVolume: volume %s is already mounted on %s, skipping health probe", volumeID, target)
+					return &csi.NodePublishVolumeResponse{}, nil
+				}
 			}
 		}
 	}
