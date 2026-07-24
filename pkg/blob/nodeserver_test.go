@@ -234,6 +234,23 @@ func TestNodePublishVolume(t *testing.T) {
 			},
 			expectedErr: status.Error(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s", "07ab")),
 		},
+		{
+			desc: "[Success] Republish skips health probe when target is already mounted",
+			setup: func(_ *Driver) {
+				_ = makeDir("./false_is_likely_republish")
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_republish",
+				TargetPath:        "./false_is_likely_republish",
+				StagingTargetPath: sourceTest,
+				Readonly:          true,
+			},
+			expectedErr: nil,
+			cleanup: func(_ *Driver) {
+				_ = os.RemoveAll("./false_is_likely_republish")
+			},
+		},
 	}
 
 	// Setup
