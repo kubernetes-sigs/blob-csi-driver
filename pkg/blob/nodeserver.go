@@ -777,6 +777,18 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 //   - (true, err) if the target is mounted but the health check failed (shouldUnmount=false)
 //   - (false, nil) if the target was freshly created or successfully unmounted
 //   - (false, err) on other failures
+// ensureMountPoint verifies that target is a valid mount point.
+//
+// When shouldUnmount is true (NodeStageVolume path), a data-plane ReadDir(1)
+// probe is issued to detect stale blobfuse mounts; if the probe fails the
+// mount is unmounted so it can be remounted by the caller.
+//
+// When shouldUnmount is false (NodePublishVolume republish path), the ReadDir
+// probe is skipped: the mount table entry is treated as authoritative for the
+// bind mount, so the function returns (true, nil) without contacting the
+// blobfuse data plane. This avoids issuing one ListBlobs REST call per
+// pod-volume on every kubelet republish (~1min when
+// CSIDriver.spec.requiresRepublish=true), which is expensive at scale.
 func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount bool) (bool, error) {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
@@ -812,7 +824,7 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 		// health probe: the mount table entry is authoritative for the bind mount, and
 		// kubelet republishes every ~1min due to CSIDriver.spec.requiresRepublish=true.
 		// A per-republish ReadDir would translate into a ListBlobs call per pod-volume
-		// even when the workload is idle, which is expensive at scale (see #issue).
+		// even when the workload is idle, which is expensive at scale.
 		if !shouldUnmount {
 			klog.V(2).Infof("already mounted to target %s", target)
 			return !notMnt, nil
