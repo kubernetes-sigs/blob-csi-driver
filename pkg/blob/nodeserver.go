@@ -768,10 +768,18 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 }
 
 // ensureMountPoint: create mount point if not exists.
-// When shouldUnmount is true (e.g. NodeStageVolume), a stale mount is unmounted so it can be
-// re-established. When shouldUnmount is false (e.g. NodePublishVolume), a stale mount is left
-// in place and the error is returned so kubelet can retry; this avoids a race where unmounting
-// during periodic republish causes data loss if the application container is writing.
+//
+// When shouldUnmount is true (NodeStageVolume path), a data-plane ReadDir(1)
+// probe is issued to detect stale blobfuse mounts; if the probe fails the
+// mount is unmounted so it can be remounted by the caller.
+//
+// When shouldUnmount is false (NodePublishVolume republish path), the ReadDir
+// probe is skipped: the mount table entry is treated as authoritative for the
+// bind mount, so the function returns (true, nil) without contacting the
+// blobfuse data plane. This avoids issuing one ListBlobs REST call per
+// pod-volume on every kubelet republish (~1min when
+// CSIDriver.spec.requiresRepublish=true), which is expensive at scale.
+//
 // Returns:
 //   - (true, nil) if the target is already a healthy mount point
 //   - (true, err) if the target is mounted but the health check failed (shouldUnmount=false)
@@ -808,6 +816,16 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 	}
 
 	if !notMnt {
+		// For NodePublishVolume (shouldUnmount=false), skip the data-plane ReadDir(1)
+		// health probe: the mount table entry is authoritative for the bind mount, and
+		// kubelet republishes every ~1min due to CSIDriver.spec.requiresRepublish=true.
+		// A per-republish ReadDir would translate into a ListBlobs call per pod-volume
+		// even when the workload is idle, which is expensive at scale.
+		if !shouldUnmount {
+			klog.V(2).Infof("already mounted to target %s", target)
+			return !notMnt, nil
+		}
+
 		// testing original mount point, make sure the mount link is valid
 		// Use ReadDir(1) instead of full os.ReadDir to avoid expensive directory listing
 		// on blobfuse mounts with many files. ReadDir(1) makes only one BlockBlob.List()
