@@ -18,7 +18,6 @@ package blob
 
 import (
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -82,6 +81,10 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	if context != nil {
 		// token request
 		if context[serviceAccountTokenField] != "" && useWorkloadIdentity(context) {
+			if d.canSkipRepublishNodeStage(context, target) {
+				klog.V(2).Infof("NodePublishVolume: volume(%s) already mounted on %s with clientID auth, skipping NodeStageVolume (no time-bound credential to refresh)", volumeID, target)
+				return &csi.NodePublishVolumeResponse{}, nil
+			}
 			klog.V(2).Infof("NodePublishVolume: volume(%s) mount on %s with service account token, clientID: %s", volumeID, target, getValueInMap(context, clientIDField))
 			_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
 				StagingTargetPath: target,
@@ -99,6 +102,10 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 				// only get storage account from secret
 				setKeyValueInMap(context, getAccountKeyFromSecretField, trueValue)
 				setKeyValueInMap(context, storageAccountField, "")
+			}
+			if d.canSkipRepublishNodeStage(context, target) {
+				klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) already mounted on %s, skipping NodeStageVolume (no time-bound credential to refresh)", volumeID, target)
+				return &csi.NodePublishVolumeResponse{}, nil
 			}
 			klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) mount on %s", volumeID, target)
 			_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
@@ -751,16 +758,20 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 
 // ensureMountPoint: create mount point if not exists.
 //
-// When shouldUnmount is true (NodeStageVolume path), a data-plane ReadDir(1)
-// probe is issued to detect stale blobfuse mounts; if the probe fails the
-// mount is unmounted so it can be remounted by the caller.
+// Uses a lightweight kernel-level probe (probeMount) to detect stale mounts.
+// On Linux this calls syscall.Statfs, which is served entirely by the kernel
+// FUSE layer without issuing any data-plane request to Azure Blob Storage.
+// On Windows it uses os.Lstat. Both detect the failure modes that matter:
+// ENOTCONN (blobfuse died), ESTALE, EIO.
 //
-// When shouldUnmount is false (NodePublishVolume republish path), the ReadDir
-// probe is skipped: the mount table entry is treated as authoritative for the
-// bind mount, so the function returns (true, nil) without contacting the
-// blobfuse data plane. This avoids issuing one ListBlobs REST call per
-// pod-volume on every kubelet republish (~1min when
-// CSIDriver.spec.requiresRepublish=true), which is expensive at scale.
+// When shouldUnmount is true (NodeStageVolume path), a failed probe triggers
+// an unmount so the mount can be recreated by the caller.
+//
+// When shouldUnmount is false (NodePublishVolume republish path), the probe
+// is skipped entirely: the mount table entry is treated as authoritative for
+// the bind mount, so the function returns (true, nil) without contacting the
+// blobfuse data plane. This avoids issuing any probe per pod-volume on every
+// kubelet republish (~1min when CSIDriver.spec.requiresRepublish=true).
 //
 // Returns:
 //   - (true, nil) if the target is already a healthy mount point
@@ -798,46 +809,35 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 	}
 
 	if !notMnt {
-		// For NodePublishVolume (shouldUnmount=false), skip the data-plane ReadDir(1)
-		// health probe: the mount table entry is authoritative for the bind mount, and
-		// kubelet republishes every ~1min due to CSIDriver.spec.requiresRepublish=true.
-		// A per-republish ReadDir would translate into a ListBlobs call per pod-volume
-		// even when the workload is idle, which is expensive at scale.
+		// For NodePublishVolume (shouldUnmount=false), skip the health probe
+		// entirely: the mount table entry is authoritative for the bind mount,
+		// and kubelet republishes every ~1min due to
+		// CSIDriver.spec.requiresRepublish=true. Even a cheap Statfs probe is
+		// unnecessary here because the underlying FUSE mount health is validated
+		// on the NodeStageVolume path (shouldUnmount=true).
 		if !shouldUnmount {
 			klog.V(2).Infof("already mounted to target %s", target)
 			return !notMnt, nil
 		}
 
-		// testing original mount point, make sure the mount link is valid
-		// Use ReadDir(1) instead of full os.ReadDir to avoid expensive directory listing
-		// on blobfuse mounts with many files. ReadDir(1) makes only one BlockBlob.List()
-		// call (returning up to 5000 entries) regardless of directory size.
-		f, err := os.Open(target)
-		if err == nil {
-			defer f.Close()
-			_, err = f.ReadDir(1)
-			// EOF means empty directory, which is valid
-			if err == io.EOF {
-				err = nil
-			}
-		}
+		// testing original mount point, make sure the mount link is valid.
+		// Use a cheap kernel-level probe (probeMount) instead of ReadDir(1):
+		// on Linux this calls syscall.Statfs which is served entirely by the
+		// kernel FUSE layer, so it does not issue any data-plane request to
+		// Azure Blob Storage.
+		// shouldUnmount is true here (NodeStageVolume path).
+		err := probeMount(target)
 		if err == nil {
 			klog.V(2).Infof("already mounted to target %s", target)
 			return !notMnt, nil
 		}
-		if shouldUnmount {
-			// mount link is invalid, now unmount and remount later
-			klog.Warningf("ReadDir %s failed with %v, unmounting stale mount to fix it", target, err)
-			if err := d.mounter.Unmount(target); err != nil {
-				klog.Errorf("Unmount directory %s failed with %v", target, err)
-				return !notMnt, err
-			}
-			notMnt = true
+		// mount link is invalid, now unmount and remount later
+		klog.Warningf("probeMount %s failed with %v, unmounting stale mount to fix it", target, err)
+		if err := d.mounter.Unmount(target); err != nil {
+			klog.Errorf("Unmount directory %s failed with %v", target, err)
 			return !notMnt, err
 		}
-		// shouldUnmount is false: skip unmount to avoid data-loss race, but return
-		// the error so kubelet can surface the failure and retry.
-		klog.Warningf("ReadDir %s failed with %v, skipping unmount (shouldUnmount=false)", target, err)
+		notMnt = true
 		return !notMnt, err
 	}
 	if err := volumehelper.MakeDir(target, perm); err != nil {
@@ -885,4 +885,34 @@ func useWorkloadIdentity(attrib map[string]string) bool {
 		return true
 	}
 	return false
+}
+
+// canSkipRepublishNodeStage reports whether a NodePublishVolume call is a kubelet
+// requiresRepublish retry (target already mounted) whose auth mode has no time-bound
+// credential to refresh. When true, callers should return success without re-invoking
+// NodeStageVolume, avoiding wasteful ARM API calls (GetAccountInfo/ListKeys for
+// clientID-only mounts). Although NodeStageVolume would eventually return early
+// when it sees the mount is already present (mnt==true after ensureMountPoint),
+// it still performs GetAuthEnv and other setup work before that check — skipping
+// the call entirely avoids that overhead.
+// The mountWithWIToken path is excluded so credential rotation continues on every
+// republish.
+//
+// A lightweight os.Lstat is used to detect stale/broken mounts (ENOTCONN, ESTALE)
+// so we don't mask failures by returning success on a dead mount.
+func (d *Driver) canSkipRepublishNodeStage(volumeContext map[string]string, target string) bool {
+	if strings.EqualFold(getValueInMap(volumeContext, mountWithWITokenField), trueValue) {
+		return false
+	}
+	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
+	if err != nil || notMnt {
+		return false
+	}
+	// Verify the mount is healthy: os.Lstat is served by the kernel VFS
+	// and returns ENOTCONN/ESTALE when the FUSE process died or the mount
+	// is broken, without issuing any data-plane request.
+	if _, err := os.Lstat(target); err != nil {
+		return false
+	}
+	return true
 }

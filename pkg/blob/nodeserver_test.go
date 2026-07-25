@@ -100,7 +100,7 @@ func TestEnsureMountPoint(t *testing.T) {
 		{
 			desc:        "[Error] Error opening file",
 			target:      falseTarget,
-			expectedErr: &os.PathError{Op: "open", Path: "./false_is_likely_target", Err: syscall.ENOENT},
+			expectedErr: syscall.ENOENT,
 		},
 		{
 			desc:        "[Error] Not a directory",
@@ -354,6 +354,52 @@ func TestNodePublishVolume(t *testing.T) {
 				if v := req.VolumeContext[getAccountKeyFromSecretField]; v == trueValue {
 					t.Errorf("expected getaccountkeyfromsecret to NOT be forced for WI ephemeral volume, but got 'true'")
 				}
+			},
+		},
+		{
+			desc: "[Success] Republish for clientID-only mount already mounted skips NodeStageVolume",
+			setup: func(_ *Driver) {
+				_ = makeDir("./false_is_likely_republish_clientid")
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "csi-clientid-republish-already-mounted",
+				TargetPath:        "./false_is_likely_republish_clientid",
+				StagingTargetPath: sourceTest,
+				Readonly:          true,
+				VolumeContext: map[string]string{
+					storageAccountField:      "teststorageaccount",
+					containerNameField:       "testcontainer",
+					clientIDField:            "test-client-id-1234",
+					serviceAccountTokenField: `{"api://AzureADTokenExchange":{"token":"test-token","expirationTimestamp":"2023-01-01T00:00:00Z"}}`,
+				},
+			},
+			expectedErr: nil,
+			cleanup: func(_ *Driver) {
+				_ = os.RemoveAll("./false_is_likely_republish_clientid")
+			},
+		},
+		{
+			desc: "[Success] Republish for ephemeral clientID-based mount already mounted skips NodeStageVolume",
+			setup: func(_ *Driver) {
+				_ = makeDir("./false_is_likely_republish_ephemeral")
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "csi-ephemeral-clientid-republish-already-mounted",
+				TargetPath:        "./false_is_likely_republish_ephemeral",
+				StagingTargetPath: sourceTest,
+				Readonly:          true,
+				VolumeContext: map[string]string{
+					ephemeralField:      "true",
+					storageAccountField: "teststorageaccount",
+					containerNameField:  "testcontainer",
+					clientIDField:       "test-client-id-1234",
+				},
+			},
+			expectedErr: nil,
+			cleanup: func(_ *Driver) {
+				_ = os.RemoveAll("./false_is_likely_republish_ephemeral")
 			},
 		},
 		{
