@@ -767,9 +767,11 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 // When shouldUnmount is true (NodeStageVolume path), a failed probe triggers
 // an unmount so the mount can be recreated by the caller.
 //
-// When shouldUnmount is false (NodePublishVolume republish path), a failed
-// probe returns the error without unmounting to avoid a data-loss race where
-// unmounting during periodic republish would truncate writes in flight.
+// When shouldUnmount is false (NodePublishVolume republish path), the probe
+// is skipped entirely: the mount table entry is treated as authoritative for
+// the bind mount, so the function returns (true, nil) without contacting the
+// blobfuse data plane. This avoids issuing any probe per pod-volume on every
+// kubelet republish (~1min when CSIDriver.spec.requiresRepublish=true).
 //
 // Returns:
 //   - (true, nil) if the target is already a healthy mount point
@@ -807,33 +809,35 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 	}
 
 	if !notMnt {
+		// For NodePublishVolume (shouldUnmount=false), skip the health probe
+		// entirely: the mount table entry is authoritative for the bind mount,
+		// and kubelet republishes every ~1min due to
+		// CSIDriver.spec.requiresRepublish=true. Even a cheap Statfs probe is
+		// unnecessary here because the underlying FUSE mount health is validated
+		// on the NodeStageVolume path (shouldUnmount=true).
+		if !shouldUnmount {
+			klog.V(2).Infof("already mounted to target %s", target)
+			return !notMnt, nil
+		}
+
 		// testing original mount point, make sure the mount link is valid.
 		// Use a cheap kernel-level probe (probeMount) instead of ReadDir(1):
 		// on Linux this calls syscall.Statfs which is served entirely by the
 		// kernel FUSE layer, so it does not issue any data-plane request to
-		// Azure Blob Storage. ReadDir would translate into a BlockBlob.List()
-		// (ListBlobs) REST call which is expensive on large containers and
-		// adds unnecessary load on every mount health probe. The Statfs-based
-		// check still detects the failure modes we care about (ENOTCONN when
-		// the blobfuse process died, ESTALE, EIO on a broken mount).
+		// Azure Blob Storage.
+		// shouldUnmount is true here (NodeStageVolume path).
 		err := probeMount(target)
 		if err == nil {
 			klog.V(2).Infof("already mounted to target %s", target)
 			return !notMnt, nil
 		}
-		if shouldUnmount {
-			// mount link is invalid, now unmount and remount later
-			klog.Warningf("probeMount %s failed with %v, unmounting stale mount to fix it", target, err)
-			if err := d.mounter.Unmount(target); err != nil {
-				klog.Errorf("Unmount directory %s failed with %v", target, err)
-				return !notMnt, err
-			}
-			notMnt = true
+		// mount link is invalid, now unmount and remount later
+		klog.Warningf("probeMount %s failed with %v, unmounting stale mount to fix it", target, err)
+		if err := d.mounter.Unmount(target); err != nil {
+			klog.Errorf("Unmount directory %s failed with %v", target, err)
 			return !notMnt, err
 		}
-		// shouldUnmount is false: skip unmount to avoid data-loss race, but return
-		// the error so kubelet can surface the failure and retry.
-		klog.Warningf("probeMount %s failed with %v, skipping unmount (shouldUnmount=false)", target, err)
+		notMnt = true
 		return !notMnt, err
 	}
 	if err := volumehelper.MakeDir(target, perm); err != nil {
