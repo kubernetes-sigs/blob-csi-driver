@@ -1,3 +1,25 @@
+{{- /*
+  On RHCOS (OSTree-based, e.g. ARO nodes), /usr/local is a symlink to
+  /var/usrlocal. crun uses openat2 with RESOLVE_NO_SYMLINKS when creating
+  bind-mount sources and fails with "Init:CreateContainerError" on such
+  symlinked host paths. When linux.distro=rhcos and the user has not
+  overridden node.hostPath.usrLocal, automatically resolve the hostPath
+  side to the real path /var/usrlocal. The in-container mountPath stays
+  at /host/usr/local so install scripts (default BIN_PATH=/usr/local/bin)
+  keep working unchanged. Users can still set node.hostPath.usrLocal
+  explicitly to opt out.
+
+  Note: linux.distro=fedora is intentionally NOT auto-rewritten here.
+  "fedora" in this chart is documented for traditional RedHat/CentOS/Fedora
+  installs where /usr/local is a real directory and /var/usrlocal does not
+  exist. ARO / Fedora CoreOS users should switch to linux.distro=rhcos
+  (which inherits the same SSL cert bind mounts as "fedora" and additionally
+  fixes the /usr/local symlink under crun).
+*/}}
+{{- $usrLocalHostPath := .Values.node.hostPath.usrLocal -}}
+{{- if and (eq $usrLocalHostPath "/usr/local") (eq .Values.linux.distro "rhcos") -}}
+{{- $usrLocalHostPath = "/var/usrlocal" -}}
+{{- end }}
 kind: DaemonSet
 apiVersion: apps/v1
 metadata:
@@ -273,12 +295,12 @@ spec:
               name: azure-cred
             - mountPath: /mnt
               name: blob-cache
-            {{- if or (eq .Values.cloud "AzureStackCloud") (eq .Values.linux.distro "fedora") }}
+            {{- if or (eq .Values.cloud "AzureStackCloud") (eq .Values.linux.distro "fedora") (eq .Values.linux.distro "rhcos") }}
             - name: ssl
               mountPath: /etc/ssl/certs
               readOnly: true
             {{- end }}
-           {{- if eq .Values.linux.distro "fedora" }}
+           {{- if or (eq .Values.linux.distro "fedora") (eq .Values.linux.distro "rhcos") }}
             - name: ssl-pki
               mountPath: /etc/pki/ca-trust/extracted
               readOnly: true
@@ -335,7 +357,7 @@ spec:
             path: {{ .Values.node.hostPath.usr }}
         - name: host-usr-local
           hostPath:
-            path: {{ .Values.node.hostPath.usrLocal }}
+            path: {{ $usrLocalHostPath }}
         - name: host-etc
           hostPath:
             path: {{ .Values.node.hostPath.etc }}
@@ -358,12 +380,12 @@ spec:
         - hostPath:
             path: {{ .Values.node.blobfuseCachePath }}
           name: blob-cache
-        {{- if or (eq .Values.cloud "AzureStackCloud") (eq .Values.linux.distro "fedora") }}
+        {{- if or (eq .Values.cloud "AzureStackCloud") (eq .Values.linux.distro "fedora") (eq .Values.linux.distro "rhcos") }}
         - name: ssl
           hostPath:
             path: /etc/ssl/certs
         {{- end }}
-        {{- if eq .Values.linux.distro "fedora" }}
+        {{- if or (eq .Values.linux.distro "fedora") (eq .Values.linux.distro "rhcos") }}
         - name: ssl-pki
           hostPath:
             path: /etc/pki/ca-trust/extracted
