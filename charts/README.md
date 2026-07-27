@@ -34,6 +34,12 @@ helm install blob-csi-driver blob-csi-driver/blob-csi-driver --set node.enableBl
 helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set linux.distro=fedora
 ```
 
+### install on RHCOS / ARO (OpenShift)
+Use `linux.distro=rhcos` on RHCOS-based nodes (e.g. ARO). This picks up the same SSL cert bind mounts as `fedora`, and additionally resolves the `/usr/local -> /var/usrlocal` symlink so the DaemonSet starts under `crun` (which uses `openat2` with `RESOLVE_NO_SYMLINKS`).
+```console
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --namespace kube-system --set linux.distro=rhcos
+```
+
 ### install driver with customized driver name, deployment name
 > only supported from `v1.5.0`+
  - following example would install a driver with name `blob2`
@@ -152,7 +158,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.nodeSelector`                                   | node pod node selector                                | {}                                                             |
 | `node.tolerations`                                    | node pod tolerations                                  | []                                                             |
 | `linux.kubelet`                                       | configure kubelet directory path on Linux agent node node                  | `/var/lib/kubelet`                                                |
-| `linux.distro`                                        | configure ssl certificates for different Linux distribution(available values: `debian`, `fedora`)             | `debian`
+| `linux.distro`                                        | configure ssl certificates for different Linux distribution(available values: `debian`, `fedora`, `rhcos`, `cos`, `gardenlinux`, `flatcar`, `azurecontainerlinux`). Use `rhcos` on RHCOS/ARO — it adds `/usr/local` symlink resolution needed under `crun`.             | `debian`
 | `workloadIdentity.clientID` | client ID of workload identity | ''
 | `workloadIdentity.tenantID` | [optional] If the AAD application or user-assigned managed identity is not in the same tenant as the cluster then set tenantID with the AAD application or user-assigned managed identity tenant ID | ''
 | `node.enableAznfsMount` | enable [AZNFS mount helper](https://github.com/Azure/AZNFS-mount/) for NFS protocol | true
