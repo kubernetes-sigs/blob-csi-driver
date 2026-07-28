@@ -20,7 +20,7 @@
 
 ### install a specific version
 
-Add the helm repo — pick **one** source (both host the same charts; do not run both, the second overwrites the first):
+Add the helm repo — pick **one** source (both host the same charts; the two commands share the repo name `blob-csi-driver`, so running the second after the first will fail unless you pass `--force-update`):
 
 Option 1: raw.githubusercontent.com (default)
 
