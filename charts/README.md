@@ -19,8 +19,26 @@
     - `--set linux.kubelet="/var/snap/microk8s/common/var/lib/kubelet"` - sets correct path to microk8s kubelet even though a user has a folder link to it.
 
 ### install a specific version
+
+Add the helm repo — pick **one** source (both host the same charts; the two commands share the repo name `blob-csi-driver`, so running the second after the first will fail unless you pass `--force-update`):
+
+Option 1: raw.githubusercontent.com (default)
+
 ```console
 helm repo add blob-csi-driver https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/master/charts
+```
+
+Option 2: GitHub Pages mirror (available since 1.26.12, not affected by raw.githubusercontent.com rate limits)
+
+```console
+helm repo add blob-csi-driver https://kubernetes-sigs.github.io/blob-csi-driver
+```
+
+Then update the repo cache, search for available versions, and install:
+
+```console
+helm repo update blob-csi-driver
+helm search repo blob-csi-driver --versions
 helm install blob-csi-driver blob-csi-driver/blob-csi-driver --set node.enableBlobfuseProxy=true --namespace kube-system --version 1.27.8
 ```
 
