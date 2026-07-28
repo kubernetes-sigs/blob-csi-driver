@@ -80,6 +80,14 @@ jobs:
             echo "Could not determine chart version" >&2
             exit 1
           fi
+          # Validate strict semver (MAJOR.MINOR.PATCH with optional pre-release/
+          # build-metadata). This value is later interpolated into a git tag
+          # ref, file paths and `sed` replacements, so reject anything that
+          # could produce surprising tag names or shell/sed metacharacters.
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::Chart version '$version' is not a valid semver (expected MAJOR.MINOR.PATCH[-prerelease][+build])." >&2
+            exit 1
+          fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Publishing chart version: $version"
 
@@ -167,10 +175,13 @@ jobs:
           # entirely, and produces the same helm repo layout users expect.
           workdir="$(mktemp -d)"
           # Explicitly base the worktree on origin/gh-pages so we never
-          # accidentally branch off HEAD (the release tag commit). Using
-          # -B forces the local gh-pages branch to point at origin/gh-pages
-          # even if a stale local ref exists, making the subsequent push a
-          # fast-forward.
+          # accidentally branch off HEAD (the release tag commit). Fetch
+          # first so origin/gh-pages is guaranteed to exist and be current
+          # even on the very first run right after the bootstrap step
+          # created gh-pages on the remote. Using -B forces the local
+          # gh-pages branch to point at origin/gh-pages even if a stale
+          # local ref exists, making the subsequent push a fast-forward.
+          git fetch origin gh-pages
           git worktree add -B gh-pages "$workdir" origin/gh-pages
           cp "$pkg" "$workdir/"
           pushd "$workdir" >/dev/null
