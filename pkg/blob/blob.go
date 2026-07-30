@@ -131,6 +131,8 @@ const (
 	fsGroupChangePolicyField         = "fsgroupchangepolicy"
 	useDataPlaneAPIField             = "usedataplaneapi"
 
+	oauth = "oauth"
+
 	// See https://docs.microsoft.com/en-us/rest/api/storageservices/naming-and-referencing-containers--blobs--and-metadata#container-names
 	containerNameMinLength = 3
 	containerNameMaxLength = 63
@@ -1225,22 +1227,28 @@ func (d *Driver) getSubnetResourceID(vnetResourceGroup, vnetName, subnetName str
 	return fmt.Sprintf(subnetTemplate, subsID, vnetResourceGroup, vnetName, subnetName)
 }
 
-func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName string) bool {
+func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName string) string {
 	cache, err := d.dataPlaneAPIVolCache.Get(ctx, volumeID, azcache.CacheReadTypeDefault)
 	if err != nil {
 		klog.Errorf("get(%s) from dataPlaneAPIVolCache failed with error: %v", volumeID, err)
 	}
 	if cache != nil {
-		return true
+		if v, ok := cache.(string); ok && v != "" {
+			return v
+		}
+		return trueValue
 	}
 	cache, err = d.dataPlaneAPIVolCache.Get(ctx, accountName, azcache.CacheReadTypeDefault)
 	if err != nil {
 		klog.Errorf("get(%s) from dataPlaneAPIVolCache failed with error: %v", accountName, err)
 	}
 	if cache != nil {
-		return true
+		if v, ok := cache.(string); ok && v != "" {
+			return v
+		}
+		return trueValue
 	}
-	return false
+	return ""
 }
 
 // ValidateMountArgValues checks that no value in the mountOptions slice contains
