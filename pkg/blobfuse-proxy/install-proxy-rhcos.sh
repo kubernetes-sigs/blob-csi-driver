@@ -34,7 +34,7 @@ if [ -z "${CUSTOM_BIN_PATH:-}" ] ; then
       # /host/var/usrlocal/bin. On the host, /var/usrlocal/bin is the
       # same real directory as /usr/local/bin via the OSTree symlink,
       # so the systemd unit still resolves the binary correctly.
-      BIN_PATH="/var/usrlocal/bin"
+      BIN_PATH=${BIN_PATH:-/var/usrlocal/bin}
       mkdir -p /host${BIN_PATH} ;;
     *)
       BIN_PATH=${BIN_PATH:-/usr/local/bin} ;;
