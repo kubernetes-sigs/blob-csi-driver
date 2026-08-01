@@ -26,6 +26,16 @@ if [ -z "${CUSTOM_BIN_PATH:-}" ] ; then
     "azurecontainerlinux")
       BIN_PATH="/opt/blobcsi/bin"
       mkdir -p /host${BIN_PATH} ;;
+    "rhcos")
+      # On RHCOS, /usr/local is a symlink to /var/usrlocal. The chart
+      # rewrites BOTH the hostPath and the in-container mountPath to
+      # /var/usrlocal to avoid crun's RESOLVE_NO_SYMLINKS check, so the
+      # write path inside this init container must also be
+      # /host/var/usrlocal/bin. On the host, /var/usrlocal/bin is the
+      # same real directory as /usr/local/bin via the OSTree symlink,
+      # so the systemd unit still resolves the binary correctly.
+      BIN_PATH=${BIN_PATH:-/var/usrlocal/bin}
+      mkdir -p /host${BIN_PATH} ;;
     *)
       BIN_PATH=${BIN_PATH:-/usr/local/bin} ;;
   esac
