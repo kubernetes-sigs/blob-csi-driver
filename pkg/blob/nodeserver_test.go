@@ -983,6 +983,33 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "[Error] conflicting case-variant volume attribute keys are rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						"clientid":            "value-a",
+						"ClientID":            "value-b",
+						containerNameField:    "testcontainer",
+						mountPermissionsField: "0755",
+						protocolField:         "fuse2",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if err == nil {
+					t.Fatal("expected InvalidArgument error for conflicting case-variant keys, got nil")
+				}
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+			},
+		},
+		{
 			name: "[Error] inline volume with invalid containerName is rejected",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
