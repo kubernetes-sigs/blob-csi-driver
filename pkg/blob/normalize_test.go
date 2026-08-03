@@ -54,13 +54,13 @@ func TestNormalizeVolumeAttributes(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "case-colliding keys with same values should deduplicate",
+			name: "case-colliding keys with same values should pass",
 			input: map[string]string{
 				"clientID": "same",
 				"ClientID": "same",
 			},
 			wantErr: false,
-			wantLen: 1,
+			wantLen: 2,
 		},
 		{
 			name: "mixed case keys no collision",
@@ -95,14 +95,6 @@ func TestNormalizeVolumeAttributes(t *testing.T) {
 			}
 			if len(result) != tc.wantLen {
 				t.Errorf("expected %d keys, got %d", tc.wantLen, len(result))
-			}
-			for k := range result {
-				for _, c := range k {
-					if c >= 'A' && c <= 'Z' {
-						t.Errorf("key %q contains uppercase characters", k)
-						break
-					}
-				}
 			}
 		})
 	}

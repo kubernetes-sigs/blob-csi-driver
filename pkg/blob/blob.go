@@ -1493,26 +1493,26 @@ func createStorageAccountSecret(account, key string) map[string]string {
 	return secret
 }
 
-// NormalizeVolumeAttributes returns a new map with all keys lowercased.
-// If two keys collide after lowercasing with different values, an error is
-// returned. This ensures all code paths that read volumeAttributes resolve
-// the same deterministic value for each logical key.
+// NormalizeVolumeAttributes checks that no two keys in the map collide under
+// case-insensitive comparison with different values. If a collision is found
+// an error is returned. The original map is returned unmodified so that
+// existing direct map lookups (e.g. context[ephemeralField]) continue to work
+// without any change in behaviour.
 func NormalizeVolumeAttributes(attrib map[string]string) (map[string]string, error) {
 	if attrib == nil {
 		return nil, nil
 	}
-	normalized := make(map[string]string, len(attrib))
+	seen := make(map[string]string, len(attrib))
 	for k, v := range attrib {
 		lower := strings.ToLower(k)
-		if existing, ok := normalized[lower]; ok {
+		if existing, ok := seen[lower]; ok {
 			if existing != v {
 				return nil, fmt.Errorf("conflicting volume attribute: key %q collides with another key (case-insensitive) with a different value", lower)
 			}
-			continue
 		}
-		normalized[lower] = v
+		seen[lower] = v
 	}
-	return normalized, nil
+	return attrib, nil
 }
 
 // setKeyValueInMap set key/value pair in map
