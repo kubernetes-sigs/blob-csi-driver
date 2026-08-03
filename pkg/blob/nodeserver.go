@@ -78,6 +78,15 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 
 	mountPermissions := d.mountPermissions
 	context := req.GetVolumeContext()
+
+	// Validate volume attribute keys: reject maps with case-colliding keys
+	// that carry different values.
+	var err error
+	context, err = ValidateVolumeAttributeKeys(context)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "NodePublishVolume: %v", err)
+	}
+
 	if context != nil {
 		// token request
 		if context[serviceAccountTokenField] != "" && useWorkloadIdentity(context) {
@@ -300,6 +309,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
 	volumeMountGroup := req.GetVolumeCapability().GetMount().GetVolumeMountGroup()
 	attrib := req.GetVolumeContext()
+
+	// Validate volume attribute keys: reject maps with case-colliding keys
+	// that carry different values.
+	var err error
+	attrib, err = ValidateVolumeAttributeKeys(attrib)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+	}
+
 	secrets := req.GetSecrets()
 
 	if useWorkloadIdentity(attrib) && attrib[serviceAccountTokenField] == "" {
