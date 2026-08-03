@@ -81,10 +81,10 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 	mountPermissions := d.mountPermissions
 	context := req.GetVolumeContext()
 
-	// Normalize volume attributes: lowercase all keys and reject maps with
-	// case-colliding keys that carry different values.
+	// Validate volume attribute keys: reject maps with case-colliding keys
+	// that carry different values.
 	var err error
-	context, err = NormalizeVolumeAttributes(context)
+	context, err = ValidateVolumeAttributeKeys(context)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "NodePublishVolume: %v", err)
 	}
@@ -314,10 +314,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	volumeMountGroup := req.GetVolumeCapability().GetMount().GetVolumeMountGroup()
 	attrib := req.GetVolumeContext()
 
-	// Normalize volume attributes: lowercase all keys and reject maps with
-	// case-colliding keys that carry different values.
+	// Validate volume attribute keys: reject maps with case-colliding keys
+	// that carry different values.
 	var err error
-	attrib, err = NormalizeVolumeAttributes(attrib)
+	attrib, err = ValidateVolumeAttributeKeys(attrib)
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
 	}

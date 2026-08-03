@@ -1493,12 +1493,12 @@ func createStorageAccountSecret(account, key string) map[string]string {
 	return secret
 }
 
-// NormalizeVolumeAttributes checks that no two keys in the map collide under
+// ValidateVolumeAttributeKeys checks that no two keys in the map collide under
 // case-insensitive comparison with different values. If a collision is found
 // an error is returned. The original map is returned unmodified so that
 // existing direct map lookups (e.g. context[ephemeralField]) continue to work
 // without any change in behaviour.
-func NormalizeVolumeAttributes(attrib map[string]string) (map[string]string, error) {
+func ValidateVolumeAttributeKeys(attrib map[string]string) (map[string]string, error) {
 	if attrib == nil {
 		return nil, nil
 	}

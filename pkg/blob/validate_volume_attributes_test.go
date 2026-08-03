@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-func TestNormalizeVolumeAttributes(t *testing.T) {
+func TestValidateVolumeAttributeKeys(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   map[string]string
@@ -76,7 +76,7 @@ func TestNormalizeVolumeAttributes(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := NormalizeVolumeAttributes(tc.input)
+			result, err := ValidateVolumeAttributeKeys(tc.input)
 			if tc.wantErr {
 				if err == nil {
 					t.Errorf("expected error but got nil")
