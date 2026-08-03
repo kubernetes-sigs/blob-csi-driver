@@ -119,7 +119,7 @@ func TestValidateContainerNameAdditional(t *testing.T) {
 		{name: "empty allowed", input: "", wantErr: false},
 		{name: "too short", input: "ab", wantErr: true},
 		{name: "consecutive hyphens", input: "my--container", wantErr: true},
-		{name: "contains spaces", input: "a]b c", wantErr: true},
+		{name: "contains spaces", input: "abc def", wantErr: true},
 		{name: "contains tab", input: "abc\tdef", wantErr: true},
 		{name: "uppercase", input: "MyContainer", wantErr: true},
 		{name: "starts with hyphen", input: "-container", wantErr: true},
