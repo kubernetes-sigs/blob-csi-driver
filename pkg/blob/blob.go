@@ -1459,6 +1459,28 @@ func createStorageAccountSecret(account, key string) map[string]string {
 	return secret
 }
 
+// ValidateVolumeAttributeKeys checks that no two keys in the map collide under
+// case-insensitive comparison with different values. If a collision is found
+// an error is returned. The original map is returned unmodified so that
+// existing direct map lookups (e.g. context[ephemeralField]) continue to work
+// without any change in behaviour.
+func ValidateVolumeAttributeKeys(attrib map[string]string) (map[string]string, error) {
+	if attrib == nil {
+		return nil, nil
+	}
+	seen := make(map[string]string, len(attrib))
+	for k, v := range attrib {
+		lower := strings.ToLower(k)
+		if existing, ok := seen[lower]; ok {
+			if existing != v {
+				return nil, fmt.Errorf("conflicting volume attribute: key %q collides with another key (case-insensitive) with a different value", lower)
+			}
+		}
+		seen[lower] = v
+	}
+	return attrib, nil
+}
+
 // setKeyValueInMap set key/value pair in map
 // key in the map is case insensitive, if key already exists, overwrite existing value
 func setKeyValueInMap(m map[string]string, key, value string) {
