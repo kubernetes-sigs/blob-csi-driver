@@ -82,11 +82,11 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 
 	// Validate volume attribute keys: reject maps with case-colliding keys
 	// that carry different values.
-	var err error
-	context, err = ValidateVolumeAttributeKeys(context)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "NodePublishVolume: %v", err)
+	validatedContext, verr := ValidateVolumeAttributeKeys(context)
+	if verr != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "NodePublishVolume: %v", verr)
 	}
+	context = validatedContext
 
 	if context != nil {
 		// token request
@@ -274,11 +274,11 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	// Validate volume attribute keys: reject maps with case-colliding keys
 	// that carry different values.
-	var err error
-	attrib, err = ValidateVolumeAttributeKeys(attrib)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+	validatedAttrib, verr := ValidateVolumeAttributeKeys(attrib)
+	if verr != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", verr)
 	}
+	attrib = validatedAttrib
 
 	secrets := req.GetSecrets()
 
