@@ -39,7 +39,7 @@ Then update the repo cache, search for available versions, and install:
 ```console
 helm repo update blob-csi-driver
 helm search repo blob-csi-driver --versions
-helm install blob-csi-driver blob-csi-driver/blob-csi-driver --set node.enableBlobfuseProxy=true --namespace kube-system --version 1.27.8
+helm install blob-csi-driver blob-csi-driver/blob-csi-driver --set node.enableBlobfuseProxy=true --namespace kube-system --version 1.27.9
 ```
 
 ## install on Azure Stack
