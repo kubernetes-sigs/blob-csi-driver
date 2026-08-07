@@ -60,7 +60,7 @@ requireInfraEncryption | specify whether or not the service applies a secondary 
 storageEndpointSuffix | specify Azure storage endpoint suffix | `core.windows.net`, `core.chinacloudapi.cn`, etc | No | if empty, driver will use default storage endpoint suffix according to cloud environment
 tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources) would be created in newly created storage account | tag format: 'foo=aaa,bar=bbb' | No | ""
 matchTags | whether matching tags when driver tries to find a suitable storage account | `true`,`false` | No | `false`
-useDataPlaneAPI | specify whether use data plane API for blob container create/delete, this could solve the SRP API throttling issue since data plane API has almost no limit, while it would fail when there is firewall or vnet setting on storage account | `true`,`false` | No | `false`
+useDataPlaneAPI | specify whether use data plane API for blob container create/delete, this could solve the SRP API throttling issue since data plane API has almost no limit. When set to `oauth`, the driver uses its managed-identity OAuth token (via `d.cloud.AuthProvider.GetAzIdentity()`) to perform container operations against the storage data plane, enabling access to storage accounts with firewall/vnet restrictions when `networkAcls.bypass` includes `AzureServices` | `true`,`false`,`oauth` | No | `false`
 softDeleteBlobs | Enable [soft delete for blobs](https://learn.microsoft.com/en-us/azure/storage/blobs/soft-delete-blob-overview), specify the days to retain deleted blobs | "7" | No | Soft Delete Blobs is disabled if empty
 softDeleteContainers | Enable [soft delete for containers](https://learn.microsoft.com/en-us/azure/storage/blobs/soft-delete-container-overview), specify the days to retain deleted containers | "7" | No | Soft Delete Containers is disabled if empty
 enableBlobVersioning | Enable [blob versioning](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), can't enabled when `protocol` is `nfs` or `isHnsEnabled` is `true` | `true`,`false` | No | versioning for blobs is disabled if empty
@@ -179,3 +179,26 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
 
 #### [Storage considerations for Azure Kubernetes Service (AKS)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/app-platform/aks/storage)
 #### [Compare access to Azure Files, Blob Storage, and Azure NetApp Files with NFS](https://learn.microsoft.com/en-us/azure/storage/common/nfs-comparison#comparison)
+
+#### Using `useDataPlaneAPI: oauth` against private storage accounts
+When `useDataPlaneAPI` is set to `oauth` in the StorageClass parameters, the blob CSI driver uses its own managed-identity OAuth token to perform container create/delete operations directly against the Azure Blob Storage data plane endpoint. This enables the driver to work with storage accounts that have:
+- `publicNetworkAccess` set to `Disabled`
+- Firewall/VNet restrictions configured
+- `networkAcls.bypass` including `AzureServices` (trusted service bypass)
+
+**Required RBAC role**: The driver's managed identity must be assigned the `Storage Blob Data Contributor` role (or higher) on the target storage account.
+
+**Example StorageClass**:
+```yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: blob-fuse-private
+provisioner: blob.csi.azure.com
+parameters:
+  useDataPlaneAPI: "oauth"
+  storageAccount: mystorageaccount
+  resourceGroup: myResourceGroup
+```
+
+**Note**: When `useDataPlaneAPI: oauth` is set, the driver does not need storage account keys for container CRUD operations. The node-side mount operations (blobfuse/blobfuse2) still use their own authentication mechanism (workload identity, managed identity, etc.) as configured separately.

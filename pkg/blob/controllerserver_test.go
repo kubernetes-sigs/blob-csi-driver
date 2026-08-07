@@ -223,6 +223,52 @@ func TestCreateVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid useDataPlaneAPI value",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				mp := map[string]string{
+					useDataPlaneAPIField: "bogus",
+				}
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				expectedErr := status.Errorf(codes.InvalidArgument, "invalid %s: %s in storage class", useDataPlaneAPIField, "bogus")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "valid useDataPlaneAPI oauth value",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{}
+				mp := map[string]string{
+					useDataPlaneAPIField: "oauth",
+				}
+				req := &csi.CreateVolumeRequest{
+					Name:               "unit-test",
+					VolumeCapabilities: stdVolumeCapabilities,
+					Parameters:         mp,
+				}
+				d.Cap = []*csi.ControllerServiceCapability{
+					controllerServiceCapability,
+				}
+				_, err := d.CreateVolume(context.Background(), req)
+				// Should not return InvalidArgument for 'oauth' - it should proceed past parameter parsing
+				if err != nil && strings.Contains(err.Error(), "invalid "+useDataPlaneAPIField) {
+					t.Errorf("useDataPlaneAPI: oauth should be valid, got error: %v", err)
+				}
+			},
+		},
+		{
 			name: "storageAccount and matchTags conflict",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
@@ -1548,7 +1594,7 @@ func TestCreateBlobContainer(t *testing.T) {
 				}
 				return nil, nil
 			}).AnyTimes()
-		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, "core.windows.net", test.secrets)
+		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, "core.windows.net", test.secrets, "")
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
@@ -1638,7 +1684,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 				}
 				return nil
 			}).AnyTimes()
-		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets)
+		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets, "")
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
@@ -2432,7 +2478,7 @@ func TestCleanupContainerOnFailure(t *testing.T) {
 				Times(expectedCalls)
 
 			// Act. Must not panic even when the delete errors out (best-effort).
-			d.cleanupContainerOnFailure(test.shouldCleanup, "subsID", "rg", testAccount, testContainer, map[string]string{}, []string{}, "unit-test")
+			d.cleanupContainerOnFailure(test.shouldCleanup, "subsID", "rg", testAccount, testContainer, map[string]string{}, []string{}, "", "unit-test")
 
 			if deleteCalls != expectedCalls {
 				t.Errorf("DeleteContainer call count = %d, expected %d", deleteCalls, expectedCalls)

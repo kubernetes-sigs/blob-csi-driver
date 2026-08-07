@@ -1413,13 +1413,24 @@ func TestUseDataPlaneAPI(t *testing.T) {
 		testFunc func(t *testing.T)
 	}{
 		{
-			name: "volumeID loads correctly",
+			name: "volumeID loads correctly with true value",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				d.dataPlaneAPIVolCache.Set(fakeVolumeID, "foo")
+				d.dataPlaneAPIVolCache.Set(fakeVolumeID, trueValue)
 				output := d.useDataPlaneAPI(ctx, fakeVolumeID, "")
-				if !output {
-					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)
+				if output != trueValue {
+					t.Errorf("Actual Output: %s, Expected Output: %s", output, trueValue)
+				}
+			},
+		},
+		{
+			name: "volumeID loads correctly with oauth value",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.dataPlaneAPIVolCache.Set(fakeVolumeID, oauth)
+				output := d.useDataPlaneAPI(ctx, fakeVolumeID, "")
+				if output != oauth {
+					t.Errorf("Actual Output: %s, Expected Output: %s", output, oauth)
 				}
 			},
 		},
@@ -1428,19 +1439,30 @@ func TestUseDataPlaneAPI(t *testing.T) {
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.dataPlaneAPIVolCache.Set(fakeAccountName, "foo")
-				output := d.useDataPlaneAPI(ctx, fakeAccountName, "")
-				if !output {
-					t.Errorf("Actual Output: %t, Expected Output: %t", output, true)
+				output := d.useDataPlaneAPI(ctx, "", fakeAccountName)
+				if output == "" {
+					t.Errorf("Expected non-empty output when account is in cache")
 				}
 			},
 		},
 		{
-			name: "invalid volumeID and account",
+			name: "empty cache returns empty string",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				output := d.useDataPlaneAPI(ctx, "", "")
-				if output {
-					t.Errorf("Actual Output: %t, Expected Output: %t", output, false)
+				if output != "" {
+					t.Errorf("Actual Output: %s, Expected Output: empty string", output)
+				}
+			},
+		},
+		{
+			name: "legacy empty-string cache value returns true",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.dataPlaneAPIVolCache.Set(fakeVolumeID, "")
+				output := d.useDataPlaneAPI(ctx, fakeVolumeID, "")
+				if output != trueValue {
+					t.Errorf("Actual Output: %s, Expected Output: %s (legacy empty cache should return true)", output, trueValue)
 				}
 			},
 		},
