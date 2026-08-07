@@ -23,8 +23,8 @@ This driver allows Kubernetes to access [Azure Blob Storage](https://azure.micro
 | Driver Version | Image                                                            | Supported K8s Version |
 |----------------|------------------------------------------------------------------|-----------------------|
 | master branch  | `mcr.microsoft.com/k8s/csi/blob-csi:latest`                     | 1.21+                 |
-| v1.27.8        | `mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.27.8`      | 1.21+                 |
-| v1.26.15       | `mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.26.15`     | 1.21+                 |
+| v1.27.9        | `mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.27.9`      | 1.21+                 |
+| v1.26.16       | `mcr.microsoft.com/oss/v2/kubernetes-csi/blob-csi:v1.26.16`     | 1.21+                 |
 | v1.25.6        | `mcr.microsoft.com/oss/kubernetes-csi/blob-csi:v1.25.6`         | 1.21+                 |
 
 ## Driver Parameters
