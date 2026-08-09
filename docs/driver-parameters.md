@@ -60,7 +60,7 @@ requireInfraEncryption | specify whether or not the service applies a secondary 
 storageEndpointSuffix | specify Azure storage endpoint suffix | `core.windows.net`, `core.chinacloudapi.cn`, etc | No | if empty, driver will use default storage endpoint suffix according to cloud environment
 tags | [tags](https://docs.microsoft.com/en-us/azure/azure-resource-manager/management/tag-resources) would be created in newly created storage account | tag format: 'foo=aaa,bar=bbb' | No | ""
 matchTags | whether matching tags when driver tries to find a suitable storage account | `true`,`false` | No | `false`
-useDataPlaneAPI | specify whether use data plane API for blob container create/delete, this could solve the SRP API throttling issue since data plane API has almost no limit. When set to `oauth`, the driver uses its managed-identity OAuth token (via `d.cloud.AuthProvider.GetAzIdentity()`) to perform container operations against the storage data plane, enabling access to storage accounts with firewall/vnet restrictions when `networkAcls.bypass` includes `AzureServices` | `true`,`false`,`oauth` | No | `false`
+useDataPlaneAPI | specify whether use data plane API for blob container create/delete, this could solve the SRP API throttling issue since data plane API has almost no limit, while it would fail when there is firewall or vnet setting on storage account | `true`,`false` | No | `false`
 softDeleteBlobs | Enable [soft delete for blobs](https://learn.microsoft.com/en-us/azure/storage/blobs/soft-delete-blob-overview), specify the days to retain deleted blobs | "7" | No | Soft Delete Blobs is disabled if empty
 softDeleteContainers | Enable [soft delete for containers](https://learn.microsoft.com/en-us/azure/storage/blobs/soft-delete-container-overview), specify the days to retain deleted containers | "7" | No | Soft Delete Containers is disabled if empty
 enableBlobVersioning | Enable [blob versioning](https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-overview), can't enabled when `protocol` is `nfs` or `isHnsEnabled` is `true` | `true`,`false` | No | versioning for blobs is disabled if empty
@@ -109,7 +109,7 @@ volumeAttributes.subscriptionID | specify Azure subscription ID where blob stora
 volumeAttributes.resourceGroup | Azure resource group name | existing resource group name | No | if empty, driver will use the same resource group name as current k8s cluster
 volumeAttributes.storageAccount | existing storage account name | existing storage account name | Yes |
 volumeAttributes.containerName | existing container name | existing container name | Yes |
-volumeAttributes.protocol | specify blobfuse, blobfuse2 or NFSv3 mount | `fuse`, `fuse2`, `nfs` | No | `fuse`
+volumeAttributes.protocol | specify blobfuse, blobfuse2 or NFSv3 mount (blobfuse2 is still in Preview) | `fuse`, `fuse2`, `nfs` | No | `fuse`
 volumeAttributes.server | specify Azure storage account server address | existing server address, e.g. `accountname.blob.core.windows.net` | No | if empty, driver will use default `accountname.blob.core.windows.net` or other sovereign cloud account address
 volumeAttributes.storageEndpointSuffix | specify Azure storage endpoint suffix | `core.windows.net`, `core.chinacloudapi.cn`, etc | No | if empty, driver will use default storage endpoint suffix according to cloud environment
 --- | **Following parameters are only for blobfuse** | --- | --- |
@@ -162,10 +162,6 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
  - blobfuse cache(`--tmp-path` [mount option](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#mount-options))
    - By default, the blobfuse cache is located in the `/mnt` directory. If the VM SKU provides a temporary disk, the `/mnt` directory is mounted on the temporary disk. However, if the VM SKU does not provide a temporary disk, the `/mnt` directory is mounted on the OS disk. 
    - with blobfuse-proxy deployment (default on AKS), user could set `--tmp-path=` mount option to specify a different cache directory
- - blobfuse2 attribute cache and kernel list cache tuning (requires blobfuse2 v2.5.4+, shipped by default)
-   - `--attr-cache-max-size-mb=<sizeInMB>`: maximum memory in MB that the attribute cache can use (`0` = auto-tune to 1% of total RAM, clamped to `[64 MB, 1 GB]`). Increase for workloads with large directory trees or many distinct file paths.
-   - `--kernel-list-cache-timeout=<seconds>`: enable kernel caching of directory listings and set the TTL in seconds (fuse3 only). `0` = disabled. Reduces backend `readdir` traffic for read-heavy workloads.
-   - Both are passed via `mountOptions` on the PV/StorageClass, and are also permitted on ephemeral inline volumes.
  - If there are CVEs in the `livenessprobe` and `csi-node-driver-registrar` sidecar images, you can run `kubectl edit ds -n kube-system csi-blob-node` to change the `imagePullPolicy` to `Always` for both sidecar containers. This will cause the CSI driver to restart and pull the latest patched images, thereby resolving the CVEs in these sidecar components.
  - [Mount Azure blob storage with managed identity](../deploy/example/blobfuse-mi)
  - [Blobfuse Performance and caching](https://github.com/Azure/azure-storage-fuse?tab=readme-ov-file#frequently-asked-questions)
@@ -179,26 +175,3 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
 
 #### [Storage considerations for Azure Kubernetes Service (AKS)](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/app-platform/aks/storage)
 #### [Compare access to Azure Files, Blob Storage, and Azure NetApp Files with NFS](https://learn.microsoft.com/en-us/azure/storage/common/nfs-comparison#comparison)
-
-#### Using `useDataPlaneAPI: oauth` against private storage accounts
-When `useDataPlaneAPI` is set to `oauth` in the StorageClass parameters, the blob CSI driver uses its own managed-identity OAuth token to perform container create/delete operations directly against the Azure Blob Storage data plane endpoint. This enables the driver to work with storage accounts that have:
-- `publicNetworkAccess` set to `Disabled`
-- Firewall/VNet restrictions configured
-- `networkAcls.bypass` including `AzureServices` (trusted service bypass)
-
-**Required RBAC role**: The driver's managed identity must be assigned the `Storage Blob Data Contributor` role (or higher) on the target storage account.
-
-**Example StorageClass**:
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: blob-fuse-private
-provisioner: blob.csi.azure.com
-parameters:
-  useDataPlaneAPI: "oauth"
-  storageAccount: mystorageaccount
-  resourceGroup: myResourceGroup
-```
-
-**Note**: When `useDataPlaneAPI: oauth` is set, the driver does not need storage account keys for container CRUD operations. The node-side mount operations (blobfuse/blobfuse2) still use their own authentication mechanism (workload identity, managed identity, etc.) as configured separately.
