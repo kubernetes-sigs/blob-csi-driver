@@ -506,8 +506,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			CSIDriver: testDriver,
 			Pods:      pods,
 			StorageClassParameters: map[string]string{
-				"skuName":   "Standard_LRS",
-				"matchTags": "true",
+				"skuName":         "Standard_LRS",
+				"matchTags":       "true",
+				"useDataPlaneAPI": "oauth",
 			},
 		}
 		test.Run(ctx, cs, ns)
@@ -591,6 +592,7 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"protocol":            "nfs",
 				"mountPermissions":    "0755",
 				"fsGroupChangePolicy": "Always",
+				"useDataPlaneAPI":     "oauth",
 			},
 		}
 		test.Run(ctx, cs, ns)
