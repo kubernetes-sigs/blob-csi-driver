@@ -851,6 +851,9 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 			container.Metadata = map[string]string{createdByMetadata: d.Name}
 			_, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate})
 		} else if strings.EqualFold(useDataPlaneAPI, oauth) {
+			if err := d.validateOAuthStorageEndpointSuffix(storageEndpointSuffix); err != nil {
+				return true, err
+			}
 			if d.cloud == nil || d.cloud.AuthProvider == nil {
 				return true, fmt.Errorf("useDataPlaneAPI is set to %q but AuthProvider is not configured", oauth)
 			}
@@ -896,6 +899,18 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 	return err
 }
 
+func (d *Driver) validateOAuthStorageEndpointSuffix(storageEndpointSuffix string) error {
+	expected := d.getStorageEndPointSuffix()
+	actual := strings.TrimSpace(storageEndpointSuffix)
+	if actual == "" {
+		actual = expected
+	}
+	if !strings.EqualFold(actual, expected) {
+		return fmt.Errorf("storageEndpointSuffix %q is not allowed with useDataPlaneAPI=%q, expected %q", actual, oauth, expected)
+	}
+	return nil
+}
+
 // isContainerNotFoundErr returns true when the delete target is already gone.
 func isContainerNotFoundErr(err error) bool {
 	if err == nil {
@@ -937,6 +952,9 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 			}
 			_, err = container.DeleteIfExists(nil)
 		} else if strings.EqualFold(useDataPlaneAPI, oauth) {
+			if err := d.validateOAuthStorageEndpointSuffix(storageEndpointSuffix); err != nil {
+				return true, err
+			}
 			if d.cloud == nil || d.cloud.AuthProvider == nil {
 				return true, fmt.Errorf("useDataPlaneAPI is set to %q but AuthProvider is not configured", oauth)
 			}

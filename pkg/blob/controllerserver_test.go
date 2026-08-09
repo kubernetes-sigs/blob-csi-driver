@@ -1516,16 +1516,17 @@ func TestControllerExpandVolume(t *testing.T) {
 
 func TestCreateBlobContainer(t *testing.T) {
 	tests := []struct {
-		desc            string
-		subsID          string
-		rg              string
-		accountName     string
-		containerName   string
-		secrets         map[string]string
-		customErrStr    string
-		clientErr       errType
-		useDataPlaneAPI string
-		expectedErr     error
+		desc                  string
+		subsID                string
+		rg                    string
+		accountName           string
+		containerName         string
+		storageEndpointSuffix string
+		secrets               map[string]string
+		customErrStr          string
+		clientErr             errType
+		useDataPlaneAPI       string
+		expectedErr           error
 	}{
 		{
 			desc:        "containerName is empty",
@@ -1572,6 +1573,15 @@ func TestCreateBlobContainer(t *testing.T) {
 			expectedErr:   fmt.Errorf("foobar"),
 		},
 		{
+			desc:                  "oauth rejects untrusted storage endpoint suffix",
+			containerName:         "containerName",
+			accountName:           "accountName",
+			storageEndpointSuffix: "evil.example",
+			secrets:               map[string]string{},
+			useDataPlaneAPI:       oauth,
+			expectedErr:           fmt.Errorf("storageEndpointSuffix %q is not allowed with useDataPlaneAPI=%q, expected %q", "evil.example", oauth, defaultStorageEndPointSuffix),
+		},
+		{
 			desc:            "oauth requires auth provider",
 			containerName:   "containerName",
 			accountName:     "accountName",
@@ -1604,11 +1614,60 @@ func TestCreateBlobContainer(t *testing.T) {
 				}
 				return nil, nil
 			}).AnyTimes()
-		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, "core.windows.net", test.secrets, test.useDataPlaneAPI)
+		storageEndpointSuffix := test.storageEndpointSuffix
+		if storageEndpointSuffix == "" {
+			storageEndpointSuffix = defaultStorageEndPointSuffix
+		}
+		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, storageEndpointSuffix, test.secrets, test.useDataPlaneAPI)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
 		controller.Finish()
+	}
+}
+
+func TestValidateOAuthStorageEndpointSuffix(t *testing.T) {
+	tests := []struct {
+		name                  string
+		driverSuffix          string
+		storageEndpointSuffix string
+		wantErr               error
+	}{
+		{
+			name:                  "empty suffix uses default cloud suffix",
+			storageEndpointSuffix: "",
+			wantErr:               nil,
+		},
+		{
+			name:                  "matching default suffix",
+			storageEndpointSuffix: defaultStorageEndPointSuffix,
+			wantErr:               nil,
+		},
+		{
+			name:                  "matching configured environment suffix",
+			driverSuffix:          "core.usgovcloudapi.net",
+			storageEndpointSuffix: "core.usgovcloudapi.net",
+			wantErr:               nil,
+		},
+		{
+			name:                  "rejects untrusted suffix",
+			storageEndpointSuffix: "evil.example",
+			wantErr:               fmt.Errorf("storageEndpointSuffix %q is not allowed with useDataPlaneAPI=%q, expected %q", "evil.example", oauth, defaultStorageEndPointSuffix),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			d := NewFakeDriver()
+			d.cloud = &storage.AccountRepo{}
+			if test.driverSuffix != "" {
+				d.cloud.Environment = &azclient.Environment{StorageEndpointSuffix: test.driverSuffix}
+			}
+			err := d.validateOAuthStorageEndpointSuffix(test.storageEndpointSuffix)
+			if !reflect.DeepEqual(err, test.wantErr) {
+				t.Fatalf("validateOAuthStorageEndpointSuffix(%q) = %v, want %v", test.storageEndpointSuffix, err, test.wantErr)
+			}
+		})
 	}
 }
 
@@ -1672,16 +1731,17 @@ func TestIsContainerNotFoundErr(t *testing.T) {
 
 func TestDeleteBlobContainer(t *testing.T) {
 	tests := []struct {
-		desc            string
-		subsID          string
-		rg              string
-		accountName     string
-		containerName   string
-		secrets         map[string]string
-		clientErr       errType
-		customErrStr    string
-		useDataPlaneAPI string
-		expectedErr     error
+		desc                  string
+		subsID                string
+		rg                    string
+		accountName           string
+		containerName         string
+		storageEndpointSuffix string
+		secrets               map[string]string
+		clientErr             errType
+		customErrStr          string
+		useDataPlaneAPI       string
+		expectedErr           error
 	}{
 		{
 			desc:        "containerName is empty",
@@ -1729,6 +1789,15 @@ func TestDeleteBlobContainer(t *testing.T) {
 				fmt.Errorf("foobar")),
 		},
 		{
+			desc:                  "oauth rejects untrusted storage endpoint suffix",
+			containerName:         "containerName",
+			accountName:           "accountName",
+			storageEndpointSuffix: "evil.example",
+			secrets:               map[string]string{},
+			useDataPlaneAPI:       oauth,
+			expectedErr:           fmt.Errorf("storageEndpointSuffix %q is not allowed with useDataPlaneAPI=%q, expected %q", "evil.example", oauth, defaultStorageEndPointSuffix),
+		},
+		{
 			desc:            "oauth requires auth provider",
 			containerName:   "containerName",
 			accountName:     "accountName",
@@ -1761,7 +1830,11 @@ func TestDeleteBlobContainer(t *testing.T) {
 				}
 				return nil
 			}).AnyTimes()
-		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, "core.windows.net", test.secrets, test.useDataPlaneAPI)
+		storageEndpointSuffix := test.storageEndpointSuffix
+		if storageEndpointSuffix == "" {
+			storageEndpointSuffix = defaultStorageEndPointSuffix
+		}
+		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, storageEndpointSuffix, test.secrets, test.useDataPlaneAPI)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
