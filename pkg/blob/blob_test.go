@@ -97,6 +97,7 @@ func TestNewDriver(t *testing.T) {
 	fakedriver.Version = driverVersion
 	fakedriver.accountSearchCache = driver.accountSearchCache
 	fakedriver.dataPlaneAPIVolCache = driver.dataPlaneAPIVolCache
+	fakedriver.storageEndpointSuffixCache = driver.storageEndpointSuffixCache
 	fakedriver.azcopySasTokenCache = driver.azcopySasTokenCache
 	fakedriver.volStatsCache = driver.volStatsCache
 	fakedriver.subnetCache = driver.subnetCache

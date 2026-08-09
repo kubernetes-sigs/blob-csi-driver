@@ -1675,8 +1675,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 			accountName:     "accountName",
 			secrets:         map[string]string{},
 			useDataPlaneAPI: oauth,
-			expectedErr: fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", "containerName", "accountName",
-				fmt.Errorf("useDataPlaneAPI is set to %q but AuthProvider is not configured", oauth)),
+			expectedErr:     fmt.Errorf("useDataPlaneAPI is set to %q but AuthProvider is not configured", oauth),
 		},
 	}
 
