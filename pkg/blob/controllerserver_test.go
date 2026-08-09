@@ -23,6 +23,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage/v2"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
@@ -1608,6 +1609,54 @@ func TestCreateBlobContainer(t *testing.T) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
 		controller.Finish()
+	}
+}
+
+func TestIsContainerNotFoundErr(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "response error status 404",
+			err: &azcore.ResponseError{StatusCode: 404},
+			want: true,
+		},
+		{
+			name: "response error code container not found",
+			err: &azcore.ResponseError{ErrorCode: "ContainerNotFound"},
+			want: true,
+		},
+		{
+			name: "wrapped response error",
+			err: fmt.Errorf("wrapped: %w", &azcore.ResponseError{StatusCode: 404}),
+			want: true,
+		},
+		{
+			name: "legacy response string",
+			err: fmt.Errorf("DELETE https://acct.blob.core.windows.net/c\nRESPONSE 404: 404 The specified container does not exist.\nERROR CODE: ContainerNotFound"),
+			want: true,
+		},
+		{
+			name: "other error",
+			err: fmt.Errorf("boom"),
+			want: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := isContainerNotFoundErr(test.err)
+			if got != test.want {
+				t.Fatalf("isContainerNotFoundErr(%v) = %v, want %v", test.err, got, test.want)
+			}
+		})
 	}
 }
 

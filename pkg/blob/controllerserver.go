@@ -19,7 +19,9 @@ package blob
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -30,6 +32,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
@@ -893,7 +896,29 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 	return err
 }
 
-// DeleteBlobContainer deletes a blob container
+// isContainerNotFoundErr returns true when the delete target is already gone.
+func isContainerNotFoundErr(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	var responseErr *azcore.ResponseError
+	if errors.As(err, &responseErr) {
+		if responseErr.StatusCode == http.StatusNotFound {
+			return true
+		}
+		if strings.EqualFold(responseErr.ErrorCode, "ContainerNotFound") {
+			return true
+		}
+	}
+
+	return strings.Contains(err.Error(), statusCodeNotFound) ||
+		strings.Contains(err.Error(), httpCodeNotFound) ||
+		strings.Contains(err.Error(), "RESPONSE 404") ||
+		strings.Contains(err.Error(), "ContainerNotFound")
+}
+
+// DeleteBlobContainer deletes a blob container.
 func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName, storageEndpointSuffix string, secrets map[string]string, useDataPlaneAPI string) error {
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
@@ -921,7 +946,7 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 				return true, clientErr
 			}
 			_, err = client.Delete(ctx, nil)
-			if err != nil && (strings.Contains(err.Error(), statusCodeNotFound) || strings.Contains(err.Error(), httpCodeNotFound)) {
+			if isContainerNotFoundErr(err) {
 				klog.V(2).Infof("container(%s) on account(%s) not found, return as success", containerName, accountName)
 				err = nil
 			}
@@ -939,8 +964,7 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 		if err != nil {
 			if strings.Contains(err.Error(), containerBeingDeletedDataplaneAPIError) ||
 				strings.Contains(err.Error(), containerBeingDeletedManagementAPIError) ||
-				strings.Contains(err.Error(), statusCodeNotFound) ||
-				strings.Contains(err.Error(), httpCodeNotFound) {
+				isContainerNotFoundErr(err) {
 				klog.Warningf("delete container(%s) on account(%s) failed with error(%v), return as success", containerName, accountName, err)
 				return true, nil
 			}
