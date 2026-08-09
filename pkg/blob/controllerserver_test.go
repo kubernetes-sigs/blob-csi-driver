@@ -1625,17 +1625,23 @@ func TestIsContainerNotFoundErr(t *testing.T) {
 		},
 		{
 			name: "response error status 404",
-			err: &azcore.ResponseError{StatusCode: 404},
+			err: &azcore.ResponseError{
+				StatusCode: 404,
+			},
 			want: true,
 		},
 		{
 			name: "response error code container not found",
-			err: &azcore.ResponseError{ErrorCode: "ContainerNotFound"},
+			err: &azcore.ResponseError{
+				ErrorCode: "ContainerNotFound",
+			},
 			want: true,
 		},
 		{
 			name: "wrapped response error",
-			err: fmt.Errorf("wrapped: %w", &azcore.ResponseError{StatusCode: 404}),
+			err: fmt.Errorf("wrapped: %w", &azcore.ResponseError{
+				StatusCode: 404,
+			}),
 			want: true,
 		},
 		{
