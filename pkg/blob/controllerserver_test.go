@@ -1646,7 +1646,11 @@ func TestIsContainerNotFoundErr(t *testing.T) {
 		},
 		{
 			name: "legacy response string",
-			err: fmt.Errorf("DELETE https://acct.blob.core.windows.net/c\nRESPONSE 404: 404 The specified container does not exist.\nERROR CODE: ContainerNotFound"),
+			err: fmt.Errorf(
+				"DELETE https://acct.blob.core.windows.net/c\n" +
+					"RESPONSE 404: 404 The specified container does not exist.\n" +
+					"ERROR CODE: ContainerNotFound",
+			),
 			want: true,
 		},
 		{
