@@ -1655,7 +1655,7 @@ func TestIsContainerNotFoundErr(t *testing.T) {
 		},
 		{
 			name: "other error",
-			err: fmt.Errorf("boom"),
+			err:  fmt.Errorf("boom"),
 			want: false,
 		},
 	}
