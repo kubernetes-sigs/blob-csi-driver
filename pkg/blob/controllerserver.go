@@ -864,6 +864,9 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 					Metadata:     map[string]*string{createdByMetadata: to.Ptr(d.Name)},
 				},
 			}
+			if d.clientFactory == nil {
+				return true, fmt.Errorf("blob container client factory is nil")
+			}
 			var blobClient blobcontainerclient.Interface
 			blobClient, err = d.clientFactory.GetBlobContainerClientForSub(subsID)
 			if err != nil {
@@ -914,6 +917,9 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 				err = nil
 			}
 		} else {
+			if d.clientFactory == nil {
+				return true, fmt.Errorf("blob container client factory is nil")
+			}
 			var blobClient blobcontainerclient.Interface
 			blobClient, err = d.clientFactory.GetBlobContainerClientForSub(subsID)
 			if err != nil {

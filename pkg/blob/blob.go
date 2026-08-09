@@ -1228,25 +1228,42 @@ func (d *Driver) getSubnetResourceID(vnetResourceGroup, vnetName, subnetName str
 }
 
 func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName string) string {
+	normalize := func(cache any) string {
+		if cache == nil {
+			return ""
+		}
+		if v, ok := cache.(string); ok {
+			switch {
+			case v == "":
+				return trueValue
+			case strings.EqualFold(v, trueValue):
+				return trueValue
+			case strings.EqualFold(v, falseValue):
+				return falseValue
+			case strings.EqualFold(v, oauth):
+				return oauth
+			default:
+				// Legacy cache entries only relied on presence to mean "enabled".
+				// Preserve that behavior for any non-empty unknown string.
+				return trueValue
+			}
+		}
+		return trueValue
+	}
+
 	cache, err := d.dataPlaneAPIVolCache.Get(ctx, volumeID, azcache.CacheReadTypeDefault)
 	if err != nil {
 		klog.Errorf("get(%s) from dataPlaneAPIVolCache failed with error: %v", volumeID, err)
 	}
 	if cache != nil {
-		if v, ok := cache.(string); ok && v != "" {
-			return v
-		}
-		return trueValue
+		return normalize(cache)
 	}
 	cache, err = d.dataPlaneAPIVolCache.Get(ctx, accountName, azcache.CacheReadTypeDefault)
 	if err != nil {
 		klog.Errorf("get(%s) from dataPlaneAPIVolCache failed with error: %v", accountName, err)
 	}
 	if cache != nil {
-		if v, ok := cache.(string); ok && v != "" {
-			return v
-		}
-		return trueValue
+		return normalize(cache)
 	}
 	return ""
 }

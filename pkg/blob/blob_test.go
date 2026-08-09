@@ -1435,13 +1435,13 @@ func TestUseDataPlaneAPI(t *testing.T) {
 			},
 		},
 		{
-			name: "account loads correctly",
+			name: "account cache legacy non-empty value returns true",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
 				d.dataPlaneAPIVolCache.Set(fakeAccountName, "foo")
 				output := d.useDataPlaneAPI(ctx, "", fakeAccountName)
-				if output == "" {
-					t.Errorf("Expected non-empty output when account is in cache")
+				if output != trueValue {
+					t.Errorf("Actual Output: %s, Expected Output: %s", output, trueValue)
 				}
 			},
 		},
