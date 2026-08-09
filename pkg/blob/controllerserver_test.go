@@ -2373,6 +2373,36 @@ func TestGetAzcopyAuth(t *testing.T) {
 			},
 		},
 		{
+			name: "oauth account uses identity auth instead of sas",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				d.cloud = &storage.AccountRepo{
+					Config: config.Config{
+						AzureClientConfig: config.AzureClientConfig{
+							AzureAuthConfig: azclient.AzureAuthConfig{
+								UseManagedIdentityExtension: true,
+								UserAssignedIdentityID:      "test-client-id",
+							},
+						},
+					},
+				}
+				d.dataPlaneAPIVolCache.Set("accountName", oauth)
+				accountSASToken, authAzcopyEnv, err := d.getAzcopyAuth(context.Background(), "accountName", "", defaultStorageEndPointSuffix, &storage.AccountOptions{}, nil, "", "", false)
+				if err != nil {
+					t.Fatalf("Unexpected error: %v", err)
+				}
+				if accountSASToken != "" {
+					t.Fatalf("Expected empty SAS token for oauth account, got: %s", accountSASToken)
+				}
+				if !reflect.DeepEqual(authAzcopyEnv, []string{
+					fmt.Sprintf("%s=%s", azcopyAutoLoginType, MSI),
+					fmt.Sprintf("%s=%s", azcopyMSIClientID, "test-client-id"),
+				}) {
+					t.Fatalf("Unexpected authAzcopyEnv: %v", authAzcopyEnv)
+				}
+			},
+		},
+		{
 			name: "fall back to generate SAS token failed for illegal account key",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
