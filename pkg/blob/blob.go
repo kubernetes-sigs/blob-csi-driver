@@ -393,6 +393,8 @@ type Driver struct {
 	volMap sync.Map
 	// a timed cache storing all volumeIDs and storage accounts that are using data plane API
 	dataPlaneAPIVolCache azcache.Resource
+	// a timed cache storing resolved storage endpoint suffixes by volumeID/accountName
+	storageEndpointSuffixCache azcache.Resource
 	// a timed cache storing account search history (solve account list throttling issue)
 	accountSearchCache azcache.Resource
 	// a timed cache storing volume stats <volumeID, volumeStats>
@@ -453,6 +455,9 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *s
 		klog.Fatalf("%v", err)
 	}
 	if d.dataPlaneAPIVolCache, err = azcache.NewTimedCache(24*30*time.Hour, getter, false); err != nil {
+		klog.Fatalf("%v", err)
+	}
+	if d.storageEndpointSuffixCache, err = azcache.NewTimedCache(24*30*time.Hour, getter, false); err != nil {
 		klog.Fatalf("%v", err)
 	}
 	if d.azcopySasTokenCache, err = azcache.NewTimedCache(15*time.Minute, getter, false); err != nil {
@@ -1266,6 +1271,24 @@ func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName stri
 		return normalize(cache)
 	}
 	return ""
+}
+
+func (d *Driver) resolvedStorageEndpointSuffix(ctx context.Context, volumeID, accountName string) string {
+	cache, err := d.storageEndpointSuffixCache.Get(ctx, volumeID, azcache.CacheReadTypeDefault)
+	if err != nil {
+		klog.Errorf("get(%s) from storageEndpointSuffixCache failed with error: %v", volumeID, err)
+	}
+	if v, ok := cache.(string); ok && v != "" {
+		return v
+	}
+	cache, err = d.storageEndpointSuffixCache.Get(ctx, accountName, azcache.CacheReadTypeDefault)
+	if err != nil {
+		klog.Errorf("get(%s) from storageEndpointSuffixCache failed with error: %v", accountName, err)
+	}
+	if v, ok := cache.(string); ok && v != "" {
+		return v
+	}
+	return d.getStorageEndPointSuffix()
 }
 
 // ValidateMountArgValues checks that no value in the mountOptions slice contains

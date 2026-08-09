@@ -1472,6 +1472,30 @@ func TestUseDataPlaneAPI(t *testing.T) {
 	}
 }
 
+func TestResolvedStorageEndpointSuffix(t *testing.T) {
+	fakeVolumeID := "unit-test-id"
+	fakeAccountName := "unit-test-account"
+	ctx := context.Background()
+
+	t.Run("volumeID cache wins", func(t *testing.T) {
+		d := NewFakeDriver()
+		d.storageEndpointSuffixCache.Set(fakeVolumeID, "core.usgovcloudapi.net")
+		output := d.resolvedStorageEndpointSuffix(ctx, fakeVolumeID, fakeAccountName)
+		if output != "core.usgovcloudapi.net" {
+			t.Errorf("Actual Output: %s, Expected Output: %s", output, "core.usgovcloudapi.net")
+		}
+	})
+
+	t.Run("account cache fallback", func(t *testing.T) {
+		d := NewFakeDriver()
+		d.storageEndpointSuffixCache.Set(fakeAccountName, "core.chinacloudapi.cn")
+		output := d.resolvedStorageEndpointSuffix(ctx, fakeVolumeID, fakeAccountName)
+		if output != "core.chinacloudapi.cn" {
+			t.Errorf("Actual Output: %s, Expected Output: %s", output, "core.chinacloudapi.cn")
+		}
+	})
+}
+
 func TestTokenizeMountOptionsString(t *testing.T) {
 	tests := []struct {
 		name     string

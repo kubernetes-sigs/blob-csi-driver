@@ -501,7 +501,7 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 	if volContentSource != nil {
 		accountSASToken, authAzcopyEnv, err := d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace, false)
 		if err != nil {
-			d.cleanupContainerOnFailure(shouldCleanupContainer, subsID, resourceGroup, accountName, validContainerName, secrets, authAzcopyEnv, useDataPlaneAPI, "getAzcopyAuth failure")
+			d.cleanupContainerOnFailure(shouldCleanupContainer, subsID, resourceGroup, accountName, validContainerName, storageEndpointSuffix, secrets, authAzcopyEnv, useDataPlaneAPI, "getAzcopyAuth failure")
 			return nil, status.Errorf(codes.Internal, "failed to getAzcopyAuth on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
 		}
 		copyErr := d.copyVolume(ctx, req, accountName, accountSASToken, authAzcopyEnv, validContainerName, secretNamespace, accountOptions, storageEndpointSuffix)
@@ -512,13 +512,13 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 			// variable would leave the outer authAzcopyEnv pinned to the first auth attempt.
 			accountSASToken, authAzcopyEnv, err = d.getAzcopyAuth(ctx, accountName, accountKey, storageEndpointSuffix, accountOptions, secrets, secretName, secretNamespace, true)
 			if err != nil {
-				d.cleanupContainerOnFailure(shouldCleanupContainer, subsID, resourceGroup, accountName, validContainerName, secrets, authAzcopyEnv, useDataPlaneAPI, "fallback getAzcopyAuth failure")
+				d.cleanupContainerOnFailure(shouldCleanupContainer, subsID, resourceGroup, accountName, validContainerName, storageEndpointSuffix, secrets, authAzcopyEnv, useDataPlaneAPI, "fallback getAzcopyAuth failure")
 				return nil, status.Errorf(codes.Internal, "failed to getAzcopyAuth on account(%s) rg(%s), error: %v", accountOptions.Name, accountOptions.ResourceGroup, err)
 			}
 			copyErr = d.copyVolume(ctx, req, accountName, accountSASToken, authAzcopyEnv, validContainerName, secretNamespace, accountOptions, storageEndpointSuffix)
 		}
 		if copyErr != nil {
-			d.cleanupContainerOnFailure(shouldCleanupContainer, subsID, resourceGroup, accountName, validContainerName, secrets, authAzcopyEnv, useDataPlaneAPI, fmt.Sprintf("copyVolume(%s) failure", validContainerName))
+			d.cleanupContainerOnFailure(shouldCleanupContainer, subsID, resourceGroup, accountName, validContainerName, storageEndpointSuffix, secrets, authAzcopyEnv, useDataPlaneAPI, fmt.Sprintf("copyVolume(%s) failure", validContainerName))
 			return nil, copyErr
 		}
 	}
@@ -552,6 +552,8 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		d.dataPlaneAPIVolCache.Set(volumeID, useDataPlaneAPI)
 		d.dataPlaneAPIVolCache.Set(accountName, useDataPlaneAPI)
 	}
+	d.storageEndpointSuffixCache.Set(volumeID, storageEndpointSuffix)
+	d.storageEndpointSuffixCache.Set(accountName, storageEndpointSuffix)
 
 	isOperationSucceeded = true
 	// reset secretNamespace field in VolumeContext
@@ -589,7 +591,7 @@ func isAzcopyJobActiveOrCompleted(state util.AzcopyJobState) bool {
 // It checks for a running or completed azcopy job first — if a job is still in progress or
 // has just completed, the container is preserved so retries can resume rather than starting
 // from zero, and to avoid racing with a copy that finished right as CreateVolume returned.
-func (d *Driver) cleanupContainerOnFailure(shouldCleanupContainer bool, subsID, resourceGroup, accountName, containerName string, secrets map[string]string, authAzcopyEnv []string, useDataPlaneAPI string, reason string) {
+func (d *Driver) cleanupContainerOnFailure(shouldCleanupContainer bool, subsID, resourceGroup, accountName, containerName, storageEndpointSuffix string, secrets map[string]string, authAzcopyEnv []string, useDataPlaneAPI string, reason string) {
 	if !shouldCleanupContainer {
 		return
 	}
@@ -617,7 +619,7 @@ func (d *Driver) cleanupContainerOnFailure(shouldCleanupContainer bool, subsID, 
 	// context from the original CreateVolume request (e.g., after azcopy timeout).
 	cleanupCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	if cleanupErr := d.DeleteBlobContainer(cleanupCtx, subsID, resourceGroup, accountName, containerName, secrets, useDataPlaneAPI); cleanupErr != nil {
+	if cleanupErr := d.DeleteBlobContainer(cleanupCtx, subsID, resourceGroup, accountName, containerName, storageEndpointSuffix, secrets, useDataPlaneAPI); cleanupErr != nil {
 		klog.Warningf("failed to clean up container(%s) on account(%s) rg(%s) after %s: %v", containerName, accountName, resourceGroup, reason, cleanupErr)
 	}
 }
@@ -667,7 +669,8 @@ func (d *Driver) DeleteVolume(ctx context.Context, req *csi.DeleteVolumeRequest)
 		resourceGroupName = d.cloud.ResourceGroup
 	}
 	klog.V(2).Infof("deleting container(%s) rg(%s) account(%s) volumeID(%s)", containerName, resourceGroupName, accountName, volumeID)
-	if err := d.DeleteBlobContainer(ctx, subsID, resourceGroupName, accountName, containerName, secrets, useDataPlaneAPI); err != nil {
+	storageEndpointSuffix := d.resolvedStorageEndpointSuffix(ctx, volumeID, accountName)
+	if err := d.DeleteBlobContainer(ctx, subsID, resourceGroupName, accountName, containerName, storageEndpointSuffix, secrets, useDataPlaneAPI); err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to delete container(%s) under rg(%s) account(%s) volumeID(%s), error: %v", containerName, resourceGroupName, accountName, volumeID, err)
 	}
 
@@ -844,7 +847,10 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 			}
 			container.Metadata = map[string]string{createdByMetadata: d.Name}
 			_, err = container.CreateIfNotExists(&azstorage.CreateContainerOptions{Access: azstorage.ContainerAccessTypePrivate})
-		} else if d.cloud != nil && d.cloud.AuthProvider != nil && strings.EqualFold(useDataPlaneAPI, oauth) {
+		} else if strings.EqualFold(useDataPlaneAPI, oauth) {
+			if d.cloud == nil || d.cloud.AuthProvider == nil {
+				return true, fmt.Errorf("useDataPlaneAPI is set to %q but AuthProvider is not configured", oauth)
+			}
 			containerURL := fmt.Sprintf("https://%s.blob.%s/%s", accountName, storageEndpointSuffix, containerName)
 			client, clientErr := azcontainer.NewClient(containerURL, d.cloud.AuthProvider.GetAzIdentity(), nil)
 			if clientErr != nil {
@@ -888,7 +894,7 @@ func (d *Driver) CreateBlobContainer(ctx context.Context, subsID, resourceGroupN
 }
 
 // DeleteBlobContainer deletes a blob container
-func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName string, secrets map[string]string, useDataPlaneAPI string) error {
+func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupName, accountName, containerName, storageEndpointSuffix string, secrets map[string]string, useDataPlaneAPI string) error {
 	if containerName == "" {
 		return fmt.Errorf("containerName is empty")
 	}
@@ -900,13 +906,16 @@ func (d *Driver) DeleteBlobContainer(ctx context.Context, subsID, resourceGroupN
 	err := wait.ExponentialBackoffWithContext(ctx, getBackOff(d.cloud.Config), func(ctx context.Context) (bool, error) {
 		var err error
 		if len(secrets) > 0 {
-			container, getErr := getContainerReference(containerName, secrets, d.getStorageEndPointSuffix())
+			container, getErr := getContainerReference(containerName, secrets, storageEndpointSuffix)
 			if getErr != nil {
 				return true, getErr
 			}
 			_, err = container.DeleteIfExists(nil)
-		} else if d.cloud != nil && d.cloud.AuthProvider != nil && strings.EqualFold(useDataPlaneAPI, oauth) {
-			containerURL := fmt.Sprintf("https://%s.blob.%s/%s", accountName, d.getStorageEndPointSuffix(), containerName)
+		} else if strings.EqualFold(useDataPlaneAPI, oauth) {
+			if d.cloud == nil || d.cloud.AuthProvider == nil {
+				return true, fmt.Errorf("useDataPlaneAPI is set to %q but AuthProvider is not configured", oauth)
+			}
+			containerURL := fmt.Sprintf("https://%s.blob.%s/%s", accountName, storageEndpointSuffix, containerName)
 			client, clientErr := azcontainer.NewClient(containerURL, d.cloud.AuthProvider.GetAzIdentity(), nil)
 			if clientErr != nil {
 				return true, clientErr

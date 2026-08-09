@@ -1515,15 +1515,16 @@ func TestControllerExpandVolume(t *testing.T) {
 
 func TestCreateBlobContainer(t *testing.T) {
 	tests := []struct {
-		desc          string
-		subsID        string
-		rg            string
-		accountName   string
-		containerName string
-		secrets       map[string]string
-		customErrStr  string
-		clientErr     errType
-		expectedErr   error
+		desc            string
+		subsID          string
+		rg              string
+		accountName     string
+		containerName   string
+		secrets         map[string]string
+		customErrStr    string
+		clientErr       errType
+		useDataPlaneAPI string
+		expectedErr     error
 	}{
 		{
 			desc:        "containerName is empty",
@@ -1569,6 +1570,14 @@ func TestCreateBlobContainer(t *testing.T) {
 			customErrStr:  "foobar",
 			expectedErr:   fmt.Errorf("foobar"),
 		},
+		{
+			desc:            "oauth requires auth provider",
+			containerName:   "containerName",
+			accountName:     "accountName",
+			secrets:         map[string]string{},
+			useDataPlaneAPI: oauth,
+			expectedErr:     fmt.Errorf("useDataPlaneAPI is set to %q but AuthProvider is not configured", oauth),
+		},
 	}
 
 	d := NewFakeDriver()
@@ -1594,7 +1603,7 @@ func TestCreateBlobContainer(t *testing.T) {
 				}
 				return nil, nil
 			}).AnyTimes()
-		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, "core.windows.net", test.secrets, "")
+		err := d.CreateBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, "core.windows.net", test.secrets, test.useDataPlaneAPI)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
@@ -1604,15 +1613,16 @@ func TestCreateBlobContainer(t *testing.T) {
 
 func TestDeleteBlobContainer(t *testing.T) {
 	tests := []struct {
-		desc          string
-		subsID        string
-		rg            string
-		accountName   string
-		containerName string
-		secrets       map[string]string
-		clientErr     errType
-		customErrStr  string
-		expectedErr   error
+		desc            string
+		subsID          string
+		rg              string
+		accountName     string
+		containerName   string
+		secrets         map[string]string
+		clientErr       errType
+		customErrStr    string
+		useDataPlaneAPI string
+		expectedErr     error
 	}{
 		{
 			desc:        "containerName is empty",
@@ -1659,6 +1669,15 @@ func TestDeleteBlobContainer(t *testing.T) {
 			expectedErr: fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", "containerName", "",
 				fmt.Errorf("foobar")),
 		},
+		{
+			desc:            "oauth requires auth provider",
+			containerName:   "containerName",
+			accountName:     "accountName",
+			secrets:         map[string]string{},
+			useDataPlaneAPI: oauth,
+			expectedErr: fmt.Errorf("failed to delete container(%s) on account(%s), error: %w", "containerName", "accountName",
+				fmt.Errorf("useDataPlaneAPI is set to %q but AuthProvider is not configured", oauth)),
+		},
 	}
 
 	d := NewFakeDriver()
@@ -1684,7 +1703,7 @@ func TestDeleteBlobContainer(t *testing.T) {
 				}
 				return nil
 			}).AnyTimes()
-		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, test.secrets, "")
+		err := d.DeleteBlobContainer(context.Background(), test.subsID, test.rg, test.accountName, test.containerName, "core.windows.net", test.secrets, test.useDataPlaneAPI)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("test(%s), actualErr: (%v), expectedErr: (%v)", test.desc, err, test.expectedErr)
 		}
@@ -2478,7 +2497,7 @@ func TestCleanupContainerOnFailure(t *testing.T) {
 				Times(expectedCalls)
 
 			// Act. Must not panic even when the delete errors out (best-effort).
-			d.cleanupContainerOnFailure(test.shouldCleanup, "subsID", "rg", testAccount, testContainer, map[string]string{}, []string{}, "", "unit-test")
+			d.cleanupContainerOnFailure(test.shouldCleanup, "subsID", "rg", testAccount, testContainer, "core.windows.net", map[string]string{}, []string{}, "", "unit-test")
 
 			if deleteCalls != expectedCalls {
 				t.Errorf("DeleteContainer call count = %d, expected %d", deleteCalls, expectedCalls)
