@@ -58,6 +58,7 @@ const (
 	blobCSIDriverName                = "blob_csi_driver"
 	separator                        = "#"
 	volumeIDTemplate                 = "%s#%s#%s#%s#%s#%s"
+	volumeIDOAuthMetadataTemplate    = "%s#%s#%s"
 	secretNameTemplate               = "azure-storage-account-%s-secret"
 	serverNameField                  = "server"
 	storageEndpointSuffixField       = "storageendpointsuffix"
@@ -1232,6 +1233,18 @@ func (d *Driver) getSubnetResourceID(vnetResourceGroup, vnetName, subnetName str
 	return fmt.Sprintf(subnetTemplate, subsID, vnetResourceGroup, vnetName, subnetName)
 }
 
+func parseVolumeIDMetadata(volumeID string) (string, string) {
+	segments := strings.Split(volumeID, separator)
+	if len(segments) > 7 {
+		return segments[6], segments[7]
+	}
+	return "", ""
+}
+
+func withOAuthVolumeIDMetadata(volumeID, storageEndpointSuffix string) string {
+	return fmt.Sprintf(volumeIDOAuthMetadataTemplate, volumeID, storageEndpointSuffix, oauth)
+}
+
 func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName string) string {
 	normalize := func(cache any) string {
 		if cache == nil {
@@ -1256,6 +1269,10 @@ func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName stri
 		return trueValue
 	}
 
+	if _, volumeIDUseDataPlaneAPI := parseVolumeIDMetadata(volumeID); volumeIDUseDataPlaneAPI != "" {
+		return normalize(volumeIDUseDataPlaneAPI)
+	}
+
 	cache, err := d.dataPlaneAPIVolCache.Get(ctx, volumeID, azcache.CacheReadTypeDefault)
 	if err != nil {
 		klog.Errorf("get(%s) from dataPlaneAPIVolCache failed with error: %v", volumeID, err)
@@ -1274,6 +1291,10 @@ func (d *Driver) useDataPlaneAPI(ctx context.Context, volumeID, accountName stri
 }
 
 func (d *Driver) resolvedStorageEndpointSuffix(ctx context.Context, volumeID, accountName string) string {
+	if storageEndpointSuffix, _ := parseVolumeIDMetadata(volumeID); storageEndpointSuffix != "" {
+		return storageEndpointSuffix
+	}
+
 	cache, err := d.storageEndpointSuffixCache.Get(ctx, volumeID, azcache.CacheReadTypeDefault)
 	if err != nil {
 		klog.Errorf("get(%s) from storageEndpointSuffixCache failed with error: %v", volumeID, err)

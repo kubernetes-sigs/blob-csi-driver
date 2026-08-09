@@ -1436,6 +1436,17 @@ func TestUseDataPlaneAPI(t *testing.T) {
 			},
 		},
 		{
+			name: "volumeID metadata returns oauth without cache",
+			testFunc: func(t *testing.T) {
+				d := NewFakeDriver()
+				volumeID := withOAuthVolumeIDMetadata(fakeVolumeID, "core.windows.net")
+				output := d.useDataPlaneAPI(ctx, volumeID, "")
+				if output != oauth {
+					t.Errorf("Actual Output: %s, Expected Output: %s", output, oauth)
+				}
+			},
+		},
+		{
 			name: "account cache legacy non-empty value returns true",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
@@ -1493,6 +1504,15 @@ func TestResolvedStorageEndpointSuffix(t *testing.T) {
 		output := d.resolvedStorageEndpointSuffix(ctx, fakeVolumeID, fakeAccountName)
 		if output != "core.chinacloudapi.cn" {
 			t.Errorf("Actual Output: %s, Expected Output: %s", output, "core.chinacloudapi.cn")
+		}
+	})
+
+	t.Run("volumeID metadata wins without cache", func(t *testing.T) {
+		d := NewFakeDriver()
+		volumeID := withOAuthVolumeIDMetadata(fakeVolumeID, "core.usgovcloudapi.net")
+		output := d.resolvedStorageEndpointSuffix(ctx, volumeID, fakeAccountName)
+		if output != "core.usgovcloudapi.net" {
+			t.Errorf("Actual Output: %s, Expected Output: %s", output, "core.usgovcloudapi.net")
 		}
 	})
 }

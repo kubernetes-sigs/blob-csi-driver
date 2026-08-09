@@ -549,6 +549,9 @@ func (d *Driver) CreateVolume(ctx context.Context, req *csi.CreateVolumeRequest)
 		uuid = volName
 	}
 	volumeID = fmt.Sprintf(volumeIDTemplate, resourceGroup, accountName, validContainerName, uuid, secretNamespace, subsID)
+	if strings.EqualFold(useDataPlaneAPI, oauth) {
+		volumeID = withOAuthVolumeIDMetadata(volumeID, storageEndpointSuffix)
+	}
 	klog.V(2).Infof("create container %s on storage account %s successfully", validContainerName, accountName)
 
 	if strings.EqualFold(useDataPlaneAPI, trueValue) || strings.EqualFold(useDataPlaneAPI, oauth) {
