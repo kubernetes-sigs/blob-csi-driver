@@ -109,7 +109,7 @@ volumeAttributes.subscriptionID | specify Azure subscription ID where blob stora
 volumeAttributes.resourceGroup | Azure resource group name | existing resource group name | No | if empty, driver will use the same resource group name as current k8s cluster
 volumeAttributes.storageAccount | existing storage account name | existing storage account name | Yes |
 volumeAttributes.containerName | existing container name | existing container name | Yes |
-volumeAttributes.protocol | specify blobfuse, blobfuse2 or NFSv3 mount (blobfuse2 is still in Preview) | `fuse`, `fuse2`, `nfs` | No | `fuse`
+volumeAttributes.protocol | specify blobfuse, blobfuse2 or NFSv3 mount | `fuse`, `fuse2`, `nfs` | No | `fuse`
 volumeAttributes.server | specify Azure storage account server address | existing server address, e.g. `accountname.blob.core.windows.net` | No | if empty, driver will use default `accountname.blob.core.windows.net` or other sovereign cloud account address
 volumeAttributes.storageEndpointSuffix | specify Azure storage endpoint suffix | `core.windows.net`, `core.chinacloudapi.cn`, etc | No | if empty, driver will use default storage endpoint suffix according to cloud environment
 --- | **Following parameters are only for blobfuse** | --- | --- |
@@ -162,6 +162,10 @@ kubectl create secret generic azure-secret --from-literal azurestoragespnclients
  - blobfuse cache(`--tmp-path` [mount option](https://github.com/Azure/azure-storage-fuse/tree/blobfuse-1.4.5#mount-options))
    - By default, the blobfuse cache is located in the `/mnt` directory. If the VM SKU provides a temporary disk, the `/mnt` directory is mounted on the temporary disk. However, if the VM SKU does not provide a temporary disk, the `/mnt` directory is mounted on the OS disk. 
    - with blobfuse-proxy deployment (default on AKS), user could set `--tmp-path=` mount option to specify a different cache directory
+ - blobfuse2 attribute cache and kernel list cache tuning (requires blobfuse2 v2.5.4+, shipped by default)
+   - `--attr-cache-max-size-mb=<sizeInMB>`: maximum memory in MB that the attribute cache can use (`0` = auto-tune to 1% of total RAM, clamped to `[64 MB, 1 GB]`). Increase for workloads with large directory trees or many distinct file paths.
+   - `--kernel-list-cache-timeout=<seconds>`: enable kernel caching of directory listings and set the TTL in seconds (fuse3 only). `0` = disabled. Reduces backend `readdir` traffic for read-heavy workloads.
+   - Both are passed via `mountOptions` on the PV/StorageClass, and are also permitted on ephemeral inline volumes.
  - If there are CVEs in the `livenessprobe` and `csi-node-driver-registrar` sidecar images, you can run `kubectl edit ds -n kube-system csi-blob-node` to change the `imagePullPolicy` to `Always` for both sidecar containers. This will cause the CSI driver to restart and pull the latest patched images, thereby resolving the CVEs in these sidecar components.
  - [Mount Azure blob storage with managed identity](../deploy/example/blobfuse-mi)
  - [Blobfuse Performance and caching](https://github.com/Azure/azure-storage-fuse?tab=readme-ov-file#frequently-asked-questions)
