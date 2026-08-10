@@ -1037,8 +1037,8 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName": "Standard_LRS",
-				"protocol": "fuse2",
+				"skuName":         "Standard_LRS",
+				"protocol":        "fuse2",
 				"useDataPlaneAPI": "oauth",
 			},
 		}
@@ -1070,8 +1070,8 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName": "Standard_LRS",
-				"protocol": "fuse2",
+				"skuName":         "Standard_LRS",
+				"protocol":        "fuse2",
 				"useDataPlaneAPI": "oauth",
 			},
 		}
