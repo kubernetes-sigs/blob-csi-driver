@@ -59,18 +59,6 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		testDriver = driver.InitBlobCSIDriver()
 	})
 
-	ensureOAuthControllerDataRole := func(ctx ginkgo.SpecContext) {
-		if !isCapzTest {
-			ginkgo.Skip("test case is only available for CAPZ test")
-		}
-		creds, err := credentials.CreateAzureCredentialFile()
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		azureClient, err := azure.GetClient(creds.Cloud, creds.SubscriptionID, creds.AADClientID, creds.TenantID, creds.AADClientSecret, creds.AADFederatedTokenFile)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred())
-		_, err = azureClient.EnsureNodeStorageBlobDataRole(ctx, creds.ResourceGroup)
-		gomega.Expect(err).NotTo(gomega.HaveOccurred(), "failed to assign Storage Blob Data Contributor role to controller identity")
-	}
-
 	ginkgo.It("should create a volume on demand without saving storage account key", func(ctx ginkgo.SpecContext) {
 		pods := []testsuites.PodDetails{
 			{
@@ -525,34 +513,6 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		test.Run(ctx, cs, ns)
 	})
 
-	ginkgo.It("should create a volume on demand and resize it with oauth data plane [blob.csi.azure.com]", func(ctx ginkgo.SpecContext) {
-		ensureOAuthControllerDataRole(ctx)
-		pods := []testsuites.PodDetails{
-			{
-				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
-				Volumes: []testsuites.VolumeDetails{
-					{
-						ClaimSize: "10Gi",
-						VolumeMount: testsuites.VolumeMountDetails{
-							NameGenerate:      "test-volume-",
-							MountPathGenerate: "/mnt/test-",
-						},
-					},
-				},
-			},
-		}
-		test := testsuites.DynamicallyProvisionedResizeVolumeTest{
-			CSIDriver: testDriver,
-			Pods:      pods,
-			StorageClassParameters: map[string]string{
-				"skuName":         "Standard_LRS",
-				"matchTags":       "true",
-				"useDataPlaneAPI": "oauth",
-			},
-		}
-		test.Run(ctx, cs, ns)
-	})
-
 	ginkgo.It("should create an CSI inline volume [blob.csi.azure.com]", func(ctx ginkgo.SpecContext) {
 		// create a volume
 		containerName := "csi-inline-blobfuse-volume"
@@ -631,44 +591,6 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 				"protocol":            "nfs",
 				"mountPermissions":    "0755",
 				"fsGroupChangePolicy": "Always",
-			},
-		}
-		test.Run(ctx, cs, ns)
-	})
-
-	ginkgo.It("should create a NFSv3 volume on demand with mount options and fsGroup using oauth data plane [nfs]", func(ctx ginkgo.SpecContext) {
-		ensureOAuthControllerDataRole(ctx)
-		if isAzureStackCloud {
-			ginkgo.Skip("test case is not available for Azure Stack")
-		}
-		fsGroup := int64(1000)
-		pods := []testsuites.PodDetails{
-			{
-				Cmd:     "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
-				FSGroup: &fsGroup,
-				Volumes: []testsuites.VolumeDetails{
-					{
-						ClaimSize: "10Gi",
-						MountOptions: []string{
-							"nconnect=8",
-						},
-						VolumeMount: testsuites.VolumeMountDetails{
-							NameGenerate:      "test-volume-",
-							MountPathGenerate: "/mnt/test-",
-						},
-					},
-				},
-			},
-		}
-		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
-			CSIDriver: testDriver,
-			Pods:      pods,
-			StorageClassParameters: map[string]string{
-				"skuName":             "Premium_LRS",
-				"protocol":            "nfs",
-				"mountPermissions":    "0755",
-				"fsGroupChangePolicy": "Always",
-				"useDataPlaneAPI":     "oauth",
 			},
 		}
 		test.Run(ctx, cs, ns)
@@ -1115,8 +1037,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName":  "Standard_LRS",
+				"skuName": "Standard_LRS",
 				"protocol": "fuse2",
+				"useDataPlaneAPI": "oauth",
 			},
 		}
 		test.Run(ctx, cs, ns)
@@ -1147,8 +1070,9 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 			Pod:                 pod,
 			PodWithClonedVolume: podWithClonedVolume,
 			StorageClassParameters: map[string]string{
-				"skuName":  "Standard_LRS",
+				"skuName": "Standard_LRS",
 				"protocol": "fuse2",
+				"useDataPlaneAPI": "oauth",
 			},
 		}
 		test.Run(ctx, cs, ns)
