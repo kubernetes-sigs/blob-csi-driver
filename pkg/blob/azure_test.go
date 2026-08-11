@@ -216,7 +216,7 @@ users:
 			t.Setenv("AZURE_FEDERATED_TOKEN_FILE", test.aadFederatedTokenFile)
 		}
 
-		cloud, err := GetCloudProvider(context.Background(), kubeClient, test.nodeID, "", "", test.userAgent, test.allowEmptyCloudConfig)
+		cloud, err := GetCloudProvider(context.Background(), kubeClient, test.nodeID, "azure-cloud-provider", "kube-system", test.userAgent, test.allowEmptyCloudConfig)
 		assert.ErrorIs(t, err, test.expectedErr)
 
 		if cloud == nil {
