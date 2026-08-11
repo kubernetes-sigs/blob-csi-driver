@@ -32,6 +32,7 @@ import (
 	"go.uber.org/mock/gomock"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
@@ -82,12 +83,16 @@ users:
 		desc                                  string
 		createFakeCredFile                    bool
 		createFakeKubeConfig                  bool
+		useFakeClient                         bool
 		setFederatedWorkloadIdentityEnv       bool
 		kubeconfig                            string
 		nodeID                                string
 		userAgent                             string
+		secretName                            string
+		secretNamespace                       string
 		allowEmptyCloudConfig                 bool
 		expectedErr                           error
+		expectSecretGet                       bool
 		aadFederatedTokenFile                 string
 		useFederatedWorkloadIdentityExtension bool
 		aadClientID                           string
@@ -148,6 +153,38 @@ users:
 			expectedErr:                           nil,
 		},
 		{
+			desc:                                  "[success] empty secret name disables secret lookup and falls back to credential file",
+			createFakeCredFile:                    true,
+			useFakeClient:                         true,
+			nodeID:                                "",
+			userAgent:                             "useragent",
+			secretName:                            "",
+			secretNamespace:                       "kube-system",
+			allowEmptyCloudConfig:                 true,
+			expectedErr:                           nil,
+			expectSecretGet:                       false,
+			aadFederatedTokenFile:                 "",
+			useFederatedWorkloadIdentityExtension: false,
+			aadClientID:                           "",
+			tenantID:                              "",
+		},
+		{
+			desc:                                  "[success] empty secret namespace disables secret lookup and falls back to credential file",
+			createFakeCredFile:                    true,
+			useFakeClient:                         true,
+			nodeID:                                "",
+			userAgent:                             "useragent",
+			secretName:                            "azure-cloud-provider",
+			secretNamespace:                       "",
+			allowEmptyCloudConfig:                 true,
+			expectedErr:                           nil,
+			expectSecretGet:                       false,
+			aadFederatedTokenFile:                 "",
+			useFederatedWorkloadIdentityExtension: false,
+			aadClientID:                           "",
+			tenantID:                              "",
+		},
+		{
 			desc:                                  "[success] get azure client with workload identity",
 			createFakeKubeConfig:                  true,
 			createFakeCredFile:                    true,
@@ -189,6 +226,8 @@ users:
 			if err != nil {
 				t.Error(err)
 			}
+		} else if test.useFakeClient {
+			kubeClient = fake.NewSimpleClientset()
 		} else {
 			kubeClient = nil
 		}
@@ -216,8 +255,35 @@ users:
 			t.Setenv("AZURE_FEDERATED_TOKEN_FILE", test.aadFederatedTokenFile)
 		}
 
-		cloud, err := GetCloudProvider(context.Background(), kubeClient, test.nodeID, "", "", test.userAgent, test.allowEmptyCloudConfig)
+		secretName := test.secretName
+		if secretName == "" && !test.useFakeClient {
+			secretName = "azure-cloud-provider"
+		}
+		secretNamespace := test.secretNamespace
+		if secretNamespace == "" && !test.useFakeClient {
+			secretNamespace = "kube-system"
+		}
+
+		cloud, err := GetCloudProvider(context.Background(), kubeClient, test.nodeID, secretName, secretNamespace, test.userAgent, test.allowEmptyCloudConfig)
 		assert.ErrorIs(t, err, test.expectedErr)
+
+		if test.useFakeClient {
+			fc, ok := kubeClient.(*fake.Clientset)
+			if !ok {
+				t.Fatalf("expected fake clientset, got %T", kubeClient)
+			}
+			secretGets := 0
+			for _, action := range fc.Actions() {
+				if action.GetVerb() == "get" && action.GetResource().Resource == "secrets" {
+					secretGets++
+				}
+			}
+			expectedSecretGets := 0
+			if test.expectSecretGet {
+				expectedSecretGets = 1
+			}
+			assert.Equal(t, expectedSecretGets, secretGets)
+		}
 
 		if cloud == nil {
 			t.Errorf("return value of getCloudProvider should not be nil even there is error")
