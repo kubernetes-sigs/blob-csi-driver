@@ -310,6 +310,7 @@ func TestNodePublishVolume(t *testing.T) {
 				// Mock NodeStageVolume to return success
 				d.cloud.ResourceGroup = "rg"
 				d.enableBlobMockMount = true
+				d.allowInlineVolumeKeyAccessWithIdentity = true
 			},
 			req: &csi.NodePublishVolumeRequest{
 				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
@@ -320,9 +321,14 @@ func TestNodePublishVolume(t *testing.T) {
 					"csi.storage.k8s.io/ephemeral":     "true",
 					"csi.storage.k8s.io/pod.namespace": "test-namespace",
 					"containername":                    "test-container", // Add container name to avoid error
+					storageAccountField:                "teststorageaccount",
+					storageAuthTypeField:               storageAuthTypeMSI,
 				},
 			},
 			expectedErr: nil,
+			cleanup: func(d *Driver) {
+				d.allowInlineVolumeKeyAccessWithIdentity = false
+			},
 		},
 		{
 			desc: "Valid request with ephemeral volume and workload identity (clientID) should preserve storageAccount",
@@ -961,6 +967,7 @@ func TestNodeStageVolume(t *testing.T) {
 						containerNameField:    "MyContainer",
 						mountPermissionsField: "0755",
 						protocolField:         "fuse2",
+						serverNameField:       "192.0.2.10",
 					},
 					Secrets: map[string]string{
 						accountKeyField: "fakeKey",
@@ -1006,6 +1013,155 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 				if status.Code(err) != codes.InvalidArgument {
 					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+			},
+		},
+		{
+			name: "[Error] inline volume with IP server is rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:        "true",
+						containerNameField:    "container",
+						mountPermissionsField: "0755",
+						protocolField:         "fuse2",
+						serverNameField:       "192.0.2.10",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+				if !strings.Contains(err.Error(), "IP addresses are not allowed") {
+					t.Fatalf("expected error to reject IP addresses, got: %v", err)
+				}
+			},
+		},
+		{
+			name: "[Error] inline volume with untrusted storage endpoint suffix is rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:             "true",
+						containerNameField:         "container",
+						mountPermissionsField:      "0755",
+						protocolField:              "fuse2",
+						storageEndpointSuffixField: "example.com",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+				if !strings.Contains(err.Error(), "IP addresses are not allowed") {
+					t.Fatalf("expected error to reject IP addresses, got: %v", err)
+				}
+			},
+		},
+		{
+			name: "[Error] inline volume with untrusted storage endpoint suffix is rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:             "true",
+						containerNameField:         "container",
+						mountPermissionsField:      "0755",
+						protocolField:              "fuse2",
+						storageEndpointSuffixField: "example.com",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+				if !strings.Contains(err.Error(), "configured Azure cloud") {
+					t.Fatalf("expected error to reject untrusted endpoint suffix, got: %v", err)
+				}
+			},
+		},
+		{
+			name: "inline volume accepts authoritative storage account endpoint",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:             "true",
+						containerNameField:         "container",
+						mountPermissionsField:      "0755",
+						protocolField:              "nfs",
+						serverNameField:            "acc.z22.blob.storage.azure.net",
+						storageEndpointSuffixField: ".CORE.WINDOWS.NET.",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				endpoint := "https://acc.z22.blob.storage.azure.net/"
+				accountClient := NewMockSAClient(context.Background(), gomock.NewController(t), "", "", "", nil)
+				accountClient.EXPECT().
+					GetProperties(gomock.Any(), "rg", "acc", nil).
+					Return(&armstorage.Account{
+						Properties: &armstorage.AccountProperties{
+							PrimaryEndpoints: &armstorage.Endpoints{Blob: &endpoint},
+						},
+					}, nil)
+				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(gomock.NewController(t))
+				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).
+					EXPECT().
+					GetAccountClientForSub(gomock.Any()).
+					Return(accountClient, nil)
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("expected authoritative storage account endpoint to be accepted, got: %v", err)
 				}
 			},
 		},
