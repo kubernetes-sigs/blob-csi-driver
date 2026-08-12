@@ -405,12 +405,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: containerName must be specified for ephemeral volumes")
 	}
 
+	isInlineMSI := ephemeralVol &&
+		strings.EqualFold(getValueInMap(attrib, storageAuthTypeField), storageAuthTypeMSI)
 	trustedStorageEndpointSuffix := d.getStorageEndPointSuffix()
-	if ephemeralVol {
+	if isInlineMSI {
 		if strings.TrimSpace(storageEndpointSuffix) != "" &&
 			!strings.EqualFold(strings.Trim(storageEndpointSuffix, "."), strings.Trim(trustedStorageEndpointSuffix, ".")) {
 			return nil, status.Errorf(codes.InvalidArgument,
-				"NodeStageVolume: storageEndpointSuffix must match the configured Azure cloud for ephemeral volumes")
+				"NodeStageVolume: storageEndpointSuffix must match the configured Azure cloud for inline MSI volumes")
 		}
 		storageEndpointSuffix = trustedStorageEndpointSuffix
 	}
@@ -458,7 +460,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		// server address is "accountname.blob.core.windows.net" by default
 		serverAddress = fmt.Sprintf("%s.blob.%s", accountName, storageEndpointSuffix)
 	}
-	if ephemeralVol {
+	if isInlineMSI {
 		originalServerAddress := serverAddress
 		serverAddress, err = parseInlineVolumeServer(originalServerAddress)
 		if err != nil {

@@ -1029,6 +1029,7 @@ func TestNodeStageVolume(t *testing.T) {
 						mountPermissionsField: "0755",
 						protocolField:         "fuse2",
 						serverNameField:       "192.0.2.10",
+						storageAuthTypeField:  storageAuthTypeMSI,
 					},
 					Secrets: map[string]string{
 						accountKeyField: "fakeKey",
@@ -1065,6 +1066,7 @@ func TestNodeStageVolume(t *testing.T) {
 						mountPermissionsField:      "0755",
 						protocolField:              "fuse2",
 						storageEndpointSuffixField: "example.com",
+						storageAuthTypeField:       storageAuthTypeMSI,
 					},
 					Secrets: map[string]string{
 						accountKeyField: "fakeKey",
@@ -1132,6 +1134,7 @@ func TestNodeStageVolume(t *testing.T) {
 						protocolField:              "nfs",
 						serverNameField:            "acc.z22.blob.storage.azure.net",
 						storageEndpointSuffixField: ".CORE.WINDOWS.NET.",
+						storageAuthTypeField:       storageAuthTypeMSI,
 					},
 				}
 				d := NewFakeDriver()
@@ -1162,6 +1165,42 @@ func TestNodeStageVolume(t *testing.T) {
 				_, err := d.NodeStageVolume(context.TODO(), req)
 				if err != nil {
 					t.Fatalf("expected authoritative storage account endpoint to be accepted, got: %v", err)
+				}
+			},
+		},
+		{
+			name: "inline shared-key volume preserves custom server and suffix",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:             "true",
+						containerNameField:         "container",
+						mountPermissionsField:      "0755",
+						protocolField:              "fuse2",
+						serverNameField:            "192.0.2.10",
+						storageEndpointSuffixField: "example.com",
+						storageAuthTypeField:       "key",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("expected inline shared-key custom endpoint to remain supported, got: %v", err)
 				}
 			},
 		},
