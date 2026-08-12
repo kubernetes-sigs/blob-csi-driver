@@ -469,9 +469,10 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		err = validateInlineVolumeServerHost(originalServerAddress, serverAddress, accountName, trustedStorageEndpointSuffix)
 		if err != nil {
 			accountEndpoints, endpointErr := d.getStorageAccountEndpoints(ctx, getValueInMap(attrib, subscriptionIDField), resourceGroup, accountName)
-			if endpointErr == nil {
-				err = validateInlineVolumeServerHost(originalServerAddress, serverAddress, accountName, trustedStorageEndpointSuffix, accountEndpoints...)
+			if endpointErr != nil {
+				return nil, endpointErr
 			}
+			err = validateInlineVolumeServerHost(originalServerAddress, serverAddress, accountName, trustedStorageEndpointSuffix, accountEndpoints...)
 		}
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
