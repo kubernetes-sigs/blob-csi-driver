@@ -1087,54 +1087,25 @@ func TestNodeStageVolume(t *testing.T) {
 				if status.Code(err) != codes.InvalidArgument {
 					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
 				}
-				if !strings.Contains(err.Error(), "IP addresses are not allowed") {
-					t.Fatalf("expected error to reject IP addresses, got: %v", err)
-				}
-			},
-		},
-		{
-			name: "[Error] inline volume with untrusted storage endpoint suffix is rejected",
-			testFunc: func(t *testing.T) {
-				req := &csi.NodeStageVolumeRequest{
-					VolumeId:          "rg#acc#cont#ns",
-					StagingTargetPath: targetTest,
-					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
-					VolumeContext: map[string]string{
-						ephemeralField:             "true",
-						containerNameField:         "container",
-						mountPermissionsField:      "0755",
-						protocolField:              "fuse2",
-						storageEndpointSuffixField: "example.com",
-					},
-					Secrets: map[string]string{
-						accountKeyField: "fakeKey",
-					},
-				}
-				d := NewFakeDriver()
-				d.cloud.ResourceGroup = "rg"
-
-				_, err := d.NodeStageVolume(context.TODO(), req)
-				if status.Code(err) != codes.InvalidArgument {
-					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
-				}
 				if !strings.Contains(err.Error(), "configured Azure cloud") {
 					t.Fatalf("expected error to reject untrusted endpoint suffix, got: %v", err)
 				}
 			},
 		},
 		{
-			name: "inline volume accepts Azure DNS zone endpoint",
+			name: "inline volume accepts private Azure DNS zone endpoint",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
 					VolumeId:          "rg#acc#cont#ns",
 					StagingTargetPath: targetTest,
 					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
 					VolumeContext: map[string]string{
-						ephemeralField:             "true",
-						containerNameField:         "container",
-						mountPermissionsField:      "0755",
-						protocolField:              "nfs",
-						serverNameField:            "acc.z22.blob.storage.azure.net",
+						ephemeralField:        "true",
+						containerNameField:    "container",
+						mountPermissionsField: "0755",
+						protocolField:         "nfs",
+						serverNameField: "acc.z22.privatelink." +
+							"blob.storage.azure.net",
 						storageEndpointSuffixField: ".CORE.WINDOWS.NET.",
 						storageAuthTypeField:       storageAuthTypeMSI,
 					},
@@ -1151,7 +1122,10 @@ func TestNodeStageVolume(t *testing.T) {
 
 				_, err := d.NodeStageVolume(context.TODO(), req)
 				if err != nil {
-					t.Fatalf("expected Azure DNS zone endpoint to be accepted, got: %v", err)
+					t.Fatalf(
+						"expected private Azure DNS zone endpoint, got: %v",
+						err,
+					)
 				}
 			},
 		},

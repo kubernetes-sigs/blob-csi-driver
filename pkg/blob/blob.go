@@ -1306,6 +1306,8 @@ func validateInlineVolumeServerHost(server, host, accountName, storageEndpointSu
 	}
 
 	secondaryAccount := account + "-secondary"
+	// Secondary DFS forms are accepted for structural consistency. They do not
+	// currently resolve for HNS accounts because HNS does not support RA-GRS.
 	allowedHosts := map[string]struct{}{
 		fmt.Sprintf("%s.blob.%s", account, suffix):                      {},
 		fmt.Sprintf("%s.dfs.%s", account, suffix):                       {},
@@ -1319,7 +1321,8 @@ func validateInlineVolumeServerHost(server, host, accountName, storageEndpointSu
 	if _, ok := allowedHosts[host]; ok {
 		return nil
 	}
-	if suffix == defaultStorageEndPointSuffix && isAzureDNSZoneStorageHost(host, account) {
+	if suffix == defaultStorageEndPointSuffix &&
+		isAzureDNSZoneStorageHost(host, account) {
 		return nil
 	}
 
@@ -1330,20 +1333,41 @@ func validateInlineVolumeServerHost(server, host, accountName, storageEndpointSu
 // format without requiring a storage management-plane lookup from the node.
 func isAzureDNSZoneStorageHost(host, account string) bool {
 	parts := strings.Split(host, ".")
-	if len(parts) != 6 {
+	if len(parts) != 6 && len(parts) != 7 {
 		return false
 	}
 	if parts[0] != account && parts[0] != account+"-secondary" {
 		return false
 	}
 	zone := parts[1]
-	if len(zone) != 3 || zone[0] != 'z' || zone[1] < '0' || zone[1] > '9' || zone[2] < '0' || zone[2] > '9' {
+	zoneID, hasZonePrefix := strings.CutPrefix(zone, "z")
+	if !hasZonePrefix {
 		return false
 	}
-	if parts[2] != "blob" && parts[2] != "dfs" {
+	if len(zoneID) == 1 &&
+		(zoneID[0] < '1' || zoneID[0] > '9') {
 		return false
 	}
-	return parts[3] == "storage" && parts[4] == "azure" && parts[5] == "net"
+	if len(zoneID) == 2 &&
+		(zoneID[0] < '0' || zoneID[0] > '9' ||
+			zoneID[1] < '0' || zoneID[1] > '9') {
+		return false
+	}
+	if len(zoneID) < 1 || len(zoneID) > 2 {
+		return false
+	}
+
+	serviceIndex := 2
+	if len(parts) == 7 {
+		if parts[serviceIndex] != "privatelink" {
+			return false
+		}
+		serviceIndex++
+	}
+	if parts[serviceIndex] != "blob" && parts[serviceIndex] != "dfs" {
+		return false
+	}
+	return strings.Join(parts[serviceIndex+1:], ".") == "storage.azure.net"
 }
 
 // parseInlineVolumeServer extracts a normalized hostname from an HTTPS server
