@@ -20,7 +20,7 @@ import (
 	"testing"
 )
 
-func TestValidateInlineVolumeServer(t *testing.T) {
+func TestNormalizeInlineVolumeServerValidation(t *testing.T) {
 	tests := []struct {
 		name     string
 		server   string
@@ -196,12 +196,12 @@ func TestValidateInlineVolumeServer(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			err := ValidateInlineVolumeServer(test.server, test.account, test.suffix)
+			_, err := normalizeInlineVolumeServer(test.server, test.account, test.suffix)
 			if test.expected && err != nil {
-				t.Fatalf("ValidateInlineVolumeServer() returned unexpected error: %v", err)
+				t.Fatalf("normalizeInlineVolumeServer() returned unexpected error: %v", err)
 			}
 			if !test.expected && err == nil {
-				t.Fatal("ValidateInlineVolumeServer() returned nil, expected an error")
+				t.Fatal("normalizeInlineVolumeServer() returned nil, expected an error")
 			}
 		})
 	}
@@ -221,12 +221,7 @@ func TestNormalizeInlineVolumeServer(t *testing.T) {
 	}
 }
 
-func TestNormalizeInlineVolumeServerWithAccountEndpoint(t *testing.T) {
-	accountEndpoints := []string{
-		"https://account.z22.blob.storage.azure.net/",
-		"https://account.z22.dfs.storage.azure.net/",
-		"https://account-secondary.z22.blob.storage.azure.net/",
-	}
+func TestNormalizeInlineVolumeServerWithAzureDNSZoneEndpoint(t *testing.T) {
 	tests := []string{
 		"account.z22.blob.storage.azure.net",
 		"account.z22.dfs.storage.azure.net",
@@ -238,7 +233,6 @@ func TestNormalizeInlineVolumeServerWithAccountEndpoint(t *testing.T) {
 				expected,
 				"account",
 				"core.windows.net",
-				accountEndpoints...,
 			)
 			if err != nil {
 				t.Fatalf("normalizeInlineVolumeServer() returned unexpected error: %v", err)
@@ -250,14 +244,29 @@ func TestNormalizeInlineVolumeServerWithAccountEndpoint(t *testing.T) {
 	}
 }
 
-func TestNormalizeInlineVolumeServerRejectsEndpointNotInAccountMetadata(t *testing.T) {
-	_, err := normalizeInlineVolumeServer(
+func TestNormalizeInlineVolumeServerRejectsInvalidAzureDNSZoneEndpoints(t *testing.T) {
+	tests := []string{
 		"other.z22.blob.storage.azure.net",
+		"account.z2.blob.storage.azure.net",
+		"account.z100.blob.storage.azure.net",
+		"account.z22.file.storage.azure.net",
+		"account.z22.blob.storage.azure.net.example.com",
+	}
+	for _, server := range tests {
+		t.Run(server, func(t *testing.T) {
+			_, err := normalizeInlineVolumeServer(server, "account", "core.windows.net")
+			if err == nil {
+				t.Fatal("normalizeInlineVolumeServer() returned nil, expected an error")
+			}
+		})
+	}
+
+	_, err := normalizeInlineVolumeServer(
+		"account.z22.blob.storage.azure.net",
 		"account",
-		"core.windows.net",
-		"https://account.z22.blob.storage.azure.net/",
+		"core.usgovcloudapi.net",
 	)
 	if err == nil {
-		t.Fatal("normalizeInlineVolumeServer() returned nil, expected an error")
+		t.Fatal("normalizeInlineVolumeServer() accepted a public Azure DNS-zone endpoint for a sovereign cloud")
 	}
 }

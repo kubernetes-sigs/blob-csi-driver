@@ -29,7 +29,6 @@ import (
 	volumehelper "sigs.k8s.io/blob-csi-driver/pkg/util"
 	azcache "sigs.k8s.io/cloud-provider-azure/pkg/cache"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage/v2"
 	"github.com/container-storage-interface/spec/lib/go/csi"
 
 	"k8s.io/klog/v2"
@@ -430,7 +429,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", targetPath, err)
 	}
 
-	resourceGroup, accountName, _, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, protocol, attrib, secrets)
+	_, accountName, _, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, protocol, attrib, secrets)
 	if err != nil && !mnt {
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
@@ -462,18 +461,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	}
 	if isInlineMSI {
 		originalServerAddress := serverAddress
-		serverAddress, err = parseInlineVolumeServer(originalServerAddress)
-		if err != nil {
-			return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
-		}
-		err = validateInlineVolumeServerHost(originalServerAddress, serverAddress, accountName, trustedStorageEndpointSuffix)
-		if err != nil {
-			accountEndpoints, endpointErr := d.getStorageAccountEndpoints(ctx, getValueInMap(attrib, subscriptionIDField), resourceGroup, accountName)
-			if endpointErr != nil {
-				return nil, endpointErr
-			}
-			err = validateInlineVolumeServerHost(originalServerAddress, serverAddress, accountName, trustedStorageEndpointSuffix, accountEndpoints...)
-		}
+		serverAddress, err = normalizeInlineVolumeServer(originalServerAddress, accountName, trustedStorageEndpointSuffix)
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
 		}
@@ -674,45 +662,6 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	klog.V(2).Infof("volume(%s) mount on %q succeeded", volumeID, targetPath)
 	isOperationSucceeded = true
 	return &csi.NodeStageVolumeResponse{}, nil
-}
-
-func (d *Driver) getStorageAccountEndpoints(ctx context.Context, subscriptionID, resourceGroup, accountName string) ([]string, error) {
-	if d.cloud == nil || d.cloud.ComputeClientFactory == nil {
-		return nil, fmt.Errorf("cloud account client is not configured")
-	}
-	if subscriptionID == "" {
-		subscriptionID = d.cloud.SubscriptionID
-	}
-	if resourceGroup == "" {
-		resourceGroup = d.cloud.ResourceGroup
-	}
-	accountClient, err := d.cloud.ComputeClientFactory.GetAccountClientForSub(subscriptionID)
-	if err != nil {
-		return nil, err
-	}
-	account, err := accountClient.GetProperties(ctx, resourceGroup, accountName, nil)
-	if err != nil {
-		return nil, err
-	}
-	if account == nil || account.Properties == nil {
-		return nil, fmt.Errorf("storage account %q has no endpoint metadata", accountName)
-	}
-
-	var endpoints []string
-	appendEndpoints := func(storageEndpoints *armstorage.Endpoints) {
-		if storageEndpoints == nil {
-			return
-		}
-		if storageEndpoints.Blob != nil {
-			endpoints = append(endpoints, *storageEndpoints.Blob)
-		}
-		if storageEndpoints.Dfs != nil {
-			endpoints = append(endpoints, *storageEndpoints.Dfs)
-		}
-	}
-	appendEndpoints(account.Properties.PrimaryEndpoints)
-	appendEndpoints(account.Properties.SecondaryEndpoints)
-	return endpoints, nil
 }
 
 // NodeUnstageVolume unmount the volume from the staging path

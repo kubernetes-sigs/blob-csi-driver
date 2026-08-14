@@ -957,18 +957,19 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "non-inline MSI volume skips inline validation",
+			name: "non-inline MSI volume preserves custom server and suffix",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
 					VolumeId:          "rg#acc#cont#ns",
 					StagingTargetPath: targetTest,
 					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
 					VolumeContext: map[string]string{
-						containerNameField:    "MyContainer",
-						mountPermissionsField: "0755",
-						protocolField:         "fuse2",
-						serverNameField:       "192.0.2.10",
-						storageAuthTypeField:  storageAuthTypeMSI,
+						containerNameField:         "MyContainer",
+						mountPermissionsField:      "0755",
+						protocolField:              "fuse2",
+						serverNameField:            "192.0.2.10",
+						storageEndpointSuffixField: "example.com",
+						storageAuthTypeField:       storageAuthTypeMSI,
 					},
 					Secrets: map[string]string{
 						accountKeyField: "fakeKey",
@@ -1122,7 +1123,7 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "inline volume accepts authoritative storage account endpoint",
+			name: "inline volume accepts Azure DNS zone endpoint",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
 					VolumeId:          "rg#acc#cont#ns",
@@ -1148,69 +1149,9 @@ func TestNodeStageVolume(t *testing.T) {
 					Exec:      fakeExec,
 				}
 
-				endpoint := "https://acc.z22.blob.storage.azure.net/"
-				accountClient := NewMockSAClient(context.Background(), gomock.NewController(t), "", "", "", nil)
-				accountClient.EXPECT().
-					GetProperties(gomock.Any(), "rg", "acc", nil).
-					Return(&armstorage.Account{
-						Properties: &armstorage.AccountProperties{
-							PrimaryEndpoints: &armstorage.Endpoints{Blob: &endpoint},
-						},
-					}, nil)
-				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(gomock.NewController(t))
-				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).
-					EXPECT().
-					GetAccountClientForSub(gomock.Any()).
-					Return(accountClient, nil)
-
 				_, err := d.NodeStageVolume(context.TODO(), req)
 				if err != nil {
-					t.Fatalf("expected authoritative storage account endpoint to be accepted, got: %v", err)
-				}
-			},
-		},
-		{
-			name: "[Error] inline volume propagates storage endpoint lookup failure",
-			testFunc: func(t *testing.T) {
-				req := &csi.NodeStageVolumeRequest{
-					VolumeId:          "rg#acc#cont#ns",
-					StagingTargetPath: targetTest,
-					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
-					VolumeContext: map[string]string{
-						ephemeralField:        "true",
-						containerNameField:    "container",
-						mountPermissionsField: "0755",
-						protocolField:         "nfs",
-						resourceGroupField:    "rg",
-						serverNameField:       "acc.blob.example.com",
-						storageAccountField:   "acc",
-						storageAuthTypeField:  storageAuthTypeMSI,
-					},
-				}
-				d := NewFakeDriver()
-				d.cloud.ResourceGroup = "rg"
-				d.mounter = &mount.SafeFormatAndMount{
-					Interface: &fakeMounter{},
-					Exec:      &testingexec.FakeExec{},
-				}
-
-				endpointErr := errors.New("failed to get storage account endpoints")
-				accountClient := NewMockSAClient(context.Background(), gomock.NewController(t), "", "", "", nil)
-				accountClient.EXPECT().
-					GetProperties(gomock.Any(), "rg", "acc", nil).
-					Return(nil, endpointErr)
-				d.cloud.ComputeClientFactory = mock_azclient.NewMockClientFactory(gomock.NewController(t))
-				d.cloud.ComputeClientFactory.(*mock_azclient.MockClientFactory).
-					EXPECT().
-					GetAccountClientForSub(gomock.Any()).
-					Return(accountClient, nil)
-
-				_, err := d.NodeStageVolume(context.TODO(), req)
-				if !errors.Is(err, endpointErr) {
-					t.Fatalf("expected storage endpoint lookup error, got: %v", err)
-				}
-				if status.Code(err) == codes.InvalidArgument {
-					t.Fatalf("expected lookup failure not to be reported as invalid argument")
+					t.Fatalf("expected Azure DNS zone endpoint to be accepted, got: %v", err)
 				}
 			},
 		},

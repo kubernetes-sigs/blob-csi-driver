@@ -1283,53 +1283,71 @@ func ValidateContainerName(containerName string) error {
 	return nil
 }
 
-// ValidateInlineVolumeServer ensures a namespace-controlled inline volume can
-// only direct storage traffic to the resolved account in the configured cloud.
-func ValidateInlineVolumeServer(server, accountName, storageEndpointSuffix string) error {
-	_, err := normalizeInlineVolumeServer(server, accountName, storageEndpointSuffix)
-	return err
-}
-
-func normalizeInlineVolumeServer(server, accountName, storageEndpointSuffix string, accountEndpoints ...string) (string, error) {
+// normalizeInlineVolumeServer parses the server and verifies that its hostname
+// belongs to the selected storage account.
+func normalizeInlineVolumeServer(server, accountName, storageEndpointSuffix string) (string, error) {
 	host, err := parseInlineVolumeServer(server)
 	if err != nil {
 		return "", err
 	}
-	if err := validateInlineVolumeServerHost(server, host, accountName, storageEndpointSuffix, accountEndpoints...); err != nil {
+	if err := validateInlineVolumeServerHost(server, host, accountName, storageEndpointSuffix); err != nil {
 		return "", err
 	}
 	return host, nil
 }
 
-func validateInlineVolumeServerHost(server, host, accountName, storageEndpointSuffix string, accountEndpoints ...string) error {
+// validateInlineVolumeServerHost checks the parsed hostname against endpoint
+// formats derived from the selected storage account and configured cloud.
+func validateInlineVolumeServerHost(server, host, accountName, storageEndpointSuffix string) error {
 	account := strings.ToLower(strings.TrimSpace(accountName))
 	suffix := strings.ToLower(strings.Trim(strings.TrimSpace(storageEndpointSuffix), "."))
 	if account == "" || suffix == "" {
 		return fmt.Errorf("cannot validate server %q without a storage account and endpoint suffix", server)
 	}
 
+	secondaryAccount := account + "-secondary"
 	allowedHosts := map[string]struct{}{
-		fmt.Sprintf("%s.blob.%s", account, suffix):             {},
-		fmt.Sprintf("%s.dfs.%s", account, suffix):              {},
-		fmt.Sprintf("%s.privatelink.blob.%s", account, suffix): {},
-		fmt.Sprintf("%s.privatelink.dfs.%s", account, suffix):  {},
+		fmt.Sprintf("%s.blob.%s", account, suffix):                      {},
+		fmt.Sprintf("%s.dfs.%s", account, suffix):                       {},
+		fmt.Sprintf("%s.privatelink.blob.%s", account, suffix):          {},
+		fmt.Sprintf("%s.privatelink.dfs.%s", account, suffix):           {},
+		fmt.Sprintf("%s.blob.%s", secondaryAccount, suffix):             {},
+		fmt.Sprintf("%s.dfs.%s", secondaryAccount, suffix):              {},
+		fmt.Sprintf("%s.privatelink.blob.%s", secondaryAccount, suffix): {},
+		fmt.Sprintf("%s.privatelink.dfs.%s", secondaryAccount, suffix):  {},
 	}
-	for _, endpoint := range accountEndpoints {
-		endpointURL, err := url.Parse(endpoint)
-		if err != nil {
-			continue
-		}
-		if endpointHost := strings.ToLower(strings.TrimSuffix(endpointURL.Hostname(), ".")); endpointHost != "" {
-			allowedHosts[endpointHost] = struct{}{}
-		}
+	if _, ok := allowedHosts[host]; ok {
+		return nil
 	}
-	if _, ok := allowedHosts[host]; !ok {
-		return fmt.Errorf("invalid server %q: hostname must match storage account %q in the configured Azure cloud", server, accountName)
+	if suffix == defaultStorageEndPointSuffix && isAzureDNSZoneStorageHost(host, account) {
+		return nil
 	}
 
-	return nil
+	return fmt.Errorf("invalid server %q: hostname must match storage account %q in the configured Azure cloud", server, accountName)
 }
 
+// isAzureDNSZoneStorageHost validates the public Azure DNS-zone endpoint
+// format without requiring a storage management-plane lookup from the node.
+func isAzureDNSZoneStorageHost(host, account string) bool {
+	parts := strings.Split(host, ".")
+	if len(parts) != 6 {
+		return false
+	}
+	if parts[0] != account && parts[0] != account+"-secondary" {
+		return false
+	}
+	zone := parts[1]
+	if len(zone) != 3 || zone[0] != 'z' || zone[1] < '0' || zone[1] > '9' || zone[2] < '0' || zone[2] > '9' {
+		return false
+	}
+	if parts[2] != "blob" && parts[2] != "dfs" {
+		return false
+	}
+	return parts[3] == "storage" && parts[4] == "azure" && parts[5] == "net"
+}
+
+// parseInlineVolumeServer extracts a normalized hostname from an HTTPS server
+// value and rejects URL components that are unsafe for inline volumes.
 func parseInlineVolumeServer(server string) (string, error) {
 	if server == "" {
 		return "", fmt.Errorf("server must not be empty")
