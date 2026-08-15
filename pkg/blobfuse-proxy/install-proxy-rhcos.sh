@@ -83,14 +83,21 @@ if [ "$updateBlobfuse2" = "true" ];then
     cp /usr/bin/blobfuse2 /host${BIN_PATH}/blobfuse2 --force
   fi
   # if both /usr/lib/libfuse3.so.3 and target folder /host/usr/lib64/ exist, copy libfuse3.so.3 to /host/usr/lib64/
-  if [ -f "/usr/lib/libfuse3.so.3" ] && [ -d "/host/usr/lib64/" ]; then
-    echo "copy libfuse3.so.3 to /host/usr/lib64/"
-    cp /usr/lib/libfuse3.so.3* /host/usr/lib64/
-  fi
-  # if both /usr/lib64/libfuse3.so.3 and target folder /host/usr/lib64/ exist, copy libfuse3.so.3 to /host/usr/lib64/
-  if [ -f "/usr/lib64/libfuse3.so.3" ] && [ -d "/host/usr/lib64/" ]; then
-    echo "copy libfuse3.so.3 to /host/usr/lib64/"
-    cp /usr/lib64/libfuse3.so.3* /host/usr/lib64/
+  # Copy libfuse3.so.3 to the host ONLY when the host does not already ship
+  # its own copy. Distributions like RHCOS 9.x and RHEL 9.x provide a
+  # libfuse3 built against their native glibc (2.34). Overwriting it with the
+  # container's copy (built on Debian Bookworm / glibc 2.38) causes
+  # "GLIBC_2.38 not found" errors when blobfuse2 runs on the host.
+  if [ ! -f "/host/usr/lib64/libfuse3.so.3" ] && [ -d "/host/usr/lib64/" ]; then
+    if [ -f "/usr/lib/libfuse3.so.3" ]; then
+      echo "copy libfuse3.so.3 to /host/usr/lib64/ (host copy not present)"
+      cp /usr/lib/libfuse3.so.3* /host/usr/lib64/
+    elif [ -f "/usr/lib64/libfuse3.so.3" ]; then
+      echo "copy libfuse3.so.3 to /host/usr/lib64/ (host copy not present)"
+      cp /usr/lib64/libfuse3.so.3* /host/usr/lib64/
+    fi
+  else
+    echo "skip copying libfuse3.so.3: host already has /usr/lib64/libfuse3.so.3"
   fi
   chmod 755 /host${BIN_PATH}/blobfuse2
 fi
