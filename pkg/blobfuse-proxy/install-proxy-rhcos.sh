@@ -82,22 +82,46 @@ if [ "$updateBlobfuse2" = "true" ];then
   else
     cp /usr/bin/blobfuse2 /host${BIN_PATH}/blobfuse2 --force
   fi
-  # if both /usr/lib/libfuse3.so.3 and target folder /host/usr/lib64/ exist, copy libfuse3.so.3 to /host/usr/lib64/
-  # Copy libfuse3.so.3 to the host ONLY when the host does not already ship
-  # its own copy. Distributions like RHCOS 9.x and RHEL 9.x provide a
+  # Copy libfuse3.so.3 to the host ONLY when the host does not already have
+  # a *native* copy. Distributions like RHCOS 9.x and RHEL 9.x provide a
   # libfuse3 built against their native glibc (2.34). Overwriting it with the
   # container's copy (built on Debian Bookworm / glibc 2.38) causes
   # "GLIBC_2.38 not found" errors when blobfuse2 runs on the host.
-  if [ ! -f "/host/usr/lib64/libfuse3.so.3" ] && [ -d "/host/usr/lib64/" ]; then
-    if [ -f "/usr/lib/libfuse3.so.3" ]; then
+  #
+  # Migration: if a previous driver version already overwrote the host's
+  # libfuse3, the file at /host/usr/lib64/libfuse3.so.3 will be identical to
+  # the container's copy. Detect that case and remove the stale library so
+  # the host-native copy (from the OS image / package manager) takes effect.
+  _container_fuse3=""
+  if [ -f "/usr/lib/libfuse3.so.3" ]; then
+    _container_fuse3="/usr/lib/libfuse3.so.3"
+  elif [ -f "/usr/lib64/libfuse3.so.3" ]; then
+    _container_fuse3="/usr/lib64/libfuse3.so.3"
+  fi
+
+  if [ ! -d "/host/usr/lib64/" ]; then
+    echo "skip copying libfuse3.so.3: /host/usr/lib64/ does not exist"
+  elif [ ! -f "/host/usr/lib64/libfuse3.so.3" ]; then
+    # Host has no libfuse3 at all — install ours.
+    if [ -n "$_container_fuse3" ]; then
       echo "copy libfuse3.so.3 to /host/usr/lib64/ (host copy not present)"
-      cp /usr/lib/libfuse3.so.3* /host/usr/lib64/
-    elif [ -f "/usr/lib64/libfuse3.so.3" ]; then
-      echo "copy libfuse3.so.3 to /host/usr/lib64/ (host copy not present)"
-      cp /usr/lib64/libfuse3.so.3* /host/usr/lib64/
+      cp "${_container_fuse3}"* /host/usr/lib64/
     fi
   else
-    echo "skip copying libfuse3.so.3: host already has /usr/lib64/libfuse3.so.3"
+    # Host already has libfuse3.so.3. Check whether it is a stale copy
+    # planted by a previous driver install (same sha256 as container's).
+    if [ -n "$_container_fuse3" ]; then
+      _host_sha=$(sha256sum /host/usr/lib64/libfuse3.so.3 | awk '{print $1}')
+      _ctr_sha=$(sha256sum "$_container_fuse3" | awk '{print $1}')
+      if [ "$_host_sha" = "$_ctr_sha" ]; then
+        echo "detected stale container-copied libfuse3.so.3 on host (sha256 match), removing"
+        rm -f /host/usr/lib64/libfuse3.so.3*
+      else
+        echo "skip copying libfuse3.so.3: host has a native copy (sha256 differs from container)"
+      fi
+    else
+      echo "skip copying libfuse3.so.3: host already has /usr/lib64/libfuse3.so.3"
+    fi
   fi
   chmod 755 /host${BIN_PATH}/blobfuse2
 fi
