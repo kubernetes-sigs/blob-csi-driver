@@ -1349,7 +1349,7 @@ func isAzureDNSZoneStorageHost(host, account string) bool {
 		return false
 	}
 	if len(zoneID) == 2 &&
-		(zoneID[0] < '0' || zoneID[0] > '9' ||
+		(zoneID[0] < '1' || zoneID[0] > '9' ||
 			zoneID[1] < '0' || zoneID[1] > '9') {
 		return false
 	}

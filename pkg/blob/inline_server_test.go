@@ -225,8 +225,6 @@ func TestNormalizeInlineVolumeServerWithAzureDNSZoneEndpoint(t *testing.T) {
 	tests := []string{
 		"account.z1.blob.storage.azure.net",
 		"account.z9.dfs.storage.azure.net",
-		"account.z00.blob.storage.azure.net",
-		"account.z01.dfs.storage.azure.net",
 		"account.z10.blob.storage.azure.net",
 		"account.z22.blob.storage.azure.net",
 		"account.z22.dfs.storage.azure.net",
@@ -257,6 +255,8 @@ func TestNormalizeInlineVolumeServerRejectsInvalidAzureDNSZoneEndpoints(t *testi
 	tests := []string{
 		"other.z22.blob.storage.azure.net",
 		"account.z0.blob.storage.azure.net",
+		"account.z00.blob.storage.azure.net",
+		"account.z01.dfs.storage.azure.net",
 		"account.z100.blob.storage.azure.net",
 		"account.z22.file.storage.azure.net",
 		"account.z22.privatelink.file.storage.azure.net",
