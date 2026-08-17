@@ -956,6 +956,75 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "non-inline volume preserves high block-cache parallelism",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						mountOptionsField:     "--block-cache-parallelism=129",
+						mountPermissionsField: "0755",
+						protocolField:         "fuse2",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("expected non-inline option to remain supported: %v", err)
+				}
+			},
+		},
+		{
+			name: "[Error] inline volume rejects high block-cache parallelism",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:        "true",
+						containerNameField:    "container",
+						mountOptionsField:     "--block-cache-parallelism=129",
+						mountPermissionsField: "0755",
+						protocolField:         "fuse2",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+				if !strings.Contains(err.Error(), "between 1 and 128") {
+					t.Fatalf("expected inline parallelism limit error, got: %v", err)
+				}
+			},
+		},
+		{
 			name: "[Error] conflicting case-variant volume attribute keys are rejected",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
