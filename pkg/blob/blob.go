@@ -159,6 +159,8 @@ const (
 
 	defaultStorageEndPointSuffix = "core.windows.net"
 
+	maxInlineBlockCacheParallelism = 128
+
 	FSGroupChangeNone = "None"
 	// define tag value delimiter and default is comma
 	tagValueDelimiterField = "tagvaluedelimiter"
@@ -1348,6 +1350,11 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 		if _, ok := allowedEphemeralMountOptions[flagName]; !ok {
 			return nil, fmt.Errorf("mount option %q is not allowed for ephemeral volumes", flagName)
 		}
+		if flagName == "--block-cache-parallelism" && len(parts) != 2 {
+			return nil, fmt.Errorf(
+				"mount option --block-cache-parallelism requires a value",
+			)
+		}
 		// Validate enum-typed flags when a value is present.
 		if len(parts) == 2 {
 			flagValue := parts[1]
@@ -1360,6 +1367,16 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 				return nil, fmt.Errorf("mount option %q: value must not contain whitespace", trimmed)
 			}
 			switch flagName {
+			case "--block-cache-parallelism":
+				parallelism, err := strconv.ParseUint(flagValue, 10, 32)
+				if err != nil || parallelism == 0 ||
+					parallelism > maxInlineBlockCacheParallelism {
+					return nil, fmt.Errorf(
+						"mount option --block-cache-parallelism must be "+
+							"between 1 and %d for ephemeral volumes",
+						maxInlineBlockCacheParallelism,
+					)
+				}
 			case "--log-level":
 				if _, ok := allowedLogLevels[flagValue]; !ok {
 					return nil, fmt.Errorf("mount option --log-level has invalid value %q: "+
