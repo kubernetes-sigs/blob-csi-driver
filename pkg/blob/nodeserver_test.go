@@ -176,6 +176,7 @@ func TestNodePublishVolume(t *testing.T) {
 		req         *csi.NodePublishVolumeRequest
 		expectedErr error
 		cleanup     func(*Driver)
+		postCheck   func(*testing.T, *csi.NodePublishVolumeRequest)
 	}{
 		{
 			desc:        "Volume capabilities missing",
@@ -522,6 +523,9 @@ func TestNodePublishVolume(t *testing.T) {
 
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("Desc: %s - Unexpected error: %v - Expected: %v", test.desc, err, test.expectedErr)
+		}
+		if test.postCheck != nil {
+			test.postCheck(t, test.req)
 		}
 		if test.cleanup != nil {
 			test.cleanup(d)
