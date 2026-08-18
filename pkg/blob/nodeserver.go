@@ -104,7 +104,13 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		// ephemeral volume
 		if strings.EqualFold(context[ephemeralField], trueValue) {
 			setKeyValueInMap(context, secretNamespaceField, context[podNamespaceField])
-			if !d.allowInlineVolumeKeyAccessWithIdentity {
+			// If the caller supplied a clientID or opted into mount-with-WI-token,
+			// this is a workload-identity ephemeral mount: the pod-scoped SA token
+			// is the credential, not a key from a secret. Preserve the user-provided
+			// storageAccount and do not force getAccountKeyFromSecret.
+			hasWorkloadIdentity := getValueInMap(context, clientIDField) != "" ||
+				strings.EqualFold(getValueInMap(context, mountWithWITokenField), trueValue)
+			if !d.allowInlineVolumeKeyAccessWithIdentity && !hasWorkloadIdentity {
 				// only get storage account from secret
 				setKeyValueInMap(context, getAccountKeyFromSecretField, trueValue)
 				setKeyValueInMap(context, storageAccountField, "")
