@@ -110,7 +110,7 @@ kubectl patch daemonset csi-blob-node -n kube-system -p '{"spec":{"template":{"s
 - [fsGroupPolicy](./deploy/example/fsgroup)
 - [Volume cloning](./deploy/example/cloning)
 - [Mount with workload identity](./docs/workload-identity-static-pv-mount.md)
-- [Mount with managed identity](./deploy/example/blobfuse-mi)
+- [Mount with managed identity](./deploy/example/blobfuse-mi/README.md)
 
 ## Troubleshooting
 
