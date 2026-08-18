@@ -961,9 +961,15 @@ func TestNodeStageVolume(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
 					VolumeId:          "rg#acc#cont#ns",
 					StagingTargetPath: targetTest,
-					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeCapability: &csi.VolumeCapability{
+						AccessMode: &volumeCap,
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{
+								MountFlags: []string{"--block-cache-parallelism=129"},
+							},
+						},
+					},
 					VolumeContext: map[string]string{
-						mountOptionsField:     "--block-cache-parallelism=129",
 						mountPermissionsField: "0755",
 						protocolField:         "fuse2",
 					},
