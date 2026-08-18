@@ -22,6 +22,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -1279,6 +1281,140 @@ func ValidateContainerName(containerName string) error {
 		return fmt.Errorf("invalid containerName %q: consecutive hyphens are not allowed", containerName)
 	}
 	return nil
+}
+
+// normalizeInlineVolumeServer parses the server and verifies that its hostname
+// belongs to the selected storage account.
+func normalizeInlineVolumeServer(server, accountName, storageEndpointSuffix string) (string, error) {
+	host, err := parseInlineVolumeServer(server)
+	if err != nil {
+		return "", err
+	}
+	if err := validateInlineVolumeServerHost(server, host, accountName, storageEndpointSuffix); err != nil {
+		return "", err
+	}
+	return host, nil
+}
+
+// validateInlineVolumeServerHost checks the parsed hostname against endpoint
+// formats derived from the selected storage account and configured cloud.
+func validateInlineVolumeServerHost(server, host, accountName, storageEndpointSuffix string) error {
+	account := strings.ToLower(strings.TrimSpace(accountName))
+	suffix := strings.ToLower(strings.Trim(strings.TrimSpace(storageEndpointSuffix), "."))
+	if account == "" || suffix == "" {
+		return fmt.Errorf("cannot validate server %q without a storage account and endpoint suffix", server)
+	}
+
+	secondaryAccount := account + "-secondary"
+	// Secondary DFS forms are accepted for structural consistency. They do not
+	// currently resolve for HNS accounts because HNS does not support RA-GRS.
+	allowedHosts := map[string]struct{}{
+		fmt.Sprintf("%s.blob.%s", account, suffix):                      {},
+		fmt.Sprintf("%s.dfs.%s", account, suffix):                       {},
+		fmt.Sprintf("%s.privatelink.blob.%s", account, suffix):          {},
+		fmt.Sprintf("%s.privatelink.dfs.%s", account, suffix):           {},
+		fmt.Sprintf("%s.blob.%s", secondaryAccount, suffix):             {},
+		fmt.Sprintf("%s.dfs.%s", secondaryAccount, suffix):              {},
+		fmt.Sprintf("%s.privatelink.blob.%s", secondaryAccount, suffix): {},
+		fmt.Sprintf("%s.privatelink.dfs.%s", secondaryAccount, suffix):  {},
+	}
+	if _, ok := allowedHosts[host]; ok {
+		return nil
+	}
+	if suffix == defaultStorageEndPointSuffix &&
+		isAzureDNSZoneStorageHost(host, account) {
+		return nil
+	}
+
+	return fmt.Errorf("invalid server %q: hostname must match storage account %q in the configured Azure cloud", server, accountName)
+}
+
+// isAzureDNSZoneStorageHost validates the public Azure DNS-zone endpoint
+// format without requiring a storage management-plane lookup from the node.
+func isAzureDNSZoneStorageHost(host, account string) bool {
+	parts := strings.Split(host, ".")
+	if len(parts) != 6 && len(parts) != 7 {
+		return false
+	}
+	if parts[0] != account && parts[0] != account+"-secondary" {
+		return false
+	}
+	zone := parts[1]
+	zoneID, hasZonePrefix := strings.CutPrefix(zone, "z")
+	if !hasZonePrefix {
+		return false
+	}
+	if len(zoneID) == 1 &&
+		(zoneID[0] < '1' || zoneID[0] > '9') {
+		return false
+	}
+	if len(zoneID) == 2 &&
+		(zoneID[0] < '1' || zoneID[0] > '9' ||
+			zoneID[1] < '0' || zoneID[1] > '9') {
+		return false
+	}
+	if len(zoneID) < 1 || len(zoneID) > 2 {
+		return false
+	}
+
+	serviceIndex := 2
+	if len(parts) == 7 {
+		if parts[serviceIndex] != "privatelink" {
+			return false
+		}
+		serviceIndex++
+	}
+	if parts[serviceIndex] != "blob" && parts[serviceIndex] != "dfs" {
+		return false
+	}
+	return strings.Join(parts[serviceIndex+1:], ".") == "storage.azure.net"
+}
+
+// parseInlineVolumeServer extracts a normalized hostname from an HTTPS server
+// value and rejects URL components that are unsafe for inline volumes.
+func parseInlineVolumeServer(server string) (string, error) {
+	if server == "" {
+		return "", fmt.Errorf("server must not be empty")
+	}
+	if strings.TrimSpace(server) != server {
+		return "", fmt.Errorf("server %q must not contain leading or trailing whitespace", server)
+	}
+
+	serverURL := server
+	hasScheme := strings.Contains(server, "://")
+	if !hasScheme {
+		serverURL = "https://" + server
+	}
+
+	parsed, err := url.Parse(serverURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid server %q: %w", server, err)
+	}
+	if hasScheme && !strings.EqualFold(parsed.Scheme, "https") {
+		return "", fmt.Errorf("invalid server %q: only HTTPS endpoints are allowed", server)
+	}
+	if parsed.User != nil {
+		return "", fmt.Errorf("invalid server %q: user information is not allowed", server)
+	}
+	if parsed.Port() != "" {
+		return "", fmt.Errorf("invalid server %q: explicit ports are not allowed", server)
+	}
+	if parsed.Path != "" && parsed.Path != "/" {
+		return "", fmt.Errorf("invalid server %q: paths are not allowed", server)
+	}
+	if parsed.RawQuery != "" || parsed.Fragment != "" {
+		return "", fmt.Errorf("invalid server %q: query strings and fragments are not allowed", server)
+	}
+
+	host := strings.ToLower(strings.TrimSuffix(parsed.Hostname(), "."))
+	if host == "" {
+		return "", fmt.Errorf("invalid server %q: hostname is required", server)
+	}
+	if net.ParseIP(host) != nil {
+		return "", fmt.Errorf("invalid server %q: IP addresses are not allowed", server)
+	}
+
+	return host, nil
 }
 
 // tokenizeMountOptionsString splits a mountOptions string from volumeAttributes
