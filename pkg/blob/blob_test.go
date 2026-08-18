@@ -1567,6 +1567,37 @@ func TestSanitizeMountOptions(t *testing.T) {
 			expected: []string{"--attr-cache-max-size-mb=256", "--kernel-list-cache-timeout=120"},
 		},
 		{
+			name:     "block-cache parallelism at inline maximum is allowed",
+			options:  []string{"--block-cache-parallelism=128"},
+			wantErr:  false,
+			expected: []string{"--block-cache-parallelism=128"},
+		},
+		{
+			name:    "block-cache parallelism above inline maximum is rejected",
+			options: []string{"--block-cache-parallelism=129"},
+			wantErr: true,
+		},
+		{
+			name:    "block-cache parallelism zero is rejected",
+			options: []string{"--block-cache-parallelism=0"},
+			wantErr: true,
+		},
+		{
+			name:    "block-cache parallelism negative value is rejected",
+			options: []string{"--block-cache-parallelism=-1"},
+			wantErr: true,
+		},
+		{
+			name:    "block-cache parallelism non-numeric value is rejected",
+			options: []string{"--block-cache-parallelism=many"},
+			wantErr: true,
+		},
+		{
+			name:    "block-cache parallelism without value is rejected",
+			options: []string{"--block-cache-parallelism"},
+			wantErr: true,
+		},
+		{
 			name:     "-o FUSE passthrough token is always allowed",
 			options:  []string{"-o allow_other", "--log-level=LOG_WARNING"},
 			wantErr:  false,
@@ -1904,6 +1935,17 @@ func TestSanitizeMountOptionsPipeline(t *testing.T) {
 			input:       "-o allow_other,--file-cache-timeout-in-seconds=240",
 			wantErr:     false,
 			expectedLen: 2,
+		},
+		{
+			name:        "inline block-cache parallelism maximum is allowed",
+			input:       "--block-cache-parallelism=128",
+			wantErr:     false,
+			expectedLen: 1,
+		},
+		{
+			name:    "inline block-cache parallelism above maximum is rejected",
+			input:   "--block-cache-parallelism=1000000",
+			wantErr: true,
 		},
 		{
 			name:    "disallowed flag is blocked via space-separated format",
