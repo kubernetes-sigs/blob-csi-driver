@@ -82,15 +82,36 @@ if [ "$updateBlobfuse2" = "true" ];then
   else
     cp /usr/bin/blobfuse2 /host${BIN_PATH}/blobfuse2 --force
   fi
-  # if both /usr/lib/libfuse3.so.3 and target folder /host/usr/lib64/ exist, copy libfuse3.so.3 to /host/usr/lib64/
-  if [ -f "/usr/lib/libfuse3.so.3" ] && [ -d "/host/usr/lib64/" ]; then
-    echo "copy libfuse3.so.3 to /host/usr/lib64/"
-    cp /usr/lib/libfuse3.so.3* /host/usr/lib64/
+  # Copy libfuse3.so.3 to the host ONLY when the host does not already have
+  # a copy. Distributions like RHCOS 9.x and RHEL 9.x provide a libfuse3
+  # built against their native glibc (2.34). Overwriting it with the
+  # container's copy (built on Debian Bookworm / glibc 2.38) causes
+  # "GLIBC_2.38 not found" errors when blobfuse2 runs on the host.
+  #
+  # We never replace or remove an existing /host/usr/lib64/libfuse3.so.3:
+  # even if it looks identical to the container's copy, we cannot safely
+  # prove where it came from, and `rm` cannot restore the OS's original
+  # file. Nodes that were affected by a previous driver version installer
+  # (which unconditionally overwrote libfuse3.so.3) must be repaired
+  # out-of-band by reinstalling the host's fuse3 package or by an OSTree
+  # rollback — not by this init container.
+  _container_fuse3=""
+  if [ -f "/usr/lib/libfuse3.so.3" ]; then
+    _container_fuse3="/usr/lib/libfuse3.so.3"
+  elif [ -f "/usr/lib64/libfuse3.so.3" ]; then
+    _container_fuse3="/usr/lib64/libfuse3.so.3"
   fi
-  # if both /usr/lib64/libfuse3.so.3 and target folder /host/usr/lib64/ exist, copy libfuse3.so.3 to /host/usr/lib64/
-  if [ -f "/usr/lib64/libfuse3.so.3" ] && [ -d "/host/usr/lib64/" ]; then
-    echo "copy libfuse3.so.3 to /host/usr/lib64/"
-    cp /usr/lib64/libfuse3.so.3* /host/usr/lib64/
+
+  if [ ! -d "/host/usr/lib64/" ]; then
+    echo "skip copying libfuse3.so.3: /host/usr/lib64/ does not exist"
+  elif [ ! -f "/host/usr/lib64/libfuse3.so.3" ]; then
+    # Host has no libfuse3 at all — install ours.
+    if [ -n "$_container_fuse3" ]; then
+      echo "copy libfuse3.so.3 to /host/usr/lib64/ (host copy not present)"
+      cp "${_container_fuse3}"* /host/usr/lib64/
+    fi
+  else
+    echo "skip copying libfuse3.so.3: host already has /usr/lib64/libfuse3.so.3"
   fi
   chmod 755 /host${BIN_PATH}/blobfuse2
 fi
