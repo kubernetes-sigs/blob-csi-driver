@@ -1609,6 +1609,16 @@ func TestSanitizeMountOptions(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "--preload is rejected with persistent volume guidance",
+			options: []string{"--preload"},
+			wantErr: true,
+		},
+		{
+			name:    "--preload with value is rejected with persistent volume guidance",
+			options: []string{"--preload=true"},
+			wantErr: true,
+		},
+		{
 			name:    "bare --tmp-path token is rejected (space-separated value)",
 			options: []string{"--tmp-path", "/var/data/cache"},
 			wantErr: true,
