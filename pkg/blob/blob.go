@@ -268,7 +268,6 @@ var (
 		"--no-symlinks":                    {},
 		"--pool-size":                      {},
 		"--pre-mount-validate":             {},
-		"--preload":                        {},
 		"--preserve-acl":                   {},
 		"--read-only":                      {},
 		"--required-free-space-mb":         {},
@@ -1517,6 +1516,11 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 		// Extract the flag name: the part before "=" (or the whole token if no "=").
 		parts := strings.SplitN(trimmed, "=", 2)
 		flagName := parts[0]
+		if flagName == "--preload" {
+			return nil, fmt.Errorf(
+				"mount option --preload is not supported for inline volumes; use a StorageClass-based persistent volume instead",
+			)
+		}
 		if _, ok := allowedEphemeralMountOptions[flagName]; !ok {
 			return nil, fmt.Errorf("mount option %q is not allowed for ephemeral volumes", flagName)
 		}
