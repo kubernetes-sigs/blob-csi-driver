@@ -976,6 +976,81 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "non-inline volume preserves preload",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability: &csi.VolumeCapability{
+						AccessMode: &volumeCap,
+						AccessType: &csi.VolumeCapability_Mount{
+							Mount: &csi.VolumeCapability_MountVolume{
+								MountFlags: []string{"--preload"},
+							},
+						},
+					},
+					VolumeContext: map[string]string{
+						mountPermissionsField: "0755",
+						protocolField:         "fuse2",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if err != nil {
+					t.Fatalf("expected non-inline preload to remain supported: %v", err)
+				}
+			},
+		},
+		{
+			name: "[Error] inline volume rejects preload with persistent volume guidance",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:        "true",
+						containerNameField:    "container",
+						mountOptionsField:     "--preload",
+						mountPermissionsField: "0755",
+						protocolField:         "fuse2",
+					},
+					Secrets: map[string]string{
+						accountKeyField: "fakeKey",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+				if !strings.Contains(err.Error(), "use a StorageClass-based persistent volume instead") {
+					t.Fatalf("expected persistent volume guidance, got: %v", err)
+				}
+			},
+		},
+		{
 			name: "[Error] inline volume rejects high block-cache parallelism",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
