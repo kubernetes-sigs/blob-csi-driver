@@ -130,7 +130,7 @@ func TestEnsureMountPoint(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		_, err := d.ensureMountPoint(test.target, 0777, true)
+		_, err := d.ensureMountPoint(test.target, 0777, true, false)
 		if !reflect.DeepEqual(err, test.expectedErr) {
 			t.Errorf("[%s]: Unexpected Error: %v, expected error: %v", test.desc, err, test.expectedErr)
 		}
@@ -140,7 +140,7 @@ func TestEnsureMountPoint(t *testing.T) {
 	// is skipped to avoid a data-plane ListBlobs on every NodePublishVolume
 	// republish. Expect no error and no Unmount calls.
 	unmountCountBefore := fakeMounter.unmountCount
-	_, err := d.ensureMountPoint(falseTarget, 0777, false)
+	_, err := d.ensureMountPoint(falseTarget, 0777, false, false)
 	if err != nil {
 		t.Errorf("[shouldUnmount=false] expected no error when mount table entry is present, got %v", err)
 	}

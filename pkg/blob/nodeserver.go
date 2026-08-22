@@ -121,7 +121,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 				klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) already mounted on %s, skipping NodeStageVolume (no time-bound credential to refresh)", volumeID, target)
 				return &csi.NodePublishVolumeResponse{}, nil
 			}
-			klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) mount on %s", volumeID, target)
+			klog.V(6).Infof("NodePublishVolume: ephemeral volume(%s) mount on %s", volumeID, target)
 			_, err := d.NodeStageVolume(ctx, &csi.NodeStageVolumeRequest{
 				StagingTargetPath: target,
 				VolumeContext:     context,
@@ -157,7 +157,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 
 	// Pass shouldUnmount=false: NodePublishVolume must not unmount a stale mount to
 	// prevent a race where the app container loses its volume mid-write.
-	mnt, err := d.ensureMountPoint(target, fs.FileMode(mountPermissions), false)
+	mnt, err := d.ensureMountPoint(target, fs.FileMode(mountPermissions), false, false)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", target, err)
 	}
@@ -425,7 +425,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			csiMetrics.StorageAccountType, blobStorageAccountType,
 			csiMetrics.IsHnsEnabled, strconv.FormatBool(isHnsEnabled))
 	}()
-	mnt, err := d.ensureMountPoint(targetPath, fs.FileMode(mountPermissions), true)
+	mnt, err := d.ensureMountPoint(targetPath, fs.FileMode(mountPermissions), true, ephemeralVol)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", targetPath, err)
 	}
@@ -831,7 +831,10 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 //   - (true, err) if the target is mounted but the health check failed (shouldUnmount=false)
 //   - (false, nil) if the target was freshly created or successfully unmounted
 //   - (false, err) on other failures
-func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount bool) (bool, error) {
+// ephemeralVol indicates whether this call is on the CSI ephemeral (inline)
+// volume mount path; kubelet reconciles those on every sync loop, so the
+// "already mounted" log is demoted to V(6) to avoid log flooding.
+func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount, ephemeralVol bool) (bool, error) {
 	notMnt, err := d.mounter.IsLikelyNotMountPoint(target)
 	if err != nil && !os.IsNotExist(err) {
 		if IsCorruptedDir(target) {
@@ -868,7 +871,11 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 		// CSIDriver.spec.requiresRepublish=true. A per-republish probe would
 		// be wasteful even though probeMount is cheap.
 		if !shouldUnmount {
-			klog.V(2).Infof("already mounted to target %s", target)
+			if ephemeralVol {
+				klog.V(6).Infof("already mounted to target %s", target)
+			} else {
+				klog.V(2).Infof("already mounted to target %s", target)
+			}
 			return !notMnt, nil
 		}
 
@@ -883,7 +890,11 @@ func (d *Driver) ensureMountPoint(target string, perm os.FileMode, shouldUnmount
 		// the blobfuse process died, ESTALE, EIO on a broken mount).
 		err := probeMount(target)
 		if err == nil {
-			klog.V(2).Infof("already mounted to target %s", target)
+			if ephemeralVol {
+				klog.V(6).Infof("already mounted to target %s", target)
+			} else {
+				klog.V(2).Infof("already mounted to target %s", target)
+			}
 			return !notMnt, nil
 		}
 		if shouldUnmount {
