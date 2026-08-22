@@ -32,7 +32,7 @@ RUN if [ "$ARCH" = "arm64" ]; then \
     fi
 
 # install azcopy
-RUN curl -Ls https://github.com/Azure/azure-storage-azcopy/releases/download/v10.32.6/azcopy_linux_${ARCH}_10.32.6.tar.gz \
+RUN curl -Ls https://github.com/Azure/azure-storage-azcopy/releases/download/v10.32.7/azcopy_linux_${ARCH}_10.32.7.tar.gz \
         | tar xvzf - --strip-components=1 -C /usr/local/bin/ --wildcards "*/azcopy"
 
 # download blobfuse deb
