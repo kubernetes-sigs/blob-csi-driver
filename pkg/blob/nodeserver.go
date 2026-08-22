@@ -831,6 +831,7 @@ func (d *Driver) NodeGetVolumeStats(ctx context.Context, req *csi.NodeGetVolumeS
 //   - (true, err) if the target is mounted but the health check failed (shouldUnmount=false)
 //   - (false, nil) if the target was freshly created or successfully unmounted
 //   - (false, err) on other failures
+//
 // ephemeralVol indicates whether this call is on the CSI ephemeral (inline)
 // volume mount path; kubelet reconciles those on every sync loop, so the
 // "already mounted" log is demoted to V(6) to avoid log flooding.
