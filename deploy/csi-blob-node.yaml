@@ -192,6 +192,7 @@ spec:
               name: mountpoint-dir
             - mountPath: /etc/kubernetes/
               name: azure-cred
+              readOnly: true
             - mountPath: /mnt
               name: blob-cache
             - mountPath: /opt/microsoft/aznfs/data
