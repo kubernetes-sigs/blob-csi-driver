@@ -196,6 +196,7 @@ spec:
               name: azcopy-dir
             - mountPath: /etc/kubernetes/
               name: azure-cred
+              readOnly: true
             {{- if or (eq .Values.cloud "AzureStackCloud") (eq .Values.linux.distro "fedora") (eq .Values.linux.distro "rhcos") }}
             - name: ssl
               mountPath: /etc/ssl/certs
