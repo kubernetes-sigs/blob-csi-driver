@@ -298,6 +298,7 @@ spec:
               name: mountpoint-dir
             - mountPath: /etc/kubernetes/
               name: azure-cred
+              readOnly: true
             - mountPath: /mnt
               name: blob-cache
             {{- if or (eq .Values.cloud "AzureStackCloud") (eq .Values.linux.distro "fedora") (eq .Values.linux.distro "rhcos") }}
