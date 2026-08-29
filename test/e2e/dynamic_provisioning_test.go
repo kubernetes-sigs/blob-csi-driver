@@ -1273,4 +1273,81 @@ var _ = ginkgo.Describe("[blob-csi-e2e] Dynamic Provisioning", func() {
 		}()
 		test.Run(ctx, cs, defaultNS)
 	})
+
+	ginkgo.It("should create a volume on demand with workload identity account key retrieval [blob.csi.azure.com]", ginkgo.Serial, func(ctx ginkgo.SpecContext) {
+		if !isCapzTest {
+			ginkgo.Skip("test case is only available for CAPZ test")
+		}
+
+		// Wait for background AAD OIDC cache warm-up to finish.
+		ginkgo.By("Waiting for AAD OIDC cache warm-up to complete")
+		<-wiReady
+
+		gomega.Expect(wiClientID).NotTo(gomega.BeEmpty(), "WI client ID not set after background warm-up")
+		gomega.Expect(errWISetup).NotTo(gomega.HaveOccurred(),
+			"background AAD OIDC warm-up failed; WI account key retrieval will not work")
+		clientID := wiClientID
+
+		pods := []testsuites.PodDetails{
+			{
+				Cmd: "echo 'hello world' > /mnt/test-1/data && grep 'hello world' /mnt/test-1/data",
+				Volumes: []testsuites.VolumeDetails{
+					{
+						ClaimSize: "10Gi",
+						MountOptions: []string{
+							"-o allow_other",
+							"--file-cache-timeout-in-seconds=120",
+							"--cancel-list-on-mount-seconds=0",
+						},
+						VolumeMount: testsuites.VolumeMountDetails{
+							NameGenerate:      "test-volume-",
+							MountPathGenerate: "/mnt/test-",
+						},
+					},
+				},
+			},
+		}
+		// Account-key mode: WI is used to retrieve the storage account key,
+		// then the key is used for the actual mount. No mountWithWorkloadIdentityToken.
+		// Requires Storage Account Contributor role on the managed identity.
+		scParameters := map[string]string{
+			"skuName":  "Premium_LRS",
+			"protocol": "fuse2",
+			"clientID": clientID,
+		}
+		test := testsuites.DynamicallyProvisionedCmdVolumeTest{
+			CSIDriver:              testDriver,
+			Pods:                   pods,
+			StorageClassParameters: scParameters,
+			ServiceAccountName:     wiServiceAccountName,
+		}
+		// Use default namespace because the federated identity credential is bound to
+		// system:serviceaccount:default:<sa-name>, so the SA must be in default namespace.
+		defaultNS, err := cs.CoreV1().Namespaces().Get(ctx, "default", metav1.GetOptions{})
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		if defaultNS.Labels == nil {
+			defaultNS.Labels = make(map[string]string)
+		}
+		originalEnforce, hadLabel := defaultNS.Labels["pod-security.kubernetes.io/enforce"]
+		defaultNS.Labels["pod-security.kubernetes.io/enforce"] = "privileged"
+		defaultNS, err = cs.CoreV1().Namespaces().Update(ctx, defaultNS, metav1.UpdateOptions{})
+		gomega.Expect(err).NotTo(gomega.HaveOccurred())
+		defer func() {
+			nsToRestore, restoreErr := cs.CoreV1().Namespaces().Get(ctx, "default", metav1.GetOptions{})
+			if restoreErr != nil {
+				log.Printf("WARNING: failed to get default namespace for label restore: %v", restoreErr)
+				return
+			}
+			if hadLabel {
+				nsToRestore.Labels["pod-security.kubernetes.io/enforce"] = originalEnforce
+			} else {
+				delete(nsToRestore.Labels, "pod-security.kubernetes.io/enforce")
+			}
+			_, restoreErr = cs.CoreV1().Namespaces().Update(ctx, nsToRestore, metav1.UpdateOptions{})
+			if restoreErr != nil {
+				log.Printf("WARNING: failed to restore pod-security label on default namespace: %v", restoreErr)
+			}
+		}()
+		test.Run(ctx, cs, defaultNS)
+	})
 })
