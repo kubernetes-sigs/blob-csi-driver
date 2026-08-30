@@ -293,6 +293,7 @@ const (
 	wiServiceAccountName         = "blob-wi-test-sa"
 	wiServiceAccountNamespace    = "default"
 	wiStorageBlobDataContributor = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" // Storage Blob Data Contributor role GUID
+	wiStorageAccountContributor  = "17d1049b-9a84-46fb-8f53-869881c3d3ab" // Storage Account Contributor role GUID
 )
 
 // configureWorkloadIdentity sets up workload identity resources (fast, sync):
@@ -402,6 +403,14 @@ func configureWorkloadIdentity(ctx context.Context, cs clientset.Interface, azur
 		return "", fmt.Errorf("failed to assign Storage Blob Data Contributor role: %v", err)
 	}
 	log.Printf("Assigned Storage Blob Data Contributor role to identity")
+
+	// Also assign Storage Account Contributor so account-key-mode WI tests
+	// (without mountWithWorkloadIdentityToken) can retrieve storage keys.
+	err = azureClient.AssignRoleToIdentity(ctx, creds.ResourceGroup, identityInfo.PrincipalID, wiStorageAccountContributor)
+	if err != nil {
+		return "", fmt.Errorf("failed to assign Storage Account Contributor role: %v", err)
+	}
+	log.Printf("Assigned Storage Account Contributor role to identity")
 
 	// Skip static sleep for FIC/RBAC propagation — the token exchange retry
 	// loop (waitForAADTokenExchange) naturally handles FIC propagation delay,
