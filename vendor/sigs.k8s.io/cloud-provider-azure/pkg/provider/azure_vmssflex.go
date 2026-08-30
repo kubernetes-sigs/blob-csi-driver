@@ -27,7 +27,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v7"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v9"
 	"github.com/samber/lo"
 
 	v1 "k8s.io/api/core/v1"
@@ -695,7 +695,8 @@ func (fs *FlexScaleSet) ensureVMSSFlexInPool(ctx context.Context, _ *v1.Service,
 			})
 		primaryIPConfig.Properties.LoadBalancerBackendAddressPools = loadBalancerBackendAddressPools
 		newVMSS := armcompute.VirtualMachineScaleSet{
-			Location: vmssFlex.Location,
+			Location:         vmssFlex.Location,
+			ExtendedLocation: vmssFlex.ExtendedLocation,
 			Properties: &armcompute.VirtualMachineScaleSetProperties{
 				VirtualMachineProfile: &armcompute.VirtualMachineScaleSetVMProfile{
 					NetworkProfile: &armcompute.VirtualMachineScaleSetNetworkProfile{
@@ -842,7 +843,8 @@ func (fs *FlexScaleSet) EnsureBackendPoolDeletedFromVMSets(ctx context.Context, 
 		vmssUpdaters = append(vmssUpdaters, func() error {
 			// Compose a new vmss with added backendPoolID.
 			newVMSS := armcompute.VirtualMachineScaleSet{
-				Location: vmss.Location,
+				Location:         vmss.Location,
+				ExtendedLocation: vmss.ExtendedLocation,
 				Properties: &armcompute.VirtualMachineScaleSetProperties{
 					VirtualMachineProfile: &armcompute.VirtualMachineScaleSetVMProfile{
 						NetworkProfile: &armcompute.VirtualMachineScaleSetNetworkProfile{

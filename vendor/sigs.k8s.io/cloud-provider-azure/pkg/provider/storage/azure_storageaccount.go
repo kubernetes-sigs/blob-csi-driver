@@ -25,9 +25,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/cloud"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v9"
 	privatedns "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/privatedns/armprivatedns"
 	armstorage "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage/v2"
 	"github.com/google/uuid"
@@ -37,6 +40,7 @@ import (
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/cache"
+	azclientutils "sigs.k8s.io/cloud-provider-azure/pkg/azclient/utils"
 	"sigs.k8s.io/cloud-provider-azure/pkg/consts"
 	"sigs.k8s.io/cloud-provider-azure/pkg/log"
 	azureconfig "sigs.k8s.io/cloud-provider-azure/pkg/provider/config"
@@ -65,6 +69,12 @@ type AccountOptions struct {
 	SubscriptionID                            string
 	Name, Type, Kind, ResourceGroup, Location string
 	EnableHTTPSTrafficOnly                    bool
+	// SkipHTTPSTrafficOnlyMatch skips EnableHTTPSTrafficOnly account matching
+	// during account reuse lookup. Useful for NFS file share callers where
+	// EnableHTTPSTrafficOnly only governs the REST plane and has no effect
+	// on the NFS mount, so existing accounts should be reused regardless of
+	// their EnableHTTPSTrafficOnly value. Has no effect on account creation.
+	SkipHTTPSTrafficOnlyMatch bool
 	// indicate whether create new account when Name is empty or when account does not exists
 	CreateAccount                           bool
 	CreatePrivateEndpoint                   *bool
@@ -80,6 +90,7 @@ type AccountOptions struct {
 	AllowCrossTenantReplication             *bool
 	IsMultichannelEnabled                   *bool
 	IsSmbOAuthEnabled                       *bool
+	IsNFSEncryptionInTransitEnabled         *bool
 	KeyName                                 *string
 	KeyVersion                              *string
 	KeyVaultURI                             *string
@@ -120,6 +131,14 @@ type AccountRepo struct {
 	fileServiceRepo      fileservice.Repository
 	storageAccountCache  cache.Resource[armstorage.Account]
 	lockMap              *lockmap.LockMap
+
+	// saTokenCredOpts and saTokenARMOpts are pre-resolved at init time
+	// so that GetStorageAccesskeyFromServiceAccountToken does not call
+	// GetAzCoreClientOption (and the metadata-service network fetch it
+	// triggers on Azure Stack) on every volume mount.
+	saTokenCredOpts              azcore.ClientOptions
+	saTokenARMOpts               arm.ClientOptions
+	saTokenDisableInstanceDiscov bool // true for Azure Stack (private/disconnected cloud)
 }
 
 func NewRepository(config azureconfig.Config, env *azclient.Environment, authProvider *azclient.AuthProvider, computeClientFactory azclient.ClientFactory, networkClientFactory azclient.ClientFactory) (*AccountRepo, error) {
@@ -136,6 +155,13 @@ func NewRepository(config azureconfig.Config, env *azclient.Environment, authPro
 	if err != nil {
 		return nil, err
 	}
+	// Pre-resolve azcore/arm client options at init time so the SA-token
+	// path does not call GetAzCoreClientOption (which may hit the metadata
+	// endpoint on Azure Stack) on every volume mount.
+	credOpts, armOpts, isAzureStack, err := buildSATokenClientOptions(&config.ARMClientConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build SA-token client options: %w", err)
+	}
 	return &AccountRepo{
 		Config:               config,
 		Environment:          env,
@@ -146,6 +172,10 @@ func NewRepository(config azureconfig.Config, env *azclient.Environment, authPro
 		subnetRepo:           subnetRepo,
 		storageAccountCache:  storageAccountCache,
 		lockMap:              lockmap.NewLockMap(),
+
+		saTokenCredOpts:              credOpts,
+		saTokenARMOpts:               armOpts,
+		saTokenDisableInstanceDiscov: isAzureStack,
 	}, nil
 }
 
@@ -159,7 +189,7 @@ func (az *AccountRepo) getStorageAccounts(ctx context.Context, storageAccountCli
 	accounts := []accountWithLocation{}
 	for _, acct := range result {
 		if acct.Name != nil && acct.Location != nil && acct.SKU != nil {
-			if !isStorageTypeEqual(acct, accountOptions) || !isAccountKindEqual(acct, accountOptions) || !isLocationEqual(acct, accountOptions) || !isLargeFileSharesPropertyEqual(acct, accountOptions) || !isTagsEqual(acct, accountOptions) || !isTaggedWithSkip(acct) || !isHnsPropertyEqual(acct, accountOptions) || !isEnableNfsV3PropertyEqual(acct, accountOptions) || !isEnableHTTPSTrafficOnlyEqual(acct, accountOptions) || !isAllowBlobPublicAccessEqual(acct, accountOptions) || !isRequireInfrastructureEncryptionEqual(acct, accountOptions) || !isAllowSharedKeyAccessEqual(acct, accountOptions) || !isAllowCrossTenantReplicationEqual(acct, accountOptions) || !isAccessTierEqual(acct, accountOptions) || !AreVNetRulesEqual(acct, accountOptions) || !isPrivateEndpointAsExpected(acct, accountOptions) {
+			if !isStorageTypeEqual(acct, accountOptions) || !isAccountKindEqual(acct, accountOptions) || !isLocationEqual(acct, accountOptions) || !isLargeFileSharesPropertyEqual(acct, accountOptions) || !isTagsEqual(acct, accountOptions) || !isTaggedWithSkip(acct) || !isHnsPropertyEqual(acct, accountOptions) || !isEnableNfsV3PropertyEqual(acct, accountOptions) || !isEnableHTTPSTrafficOnlyEqual(acct, accountOptions) || !isAllowBlobPublicAccessEqual(acct, accountOptions) || !isRequireInfrastructureEncryptionEqual(acct, accountOptions) || !isAllowSharedKeyAccessEqual(acct, accountOptions) || !isAllowCrossTenantReplicationEqual(acct, accountOptions) || !isAccessTierEqual(acct, accountOptions) || !AreVNetRulesEqual(acct, accountOptions) || !isPrivateEndpointAsExpected(acct, accountOptions) || !isSmbOAuthEnabledEqual(acct, accountOptions) {
 				continue
 			}
 
@@ -172,6 +202,13 @@ func (az *AccountRepo) getStorageAccounts(ctx context.Context, storageAccountCli
 			}
 
 			if equal, err = az.isDisableFileServiceDeleteRetentionPolicyEqual(ctx, acct, accountOptions); err != nil {
+				return nil, err
+			}
+			if !equal {
+				continue
+			}
+
+			if equal, err = az.isNFSEncryptionInTransitEnabledEqual(ctx, acct, accountOptions); err != nil {
 				return nil, err
 			}
 			if !equal {
@@ -253,15 +290,38 @@ func (az *AccountRepo) getStorageAccountWithCache(ctx context.Context, subsID, r
 	return *result, nil
 }
 
+// buildSATokenClientOptions derives the azcore + arm client options for the
+// service-account-token workload-identity path. It is called once at
+// repository init time so the per-call GetStorageAccesskeyFromServiceAccountToken
+// path does not trigger network I/O (metadata endpoint on Azure Stack).
+func buildSATokenClientOptions(armConfig *azclient.ARMClientConfig) (azcore.ClientOptions, arm.ClientOptions, bool, error) {
+	clientOpts, _, err := azclient.GetAzCoreClientOption(armConfig)
+	if err != nil {
+		return azcore.ClientOptions{}, arm.ClientOptions{}, false, fmt.Errorf("failed to get azcore client options, error: %w", err)
+	}
+	armOpts := arm.ClientOptions{ClientOptions: *clientOpts}
+	isAzureStack := armConfig.Cloud != "" && strings.EqualFold(armConfig.Cloud, azclientutils.AzureStackCloudName) && !armConfig.DisableAzureStackCloud
+	if isAzureStack {
+		armOpts.APIVersion = accountclient.AzureStackCloudAPIVersion
+	} else if !strings.EqualFold(clientOpts.Cloud.ActiveDirectoryAuthorityHost, cloud.AzurePublic.ActiveDirectoryAuthorityHost) {
+		armOpts.APIVersion = accountclient.MooncakeApiVersion
+	}
+	return azcore.ClientOptions{Cloud: clientOpts.Cloud}, armOpts, isAzureStack, nil
+}
+
 func (az *AccountRepo) GetStorageAccesskeyFromServiceAccountToken(ctx context.Context, subsID, accountName, rgName, clientID, tenantID, serviceAccountToken string) (string, error) {
 	cred, err := azidentity.NewClientAssertionCredential(tenantID, clientID, func(context.Context) (string, error) {
 		return parseServiceAccountToken(serviceAccountToken)
-	}, &azidentity.ClientAssertionCredentialOptions{})
+	}, &azidentity.ClientAssertionCredentialOptions{
+		ClientOptions:            az.saTokenCredOpts,
+		DisableInstanceDiscovery: az.saTokenDisableInstanceDiscov,
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to create client assertion credential, error: %w", err)
 	}
 
-	client, err := accountclient.New(subsID, cred, nil)
+	armOpts := az.saTokenARMOpts // shallow copy so callers don't race
+	client, err := accountclient.New(subsID, cred, &armOpts)
 	if err != nil {
 		return "", fmt.Errorf("failed to create storage account client, error: %w", err)
 	}
@@ -671,7 +731,7 @@ func (az *AccountRepo) EnsureStorageAccount(ctx context.Context, accountOptions 
 			}
 		}
 
-		if accountOptions.DisableFileServiceDeleteRetentionPolicy != nil || accountOptions.IsMultichannelEnabled != nil {
+		if accountOptions.DisableFileServiceDeleteRetentionPolicy != nil || accountOptions.IsMultichannelEnabled != nil || ptr.Deref(accountOptions.IsNFSEncryptionInTransitEnabled, false) {
 			prop, err := az.fileServiceRepo.Get(ctx, accountOptions.SubscriptionID, accountOptions.ResourceGroup, accountName)
 			if err != nil {
 				return "", "", err
@@ -693,7 +753,21 @@ func (az *AccountRepo) EnsureStorageAccount(ctx context.Context, accountOptions 
 			if accountOptions.IsMultichannelEnabled != nil {
 				logger.V(2).Info("enable SMB Multichannel setting on account", "account", accountName, "subscription", subsID, "resourceGroup", resourceGroup)
 				enabled := *accountOptions.IsMultichannelEnabled
-				prop.FileServiceProperties.ProtocolSettings = &armstorage.ProtocolSettings{Smb: &armstorage.SmbSetting{Multichannel: &armstorage.Multichannel{Enabled: &enabled}}}
+				if prop.FileServiceProperties.ProtocolSettings == nil {
+					prop.FileServiceProperties.ProtocolSettings = &armstorage.ProtocolSettings{}
+				}
+				prop.FileServiceProperties.ProtocolSettings.Smb = &armstorage.SmbSetting{Multichannel: &armstorage.Multichannel{Enabled: &enabled}}
+			}
+			if ptr.Deref(accountOptions.IsNFSEncryptionInTransitEnabled, false) {
+				logger.V(2).Info("set NFS EncryptionInTransit setting on account",
+					"required", true,
+					"account", accountName,
+					"subscription", subsID,
+					"resourceGroup", resourceGroup)
+				if prop.FileServiceProperties.ProtocolSettings == nil {
+					prop.FileServiceProperties.ProtocolSettings = &armstorage.ProtocolSettings{}
+				}
+				prop.FileServiceProperties.ProtocolSettings.Nfs = &armstorage.NfsSetting{EncryptionInTransit: &armstorage.EncryptionInTransit{Required: ptr.To(true)}}
 			}
 
 			if err := az.fileServiceRepo.Set(ctx, subsID, resourceGroup, accountName, prop); err != nil {
@@ -1035,6 +1109,15 @@ func isEnableNfsV3PropertyEqual(account *armstorage.Account, accountOptions *Acc
 }
 
 func isEnableHTTPSTrafficOnlyEqual(account *armstorage.Account, accountOptions *AccountOptions) bool {
+	// Callers can opt out of EnableHTTPSTrafficOnly matching for scenarios
+	// where the setting is irrelevant to the mount protocol (e.g. NFS file
+	// shares, where EnableHTTPSTrafficOnly only affects REST traffic). This
+	// preserves account reuse across driver-side cleanups such as
+	// kubernetes-sigs/azurefile-csi-driver#3335 that stop explicitly setting
+	// EnableHTTPSTrafficOnly=false for NFS accounts.
+	if accountOptions.SkipHTTPSTrafficOnlyMatch {
+		return true
+	}
 	return accountOptions.EnableHTTPSTrafficOnly == ptr.Deref(account.Properties.EnableHTTPSTrafficOnly, true)
 }
 
@@ -1083,6 +1166,18 @@ func isAccessTierEqual(account *armstorage.Account, accountOptions *AccountOptio
 	return account != nil && account.Properties != nil && account.Properties.AccessTier != nil && accountOptions.AccessTier == string(*account.Properties.AccessTier)
 }
 
+func isSmbOAuthEnabledEqual(account *armstorage.Account, accountOptions *AccountOptions) bool {
+	if accountOptions.IsSmbOAuthEnabled == nil {
+		return true
+	}
+	if account == nil || account.Properties == nil || account.Properties.AzureFilesIdentityBasedAuthentication == nil ||
+		account.Properties.AzureFilesIdentityBasedAuthentication.SmbOAuthSettings == nil ||
+		account.Properties.AzureFilesIdentityBasedAuthentication.SmbOAuthSettings.IsSmbOAuthEnabled == nil {
+		return !*accountOptions.IsSmbOAuthEnabled
+	}
+	return *account.Properties.AzureFilesIdentityBasedAuthentication.SmbOAuthSettings.IsSmbOAuthEnabled == *accountOptions.IsSmbOAuthEnabled
+}
+
 func (az *AccountRepo) isMultichannelEnabledEqual(ctx context.Context, account *armstorage.Account, accountOptions *AccountOptions) (bool, error) {
 	if accountOptions.IsMultichannelEnabled == nil {
 		return true, nil
@@ -1106,6 +1201,42 @@ func (az *AccountRepo) isMultichannelEnabledEqual(ctx context.Context, account *
 	}
 
 	return *accountOptions.IsMultichannelEnabled == ptr.Deref(prop.FileServiceProperties.ProtocolSettings.Smb.Multichannel.Enabled, false), nil
+}
+
+func (az *AccountRepo) isNFSEncryptionInTransitEnabledEqual(ctx context.Context, account *armstorage.Account, accountOptions *AccountOptions) (bool, error) {
+	if accountOptions.IsNFSEncryptionInTransitEnabled == nil {
+		return true, nil
+	}
+
+	// An EiT request can reuse any existing account. Enforcement handled by
+	// ProtocolSettings.Nfs.EncryptionInTransit.Required (stamped at account
+	// creation) and client-side TLS. Short circuit prevents EiT requests from
+	// always creating a new account per PVC (Required property is new, no
+	// pre-existing account has it).
+	if *accountOptions.IsNFSEncryptionInTransitEnabled {
+		return true, nil
+	}
+
+	if account.Name == nil {
+		klog.Warningf("account.Name under resource group(%s) is nil", accountOptions.ResourceGroup)
+		return false, nil
+	}
+
+	prop, err := az.fileServiceRepo.Get(ctx, accountOptions.SubscriptionID, accountOptions.ResourceGroup, ptr.Deref(account.Name, ""))
+	if err != nil {
+		return false, err
+	}
+
+	if prop.FileServiceProperties == nil ||
+		prop.FileServiceProperties.ProtocolSettings == nil ||
+		prop.FileServiceProperties.ProtocolSettings.Nfs == nil ||
+		prop.FileServiceProperties.ProtocolSettings.Nfs.EncryptionInTransit == nil {
+		// Account has no NFS EiT requirement, non EiT request may reuse it.
+		return true, nil
+	}
+
+	// Non-EiT request must not reuse an account requiring EiT.
+	return !ptr.Deref(prop.FileServiceProperties.ProtocolSettings.Nfs.EncryptionInTransit.Required, false), nil
 }
 
 func (az *AccountRepo) isDisableFileServiceDeleteRetentionPolicyEqual(ctx context.Context, account *armstorage.Account, accountOptions *AccountOptions) (bool, error) {
