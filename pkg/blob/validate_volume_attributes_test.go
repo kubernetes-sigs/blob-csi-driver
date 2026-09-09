@@ -72,6 +72,15 @@ func TestValidateVolumeAttributeKeys(t *testing.T) {
 			wantErr: false,
 			wantLen: 3,
 		},
+		{
+			name: "non-ASCII keys retain existing behavior",
+			input: map[string]string{
+				"storageAccount": "myaccount",
+				"ſtorageAccount": "decoy",
+			},
+			wantErr: false,
+			wantLen: 2,
+		},
 	}
 
 	for _, tc := range tests {
@@ -95,6 +104,50 @@ func TestValidateVolumeAttributeKeys(t *testing.T) {
 			}
 			if len(result) != tc.wantLen {
 				t.Errorf("expected %d keys, got %d", tc.wantLen, len(result))
+			}
+		})
+	}
+}
+
+func TestValidateASCIIVolumeAttributeKeys(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   map[string]string
+		wantErr bool
+	}{
+		{
+			name:  "nil map",
+			input: nil,
+		},
+		{
+			name:  "ASCII keys are accepted",
+			input: map[string]string{"clientID": "abc", "containerName": "mycontainer"},
+		},
+		{
+			name: "Unicode key should error",
+			input: map[string]string{
+				"ſtorageAccount": "myaccount",
+			},
+			wantErr: true,
+		},
+		{
+			name: "Unicode case-fold collision should error",
+			input: map[string]string{
+				"storageAccount": "myaccount",
+				"ſtorageAccount": "decoy",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := ValidateASCIIVolumeAttributeKeys(tc.input)
+			if tc.wantErr && err == nil {
+				t.Errorf("expected error but got nil")
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("unexpected error: %v", err)
 			}
 		})
 	}
