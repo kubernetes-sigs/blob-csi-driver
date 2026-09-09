@@ -31,6 +31,7 @@ import (
 	"sync"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
@@ -1636,6 +1637,25 @@ func ValidateVolumeAttributeKeys(attrib map[string]string) (map[string]string, e
 		seen[lower] = v
 	}
 	return attrib, nil
+}
+
+// ValidateASCIIVolumeAttributeKeys rejects any non-ASCII volume attribute key.
+// Only inline (ephemeral) volume attributes are attacker-controlled, so callers
+// scope this Unicode case-fold-collision guard to that path.
+func ValidateASCIIVolumeAttributeKeys(attrib map[string]string) error {
+	for k := range attrib {
+		for _, c := range []byte(k) {
+			if c >= utf8.RuneSelf {
+				return fmt.Errorf("invalid volume attribute key %q: only ASCII characters are allowed", k)
+			}
+		}
+	}
+	return nil
+}
+
+// isEphemeralVolume checks the reserved key that kubelet adds to inline volumes.
+func isEphemeralVolume(attrib map[string]string) bool {
+	return strings.EqualFold(attrib[ephemeralField], trueValue)
 }
 
 // setKeyValueInMap set key/value pair in map
