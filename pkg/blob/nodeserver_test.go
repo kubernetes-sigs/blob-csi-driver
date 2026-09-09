@@ -785,6 +785,51 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "[Error] ephemeral volume rejects non-ASCII attribute keys",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:      trueValue,
+						storageAccountField: "victim-account",
+						"ſtorageAccount":    "decoy",
+					},
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument,
+					`NodeStageVolume: invalid volume attribute key "ſtorageAccount": only ASCII characters are allowed`)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "persistent volume keeps existing behavior for non-ASCII attribute keys",
+			testFunc: func(t *testing.T) {
+				// No ephemeralField, so the ASCII guard must not run. The request is
+				// made to fail later on mountPermissions instead, which proves the
+				// non-ASCII key was accepted rather than rejected up front.
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						"ſtorageAccount":      "decoy",
+						mountPermissionsField: "07ab",
+					},
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s", "07ab"))
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
 			name: "[Error] invalid mountPermissions",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
