@@ -78,6 +78,16 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 
 	mountPermissions := d.mountPermissions
 	context := req.GetVolumeContext()
+	ephemeral := isEphemeralVolume(context)
+
+	// Inline volume attributes are attacker-controlled; reject non-ASCII keys
+	// before any lookup or mutation so Unicode/case tricks can't bypass the
+	// ephemeral-volume security guard below.
+	if ephemeral {
+		if err := ValidateASCIIVolumeAttributeKeys(context); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "NodePublishVolume: %v", err)
+		}
+	}
 
 	// Validate volume attribute keys: reject maps with case-colliding keys
 	// that carry different values.
@@ -105,7 +115,7 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		}
 
 		// ephemeral volume
-		if strings.EqualFold(context[ephemeralField], trueValue) {
+		if ephemeral {
 			setKeyValueInMap(context, secretNamespaceField, context[podNamespaceField])
 			if !d.allowInlineVolumeKeyAccessWithIdentity && !useWorkloadIdentity(context) {
 				// only get storage account from secret
@@ -310,6 +320,15 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	mountFlags := req.GetVolumeCapability().GetMount().GetMountFlags()
 	volumeMountGroup := req.GetVolumeCapability().GetMount().GetVolumeMountGroup()
 	attrib := req.GetVolumeContext()
+
+	// Inline volume attributes are attacker-controlled; reject non-ASCII keys
+	// before any lookup or mutation so Unicode/case tricks can't bypass the
+	// ephemeral-volume security guard in NodePublishVolume.
+	if isEphemeralVolume(attrib) {
+		if err := ValidateASCIIVolumeAttributeKeys(attrib); err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+		}
+	}
 
 	// Validate volume attribute keys: reject maps with case-colliding keys
 	// that carry different values.
