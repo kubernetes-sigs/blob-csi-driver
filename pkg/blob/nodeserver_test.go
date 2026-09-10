@@ -450,6 +450,25 @@ func TestNodePublishVolume(t *testing.T) {
 			},
 		},
 		{
+			desc: "Ephemeral volume rejects Unicode attribute keys before applying the inline guard",
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					ephemeralField:               trueValue,
+					podNamespaceField:            "test-namespace",
+					containerNameField:           "test-container",
+					storageAccountField:          "victim-account",
+					"ſtorageAccount":             "decoy",
+					getAccountKeyFromSecretField: falseValue,
+				},
+			},
+			expectedErr: status.Error(codes.InvalidArgument,
+				`NodePublishVolume: invalid volume attribute key "ſtorageAccount": only ASCII characters are allowed`),
+		},
+		{
 			desc: "Valid request with ephemeral volume and workload identity (clientID) should preserve storageAccount",
 			setup: func(d *Driver) {
 				d.cloud.ResourceGroup = "rg"
@@ -909,6 +928,51 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
+			name: "[Error] ephemeral volume rejects non-ASCII attribute keys",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:      trueValue,
+						storageAccountField: "victim-account",
+						"ſtorageAccount":    "decoy",
+					},
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument,
+					`NodeStageVolume: invalid volume attribute key "ſtorageAccount": only ASCII characters are allowed`)
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "persistent volume keeps existing behavior for non-ASCII attribute keys",
+			testFunc: func(t *testing.T) {
+				// No ephemeralField, so the ASCII guard must not run. The request is
+				// made to fail later on mountPermissions instead, which proves the
+				// non-ASCII key was accepted rather than rejected up front.
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "unit-test",
+					StagingTargetPath: "unit-test",
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						"ſtorageAccount":      "decoy",
+						mountPermissionsField: "07ab",
+					},
+				}
+				d := NewFakeDriver()
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, fmt.Sprintf("invalid mountPermissions %s", "07ab"))
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
 			name: "[Error] invalid mountPermissions",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
@@ -1269,7 +1333,35 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "[Error] conflicting case-variant volume attribute keys are rejected",
+			name: "[Error] conflicting case-variant volume attribute keys are rejected for inline volumes",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						ephemeralField:        "true",
+						"clientid":            "value-a",
+						"ClientID":            "value-b",
+						containerNameField:    "testcontainer",
+						mountPermissionsField: "0755",
+						protocolField:         "fuse2",
+					},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if err == nil {
+					t.Fatal("expected InvalidArgument error for conflicting case-variant keys, got nil")
+				}
+				if status.Code(err) != codes.InvalidArgument {
+					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+				}
+			},
+		},
+		{
+			name: "[Error] conflicting case-variant volume attribute keys are rejected for StorageClass-backed volumes",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
 					VolumeId:          "rg#acc#cont#ns",
