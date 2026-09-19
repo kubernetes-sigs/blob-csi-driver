@@ -57,64 +57,67 @@ import (
 
 const (
 	// DefaultDriverName holds the name of the csi-driver
-	DefaultDriverName                = "blob.csi.azure.com"
-	blobCSIDriverName                = "blob_csi_driver"
-	separator                        = "#"
-	volumeIDTemplate                 = "%s#%s#%s#%s#%s#%s"
-	secretNameTemplate               = "azure-storage-account-%s-secret"
-	serverNameField                  = "server"
-	storageEndpointSuffixField       = "storageendpointsuffix"
-	tagsField                        = "tags"
-	matchTagsField                   = "matchtags"
-	protocolField                    = "protocol"
-	accountNameField                 = "accountname"
-	accountKeyField                  = "accountkey"
-	storageAccountField              = "storageaccount"
-	storageAccountTypeField          = "storageaccounttype"
-	skuNameField                     = "skuname"
-	subscriptionIDField              = "subscriptionid"
-	resourceGroupField               = "resourcegroup"
-	locationField                    = "location"
-	secretNameField                  = "secretname"
-	secretNamespaceField             = "secretnamespace"
-	containerNameField               = "containername"
-	containerNamePrefixField         = "containernameprefix"
-	storeAccountKeyField             = "storeaccountkey"
-	getLatestAccountKeyField         = "getlatestaccountkey"
-	isHnsEnabledField                = "ishnsenabled"
-	softDeleteBlobsField             = "softdeleteblobs"
-	softDeleteContainersField        = "softdeletecontainers"
-	enableBlobVersioningField        = "enableblobversioning"
-	getAccountKeyFromSecretField     = "getaccountkeyfromsecret"
-	storageSPNClientIDField          = "azurestoragespnclientid"
-	storageSPNTenantIDField          = "azurestoragespntenantid"
-	storageAuthTypeField             = "azurestorageauthtype"
-	blobStorageAccountTypeField      = "blobstorageaccounttype"
-	storageAuthTypeMSI               = "msi"
-	storageIdentityClientIDField     = "azurestorageidentityclientid"
-	storageIdentityObjectIDField     = "azurestorageidentityobjectid"
-	storageIdentityResourceIDField   = "azurestorageidentityresourceid"
-	msiEndpointField                 = "msiendpoint"
-	storageAADEndpointField          = "azurestorageaadendpoint"
-	keyVaultURLField                 = "keyvaulturl"
-	keyVaultSecretNameField          = "keyvaultsecretname"
-	keyVaultSecretVersionField       = "keyvaultsecretversion"
-	storageAccountNameField          = "storageaccountname"
-	allowBlobPublicAccessField       = "allowblobpublicaccess"
-	allowSharedKeyAccessField        = "allowsharedkeyaccess"
-	publicNetworkAccessField         = "publicnetworkaccess"
-	requireInfraEncryptionField      = "requireinfraencryption"
-	ephemeralField                   = "csi.storage.k8s.io/ephemeral"
-	podNamespaceField                = "csi.storage.k8s.io/pod.namespace"
-	serviceAccountTokenField         = "csi.storage.k8s.io/serviceAccount.tokens"
-	clientIDField                    = "clientid"
-	mountWithWITokenField            = "mountwithworkloadidentitytoken"
-	tenantIDField                    = "tenantid"
-	mountOptionsField                = "mountoptions"
-	falseValue                       = "false"
-	trueValue                        = "true"
-	defaultSecretAccountName         = "azurestorageaccountname"
-	defaultSecretAccountKey          = "azurestorageaccountkey"
+	DefaultDriverName              = "blob.csi.azure.com"
+	blobCSIDriverName              = "blob_csi_driver"
+	separator                      = "#"
+	volumeIDTemplate               = "%s#%s#%s#%s#%s#%s"
+	secretNameTemplate             = "azure-storage-account-%s-secret"
+	serverNameField                = "server"
+	storageEndpointSuffixField     = "storageendpointsuffix"
+	tagsField                      = "tags"
+	matchTagsField                 = "matchtags"
+	protocolField                  = "protocol"
+	accountNameField               = "accountname"
+	accountKeyField                = "accountkey"
+	storageAccountField            = "storageaccount"
+	storageAccountTypeField        = "storageaccounttype"
+	skuNameField                   = "skuname"
+	subscriptionIDField            = "subscriptionid"
+	resourceGroupField             = "resourcegroup"
+	locationField                  = "location"
+	secretNameField                = "secretname"
+	secretNamespaceField           = "secretnamespace"
+	containerNameField             = "containername"
+	containerNamePrefixField       = "containernameprefix"
+	storeAccountKeyField           = "storeaccountkey"
+	getLatestAccountKeyField       = "getlatestaccountkey"
+	isHnsEnabledField              = "ishnsenabled"
+	softDeleteBlobsField           = "softdeleteblobs"
+	softDeleteContainersField      = "softdeletecontainers"
+	enableBlobVersioningField      = "enableblobversioning"
+	getAccountKeyFromSecretField   = "getaccountkeyfromsecret"
+	storageSPNClientIDField        = "azurestoragespnclientid"
+	storageSPNTenantIDField        = "azurestoragespntenantid"
+	storageAuthTypeField           = "azurestorageauthtype"
+	blobStorageAccountTypeField    = "blobstorageaccounttype"
+	storageAuthTypeMSI             = "msi"
+	storageIdentityClientIDField   = "azurestorageidentityclientid"
+	storageIdentityObjectIDField   = "azurestorageidentityobjectid"
+	storageIdentityResourceIDField = "azurestorageidentityresourceid"
+	msiEndpointField               = "msiendpoint"
+	storageAADEndpointField        = "azurestorageaadendpoint"
+	keyVaultURLField               = "keyvaulturl"
+	keyVaultSecretNameField        = "keyvaultsecretname"
+	keyVaultSecretVersionField     = "keyvaultsecretversion"
+	storageAccountNameField        = "storageaccountname"
+	allowBlobPublicAccessField     = "allowblobpublicaccess"
+	allowSharedKeyAccessField      = "allowsharedkeyaccess"
+	publicNetworkAccessField       = "publicnetworkaccess"
+	requireInfraEncryptionField    = "requireinfraencryption"
+	ephemeralField                 = "csi.storage.k8s.io/ephemeral"
+	podNamespaceField              = "csi.storage.k8s.io/pod.namespace"
+	serviceAccountTokenField       = "csi.storage.k8s.io/serviceAccount.tokens"
+	clientIDField                  = "clientid"
+	mountWithWITokenField          = "mountwithworkloadidentitytoken"
+	tenantIDField                  = "tenantid"
+	mountOptionsField              = "mountoptions"
+	falseValue                     = "false"
+	trueValue                      = "true"
+	defaultSecretAccountName       = "azurestorageaccountname"
+	defaultSecretAccountKey        = "azurestorageaccountkey"
+	// AKS assigns 10.0.0.10 to the cluster DNS service by default; use it for
+	// distributed-cache service discovery when the user does not provide a DNS server.
+	defaultDistributedCacheDNSServer = "10.0.0.10"
 	accountSasTokenField             = "azurestorageaccountsastoken"
 	msiSecretField                   = "msisecret"
 	storageSPNClientSecretField      = "azurestoragespnclientsecret"
@@ -212,79 +215,86 @@ var (
 	// Note: FUSE passthrough tokens "-o <option>[=value]" are always permitted;
 	// they are handled separately in SanitizeMountOptions.
 	allowedEphemeralMountOptions = map[string]struct{}{
-		"--allow-other":                    {},
-		"--attr-cache-max-size-mb":         {},
-		"--attr-cache-timeout":             {},
-		"--attr-timeout":                   {},
-		"--background-download":            {},
-		"--basic-remount-check":            {},
-		"--block-cache":                    {},
-		"--block-cache-block-size":         {},
-		"--block-cache-disk-size":          {},
-		"--block-cache-disk-timeout":       {},
-		"--block-cache-parallelism":        {},
-		"--block-cache-pool-size":          {},
-		"--block-cache-prefetch":           {},
-		"--block-cache-prefetch-on-open":   {},
-		"--block-cache-strong-consistency": {},
-		"--block-size-mb":                  {},
-		"--cache-on-list":                  {},
-		"--cache-poll-timeout-msec":        {},
-		"--cache-size-mb":                  {},
-		"--cap-iops":                       {},
-		"--cap-mbps-read":                  {},
-		"--cleanup-on-start":               {},
-		"--cpk-enabled":                    {},
-		"--disable-compression":            {},
-		"--disable-kernel-cache":           {},
-		"--disable-version-check":          {},
-		"--disable-writeback-cache":        {},
-		"--cancel-list-on-mount-seconds":   {},
-		"--empty-dir-check":                {},
-		"--entry-timeout":                  {},
-		"--file-cache-policy":              {},
-		"--file-cache-timeout":             {},
-		"--file-cache-timeout-in-seconds":  {},
-		"--filter":                         {},
-		"--foreground":                     {},
-		"--hard-limit":                     {},
-		"--high-disk-threshold":            {},
-		"--honour-acl":                     {},
-		"--ignore-open-flags":              {},
-		"--ignore-sync":                    {},
-		"--invalidate-on-sync":             {},
-		"--kernel-list-cache-timeout":      {},
-		"--lazy-write":                     {},
-		"--list-cache-timeout":             {},
-		"--log-goroutine-id":               {},
-		"--log-level":                      {},
-		"--log-type":                       {},
-		"--low-disk-threshold":             {},
-		"--max-blocks-per-file":            {},
-		"--max-concurrency":                {},
-		"--max-eviction":                   {},
-		"--max-retry":                      {},
-		"--max-retry-interval-in-seconds":  {},
-		"--negative-timeout":               {},
-		"--no-symlinks":                    {},
-		"--pool-size":                      {},
-		"--pre-mount-validate":             {},
-		"--preserve-acl":                   {},
-		"--read-only":                      {},
-		"--required-free-space-mb":         {},
-		"--retry-delay-factor":             {},
-		"--set-content-type":               {},
-		"--stream-cache-mb":                {},
-		"--streaming":                      {},
-		"--subdirectory":                   {},
-		"--sync-to-flush":                  {},
-		"--telemetry":                      {},
-		"--upload-modified-only":           {},
-		"--use-adls":                       {},
-		"--use-attr-cache":                 {},
-		"--virtual-directory":              {},
-		"--wait-for-mount":                 {},
-		"--workers":                        {},
+		"--allow-other":                          {},
+		"--attr-cache-max-size-mb":               {},
+		"--attr-cache-timeout":                   {},
+		"--attr-timeout":                         {},
+		"--background-download":                  {},
+		"--basic-remount-check":                  {},
+		"--block-cache":                          {},
+		"--block-cache-block-size":               {},
+		"--block-cache-disk-size":                {},
+		"--block-cache-disk-timeout":             {},
+		"--block-cache-parallelism":              {},
+		"--block-cache-pool-size":                {},
+		"--block-cache-prefetch":                 {},
+		"--block-cache-prefetch-on-open":         {},
+		"--block-cache-strong-consistency":       {},
+		"--block-size-mb":                        {},
+		"--cache-on-list":                        {},
+		"--cache-poll-timeout-msec":              {},
+		"--cache-size-mb":                        {},
+		"--cap-iops":                             {},
+		"--cap-mbps-read":                        {},
+		"--cleanup-on-start":                     {},
+		"--cpk-enabled":                          {},
+		"--disable-compression":                  {},
+		"--disable-kernel-cache":                 {},
+		"--disable-version-check":                {},
+		"--disable-writeback-cache":              {},
+		"--distributed-cache-block-size":         {},
+		"--distributed-cache-discovery-endpoint": {},
+		"--distributed-cache-dns-server":         {},
+		"--distributed-cache-node-memory":        {},
+		"--distributed-cache-node-ttl":           {},
+		"--distributed-cache-parallelism":        {},
+		"--distributed-cache-prefetch":           {},
+		"--cancel-list-on-mount-seconds":         {},
+		"--empty-dir-check":                      {},
+		"--entry-timeout":                        {},
+		"--file-cache-policy":                    {},
+		"--file-cache-timeout":                   {},
+		"--file-cache-timeout-in-seconds":        {},
+		"--filter":                               {},
+		"--foreground":                           {},
+		"--hard-limit":                           {},
+		"--high-disk-threshold":                  {},
+		"--honour-acl":                           {},
+		"--ignore-open-flags":                    {},
+		"--ignore-sync":                          {},
+		"--invalidate-on-sync":                   {},
+		"--kernel-list-cache-timeout":            {},
+		"--lazy-write":                           {},
+		"--list-cache-timeout":                   {},
+		"--log-goroutine-id":                     {},
+		"--log-level":                            {},
+		"--log-type":                             {},
+		"--low-disk-threshold":                   {},
+		"--max-blocks-per-file":                  {},
+		"--max-concurrency":                      {},
+		"--max-eviction":                         {},
+		"--max-retry":                            {},
+		"--max-retry-interval-in-seconds":        {},
+		"--negative-timeout":                     {},
+		"--no-symlinks":                          {},
+		"--pool-size":                            {},
+		"--pre-mount-validate":                   {},
+		"--preserve-acl":                         {},
+		"--read-only":                            {},
+		"--required-free-space-mb":               {},
+		"--retry-delay-factor":                   {},
+		"--set-content-type":                     {},
+		"--stream-cache-mb":                      {},
+		"--streaming":                            {},
+		"--subdirectory":                         {},
+		"--sync-to-flush":                        {},
+		"--telemetry":                            {},
+		"--upload-modified-only":                 {},
+		"--use-adls":                             {},
+		"--use-attr-cache":                       {},
+		"--virtual-directory":                    {},
+		"--wait-for-mount":                       {},
+		"--workers":                              {},
 	}
 
 	// allowedLogLevels is the set of valid values for the --log-level flag.
@@ -1525,9 +1535,11 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 		if _, ok := allowedEphemeralMountOptions[flagName]; !ok {
 			return nil, fmt.Errorf("mount option %q is not allowed for ephemeral volumes", flagName)
 		}
-		if flagName == "--block-cache-parallelism" && len(parts) != 2 {
+		if (flagName == "--block-cache-parallelism" ||
+			flagName == "--distributed-cache-parallelism") && len(parts) != 2 {
 			return nil, fmt.Errorf(
-				"mount option --block-cache-parallelism requires a value",
+				"mount option %s requires a value",
+				flagName,
 			)
 		}
 		// Validate enum-typed flags when a value is present.
@@ -1542,13 +1554,14 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 				return nil, fmt.Errorf("mount option %q: value must not contain whitespace", trimmed)
 			}
 			switch flagName {
-			case "--block-cache-parallelism":
+			case "--block-cache-parallelism", "--distributed-cache-parallelism":
 				parallelism, err := strconv.ParseUint(flagValue, 10, 32)
 				if err != nil || parallelism == 0 ||
 					parallelism > maxInlineBlockCacheParallelism {
 					return nil, fmt.Errorf(
-						"mount option --block-cache-parallelism must be "+
+						"mount option %s must be "+
 							"between 1 and %d for ephemeral volumes",
+						flagName,
 						maxInlineBlockCacheParallelism,
 					)
 				}
@@ -1594,12 +1607,29 @@ func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName str
 
 	// stores the mount options already included in mountOptions
 	included := make(map[string]bool)
+	distributedCacheEnabled := false
+	distributedCacheDNSServerProvided := false
 
 	for _, mountOption := range mountOptions {
+		flagName, _, _ := strings.Cut(strings.TrimSpace(mountOption), "=")
+		if flagName == "--distributed-cache-discovery-endpoint" {
+			distributedCacheEnabled = true
+		}
+		if flagName == "--distributed-cache-dns-server" {
+			distributedCacheDNSServerProvided = true
+		}
 		for k := range defaultMountOptions {
 			if strings.HasPrefix(mountOption, k) {
 				included[k] = true
 			}
+		}
+	}
+	if distributedCacheEnabled {
+		included["--tmp-path"] = true
+		included["--empty-dir-check"] = true
+		defaultMountOptions["--distributed-cache-dns-server"] = defaultDistributedCacheDNSServer
+		if distributedCacheDNSServerProvided {
+			included["--distributed-cache-dns-server"] = true
 		}
 	}
 
