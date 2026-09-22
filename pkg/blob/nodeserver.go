@@ -54,6 +54,11 @@ type MountClient struct {
 	service mount_azure_blob.MountServiceClient
 }
 
+const (
+	distributedCacheDiscoveryFlag      = "--distributed-cache-discovery-endpoint"
+	distributedCacheUnavailableMessage = "Distributed cache is not supported by the current BlobFuse2 binary; local block cache was selected."
+)
+
 // NewMountClient returns a new mount client
 func NewMountClient(cc *grpc.ClientConn) *MountClient {
 	service := mount_azure_blob.NewMountServiceClient(cc)
@@ -238,6 +243,50 @@ func (d *Driver) mountBlobfuseWithProxy(ctx context.Context, args, protocol stri
 
 	isOperationSucceeded = err == nil
 	return output, err
+}
+
+func (d *Driver) isDistributedCacheSupported(ctx context.Context, protocol string) (bool, error) {
+	if d.enableBlobfuseProxy {
+		connectionTimeout := time.Duration(d.blobfuseProxyConnTimeout) * time.Second
+		dialCtx, dialCancel := context.WithTimeout(ctx, connectionTimeout)
+		defer dialCancel()
+
+		conn, err := grpc.DialContext(dialCtx, d.blobfuseProxyEndpoint, grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			return false, fmt.Errorf("failed to connect to blobfuse proxy: %w", err)
+		}
+		defer func() {
+			if err := conn.Close(); err != nil {
+				klog.Errorf("failed to close connection to blobfuse proxy: %v", err)
+			}
+		}()
+
+		response, err := NewMountClient(conn).service.GetBlobfuseCapabilities(ctx, &mount_azure_blob.BlobfuseCapabilitiesRequest{
+			Protocol: protocol,
+		})
+		if err != nil {
+			return false, fmt.Errorf("failed to get blobfuse capabilities from proxy: %w", err)
+		}
+		return response.GetDistributedCacheSupported(), nil
+	}
+	if protocol != Fuse2 {
+		return false, nil
+	}
+
+	cmd := exec.CommandContext(ctx, "blobfuse2", "mount", "--help")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return false, fmt.Errorf("failed to inspect blobfuse2 mount capabilities: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+	return strings.Contains(string(output), distributedCacheDiscoveryFlag), nil
+}
+
+func logDistributedCacheUnavailable(volumeID string, probeErr error) {
+	message := distributedCacheUnavailableMessage
+	if probeErr != nil {
+		message = fmt.Sprintf("BlobFuse2 distributed-cache support could not be verified: %v. Distributed-cache options were removed and local block cache was selected.", probeErr)
+	}
+	klog.Warningf("volume(%s): %s", volumeID, message)
 }
 
 func (d *Driver) mountBlobfuseInsideDriver(args string, protocol string, authEnv []string) (string, error) {
@@ -600,6 +649,14 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		}
 		klog.V(2).Infof("append volumeMountGroup %s", volumeMountGroup)
 		mountOptions = append(mountOptions, fmt.Sprintf("-o gid=%s", volumeMountGroup))
+	}
+
+	if hasDistributedCacheMountOptions(mountOptions) {
+		distributedCacheSupported, probeErr := d.isDistributedCacheSupported(ctx, protocol)
+		if probeErr != nil || !distributedCacheSupported {
+			mountOptions = fallbackToLocalBlockCache(mountOptions)
+			logDistributedCacheUnavailable(volumeID, probeErr)
+		}
 	}
 
 	tmpPath := fmt.Sprintf("%s/%s", "/mnt", volumeID)

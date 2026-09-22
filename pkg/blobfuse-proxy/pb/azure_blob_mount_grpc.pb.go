@@ -11,7 +11,6 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
-// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // MountServiceClient is the client API for MountService service.
@@ -19,6 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MountServiceClient interface {
 	MountAzureBlob(ctx context.Context, in *MountAzureBlobRequest, opts ...grpc.CallOption) (*MountAzureBlobResponse, error)
+	GetBlobfuseCapabilities(ctx context.Context, in *BlobfuseCapabilitiesRequest, opts ...grpc.CallOption) (*BlobfuseCapabilitiesResponse, error)
 }
 
 type mountServiceClient struct {
@@ -38,11 +38,21 @@ func (c *mountServiceClient) MountAzureBlob(ctx context.Context, in *MountAzureB
 	return out, nil
 }
 
+func (c *mountServiceClient) GetBlobfuseCapabilities(ctx context.Context, in *BlobfuseCapabilitiesRequest, opts ...grpc.CallOption) (*BlobfuseCapabilitiesResponse, error) {
+	out := new(BlobfuseCapabilitiesResponse)
+	err := c.cc.Invoke(ctx, "/MountService/GetBlobfuseCapabilities", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MountServiceServer is the server API for MountService service.
 // All implementations must embed UnimplementedMountServiceServer
 // for forward compatibility
 type MountServiceServer interface {
 	MountAzureBlob(context.Context, *MountAzureBlobRequest) (*MountAzureBlobResponse, error)
+	GetBlobfuseCapabilities(context.Context, *BlobfuseCapabilitiesRequest) (*BlobfuseCapabilitiesResponse, error)
 	mustEmbedUnimplementedMountServiceServer()
 }
 
@@ -52,6 +62,9 @@ type UnimplementedMountServiceServer struct {
 
 func (UnimplementedMountServiceServer) MountAzureBlob(context.Context, *MountAzureBlobRequest) (*MountAzureBlobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MountAzureBlob not implemented")
+}
+func (UnimplementedMountServiceServer) GetBlobfuseCapabilities(context.Context, *BlobfuseCapabilitiesRequest) (*BlobfuseCapabilitiesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBlobfuseCapabilities not implemented")
 }
 func (UnimplementedMountServiceServer) mustEmbedUnimplementedMountServiceServer() {}
 
@@ -63,7 +76,7 @@ type UnsafeMountServiceServer interface {
 }
 
 func RegisterMountServiceServer(s grpc.ServiceRegistrar, srv MountServiceServer) {
-	s.RegisterService(&MountService_ServiceDesc, srv)
+	s.RegisterService(&_MountService_serviceDesc, srv)
 }
 
 func _MountService_MountAzureBlob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -84,16 +97,35 @@ func _MountService_MountAzureBlob_Handler(srv interface{}, ctx context.Context, 
 	return interceptor(ctx, in, info, handler)
 }
 
-// MountService_ServiceDesc is the grpc.ServiceDesc for MountService service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var MountService_ServiceDesc = grpc.ServiceDesc{
+func _MountService_GetBlobfuseCapabilities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BlobfuseCapabilitiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MountServiceServer).GetBlobfuseCapabilities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/MountService/GetBlobfuseCapabilities",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MountServiceServer).GetBlobfuseCapabilities(ctx, req.(*BlobfuseCapabilitiesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _MountService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "MountService",
 	HandlerType: (*MountServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "MountAzureBlob",
 			Handler:    _MountService_MountAzureBlob_Handler,
+		},
+		{
+			MethodName: "GetBlobfuseCapabilities",
+			Handler:    _MountService_GetBlobfuseCapabilities_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

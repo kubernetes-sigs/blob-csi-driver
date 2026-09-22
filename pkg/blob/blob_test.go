@@ -1600,6 +1600,50 @@ func TestSanitizeMountOptions(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "distributed-cache options without values are passed through",
+			options: []string{
+				"--distributed-cache-discovery-endpoint",
+				"--distributed-cache-dns-server",
+				"--distributed-cache-node-ttl",
+				"--distributed-cache-block-size",
+				"--distributed-cache-node-memory",
+				"--distributed-cache-prefetch",
+				"--distributed-cache-parallelism",
+			},
+			wantErr: false,
+			expected: []string{
+				"--distributed-cache-discovery-endpoint",
+				"--distributed-cache-dns-server",
+				"--distributed-cache-node-ttl",
+				"--distributed-cache-block-size",
+				"--distributed-cache-node-memory",
+				"--distributed-cache-prefetch",
+				"--distributed-cache-parallelism",
+			},
+		},
+		{
+			name: "distributed-cache options with empty values are passed through",
+			options: []string{
+				"--distributed-cache-discovery-endpoint=",
+				"--distributed-cache-dns-server=",
+				"--distributed-cache-node-ttl=",
+				"--distributed-cache-block-size=",
+				"--distributed-cache-node-memory=",
+				"--distributed-cache-prefetch=",
+				"--distributed-cache-parallelism=",
+			},
+			wantErr: false,
+			expected: []string{
+				"--distributed-cache-discovery-endpoint=",
+				"--distributed-cache-dns-server=",
+				"--distributed-cache-node-ttl=",
+				"--distributed-cache-block-size=",
+				"--distributed-cache-node-memory=",
+				"--distributed-cache-prefetch=",
+				"--distributed-cache-parallelism=",
+			},
+		},
+		{
 			name:    "block-cache parallelism above inline maximum is rejected",
 			options: []string{"--block-cache-parallelism=129"},
 			wantErr: true,
@@ -2304,6 +2348,66 @@ func TestAppendDefaultMountOptions(t *testing.T) {
 		if !reflect.DeepEqual(result, test.expected) {
 			t.Errorf("input: %q, appendDefaultMountOptions result: %q, expected: %q", test.options, result, test.expected)
 		}
+	}
+}
+
+func TestFallbackToLocalBlockCache(t *testing.T) {
+	mountOptions := []string{
+		"--distributed-cache-discovery-endpoint=cache.default.svc.cluster.local:9065",
+		"--distributed-cache-dns-server=10.0.0.10",
+		"--distributed-cache-node-ttl=60",
+		"--distributed-cache-block-size=32",
+		"--distributed-cache-node-memory=4096",
+		"--distributed-cache-prefetch=16",
+		"--distributed-cache-parallelism=24",
+		"--distributed-cache-future-option=value",
+		"--block-cache-block-size=64",
+		"--log-level=LOG_INFO",
+	}
+
+	result := fallbackToLocalBlockCache(mountOptions)
+
+	assert.Equal(t, []string{
+		"--block-cache-pool-size=4096",
+		"--block-cache-prefetch=16",
+		"--block-cache-parallelism=24",
+		"--block-cache-block-size=64",
+		"--log-level=LOG_INFO",
+		"--block-cache=true",
+	}, result)
+	for _, option := range result {
+		assert.False(t, strings.HasPrefix(option, "--distributed-cache-"), "distributed-cache option survived fallback: %s", option)
+	}
+}
+
+func TestFallbackToLocalBlockCacheUsesDefaultsForEmptyValues(t *testing.T) {
+	result := fallbackToLocalBlockCache([]string{
+		"--distributed-cache-block-size",
+		"--distributed-cache-node-memory=",
+		"--distributed-cache-prefetch=",
+		"--distributed-cache-parallelism",
+		"--block-cache=false",
+	})
+
+	assert.Equal(t, []string{"--block-cache=true"}, result)
+}
+
+func TestFallbackToLocalBlockCacheRestoresDefaultMountOptions(t *testing.T) {
+	result := appendDefaultMountOptions(
+		fallbackToLocalBlockCache([]string{
+			"--distributed-cache-discovery-endpoint=cache.default.svc.cluster.local:9065",
+			"--distributed-cache-block-size=32",
+		}),
+		"/mnt/volume-id",
+		"container-name",
+	)
+
+	assert.Contains(t, result, "--block-cache=true")
+	assert.Contains(t, result, "--block-cache-block-size=32")
+	assert.Contains(t, result, "--tmp-path=/mnt/volume-id")
+	assert.Contains(t, result, "--empty-dir-check=false")
+	for _, option := range result {
+		assert.False(t, strings.HasPrefix(option, "--distributed-cache-"), "distributed-cache option survived fallback: %s", option)
 	}
 }
 

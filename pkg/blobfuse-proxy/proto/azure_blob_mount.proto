@@ -12,6 +12,15 @@ message MountAzureBlobResponse {
 	string output = 1;
 }
 
+message BlobfuseCapabilitiesRequest {
+	string protocol = 1;
+}
+
+message BlobfuseCapabilitiesResponse {
+	bool distributedCacheSupported = 1;
+}
+
 service MountService {
 	rpc MountAzureBlob(MountAzureBlobRequest) returns (MountAzureBlobResponse) {};
+	rpc GetBlobfuseCapabilities(BlobfuseCapabilitiesRequest) returns (BlobfuseCapabilitiesResponse) {};
 }
