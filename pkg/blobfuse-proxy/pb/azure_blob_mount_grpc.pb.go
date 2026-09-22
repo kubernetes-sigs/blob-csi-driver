@@ -11,6 +11,7 @@ import (
 
 // This is a compile-time assertion to ensure that this generated file
 // is compatible with the grpc package it is being compiled against.
+// Requires gRPC-Go v1.32.0 or later.
 const _ = grpc.SupportPackageIsVersion7
 
 // MountServiceClient is the client API for MountService service.
@@ -76,7 +77,7 @@ type UnsafeMountServiceServer interface {
 }
 
 func RegisterMountServiceServer(s grpc.ServiceRegistrar, srv MountServiceServer) {
-	s.RegisterService(&_MountService_serviceDesc, srv)
+	s.RegisterService(&MountService_ServiceDesc, srv)
 }
 
 func _MountService_MountAzureBlob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -115,7 +116,10 @@ func _MountService_GetBlobfuseCapabilities_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
-var _MountService_serviceDesc = grpc.ServiceDesc{
+// MountService_ServiceDesc is the grpc.ServiceDesc for MountService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var MountService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "MountService",
 	HandlerType: (*MountServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
