@@ -1535,7 +1535,9 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 		if _, ok := allowedEphemeralMountOptions[flagName]; !ok {
 			return nil, fmt.Errorf("mount option %q is not allowed for ephemeral volumes", flagName)
 		}
-		if flagName == "--block-cache-parallelism" && len(parts) != 2 {
+		if (flagName == "--block-cache-parallelism" && len(parts) != 2) ||
+			(flagName == "--distributed-cache-parallelism" &&
+				(len(parts) != 2 || parts[1] == "")) {
 			return nil, fmt.Errorf(
 				"mount option %s requires a value",
 				flagName,
@@ -1554,9 +1556,6 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 			}
 			switch flagName {
 			case "--block-cache-parallelism", "--distributed-cache-parallelism":
-				if flagName == "--distributed-cache-parallelism" && flagValue == "" {
-					break
-				}
 				parallelism, err := strconv.ParseUint(flagValue, 10, 32)
 				if err != nil || parallelism == 0 ||
 					parallelism > maxInlineBlockCacheParallelism {
