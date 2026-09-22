@@ -1535,8 +1535,7 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 		if _, ok := allowedEphemeralMountOptions[flagName]; !ok {
 			return nil, fmt.Errorf("mount option %q is not allowed for ephemeral volumes", flagName)
 		}
-		if (flagName == "--block-cache-parallelism" ||
-			flagName == "--distributed-cache-parallelism") && len(parts) != 2 {
+		if flagName == "--block-cache-parallelism" && len(parts) != 2 {
 			return nil, fmt.Errorf(
 				"mount option %s requires a value",
 				flagName,
@@ -1555,6 +1554,9 @@ func SanitizeMountOptions(mountOptions []string) ([]string, error) {
 			}
 			switch flagName {
 			case "--block-cache-parallelism", "--distributed-cache-parallelism":
+				if flagName == "--distributed-cache-parallelism" && flagValue == "" {
+					break
+				}
 				parallelism, err := strconv.ParseUint(flagValue, 10, 32)
 				if err != nil || parallelism == 0 ||
 					parallelism > maxInlineBlockCacheParallelism {
@@ -1652,6 +1654,62 @@ func appendDefaultMountOptions(mountOptions []string, tmpPath, containerName str
 	}
 
 	return allMountOptions
+}
+
+var distributedToBlockCacheOptions = map[string]string{
+	"--distributed-cache-block-size":  "--block-cache-block-size",
+	"--distributed-cache-node-memory": "--block-cache-pool-size",
+	"--distributed-cache-prefetch":    "--block-cache-prefetch",
+	"--distributed-cache-parallelism": "--block-cache-parallelism",
+}
+
+func hasDistributedCacheMountOptions(mountOptions []string) bool {
+	for _, mountOption := range mountOptions {
+		flagName, _, _ := strings.Cut(strings.TrimSpace(mountOption), "=")
+		if strings.HasPrefix(flagName, "--distributed-cache-") {
+			return true
+		}
+	}
+	return false
+}
+
+func fallbackToLocalBlockCache(mountOptions []string) []string {
+	includedLocalOptions := make(map[string]bool)
+	for _, mountOption := range mountOptions {
+		flagName, _, _ := strings.Cut(strings.TrimSpace(mountOption), "=")
+		if !strings.HasPrefix(flagName, "--distributed-cache-") {
+			includedLocalOptions[flagName] = true
+		}
+	}
+
+	fallbackOptions := make([]string, 0, len(mountOptions)+1)
+	blockCacheEnabled := false
+	for _, mountOption := range mountOptions {
+		trimmed := strings.TrimSpace(mountOption)
+		flagName, value, hasValue := strings.Cut(trimmed, "=")
+		if flagName == "--block-cache" {
+			if !blockCacheEnabled {
+				fallbackOptions = append(fallbackOptions, "--block-cache=true")
+				blockCacheEnabled = true
+			}
+			continue
+		}
+		if !strings.HasPrefix(flagName, "--distributed-cache-") {
+			fallbackOptions = append(fallbackOptions, mountOption)
+			continue
+		}
+
+		localFlag, canTranslate := distributedToBlockCacheOptions[flagName]
+		if canTranslate && hasValue && value != "" && !includedLocalOptions[localFlag] {
+			fallbackOptions = append(fallbackOptions, localFlag+"="+value)
+			includedLocalOptions[localFlag] = true
+		}
+	}
+
+	if !blockCacheEnabled {
+		fallbackOptions = append(fallbackOptions, "--block-cache=true")
+	}
+	return fallbackOptions
 }
 
 // chmodIfPermissionMismatch only perform chmod when permission mismatches
