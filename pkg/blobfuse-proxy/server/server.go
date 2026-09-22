@@ -39,6 +39,8 @@ var (
 // telemetryTagPrefix is used to identify the mounts done via blobcsi driver
 const telemetryTagPrefix = "blobpartner-csi/"
 
+const distributedCacheDiscoveryFlag = "--distributed-cache-discovery-endpoint"
+
 type BlobfuseVersion int
 
 const (
@@ -125,6 +127,26 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 		return &result, fmt.Errorf("%w %s", err, result.Output)
 	}
 	return &result, nil
+}
+
+// GetBlobfuseCapabilities reports capabilities exposed by the BlobFuse2 binary
+// installed on the host.
+func (server *MountServer) GetBlobfuseCapabilities(_ context.Context,
+	req *mount_azure_blob.BlobfuseCapabilitiesRequest,
+) (*mount_azure_blob.BlobfuseCapabilitiesResponse, error) {
+	if req.GetProtocol() != blob.Fuse2 && server.blobfuseVersion != BlobfuseV2 {
+		return &mount_azure_blob.BlobfuseCapabilitiesResponse{}, nil
+	}
+
+	cmd := server.exec("blobfuse2", "mount", "--help")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect blobfuse2 mount capabilities: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+
+	return &mount_azure_blob.BlobfuseCapabilitiesResponse{
+		DistributedCacheSupported: strings.Contains(string(output), distributedCacheDiscoveryFlag),
+	}, nil
 }
 
 func RunGRPCServer(
