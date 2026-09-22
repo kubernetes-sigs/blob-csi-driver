@@ -1600,7 +1600,33 @@ func TestSanitizeMountOptions(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "distributed-cache options without values are passed through",
+			name:     "distributed-cache parallelism at inline minimum is allowed",
+			options:  []string{"--distributed-cache-parallelism=1"},
+			wantErr:  false,
+			expected: []string{"--distributed-cache-parallelism=1"},
+		},
+		{
+			name:    "distributed-cache parallelism without value is rejected",
+			options: []string{"--distributed-cache-parallelism"},
+			wantErr: true,
+		},
+		{
+			name:    "distributed-cache parallelism with empty value is rejected",
+			options: []string{"--distributed-cache-parallelism="},
+			wantErr: true,
+		},
+		{
+			name:    "distributed-cache parallelism with zero value is rejected",
+			options: []string{"--distributed-cache-parallelism=0"},
+			wantErr: true,
+		},
+		{
+			name:    "distributed-cache parallelism with non-integer value is rejected",
+			options: []string{"--distributed-cache-parallelism=abc"},
+			wantErr: true,
+		},
+		{
+			name: "other distributed-cache options without values are passed through",
 			options: []string{
 				"--distributed-cache-discovery-endpoint",
 				"--distributed-cache-dns-server",
@@ -1608,7 +1634,6 @@ func TestSanitizeMountOptions(t *testing.T) {
 				"--distributed-cache-block-size",
 				"--distributed-cache-node-memory",
 				"--distributed-cache-prefetch",
-				"--distributed-cache-parallelism",
 			},
 			wantErr: false,
 			expected: []string{
@@ -1618,11 +1643,10 @@ func TestSanitizeMountOptions(t *testing.T) {
 				"--distributed-cache-block-size",
 				"--distributed-cache-node-memory",
 				"--distributed-cache-prefetch",
-				"--distributed-cache-parallelism",
 			},
 		},
 		{
-			name: "distributed-cache options with empty values are passed through",
+			name: "other distributed-cache options with empty values are passed through",
 			options: []string{
 				"--distributed-cache-discovery-endpoint=",
 				"--distributed-cache-dns-server=",
@@ -1630,7 +1654,6 @@ func TestSanitizeMountOptions(t *testing.T) {
 				"--distributed-cache-block-size=",
 				"--distributed-cache-node-memory=",
 				"--distributed-cache-prefetch=",
-				"--distributed-cache-parallelism=",
 			},
 			wantErr: false,
 			expected: []string{
@@ -1640,7 +1663,6 @@ func TestSanitizeMountOptions(t *testing.T) {
 				"--distributed-cache-block-size=",
 				"--distributed-cache-node-memory=",
 				"--distributed-cache-prefetch=",
-				"--distributed-cache-parallelism=",
 			},
 		},
 		{
@@ -2385,7 +2407,6 @@ func TestFallbackToLocalBlockCacheUsesDefaultsForEmptyValues(t *testing.T) {
 		"--distributed-cache-block-size",
 		"--distributed-cache-node-memory=",
 		"--distributed-cache-prefetch=",
-		"--distributed-cache-parallelism",
 		"--block-cache=false",
 	})
 
