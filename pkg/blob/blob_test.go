@@ -693,24 +693,50 @@ func TestGetAuthEnv(t *testing.T) {
 			},
 		},
 		{
-			name: "nfs protocol",
+			name: "nfs protocols do not retrieve account keys",
+			testFunc: func(t *testing.T) {
+				for _, protocol := range []string{NFS, AZNFS, NFSv3, "NFSv3", "NfSv3"} {
+					t.Run(protocol, func(t *testing.T) {
+						d := NewFakeDriver()
+						attrib := map[string]string{
+							storageAccountField: "accountname",
+							containerNameField:  "containername",
+						}
+						volumeID := "unique-volumeid"
+						rg, accountName, accountkey, containerName, authEnv, err := d.GetAuthEnv(
+							context.TODO(),
+							volumeID,
+							protocol,
+							attrib,
+							map[string]string{},
+						)
+						assert.NoError(t, err)
+						assert.Equal(t, "", rg)
+						assert.Equal(t, "accountname", accountName)
+						assert.Equal(t, "", accountkey)
+						assert.Equal(t, "containername", containerName)
+						assert.Empty(t, authEnv)
+					})
+				}
+			},
+		},
+		{
+			name: "conflicting storage account aliases are rejected",
 			testFunc: func(t *testing.T) {
 				d := NewFakeDriver()
-				attrib := make(map[string]string)
-				secret := make(map[string]string)
-				volumeID := "unique-volumeid"
-				attrib[storageAccountField] = "accountname"
-				attrib[containerNameField] = "containername"
-				rg, accountName, accountkey, containerName, authEnv, err := d.GetAuthEnv(context.TODO(), volumeID, NFS, attrib, secret)
-				if err != nil {
-					t.Errorf("actualErr: (%v), expect no error", err)
-				}
-
-				assert.Equal(t, "", rg)
-				assert.Equal(t, "accountname", accountName)
-				assert.Equal(t, "", accountkey)
-				assert.Equal(t, "containername", containerName)
-				assert.Equal(t, len(authEnv), 0)
+				_, _, _, _, _, err := d.GetAuthEnv(
+					context.TODO(),
+					"unique-volumeid",
+					NFS,
+					map[string]string{
+						storageAccountField:     "canonical-account",
+						storageAccountNameField: "compatibility-account",
+						containerNameField:      "container",
+					},
+					map[string]string{},
+				)
+				assert.EqualError(t, err,
+					"conflicting values for storageaccount and storageaccountname in volume context")
 			},
 		},
 		{

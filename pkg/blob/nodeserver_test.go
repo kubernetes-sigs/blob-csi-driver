@@ -432,6 +432,7 @@ func TestNodePublishVolume(t *testing.T) {
 					ephemeralField:          trueValue,
 					podNamespaceField:       "test-namespace",
 					containerNameField:      "test-container",
+					protocolField:           Fuse2,
 					storageAccountField:     "canonical-account",
 					storageAccountNameField: "compatibility-account",
 				},
@@ -446,6 +447,39 @@ func TestNodePublishVolume(t *testing.T) {
 				}
 				if value := getValueInMap(req.VolumeContext, getAccountKeyFromSecretField); value != trueValue {
 					t.Errorf("expected getAccountKeyFromSecret to be true, got %q", value)
+				}
+			},
+		},
+		{
+			desc: "Ephemeral NFS volume preserves storage account fields",
+			setup: func(d *Driver) {
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+			},
+			req: &csi.NodePublishVolumeRequest{
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeId:          "vol_1",
+				TargetPath:        targetTest,
+				StagingTargetPath: sourceTest,
+				VolumeContext: map[string]string{
+					ephemeralField:          trueValue,
+					podNamespaceField:       "test-namespace",
+					containerNameField:      "test-container",
+					protocolField:           NFS,
+					storageAccountField:     "canonical-account",
+					storageAccountNameField: "canonical-account",
+				},
+			},
+			expectedErr: nil,
+			postCheck: func(t *testing.T, req *csi.NodePublishVolumeRequest) {
+				if value := getValueInMap(req.VolumeContext, storageAccountField); value != "canonical-account" {
+					t.Errorf("expected NFS storageAccount to be preserved, got %q", value)
+				}
+				if value := getValueInMap(req.VolumeContext, storageAccountNameField); value != "canonical-account" {
+					t.Errorf("expected NFS storageAccountName to be preserved, got %q", value)
+				}
+				if value := getValueInMap(req.VolumeContext, getAccountKeyFromSecretField); value == trueValue {
+					t.Errorf("expected NFS not to force account key retrieval from a secret")
 				}
 			},
 		},
@@ -1745,6 +1779,121 @@ func TestNodeStageVolume(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+func TestNodeStageVolumeNFSAccountResolutionAndMountType(t *testing.T) {
+	volumeCap := csi.VolumeCapability_AccessMode{Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER}
+	tests := []struct {
+		name               string
+		protocol           string
+		storageAccount     string
+		storageAccountName string
+		expectedAccount    string
+		expectedMountType  string
+		expectedCode       codes.Code
+	}{
+		{
+			name:              "canonical account",
+			protocol:          NFS,
+			storageAccount:    "canonical-account",
+			expectedAccount:   "canonical-account",
+			expectedMountType: AZNFS,
+			expectedCode:      codes.OK,
+		},
+		{
+			name:               "compatibility account",
+			protocol:           NFS,
+			storageAccountName: "compatibility-account",
+			expectedAccount:    "compatibility-account",
+			expectedMountType:  AZNFS,
+			expectedCode:       codes.OK,
+		},
+		{
+			name:               "matching aliases",
+			protocol:           NFS,
+			storageAccount:     "same-account",
+			storageAccountName: "same-account",
+			expectedAccount:    "same-account",
+			expectedMountType:  AZNFS,
+			expectedCode:       codes.OK,
+		},
+		{
+			name:               "conflicting aliases",
+			protocol:           NFS,
+			storageAccount:     "canonical-account",
+			storageAccountName: "compatibility-account",
+			expectedCode:       codes.InvalidArgument,
+		},
+		{
+			name:              "lowercase nfsv3",
+			protocol:          NFSv3,
+			storageAccount:    "canonical-account",
+			expectedAccount:   "canonical-account",
+			expectedMountType: NFS,
+			expectedCode:      codes.OK,
+		},
+		{
+			name:              "uppercase NFSv3",
+			protocol:          "NFSv3",
+			storageAccount:    "canonical-account",
+			expectedAccount:   "canonical-account",
+			expectedMountType: NFS,
+			expectedCode:      codes.OK,
+		},
+		{
+			name:              "mixed case NfSv3",
+			protocol:          "NfSv3",
+			storageAccount:    "canonical-account",
+			expectedAccount:   "canonical-account",
+			expectedMountType: NFS,
+			expectedCode:      codes.OK,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			volumeContext := map[string]string{
+				containerNameField:    "container",
+				mountPermissionsField: "0",
+				protocolField:         test.protocol,
+			}
+			if test.storageAccount != "" {
+				volumeContext[storageAccountField] = test.storageAccount
+			}
+			if test.storageAccountName != "" {
+				volumeContext[storageAccountNameField] = test.storageAccountName
+			}
+
+			req := &csi.NodeStageVolumeRequest{
+				VolumeId:          "rg#volume-account#container#uuid",
+				StagingTargetPath: filepath.Join(t.TempDir(), "mount"),
+				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+				VolumeContext:     volumeContext,
+			}
+			d := NewFakeDriver()
+			d.enableAznfsMount = true
+			fakeMounter := &fakeMounter{}
+			d.mounter = &mount.SafeFormatAndMount{
+				Interface: fakeMounter,
+				Exec:      &testingexec.FakeExec{},
+			}
+
+			_, err := d.NodeStageVolume(context.TODO(), req)
+			if status.Code(err) != test.expectedCode {
+				t.Fatalf("expected status code %s, got %v", test.expectedCode, err)
+			}
+			if test.expectedCode != codes.OK {
+				assert.Contains(t, err.Error(), "conflicting values")
+				return
+			}
+
+			assert.Equal(t, test.expectedMountType, fakeMounter.lastMountSensitiveType)
+			assert.Equal(t,
+				fmt.Sprintf("%s.blob.core.windows.net:/%s/container", test.expectedAccount, test.expectedAccount),
+				fakeMounter.lastMountSensitiveSource,
+			)
+		})
 	}
 }
 
