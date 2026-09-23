@@ -18,11 +18,13 @@ package server
 
 import (
 	"context"
+	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"google.golang.org/grpc/codes"
+	"sigs.k8s.io/blob-csi-driver/pkg/blob"
 	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
 )
 
@@ -61,6 +63,58 @@ func TestServerMountAzureBlob(t *testing.T) {
 				require.Error(t, err)
 				require.NotNil(t, res)
 			}
+		})
+	}
+}
+
+func fakeExecCommandWithDistributedCacheHelp(_ string, _ ...string) *exec.Cmd {
+	return exec.Command("echo", distributedCacheDiscoveryFlag)
+}
+
+func fakeExecCommandWithoutDistributedCacheHelp(_ string, _ ...string) *exec.Cmd {
+	return exec.Command("echo", "--block-cache")
+}
+
+func fakeExecCommandFailure(_ string, _ ...string) *exec.Cmd {
+	return exec.Command("sh", "-c", "echo probe-failed >&2; exit 1")
+}
+
+func TestGetBlobfuseCapabilities(t *testing.T) {
+	tests := []struct {
+		name      string
+		exec      func(string, ...string) *exec.Cmd
+		supported bool
+		wantError string
+	}{
+		{
+			name:      "distributed cache supported",
+			exec:      fakeExecCommandWithDistributedCacheHelp,
+			supported: true,
+		},
+		{
+			name: "distributed cache unsupported",
+			exec: fakeExecCommandWithoutDistributedCacheHelp,
+		},
+		{
+			name:      "help probe fails",
+			exec:      fakeExecCommandFailure,
+			wantError: "probe-failed",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			server := &MountServer{exec: test.exec}
+			response, err := server.GetBlobfuseCapabilities(context.Background(), &mount_azure_blob.BlobfuseCapabilitiesRequest{
+				Protocol: blob.Fuse2,
+			})
+			if test.wantError != "" {
+				require.ErrorContains(t, err, test.wantError)
+				require.Nil(t, response)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, test.supported, response.GetDistributedCacheSupported())
 		})
 	}
 }
