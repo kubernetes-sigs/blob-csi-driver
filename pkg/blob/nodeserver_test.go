@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -38,6 +39,7 @@ import (
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
+	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
 
 	mount "k8s.io/mount-utils"
 	utilexec "k8s.io/utils/exec"
@@ -1738,6 +1740,85 @@ func TestNodeExpandVolume(t *testing.T) {
 	assert.Nil(t, resp)
 	if !reflect.DeepEqual(err, status.Error(codes.Unimplemented, "NodeExpandVolume is not yet implemented")) {
 		t.Errorf("Unexpected error: %v", err)
+	}
+}
+
+// fakeMountServiceServer implements mount_azure_blob.MountServiceServer for testing
+type fakeMountServiceServer struct {
+	mount_azure_blob.UnimplementedMountServiceServer
+	mockOutput string
+	mockError  error
+}
+
+// MountAzureBlob implements the mount service method
+func (s *fakeMountServiceServer) MountAzureBlob(_ context.Context, _ *mount_azure_blob.MountAzureBlobRequest) (*mount_azure_blob.MountAzureBlobResponse, error) {
+	return &mount_azure_blob.MountAzureBlobResponse{
+		Output: s.mockOutput,
+	}, s.mockError
+}
+
+type capabilityMountServiceServer struct {
+	mount_azure_blob.UnimplementedMountServiceServer
+	supported bool
+	err       error
+}
+
+func (s *capabilityMountServiceServer) GetBlobfuseCapabilities(_ context.Context, _ *mount_azure_blob.BlobfuseCapabilitiesRequest) (*mount_azure_blob.BlobfuseCapabilitiesResponse, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &mount_azure_blob.BlobfuseCapabilitiesResponse{DistributedCacheSupported: s.supported}, nil
+}
+
+func TestIsDistributedCacheSupportedWithProxy(t *testing.T) {
+	tests := []struct {
+		name      string
+		server    mount_azure_blob.MountServiceServer
+		supported bool
+		wantError string
+	}{
+		{
+			name:      "supported",
+			server:    &capabilityMountServiceServer{supported: true},
+			supported: true,
+		},
+		{
+			name:   "unsupported",
+			server: &capabilityMountServiceServer{},
+		},
+		{
+			name:      "old proxy",
+			server:    &mount_azure_blob.UnimplementedMountServiceServer{},
+			wantError: "Unimplemented",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			assert.NoError(t, err)
+			grpcServer := grpc.NewServer()
+			mount_azure_blob.RegisterMountServiceServer(grpcServer, test.server)
+			go func() {
+				_ = grpcServer.Serve(listener)
+			}()
+			defer grpcServer.Stop()
+			defer listener.Close()
+
+			d := NewFakeDriver()
+			d.enableBlobfuseProxy = true
+			d.blobfuseProxyEndpoint = listener.Addr().String()
+			d.blobfuseProxyConnTimout = 5
+
+			supported, err := d.isDistributedCacheSupported(context.Background(), Fuse2)
+			if test.wantError != "" {
+				assert.ErrorContains(t, err, test.wantError)
+				assert.False(t, supported)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, test.supported, supported)
+		})
 	}
 }
 

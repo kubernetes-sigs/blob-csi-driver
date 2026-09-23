@@ -37,6 +37,8 @@ var (
 	mutex sync.Mutex
 )
 
+const distributedCacheDiscoveryFlag = "--distributed-cache-discovery-endpoint"
+
 type BlobfuseVersion int
 
 const (
@@ -47,12 +49,14 @@ const (
 type MountServer struct {
 	blobfuseVersion BlobfuseVersion
 	mount_azure_blob.UnimplementedMountServiceServer
+	exec func(name string, arg ...string) *exec.Cmd
 }
 
 // NewMountServer returns a new Mountserver
 func NewMountServiceServer() *MountServer {
 	mountServer := &MountServer{}
 	mountServer.blobfuseVersion = getBlobfuseVersion()
+	mountServer.exec = exec.Command
 	return mountServer
 }
 
@@ -84,11 +88,11 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 		}
 		args = util.TrimDuplicatedSpace(args)
 		klog.V(2).Infof("mount with v2, protocol: %s, args: %s", protocol, args)
-		cmd = exec.Command("blobfuse2", strings.Split(args, " ")...)
+		cmd = server.exec("blobfuse2", strings.Split(args, " ")...)
 	} else {
 		args = util.TrimDuplicatedSpace(args)
 		klog.V(2).Infof("mount with v1, protocol: %s, args: %s", protocol, args)
-		cmd = exec.Command("blobfuse", strings.Split(args, " ")...)
+		cmd = server.exec("blobfuse", strings.Split(args, " ")...)
 	}
 
 	cmd.Env = append(os.Environ(), authEnv...)
@@ -107,6 +111,26 @@ func (server *MountServer) MountAzureBlob(_ context.Context,
 		return &result, fmt.Errorf("%w %s", err, result.Output)
 	}
 	return &result, nil
+}
+
+// GetBlobfuseCapabilities reports capabilities exposed by the BlobFuse2 binary
+// installed on the host.
+func (server *MountServer) GetBlobfuseCapabilities(_ context.Context,
+	req *mount_azure_blob.BlobfuseCapabilitiesRequest,
+) (*mount_azure_blob.BlobfuseCapabilitiesResponse, error) {
+	if req.GetProtocol() != blob.Fuse2 && server.blobfuseVersion != BlobfuseV2 {
+		return &mount_azure_blob.BlobfuseCapabilitiesResponse{}, nil
+	}
+
+	cmd := server.exec("blobfuse2", "mount", "--help")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return nil, fmt.Errorf("failed to inspect blobfuse2 mount capabilities: %w: %s", err, strings.TrimSpace(string(output)))
+	}
+
+	return &mount_azure_blob.BlobfuseCapabilitiesResponse{
+		DistributedCacheSupported: strings.Contains(string(output), distributedCacheDiscoveryFlag),
+	}, nil
 }
 
 func RunGRPCServer(
