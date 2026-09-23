@@ -25,7 +25,9 @@ import (
 
 type fakeMounter struct {
 	mount.FakeMounter
-	unmountCount int
+	unmountCount             int
+	lastMountSensitiveSource string
+	lastMountSensitiveType   string
 }
 
 // Mount overrides mount.FakeMounter.Mount.
@@ -40,7 +42,9 @@ func (f *fakeMounter) Mount(source string, target string, _ string, _ []string) 
 }
 
 // MountSensitive overrides mount.FakeMounter.MountSensitive.
-func (f *fakeMounter) MountSensitive(source string, target string, _ string, _ []string, _ []string) error {
+func (f *fakeMounter) MountSensitive(source string, target string, fstype string, _ []string, _ []string) error {
+	f.lastMountSensitiveSource = source
+	f.lastMountSensitiveType = fstype
 	if strings.Contains(source, "ut-container") {
 		return fmt.Errorf("fake MountSensitive: source error")
 	} else if strings.Contains(target, "error_mount_sens") {

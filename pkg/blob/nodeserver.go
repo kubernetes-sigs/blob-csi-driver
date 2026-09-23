@@ -125,10 +125,14 @@ func (d *Driver) NodePublishVolume(ctx context.Context, req *csi.NodePublishVolu
 		if ephemeral {
 			setKeyValueInMap(context, secretNamespaceField, context[podNamespaceField])
 			if !d.allowInlineVolumeKeyAccessWithIdentity && !useWorkloadIdentity(context) {
-				// only get storage account from secret
-				setKeyValueInMap(context, getAccountKeyFromSecretField, trueValue)
-				setKeyValueInMap(context, storageAccountField, "")
-				setKeyValueInMap(context, storageAccountNameField, "")
+				// NFS needs the account name to construct the endpoint and does
+				// not retrieve an account key.
+				if !isNFSProtocol(getValueInMap(context, protocolField)) {
+					// only get storage account from secret
+					setKeyValueInMap(context, getAccountKeyFromSecretField, trueValue)
+					setKeyValueInMap(context, storageAccountField, "")
+					setKeyValueInMap(context, storageAccountNameField, "")
+				}
 			}
 			if d.canSkipRepublishNodeStage(context, target) {
 				klog.V(2).Infof("NodePublishVolume: ephemeral volume(%s) already mounted on %s, skipping NodeStageVolume (no time-bound credential to refresh)", volumeID, target)
@@ -386,6 +390,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
 	}
+	if _, err := resolveStorageAccountName(attrib, ""); err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: %v", err)
+	}
 
 	secrets := req.GetSecrets()
 	serviceAccountTokens := getServiceAccountTokens(secrets, attrib)
@@ -546,7 +553,7 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 			targetPath, protocol, volumeID, mountFlags, serverAddress)
 
 		mountType := AZNFS
-		if !d.enableAznfsMount || protocol == NFSv3 {
+		if !d.enableAznfsMount || strings.EqualFold(protocol, NFSv3) {
 			mountType = NFS
 		}
 

@@ -637,6 +637,35 @@ func isSASToken(key string) bool {
 	return strings.HasPrefix(key, "?")
 }
 
+func resolveStorageAccountName(attrib map[string]string, fallback string) (string, error) {
+	var storageAccount, storageAccountName string
+	var hasStorageAccount, hasStorageAccountName bool
+	for k, v := range attrib {
+		switch strings.ToLower(k) {
+		case storageAccountField:
+			storageAccount = v
+			hasStorageAccount = true
+		case storageAccountNameField:
+			storageAccountName = v
+			hasStorageAccountName = true
+		}
+	}
+
+	if storageAccount != "" && storageAccountName != "" && storageAccount != storageAccountName {
+		return "", fmt.Errorf("conflicting values for %s and %s in volume context", storageAccountField, storageAccountNameField)
+	}
+	if storageAccount != "" {
+		return storageAccount, nil
+	}
+	if storageAccountName != "" {
+		return storageAccountName, nil
+	}
+	if hasStorageAccount || hasStorageAccountName {
+		return "", nil
+	}
+	return fallback, nil
+}
+
 // GetAuthEnv return <accountName, containerName, authEnv, error>
 func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, string, string, []string, error) {
 	rgName, accountName, containerName, secretNamespace, subsID, err := GetContainerInfo(volumeID)
@@ -682,10 +711,6 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			keyVaultSecretName = v
 		case keyVaultSecretVersionField:
 			keyVaultSecretVersion = v
-		case storageAccountField:
-			accountName = v
-		case storageAccountNameField: // for compatibility
-			accountName = v
 		case secretNameField:
 			secretName = v
 		case secretNamespaceField:
@@ -727,9 +752,13 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			serviceAccountToken = v
 		}
 	}
+	accountName, err = resolveStorageAccountName(attrib, accountName)
+	if err != nil {
+		return rgName, accountName, accountKey, containerName, authEnv, err
+	}
 	klog.V(2).Infof("volumeID(%s) authEnv: %s", volumeID, authEnv)
 
-	if protocol == NFS {
+	if isNFSProtocol(protocol) {
 		// nfs protocol does not need account key, return directly
 		return rgName, accountName, accountKey, containerName, authEnv, err
 	}
