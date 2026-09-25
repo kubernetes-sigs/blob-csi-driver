@@ -125,6 +125,9 @@ node:
       periodSeconds: 20
       failureThreshold: 2
   logLevel: 5
+  # When false, the install-blobfuse-proxy init container is not created: blobfuse-proxy and blobfuse2 are not
+  # installed on the host, and fs.file-max, updatedb and NFS read-ahead settings are not applied.
+  enableInitContainer: true
   enableBlobfuseProxy: true
   blobfuseProxy:
     installBlobfuse: false
