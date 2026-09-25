@@ -106,6 +106,10 @@ controller:
     - key: "CriticalAddonsOnly"
       operator: "Exists"
       effect: "NoSchedule"
+  # Additional volumeMounts for the blob container in the controller pod.
+  extraVolumeMounts: []
+  # Additional volumes for the controller pod.
+  extraVolumes: []
 
 node:
   name: csi-blob-node
@@ -210,6 +214,10 @@ driver:
 linux:
   kubelet: /var/lib/kubelet
   distro: debian
+  # Additional volumeMounts for the blob container in the node pod.
+  extraVolumeMounts: []
+  # Additional volumes for the node pod.
+  extraVolumes: []
 
 workloadIdentity:
   clientID: ""
