@@ -140,6 +140,8 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.affinity`                                 | controller pod affinity                               | {}                                                             |
 | `controller.nodeSelector`                             | controller pod node selector                          | {}                                                             |
 | `controller.tolerations`                              | controller pod tolerations                            | []                                                             |
+| `controller.extraVolumeMounts`                        | additional volumeMounts for the blob container in the controller pod | `[]`                                                  |
+| `controller.extraVolumes`                             | additional volumes for the controller pod             | `[]`                                                             |
 | `node.name`                                           | name of driver daemonset                              | `csi-blob-node`
 | `node.cloudConfigSecretName`                          | cloud config secret name of node driver               | `azure-cloud-provider`
 | `node.cloudConfigSecretNamespace`                     | cloud config secret namespace of node driver          | `kube-system`
@@ -177,6 +179,8 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.tolerations`                                    | node pod tolerations                                  | []                                                             |
 | `linux.kubelet`                                       | configure kubelet directory path on Linux agent node node                  | `/var/lib/kubelet`                                                |
 | `linux.distro`                                        | configure ssl certificates for different Linux distribution(available values: `debian`, `fedora`, `rhcos`, `cos`, `gardenlinux`, `flatcar`, `azurecontainerlinux`). Use `rhcos` on RHCOS/ARO — it adds `/usr/local` symlink resolution needed under `crun`.             | `debian`
+| `linux.extraVolumeMounts`                             | additional volumeMounts for the blob container in the node pod | `[]`
+| `linux.extraVolumes`                                  | additional volumes for the node pod                | `[]`
 | `workloadIdentity.clientID` | client ID of workload identity | ''
 | `workloadIdentity.tenantID` | [optional] If the AAD application or user-assigned managed identity is not in the same tenant as the cluster then set tenantID with the AAD application or user-assigned managed identity tenant ID | ''
 | `node.enableAznfsMount` | enable [AZNFS mount helper](https://github.com/Azure/AZNFS-mount/) for NFS protocol | true
