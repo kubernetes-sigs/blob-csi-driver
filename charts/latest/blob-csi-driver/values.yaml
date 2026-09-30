@@ -125,6 +125,11 @@ node:
       periodSeconds: 20
       failureThreshold: 2
   logLevel: 5
+  # Create the install-blobfuse-proxy init container
+  # When false, the chart skips:
+  #   - installing blobfuse-proxy and blobfuse2 on the host
+  #   - fs.file-max, updatedb and NFS read-ahead settings
+  enableInitContainer: true
   enableBlobfuseProxy: true
   blobfuseProxy:
     installBlobfuse: false

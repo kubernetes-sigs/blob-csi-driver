@@ -93,6 +93,7 @@ spec:
       tolerations:
 {{ toYaml . | indent 8 }}
 {{- end }}
+      {{- if .Values.node.enableInitContainer }}
       initContainers:
         - name: install-blobfuse-proxy
 {{- if hasPrefix "/" .Values.image.blob.repository }}
@@ -157,6 +158,7 @@ spec:
 {{- if .Values.node.additionalVolumeMounts }}
 {{- toYaml .Values.node.additionalVolumeMounts | nindent 12 }}
 {{- end }}
+      {{- end }}
       containers:
         - name: liveness-probe
           imagePullPolicy: {{ .Values.image.livenessProbe.pullPolicy }}
@@ -343,6 +345,7 @@ spec:
               name: mountpoint-dir
 {{- end }}
       volumes:
+{{- if .Values.node.enableInitContainer }}
 {{- if eq .Values.linux.distro "cos" }}
         - name: host-home-kubernetes-bin
           hostPath:
@@ -367,6 +370,7 @@ spec:
         - name: host-etc
           hostPath:
             path: {{ .Values.node.hostPath.etc }}
+{{- end }}
         - hostPath:
             path: {{ .Values.linux.kubelet }}/plugins/{{ .Values.driver.name }}
             type: DirectoryOrCreate
@@ -406,7 +410,7 @@ spec:
             path: /lib/modules
             type: DirectoryOrCreate
         {{- end }}
-{{- if .Values.node.additionalVolumes }}
+{{- if and .Values.node.enableInitContainer .Values.node.additionalVolumes }}
 {{- toYaml .Values.node.additionalVolumes | nindent 8 }}
 {{- end }}
       {{- if .Values.securityContext }}

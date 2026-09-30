@@ -154,7 +154,8 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `node.nodeDriverRegistrar.livenessProbe.failureThreshold`    | node-driver-registrar liveness probe failureThreshold                                                      | `2`                                                     |
 | `node.logLevel`                                       | node driver log level                                 | `20`                                                            |
 | `node.mountPermissions`                               | mounted folder permissions (only applies for NFS)                 | `0777`
-| `node.enableBlobfuseProxy`                            | enable blobfuse-proxy on agent node                           | `false`                                                          |
+| `node.enableInitContainer`                            | create the `install-blobfuse-proxy` init container. When `false`, blobfuse-proxy and blobfuse2 are not installed on the host, and `fs.file-max`, `updatedb` and NFS read-ahead settings are not applied | `true`                                                           |
+| `node.enableBlobfuseProxy`                            | enable blobfuse-proxy on agent node                           | `true`                                                           |
 | `node.blobfuseProxy.installBlobfuse`                  | whether blobfuse should be installed on agent node| `true`                                                          |
 | `node.blobfuseProxy.blobfuseVersion`                  | installed blobfuse version on agent node (if the value is empty, it means that the latest version should be installed.) | ``                                                          |
 | `node.blobfuseProxy.installBlobfuse2`                 | whether blobfuse2 should be installed on agent node| `true`                                                          |
