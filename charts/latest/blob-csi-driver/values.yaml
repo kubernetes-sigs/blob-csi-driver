@@ -63,6 +63,14 @@ controller:
   livenessProbe:
     healthPort: 29632
   replicas: 2
+  # Optional Deployment strategy override for the controller.
+  # Leave empty to use the Kubernetes default RollingUpdate behavior.
+  # strategy:
+  #   type: RollingUpdate
+  #   rollingUpdate:
+  #     maxSurge: 0
+  #     maxUnavailable: 1
+  strategy: {}
   runOnMaster: false
   runOnControlPlane: false
   logLevel: 5
