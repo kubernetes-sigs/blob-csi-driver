@@ -101,6 +101,7 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `controller.cloudConfigSecretNamespace`               | cloud config secret namespace of controller driver          | `kube-system`
 | `controller.allowEmptyCloudConfig`                    | Whether allow running controller driver without cloud config          | `true`
 | `controller.replicas`                                 | replica number of csi-blob-controller                   | `2`                                                              |
+| `controller.strategy`                                 | optional Deployment strategy override for the controller (empty uses the Kubernetes default RollingUpdate behavior) | `{}` |
 | `controller.hostNetwork`                              | `hostNetwork` setting on controller driver(could be disabled if controller does not depend on MSI setting)                            | `true`                                                            | `true`, `false`
 | `controller.metricsPort`                              | metrics port of csi-blob-controller                   | `29634`                                                          |
 | `controller.livenessProbe.healthPort `                | health check port for liveness probe                   | `29632` |
