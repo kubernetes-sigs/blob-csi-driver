@@ -5,7 +5,7 @@ entries:
     appVersion: 1.26.18
     created: "2026-09-21T06:21:49.188841593Z"
     description: Azure Blob Storage CSI driver
-    digest: caf599f64f288e7f939159d1b0c4d64fe8f16e1faa0c065ba4dea40878db32a8
+    digest: 41e06749743ce8042b3e645135573dd91b4f08f37e48762ac1a7283f3f5d2d0c
     name: blob-csi-driver
     urls:
     - https://raw.githubusercontent.com/kubernetes-sigs/blob-csi-driver/release-1.26/charts/latest/blob-csi-driver-1.26.18.tgz
