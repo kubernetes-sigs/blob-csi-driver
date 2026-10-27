@@ -73,17 +73,17 @@ The following table lists the configurable parameters of the latest Azure Blob S
 | `image.blob.repository`                               | blob-csi-driver docker image                          | `mcr.microsoft.com/oss/kubernetes-csi/blob-csi`                             |
 | `image.blob.tag`                                      | blob-csi-driver docker image tag                      | `latest`                                                         |
 | `image.blob.pullPolicy`                               | blob-csi-driver image pull policy                     | `IfNotPresent`                                                   |
-| `image.csiProvisioner.repository`                     | csi-provisioner docker image                          | `mcr.microsoft.com/oss/kubernetes-csi/csi-provisioner`           |
-| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | `v6.3.0`                                                         |
+| `image.csiProvisioner.repository`                     | csi-provisioner docker image                          | `mcr.microsoft.com/oss/v2/kubernetes-csi/csi-provisioner`           |
+| `image.csiProvisioner.tag`                            | csi-provisioner docker image tag                      | `v6.4.0`                                                         |
 | `image.csiProvisioner.pullPolicy`                     | csi-provisioner image pull policy                     | `IfNotPresent`                                                   |
-| `image.livenessProbe.repository`                      | liveness-probe docker image                           | `mcr.microsoft.com/oss/kubernetes-csi/livenessprobe`             |
-| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | `v2.19.0`                                                         |
+| `image.livenessProbe.repository`                      | liveness-probe docker image                           | `mcr.microsoft.com/oss/v2/kubernetes-csi/livenessprobe`             |
+| `image.livenessProbe.tag`                             | liveness-probe docker image tag                       | `v2.20.0`                                                         |
 | `image.livenessProbe.pullPolicy`                      | liveness-probe image pull policy                      | `IfNotPresent`                                                   |
-| `image.nodeDriverRegistrar.repository`                | csi-node-driver-registrar docker image                | `mcr.microsoft.com/oss/kubernetes-csi/csi-node-driver-registrar` |
-| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | `v2.17.0`                                                      |
+| `image.nodeDriverRegistrar.repository`                | csi-node-driver-registrar docker image                | `mcr.microsoft.com/oss/v2/kubernetes-csi/csi-node-driver-registrar` |
+| `image.nodeDriverRegistrar.tag`                       | csi-node-driver-registrar docker image tag            | `v2.18.0`                                                      |
 | `image.nodeDriverRegistrar.pullPolicy`                | csi-node-driver-registrar image pull policy           | `IfNotPresent`                                                   |
-| `image.csiResizer.repository`                         | csi-resizer docker image                              | `mcr.microsoft.com/oss/kubernetes-csi/csi-resizer`               |
-| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v2.2.1`                                                         |
+| `image.csiResizer.repository`                         | csi-resizer docker image                              | `mcr.microsoft.com/oss/v2/kubernetes-csi/csi-resizer`               |
+| `image.csiResizer.tag`                                | csi-resizer docker image tag                          | `v2.3.0`                                                         |
 | `image.csiResizer.pullPolicy`                         | csi-resizer image pull policy                         | `IfNotPresent`                                                   |
 | `imagePullSecrets`                                    | Specify docker-registry secret names as an array      | [] (does not add image pull secrets to deployed pods)          |
 | `cloud`                                               | the cloud environment the driver is running on        | `AzurePublicCloud`                                               |
