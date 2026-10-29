@@ -26,3 +26,18 @@ CVE-2026-97030
 CVE-2026-97031
 CVE-2026-97032
 CVE-2026-111943
+
+# Embedded blobfuse2 (x/net v0.61.0) and azcopy (x/net v0.60.0); fixed in v0.62.0.
+# Remove these exceptions when both binaries are updated with the fixes.
+# Plain .trivyignore IDs apply globally; comments identify the dependency origins.
+CVE-2026-78661
+CVE-2026-97045
+
+# Embedded azcopy go-jose/v4 v4.1.4; fixed in v4.1.6.
+# Remove this exception when azcopy is updated with the fix.
+CVE-2026-116587
+
+# Embedded azcopy go-jose/v4 v4.1.4; fixed in v4.1.5.
+# Remove these exceptions when azcopy is updated with the fixes.
+CVE-2026-116585
+CVE-2026-116586
