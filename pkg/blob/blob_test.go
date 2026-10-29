@@ -34,10 +34,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	v1api "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
+	clienttesting "k8s.io/client-go/testing"
 	"sigs.k8s.io/blob-csi-driver/pkg/util"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient"
 	"sigs.k8s.io/cloud-provider-azure/pkg/azclient/accountclient/mock_accountclient"
@@ -3321,6 +3326,175 @@ func TestGetAuthEnvSecretNamespaceHandling(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, tc.testFunc)
+	}
+}
+
+// sarReactor returns a client-go fake reactor that responds to any created
+// SubjectAccessReview with the given Allowed verdict.
+func sarReactor(allowed bool) func(action clienttesting.Action) (bool, k8sruntime.Object, error) {
+	return func(action clienttesting.Action) (bool, k8sruntime.Object, error) {
+		createAction, ok := action.(clienttesting.CreateAction)
+		if !ok {
+			return false, nil, nil
+		}
+		sar, ok := createAction.GetObject().(*authorizationv1.SubjectAccessReview)
+		if !ok {
+			return false, nil, nil
+		}
+		sar.Status.Allowed = allowed
+		return true, sar, nil
+	}
+}
+
+func TestAuthorizeInlineVolumeSecret(t *testing.T) {
+	testCases := []struct {
+		name              string
+		mode              string
+		kubeClient        kubernetes.Interface
+		podNamespace      string
+		podServiceAccount string
+		secretName        string
+		expectErr         bool
+		expectErrCode     codes.Code
+	}{
+		{
+			name:       "mode off skips the check entirely even without a kube client",
+			mode:       inlineVolumeSecretAuthzOff,
+			kubeClient: nil,
+			secretName: "spn-secret",
+			expectErr:  false,
+		},
+		{
+			name:       "empty secretName is a no-op",
+			mode:       inlineVolumeSecretAuthzEnforce,
+			kubeClient: fake.NewSimpleClientset(),
+			secretName: "",
+			expectErr:  false,
+		},
+		{
+			name:              "enforce denies when SubjectAccessReview disallows",
+			mode:              inlineVolumeSecretAuthzEnforce,
+			podNamespace:      "attacker-ns",
+			podServiceAccount: "default",
+			secretName:        "spn-secret",
+			expectErr:         true,
+			expectErrCode:     codes.PermissionDenied,
+		},
+		{
+			name:              "enforce allows when SubjectAccessReview allows",
+			mode:              inlineVolumeSecretAuthzEnforce,
+			podNamespace:      "owner-ns",
+			podServiceAccount: "owner-sa",
+			secretName:        "spn-secret",
+			expectErr:         false,
+		},
+		{
+			name:              "warn mode never denies even when disallowed",
+			mode:              inlineVolumeSecretAuthzWarn,
+			podNamespace:      "attacker-ns",
+			podServiceAccount: "default",
+			secretName:        "spn-secret",
+			expectErr:         false,
+		},
+		{
+			name:          "enforce fails closed when pod identity is missing",
+			mode:          inlineVolumeSecretAuthzEnforce,
+			secretName:    "spn-secret",
+			expectErr:     true,
+			expectErrCode: codes.PermissionDenied,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := NewFakeDriver()
+			d.inlineVolumeSecretAuthz = tc.mode
+			if tc.kubeClient != nil {
+				d.KubeClient = tc.kubeClient
+			} else if tc.name != "mode off skips the check entirely even without a kube client" {
+				fakeClient := fake.NewSimpleClientset()
+				allowed := tc.name == "enforce allows when SubjectAccessReview allows"
+				fakeClient.PrependReactor("create", "subjectaccessreviews", sarReactor(allowed))
+				d.KubeClient = fakeClient
+			}
+
+			err := d.authorizeInlineVolumeSecret(context.TODO(), tc.podNamespace, tc.podServiceAccount, "secret-ns", tc.secretName)
+			if tc.expectErr {
+				assert.Error(t, err)
+				assert.Equal(t, tc.expectErrCode, status.Code(err))
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestGetAuthEnvInlineVolumeSecretAuthz verifies the end-to-end wiring of the
+// SubjectAccessReview check inside GetAuthEnv's ephemeral-volume path.
+func TestGetAuthEnvInlineVolumeSecretAuthz(t *testing.T) {
+	testCases := []struct {
+		name      string
+		mode      string
+		allowed   bool
+		expectErr bool
+	}{
+		{
+			name:      "off mode allows mount regardless of SAR result",
+			mode:      inlineVolumeSecretAuthzOff,
+			allowed:   false,
+			expectErr: false,
+		},
+		{
+			name:      "enforce mode blocks mount when SAR disallows",
+			mode:      inlineVolumeSecretAuthzEnforce,
+			allowed:   false,
+			expectErr: true,
+		},
+		{
+			name:      "enforce mode allows mount when SAR allows",
+			mode:      inlineVolumeSecretAuthzEnforce,
+			allowed:   true,
+			expectErr: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := NewFakeDriver()
+			d.inlineVolumeSecretAuthz = tc.mode
+			fakeClient := fake.NewSimpleClientset()
+			fakeClient.PrependReactor("create", "subjectaccessreviews", sarReactor(tc.allowed))
+			// Pre-create the referenced Secret so a successful authorization
+			// check is followed by a successful secret read, isolating this
+			// test to the authz wiring rather than unrelated secret-read fallback.
+			_, err := fakeClient.CoreV1().Secrets("attacker-ns").Create(context.TODO(), &v1api.Secret{
+				ObjectMeta: metav1.ObjectMeta{Name: "spn-secret", Namespace: "attacker-ns"},
+				Data: map[string][]byte{
+					defaultSecretAccountName: []byte("accountname"),
+				},
+			}, metav1.CreateOptions{})
+			assert.NoError(t, err)
+			d.KubeClient = fakeClient
+
+			attrib := map[string]string{
+				ephemeralField:         trueValue,
+				podNamespaceField:      "attacker-ns",
+				podServiceAccountField: "default",
+				secretNameField:        "spn-secret",
+				secretNamespaceField:   "attacker-ns",
+				containerNameField:     "containername",
+			}
+			secret := make(map[string]string)
+			volumeID := "rg#accountname#containername"
+
+			_, _, _, _, _, getAuthEnvErr := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+			if tc.expectErr {
+				assert.Error(t, getAuthEnvErr)
+				assert.Equal(t, codes.PermissionDenied, status.Code(getAuthEnvErr))
+			} else {
+				assert.NoError(t, getAuthEnvErr)
+			}
+		})
 	}
 }
 
