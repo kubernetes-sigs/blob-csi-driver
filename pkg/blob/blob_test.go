@@ -3348,21 +3348,22 @@ func sarReactor(allowed bool) func(action clienttesting.Action) (bool, k8sruntim
 
 func TestAuthorizeInlineVolumeSecret(t *testing.T) {
 	testCases := []struct {
-		name              string
-		mode              string
-		kubeClient        kubernetes.Interface
-		podNamespace      string
-		podServiceAccount string
-		secretName        string
-		expectErr         bool
-		expectErrCode     codes.Code
+		name               string
+		mode               string
+		kubeClient         kubernetes.Interface
+		forceNilKubeClient bool
+		podNamespace       string
+		podServiceAccount  string
+		secretName         string
+		expectErr          bool
+		expectErrCode      codes.Code
 	}{
 		{
-			name:       "mode off skips the check entirely even without a kube client",
-			mode:       inlineVolumeSecretAuthzOff,
-			kubeClient: nil,
-			secretName: "spn-secret",
-			expectErr:  false,
+			name:               "mode off skips the check entirely even without a kube client",
+			mode:               inlineVolumeSecretAuthzOff,
+			forceNilKubeClient: true,
+			secretName:         "spn-secret",
+			expectErr:          false,
 		},
 		{
 			name:       "empty secretName is a no-op",
@@ -3403,15 +3404,37 @@ func TestAuthorizeInlineVolumeSecret(t *testing.T) {
 			expectErr:     true,
 			expectErrCode: codes.PermissionDenied,
 		},
+		{
+			name:               "enforce fails closed when KubeClient is nil",
+			mode:               inlineVolumeSecretAuthzEnforce,
+			forceNilKubeClient: true,
+			podNamespace:       "owner-ns",
+			podServiceAccount:  "owner-sa",
+			secretName:         "spn-secret",
+			expectErr:          true,
+			expectErrCode:      codes.PermissionDenied,
+		},
+		{
+			name:               "warn mode proceeds when KubeClient is nil",
+			mode:               inlineVolumeSecretAuthzWarn,
+			forceNilKubeClient: true,
+			podNamespace:       "owner-ns",
+			podServiceAccount:  "owner-sa",
+			secretName:         "spn-secret",
+			expectErr:          false,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			d := NewFakeDriver()
 			d.inlineVolumeSecretAuthz = tc.mode
-			if tc.kubeClient != nil {
+			switch {
+			case tc.forceNilKubeClient:
+				d.KubeClient = nil
+			case tc.kubeClient != nil:
 				d.KubeClient = tc.kubeClient
-			} else if tc.name != "mode off skips the check entirely even without a kube client" {
+			default:
 				fakeClient := fake.NewSimpleClientset()
 				allowed := tc.name == "enforce allows when SubjectAccessReview allows"
 				fakeClient.PrependReactor("create", "subjectaccessreviews", sarReactor(allowed))
@@ -3425,6 +3448,58 @@ func TestAuthorizeInlineVolumeSecret(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+		})
+	}
+}
+
+// TestAuthorizeInlineVolumeSecretIncludesServiceAccountGroups verifies the
+// SubjectAccessReview request carries the standard ServiceAccount groups
+// (system:serviceaccounts, system:serviceaccounts:<ns>, system:authenticated)
+// in addition to the User field, since RBAC bindings commonly target those
+// groups rather than the individual ServiceAccount user.
+func TestAuthorizeInlineVolumeSecretIncludesServiceAccountGroups(t *testing.T) {
+	d := NewFakeDriver()
+	d.inlineVolumeSecretAuthz = inlineVolumeSecretAuthzEnforce
+	fakeClient := fake.NewSimpleClientset()
+	var capturedGroups []string
+	fakeClient.PrependReactor("create", "subjectaccessreviews", func(action clienttesting.Action) (bool, k8sruntime.Object, error) {
+		createAction, ok := action.(clienttesting.CreateAction)
+		if !ok {
+			return false, nil, nil
+		}
+		sar, ok := createAction.GetObject().(*authorizationv1.SubjectAccessReview)
+		if !ok {
+			return false, nil, nil
+		}
+		capturedGroups = sar.Spec.Groups
+		sar.Status.Allowed = true
+		return true, sar, nil
+	})
+	d.KubeClient = fakeClient
+
+	err := d.authorizeInlineVolumeSecret(context.TODO(), "owner-ns", "owner-sa", "secret-ns", "spn-secret")
+	assert.NoError(t, err)
+	assert.Contains(t, capturedGroups, "system:serviceaccounts")
+	assert.Contains(t, capturedGroups, "system:serviceaccounts:owner-ns")
+	assert.Contains(t, capturedGroups, "system:authenticated")
+}
+
+// TestNormalizeInlineVolumeSecretAuthz verifies that empty and "off" both
+// default to disabled, and that recognized modes are lower-cased/trimmed.
+func TestNormalizeInlineVolumeSecretAuthz(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{input: "", expected: inlineVolumeSecretAuthzOff},
+		{input: "off", expected: inlineVolumeSecretAuthzOff},
+		{input: "  Off  ", expected: inlineVolumeSecretAuthzOff},
+		{input: "WARN", expected: inlineVolumeSecretAuthzWarn},
+		{input: "Enforce", expected: inlineVolumeSecretAuthzEnforce},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.input, func(t *testing.T) {
+			assert.Equal(t, tc.expected, normalizeInlineVolumeSecretAuthz(tc.input))
 		})
 	}
 }
@@ -3493,6 +3568,78 @@ func TestGetAuthEnvInlineVolumeSecretAuthz(t *testing.T) {
 				assert.Equal(t, codes.PermissionDenied, status.Code(getAuthEnvErr))
 			} else {
 				assert.NoError(t, getAuthEnvErr)
+			}
+		})
+	}
+}
+
+// TestGetAuthEnvInlineVolumeSecretAuthzSkipsOptionalMSISecret verifies that an
+// ephemeral MSI mount with no explicit secretName does not perform the
+// SubjectAccessReview (and is not blocked by it), since the synthesized
+// default Secret name is only an optional, best-effort lookup for that auth
+// type. An explicitly-referenced secretName is still authorized even under
+// MSI auth type.
+func TestGetAuthEnvInlineVolumeSecretAuthzSkipsOptionalMSISecret(t *testing.T) {
+	testCases := []struct {
+		name          string
+		secretName    string
+		expectSARCall bool
+	}{
+		{
+			name:          "no explicit secretName: SAR is skipped, mount is not blocked",
+			secretName:    "",
+			expectSARCall: false,
+		},
+		{
+			name:          "explicit secretName: SAR is still enforced",
+			secretName:    "explicit-secret",
+			expectSARCall: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			d := NewFakeDriver()
+			d.inlineVolumeSecretAuthz = inlineVolumeSecretAuthzEnforce
+			fakeClient := fake.NewSimpleClientset()
+			sarCalled := false
+			fakeClient.PrependReactor("create", "subjectaccessreviews", func(action clienttesting.Action) (bool, k8sruntime.Object, error) {
+				sarCalled = true
+				createAction, ok := action.(clienttesting.CreateAction)
+				if !ok {
+					return false, nil, nil
+				}
+				sar, ok := createAction.GetObject().(*authorizationv1.SubjectAccessReview)
+				if !ok {
+					return false, nil, nil
+				}
+				sar.Status.Allowed = false
+				return true, sar, nil
+			})
+			d.KubeClient = fakeClient
+
+			attrib := map[string]string{
+				ephemeralField:         trueValue,
+				podNamespaceField:      "owner-ns",
+				podServiceAccountField: "owner-sa",
+				containerNameField:     "containername",
+				storageAccountField:    "accountname",
+				storageAuthTypeField:   storageAuthTypeMSI,
+			}
+			if tc.secretName != "" {
+				attrib[secretNameField] = tc.secretName
+				attrib[secretNamespaceField] = "owner-ns"
+			}
+			secret := make(map[string]string)
+			volumeID := "rg#accountname#containername"
+
+			_, _, _, _, _, err := d.GetAuthEnv(context.TODO(), volumeID, "", attrib, secret)
+			assert.Equal(t, tc.expectSARCall, sarCalled)
+			if tc.expectSARCall {
+				assert.Error(t, err)
+				assert.Equal(t, codes.PermissionDenied, status.Code(err))
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

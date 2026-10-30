@@ -838,10 +838,20 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		}
 	} else {
 		if len(secrets) == 0 {
+			explicitSecretName := secretName != ""
 			if secretName == "" && accountName != "" {
 				secretName = fmt.Sprintf(secretNameTemplate, accountName)
 			}
-			if secretName != "" {
+			// For MSI auth without an explicitly-referenced Secret, the
+			// synthesized default Secret name is only an optional, best-effort
+			// lookup (a missing Secret is already silently ignored below).
+			// Skip both the authorization check and the lookup itself in that
+			// case so a Pod's ServiceAccount lacking "get secrets" RBAC does
+			// not block an MSI mount that never needed a Secret at all. Any
+			// Secret the Pod author *did* explicitly reference is still both
+			// authorized and read.
+			skipOptionalMSISecret := !explicitSecretName && strings.EqualFold(azureStorageAuthType, storageAuthTypeMSI)
+			if secretName != "" && !skipOptionalMSISecret {
 				// For inline (ephemeral) volumes, the Pod author controls secretName/
 				// secretNamespace directly, so verify the mounting Pod's own
 				// ServiceAccount is authorized to read this Secret before the driver
@@ -1330,15 +1340,21 @@ func ValidateContainerName(containerName string) error {
 }
 
 // normalizeInlineVolumeSecretAuthz lower-cases and validates the configured
-// inline-volume-secret-authz mode, falling back to "off" for any unrecognized
-// value so misconfiguration never silently turns into unsupervised "enforce".
+// inline-volume-secret-authz mode. An empty value (flag not set) and the
+// explicit "off" value both default to disabled. Any other unrecognized
+// value is rejected at startup rather than silently disabling the check,
+// so a typo (e.g. "enfore") cannot unknowingly turn off authorization.
 func normalizeInlineVolumeSecretAuthz(mode string) string {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
+	normalized := strings.ToLower(strings.TrimSpace(mode))
+	switch normalized {
+	case "", inlineVolumeSecretAuthzOff:
+		return inlineVolumeSecretAuthzOff
 	case inlineVolumeSecretAuthzWarn:
 		return inlineVolumeSecretAuthzWarn
 	case inlineVolumeSecretAuthzEnforce:
 		return inlineVolumeSecretAuthzEnforce
 	default:
+		klog.Fatalf("invalid --inline-volume-secret-authz value(%q): must be one of off, warn, enforce", mode)
 		return inlineVolumeSecretAuthzOff
 	}
 }
@@ -1350,6 +1366,12 @@ func normalizeInlineVolumeSecretAuthz(mode string) string {
 // node ServiceAccount. This closes the gap where an inline volume could make
 // the driver read a Secret on behalf of a Pod that could not read it directly.
 //
+// Scope: this check is only reachable from GetAuthEnv's Secret-read branch.
+// The "nfs" protocol never reaches that branch (GetAuthEnv returns before
+// any Secret lookup for NFS mounts, since NFS mounts need no account key),
+// so this check intentionally does not apply to, and cannot be bypassed by,
+// NFS-protocol inline volumes -- there is no Secret read to authorize there.
+//
 // mode "off" skips the check entirely (default, no behavior change).
 // mode "warn" logs a warning on denial but still allows the mount.
 // mode "enforce" denies the mount (PermissionDenied) when the check fails or
@@ -1360,7 +1382,11 @@ func (d *Driver) authorizeInlineVolumeSecret(ctx context.Context, podNamespace, 
 		return nil
 	}
 	if d.KubeClient == nil {
-		klog.Warningf("authorizeInlineVolumeSecret: KubeClient is nil, skipping authorization check for secret(%s)", secretName)
+		msg := fmt.Sprintf("authorizeInlineVolumeSecret: KubeClient is nil, cannot verify authorization to read secret(%s)", secretName)
+		if mode == inlineVolumeSecretAuthzEnforce {
+			return status.Error(codes.PermissionDenied, msg)
+		}
+		klog.Warning(msg)
 		return nil
 	}
 	if podNamespace == "" || podServiceAccount == "" {
@@ -1375,6 +1401,11 @@ func (d *Driver) authorizeInlineVolumeSecret(ctx context.Context, podNamespace, 
 	sar := &authorizationv1.SubjectAccessReview{
 		Spec: authorizationv1.SubjectAccessReviewSpec{
 			User: fmt.Sprintf("system:serviceaccount:%s:%s", podNamespace, podServiceAccount),
+			Groups: []string{
+				"system:serviceaccounts",
+				fmt.Sprintf("system:serviceaccounts:%s", podNamespace),
+				"system:authenticated",
+			},
 			ResourceAttributes: &authorizationv1.ResourceAttributes{
 				Namespace: secretNamespace,
 				Verb:      "get",
