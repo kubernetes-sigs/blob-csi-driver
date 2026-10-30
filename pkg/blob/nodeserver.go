@@ -496,6 +496,12 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 
 	_, accountName, _, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, protocol, attrib, secrets)
 	if err != nil && !mnt {
+		// Preserve a gRPC status error (e.g. PermissionDenied from the inline
+		// volume Secret authorization check) returned by GetAuthEnv, instead
+		// of flattening every failure into codes.Internal.
+		if _, ok := status.FromError(err); ok {
+			return nil, err
+		}
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
 

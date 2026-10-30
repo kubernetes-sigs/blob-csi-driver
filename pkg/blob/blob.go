@@ -40,6 +40,9 @@ import (
 	grpcprom "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/pborman/uuid"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	authorizationv1 "k8s.io/api/authorization/v1"
 	v1 "k8s.io/api/core/v1"
 	apierror "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -106,6 +109,7 @@ const (
 	requireInfraEncryptionField    = "requireinfraencryption"
 	ephemeralField                 = "csi.storage.k8s.io/ephemeral"
 	podNamespaceField              = "csi.storage.k8s.io/pod.namespace"
+	podServiceAccountField         = "csi.storage.k8s.io/serviceAccount.name"
 	serviceAccountTokenField       = "csi.storage.k8s.io/serviceAccount.tokens"
 	clientIDField                  = "clientid"
 	mountWithWITokenField          = "mountwithworkloadidentitytoken"
@@ -155,6 +159,14 @@ const (
 	subnetTemplate = "/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s"
 
 	defaultNamespace = "default"
+
+	// inlineVolumeSecretAuthz modes: controls whether the driver verifies, via a
+	// SubjectAccessReview, that the mounting Pod's own ServiceAccount is allowed
+	// to "get" the Secret referenced by an inline (ephemeral) volume before the
+	// driver reads that Secret using its own (broader) node ServiceAccount.
+	inlineVolumeSecretAuthzOff     = "off"
+	inlineVolumeSecretAuthzWarn    = "warn"
+	inlineVolumeSecretAuthzEnforce = "enforce"
 
 	pvcNameKey           = "csi.storage.k8s.io/pvc/name"
 	pvcNamespaceKey      = "csi.storage.k8s.io/pvc/namespace"
@@ -346,6 +358,7 @@ type DriverOptions struct {
 	WaitForAzCopyTimeoutMinutes            int
 	EnableVolumeMountGroup                 bool
 	FSGroupChangePolicy                    string
+	InlineVolumeSecretAuthz                string
 }
 
 func (option *DriverOptions) AddFlags() {
@@ -366,6 +379,7 @@ func (option *DriverOptions) AddFlags() {
 	flag.IntVar(&option.WaitForAzCopyTimeoutMinutes, "wait-for-azcopy-timeout-minutes", 18, "timeout in minutes for waiting for azcopy to finish")
 	flag.BoolVar(&option.EnableVolumeMountGroup, "enable-volume-mount-group", true, "indicates whether enabling VOLUME_MOUNT_GROUP")
 	flag.StringVar(&option.FSGroupChangePolicy, "fsgroup-change-policy", "", "indicates how the volume's ownership will be changed by the driver, OnRootMismatch is the default value")
+	flag.StringVar(&option.InlineVolumeSecretAuthz, "inline-volume-secret-authz", inlineVolumeSecretAuthzOff, "verify the mounting Pod's ServiceAccount is authorized to read the Secret referenced by an inline volume: off, warn, enforce")
 }
 
 // Driver implements all interfaces of CSI drivers
@@ -394,6 +408,7 @@ type Driver struct {
 	enableAznfsMount                       bool
 	enableVolumeMountGroup                 bool
 	fsGroupChangePolicy                    string
+	inlineVolumeSecretAuthz                string
 	mounter                                *mount.SafeFormatAndMount
 	volLockMap                             *util.LockMap
 	// A map storing all volumes with ongoing operations so that additional operations
@@ -444,6 +459,7 @@ func NewDriver(options *DriverOptions, kubeClient kubernetes.Interface, cloud *s
 		sasTokenExpirationMinutes:              options.SasTokenExpirationMinutes,
 		waitForAzCopyTimeoutMinutes:            options.WaitForAzCopyTimeoutMinutes,
 		fsGroupChangePolicy:                    options.FSGroupChangePolicy,
+		inlineVolumeSecretAuthz:                normalizeInlineVolumeSecretAuthz(options.InlineVolumeSecretAuthz),
 		azcopy:                                 &util.Azcopy{ExecCmd: &util.ExecCommand{}},
 		KubeClient:                             kubeClient,
 		cloud:                                  cloud,
@@ -666,6 +682,9 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		mountWithWIToken        bool
 		tenantID                string
 		serviceAccountToken     string
+		isEphemeral             bool
+		podNamespace            string
+		podServiceAccount       string
 	)
 
 	for k, v := range attrib {
@@ -725,6 +744,12 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 			tenantID = v
 		case strings.ToLower(serviceAccountTokenField):
 			serviceAccountToken = v
+		case ephemeralField:
+			isEphemeral = strings.EqualFold(v, trueValue)
+		case podNamespaceField:
+			podNamespace = v
+		case strings.ToLower(podServiceAccountField):
+			podServiceAccount = v
 		}
 	}
 	klog.V(2).Infof("volumeID(%s) authEnv: %s", volumeID, authEnv)
@@ -813,10 +838,29 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		}
 	} else {
 		if len(secrets) == 0 {
+			explicitSecretName := secretName != ""
 			if secretName == "" && accountName != "" {
 				secretName = fmt.Sprintf(secretNameTemplate, accountName)
 			}
-			if secretName != "" {
+			// For MSI auth without an explicitly-referenced Secret, the
+			// synthesized default Secret name is only an optional, best-effort
+			// lookup (a missing Secret is already silently ignored below).
+			// Skip both the authorization check and the lookup itself in that
+			// case so a Pod's ServiceAccount lacking "get secrets" RBAC does
+			// not block an MSI mount that never needed a Secret at all. Any
+			// Secret the Pod author *did* explicitly reference is still both
+			// authorized and read.
+			skipOptionalMSISecret := !explicitSecretName && strings.EqualFold(azureStorageAuthType, storageAuthTypeMSI)
+			if secretName != "" && !skipOptionalMSISecret {
+				// For inline (ephemeral) volumes, the Pod author controls secretName/
+				// secretNamespace directly, so verify the mounting Pod's own
+				// ServiceAccount is authorized to read this Secret before the driver
+				// reads it with its own (broader) node ServiceAccount.
+				if isEphemeral {
+					if err := d.authorizeInlineVolumeSecret(ctx, podNamespace, podServiceAccount, secretNamespace, secretName); err != nil {
+						return rgName, accountName, accountKey, containerName, authEnv, err
+					}
+				}
 				// read from k8s secret first
 				var name, spnClientID, spnTenantID string
 				name, accountKey, accountSasToken, msiSecret, storageSPNClientSecret, spnClientID, spnTenantID, err = d.GetInfoFromSecret(ctx, secretName, secretNamespace)
@@ -1291,6 +1335,101 @@ func ValidateContainerName(containerName string) error {
 	}
 	if strings.Contains(containerName, "--") {
 		return fmt.Errorf("invalid containerName %q: consecutive hyphens are not allowed", containerName)
+	}
+	return nil
+}
+
+// normalizeInlineVolumeSecretAuthz lower-cases and validates the configured
+// inline-volume-secret-authz mode. An empty value (flag not set) and the
+// explicit "off" value both default to disabled. Any other unrecognized
+// value is rejected at startup rather than silently disabling the check,
+// so a typo (e.g. "enfore") cannot unknowingly turn off authorization.
+func normalizeInlineVolumeSecretAuthz(mode string) string {
+	normalized := strings.ToLower(strings.TrimSpace(mode))
+	switch normalized {
+	case "", inlineVolumeSecretAuthzOff:
+		return inlineVolumeSecretAuthzOff
+	case inlineVolumeSecretAuthzWarn:
+		return inlineVolumeSecretAuthzWarn
+	case inlineVolumeSecretAuthzEnforce:
+		return inlineVolumeSecretAuthzEnforce
+	default:
+		klog.Fatalf("invalid --inline-volume-secret-authz value(%q): must be one of off, warn, enforce", mode)
+		return inlineVolumeSecretAuthzOff
+	}
+}
+
+// authorizeInlineVolumeSecret verifies, via a SubjectAccessReview, that the
+// mounting Pod's own ServiceAccount (podNamespace/podServiceAccount) is itself
+// allowed to "get" the Secret (secretNamespace/secretName) that an inline
+// (ephemeral) volume asked the driver to read with the driver's own (broader)
+// node ServiceAccount. This closes the gap where an inline volume could make
+// the driver read a Secret on behalf of a Pod that could not read it directly.
+//
+// Scope: this check is only reachable from GetAuthEnv's Secret-read branch.
+// The "nfs" protocol never reaches that branch (GetAuthEnv returns before
+// any Secret lookup for NFS mounts, since NFS mounts need no account key),
+// so this check intentionally does not apply to, and cannot be bypassed by,
+// NFS-protocol inline volumes -- there is no Secret read to authorize there.
+//
+// mode "off" skips the check entirely (default, no behavior change).
+// mode "warn" logs a warning on denial but still allows the mount.
+// mode "enforce" denies the mount (PermissionDenied) when the check fails or
+// when the Pod's ServiceAccount is unknown (fail closed).
+func (d *Driver) authorizeInlineVolumeSecret(ctx context.Context, podNamespace, podServiceAccount, secretNamespace, secretName string) error {
+	mode := d.inlineVolumeSecretAuthz
+	if mode == inlineVolumeSecretAuthzOff || secretName == "" {
+		return nil
+	}
+	if d.KubeClient == nil {
+		msg := fmt.Sprintf("authorizeInlineVolumeSecret: KubeClient is nil, cannot verify authorization to read secret(%s)", secretName)
+		if mode == inlineVolumeSecretAuthzEnforce {
+			return status.Error(codes.PermissionDenied, msg)
+		}
+		klog.Warning(msg)
+		return nil
+	}
+	if podNamespace == "" || podServiceAccount == "" {
+		msg := fmt.Sprintf("authorizeInlineVolumeSecret: missing pod namespace/serviceAccount information, cannot verify authorization to read secret(%s) in namespace(%s)", secretName, secretNamespace)
+		if mode == inlineVolumeSecretAuthzEnforce {
+			return status.Error(codes.PermissionDenied, msg)
+		}
+		klog.Warning(msg)
+		return nil
+	}
+
+	sar := &authorizationv1.SubjectAccessReview{
+		Spec: authorizationv1.SubjectAccessReviewSpec{
+			User: fmt.Sprintf("system:serviceaccount:%s:%s", podNamespace, podServiceAccount),
+			Groups: []string{
+				"system:serviceaccounts",
+				fmt.Sprintf("system:serviceaccounts:%s", podNamespace),
+				"system:authenticated",
+			},
+			ResourceAttributes: &authorizationv1.ResourceAttributes{
+				Namespace: secretNamespace,
+				Verb:      "get",
+				Resource:  "secrets",
+				Name:      secretName,
+			},
+		},
+	}
+	result, err := d.KubeClient.AuthorizationV1().SubjectAccessReviews().Create(ctx, sar, metav1.CreateOptions{})
+	if err != nil {
+		msg := fmt.Sprintf("authorizeInlineVolumeSecret: SubjectAccessReview failed for serviceaccount(%s/%s) on secret(%s/%s): %v", podNamespace, podServiceAccount, secretNamespace, secretName, err)
+		if mode == inlineVolumeSecretAuthzEnforce {
+			return status.Error(codes.Internal, msg)
+		}
+		klog.Warning(msg)
+		return nil
+	}
+	if !result.Status.Allowed {
+		msg := fmt.Sprintf("authorizeInlineVolumeSecret: serviceaccount(system:serviceaccount:%s:%s) is not authorized to get secret(%s) in namespace(%s)",
+			podNamespace, podServiceAccount, secretName, secretNamespace)
+		if mode == inlineVolumeSecretAuthzEnforce {
+			return status.Error(codes.PermissionDenied, msg)
+		}
+		klog.Warning(msg)
 	}
 	return nil
 }

@@ -241,6 +241,9 @@ spec:
             - "--append-timestamp-cache-dir={{ .Values.node.appendTimeStampInCacheDir }}"
             - "--mount-permissions={{ .Values.node.mountPermissions }}"
             - "--allow-inline-volume-key-access-with-idenitity={{ .Values.node.allowInlineVolumeKeyAccessWithIdentity }}"
+{{- if and .Values.node.inlineVolumeSecretAuthz (ne .Values.node.inlineVolumeSecretAuthz "off") }}
+            - "--inline-volume-secret-authz={{ .Values.node.inlineVolumeSecretAuthz }}"
+{{- end }}
             - "--enable-aznfs-mount={{ .Values.node.enableAznfsMount }}"
             - "--metrics-address=0.0.0.0:{{ .Values.node.metricsPort }}"
           ports:

@@ -125,6 +125,7 @@ node:
   cloudConfigSecretNamespace: kube-system
   allowEmptyCloudConfig: true
   allowInlineVolumeKeyAccessWithIdentity: false
+  inlineVolumeSecretAuthz: "off"
   maxUnavailable: 1
   metricsPort: 29635
   livenessProbe:

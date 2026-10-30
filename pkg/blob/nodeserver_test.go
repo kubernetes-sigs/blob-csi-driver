@@ -48,6 +48,11 @@ import (
 	utilexec "k8s.io/utils/exec"
 	testingexec "k8s.io/utils/exec/testing"
 	mount_azure_blob "sigs.k8s.io/blob-csi-driver/pkg/blobfuse-proxy/pb"
+
+	authorizationv1 "k8s.io/api/authorization/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes/fake"
+	clienttesting "k8s.io/client-go/testing"
 )
 
 const (
@@ -1064,6 +1069,54 @@ func TestNodeStageVolume(t *testing.T) {
 				if !reflect.DeepEqual(err, nil) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, nil)
 				}
+			},
+		},
+		{
+			name: "[Error] enforce mode preserves PermissionDenied status from inline volume Secret authz",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#cont#ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						mountPermissionsField:  "0755",
+						ephemeralField:         trueValue,
+						podNamespaceField:      "attacker-ns",
+						podServiceAccountField: "default",
+						containerNameField:     "cont",
+						secretNameField:        "spn-secret",
+						secretNamespaceField:   "attacker-ns",
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				d.inlineVolumeSecretAuthz = inlineVolumeSecretAuthzEnforce
+				fakeClient := fake.NewSimpleClientset()
+				fakeClient.PrependReactor("create", "subjectaccessreviews", func(action clienttesting.Action) (bool, k8sruntime.Object, error) {
+					createAction, ok := action.(clienttesting.CreateAction)
+					if !ok {
+						return false, nil, nil
+					}
+					sar, ok := createAction.GetObject().(*authorizationv1.SubjectAccessReview)
+					if !ok {
+						return false, nil, nil
+					}
+					sar.Status.Allowed = false
+					return true, sar, nil
+				})
+				d.KubeClient = fakeClient
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				assert.Equal(t, codes.PermissionDenied, status.Code(err),
+					"expected the PermissionDenied status from the authz check to survive NodeStageVolume, got: %v", err)
 			},
 		},
 		{
