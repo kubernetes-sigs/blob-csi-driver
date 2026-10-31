@@ -11,97 +11,89 @@ component lets applications use it through a mounted volume without a
 DACS-specific API. Cache misses fetch data from Blob Storage and populate DACS
 asynchronously so other workloads can reuse it.
 
-```text
-AKS workload
-    |
-    | reads files from a mounted volume
-    v
-Blob CSI driver -> BlobFuse2
-                      |
-                      +-- shared DACS cache
-                      |
-                      +-- Azure Blob Storage on a cache miss
-```
+You will:
+
+1. Check eligibility and prerequisites.
+2. Choose two reader nodes and save your configuration.
+3. Verify the Blob CSI driver and install a two-server DACS cache.
+4. Upload the model (about 2.64 GiB) to your Blob container.
+5. Create a read-only volume and two reader pods on different nodes.
+6. Read the model from each node and measure cache activity.
+7. Troubleshoot if the result is not a pass.
+8. Clean up.
+
+> [!WARNING]
+> **Evaluation scope.** DACS is pre-release software, and this topology is for
+> evaluation only, not production sizing. DACS treats the entire Kubernetes
+> cluster as a single trust domain and provides no tenant isolation, so do not
+> use it in a multi-tenant cluster. See the
+> [DACS security model](https://github.com/Azure/dacs/blob/main/docs/security-model.md).
+> Use a cache dedicated to this test.
 
 ## 1. Check eligibility before creating resources
 
-### Compatibility and deployment choice
+### Compatibility
 
-| Component | Requirement for this preview |
-| --- | --- |
-| AKS version | 1.34 or later for the managed Blob CSI add-on path |
-| Reader node OS | Ubuntu 20.04, 22.04, or 24.04 |
-| Blob CSI driver | Managed Blob CSI add-on enabled with distributed-cache support, introduced in 1.27.11 |
-| Node-host BlobFuse2 | 2.5.6, which introduces distributed cache in preview |
-| Volume access | Read-only mounts only |
+| Component | Requirement | Verified in |
+| --- | --- | --- |
+| AKS version | 1.34 or later (managed Blob CSI add-on path) | `kubectl version` |
+| Reader node OS | Ubuntu 20.04, 22.04, or 24.04 | Step 2 node listing |
+| Blob CSI driver | 1.27.11 or later, with distributed-cache support | Step 3 |
+| Node-host BlobFuse2 | 2.5.6, which introduces distributed cache in preview | Step 3 |
+| Volume access | Read-only mounts only | Step 5 |
 
 The main path uses the **AKS-managed Blob CSI add-on** on an existing cluster.
-The add-on uses BlobFuse2 installed in the node image rather than installing
-or pinning the binary itself.
+The add-on uses the BlobFuse2 installed in the node image; it does not install
+or pin the binary. Without the managed add-on, use the
+[open-source driver](#a-open-source-blob-csi-driver) instead.
 
-For a cluster without the managed add-on, the
-[open-source driver alternative](#open-source-blob-csi-driver) is also available.
+### Prerequisites
 
-> [!WARNING]
-> DACS assumes the entire Kubernetes cluster is a single trust domain and does
-> not provide tenant isolation. Do not use this evaluation in a multi-tenant
-> cluster. Review the [DACS security model](https://github.com/Azure/dacs/blob/main/docs/security-model.md).
-
-### Cluster, tools, and permissions
-
-Before downloading the model, confirm all of the following:
-
-- You have at least **two supported Ubuntu worker nodes** for readers, plus
-  capacity for a DACS controller and **two 2 GiB ephemeral CacheServers**
-  (4 GiB total configured cache capacity). CacheServers may share reader nodes
-  if CPU, memory, and backing storage permit.
-  This is an evaluation topology, not a production sizing recommendation.
-  For resource requirements, NVMe/RAID preparation, and operations, use the
+- **Cluster:** at least two Ubuntu worker nodes for readers, plus capacity for
+  the DACS controller and two 2 GiB ephemeral CacheServers (CacheServers may
+  share reader nodes if resources permit). For sizing, NVMe/RAID preparation,
+  and operations, see the
   [DACS deployment guide](https://github.com/Azure/dacs/blob/main/user-guide.md).
-  DACS is pre-release software.
-- Your workstation has Bash, Helm 3, `kubectl`, Azure CLI (`az`),
+- **Workstation:** Bash, Helm 3, `kubectl`, Azure CLI (`az`), and the
   [Hugging Face CLI](https://huggingface.co/docs/huggingface_hub/guides/cli)
-  (`hf`), `sha256sum`, `awk`, `sort`, `tee`, and `mktemp`.
-  No repository checkout is required; run the inline commands from any directory.
-- Your workstation can reach Hugging Face and the storage account and has at
-  least 4 GB of free space for the model. Cluster nodes can pull the driver,
-  DACS, and BusyBox images, reach Blob Storage, and communicate with DACS.
-  The DACS charts and images at `dacstest.azurecr.io` are publicly readable.
-- Your Kubernetes identity can install cluster-scoped resources, including
-  DACS CRDs, and create namespaces, Secrets, PVs, PVCs, and pods.
-  It can also list CacheServer pods and execute commands in their
-  `cacheserver` containers. The inline metrics check requires `curl` in those
-  containers; it does not require Prometheus.
-- You have an existing storage account and Blob container, an upload identity
-  with **Storage Blob Data Contributor** or equivalent access, and network
-  access from the reader nodes.
-- For the main path, the storage account permits **shared-key authentication**
-  and you can obtain an account key. The key authenticates the mount separately
-  from your upload identity. The read-only mount does not reduce the account
-  key's permissions.
+  (`hf`); 4 GB of free disk space; access to Hugging Face and your storage
+  account. Run the commands from any directory; no repository checkout is needed.
+- **Cluster network:** nodes can pull the driver, DACS, and BusyBox images
+  (the DACS charts and images at `dacstest.azurecr.io` are publicly readable),
+  reach Blob Storage, and reach the DACS CacheServers.
+- **Kubernetes permissions:** install cluster-scoped resources (including DACS
+  CRDs); create namespaces, Secrets, PVs, PVCs, and pods; list CacheServer pods;
+  and run commands in their `cacheserver` containers. The metrics check needs
+  `curl` in those containers, not Prometheus.
+- **Storage:** an existing storage account and Blob container, and an upload
+  identity with **Storage Blob Data Contributor** or equivalent.
+- **Shared-key authentication** enabled on the storage account, with its
+  account key available. The key authenticates the mount separately from your
+  upload identity, and the read-only mount does not reduce its permissions. If
+  account keys are prohibited, use the
+  [identity-based alternative](#b-identity-based-storage-access) in step 4.
 
-If account keys are prohibited, adapt the
-[identity-based alternative](#identity-based-storage-access) before proceeding.
+## 2. Choose nodes and set shared configuration
 
-## 2. Set shared configuration and check the cluster
+### Choose two reader nodes
 
-Use **terminal B** for setup and model reads. Replace the five placeholders
-below. `COLD_NODE` and `WARM_NODE` must be different `kubernetes.io/hostname`
-label values in the selected Ubuntu node pool. First inspect your context and
-nodes:
+Inspect your context and nodes. Pick two nodes in the same Ubuntu node pool and
+note their `kubernetes.io/hostname` values.
 
 ```bash
 kubectl config current-context
 kubectl cluster-info
+kubectl version
 kubectl get nodes -o wide -L kubernetes.azure.com/agentpool,kubernetes.io/hostname
 ```
 
-Set the configuration once. The commands save the named, non-secret settings
-in a local working directory for reuse across terminals.
+### Set the configuration
+
+Replace the five placeholders. `COLD_NODE` and `WARM_NODE` must be different
+nodes in `NODE_POOL`. The commands save the non-secret settings to a local
+working directory so you can reuse them in other terminals.
 
 ```bash
-set -euo pipefail
-
 export STORAGE_ACCOUNT='<storage-account-name>'
 export STORAGE_CONTAINER='<container-name>'
 export NODE_POOL='<supported-ubuntu-node-pool>'
@@ -109,6 +101,7 @@ export COLD_NODE='<first-node-hostname-label>'
 export WARM_NODE='<second-node-hostname-label>'
 export DACS_NAMESPACE='dacs-system'
 export DACS_CACHE='cache-sample'
+# Assumes the standard cluster.local DNS domain; change it if yours differs.
 export DACS_ENDPOINT="$DACS_CACHE-discovery.$DACS_NAMESPACE.svc.cluster.local:9065"
 export DEMO_DIR
 DEMO_DIR=$(mktemp -d "$HOME/blob-dacs-demo.XXXXXX")
@@ -117,19 +110,25 @@ export MODEL_SHA256='b4f562cc4b12f1154a0b658b9d74ab9d024a686420fdf154ebc00a22199
 export MODEL_DIR="$DEMO_DIR/phi-1_5-$MODEL_REVISION"
 export BLOB_PREFIX="models/phi-1_5/$MODEL_REVISION/gsg-$(date -u +%Y%m%dT%H%M%SZ)-$RANDOM"
 export MODEL_PATH="/mnt/blob/$BLOB_PREFIX/model.safetensors"
+# The PV in step 5 passes this to BlobFuse2; the driver's default 10.0.0.10 is
+# fixed, not discovered. Set it manually if your DNS Service is not kube-dns.
 export CLUSTER_DNS
 CLUSTER_DNS=$(kubectl get service kube-dns -n kube-system \
   -o jsonpath='{.spec.clusterIP}')
 
-test -n "$CLUSTER_DNS"
-test "$COLD_NODE" != "$WARM_NODE"
+test -n "$CLUSTER_DNS" || echo 'ERROR: CLUSTER_DNS is empty; set it manually.'
+test "$COLD_NODE" != "$WARM_NODE" || echo 'ERROR: COLD_NODE and WARM_NODE must differ.'
 
 declare -p STORAGE_ACCOUNT STORAGE_CONTAINER NODE_POOL \
   COLD_NODE WARM_NODE DACS_NAMESPACE DACS_CACHE DACS_ENDPOINT DEMO_DIR \
   MODEL_REVISION MODEL_SHA256 MODEL_DIR BLOB_PREFIX MODEL_PATH CLUSTER_DNS \
   > "$DEMO_DIR/settings.env"
-printf 'Restore settings in either terminal: source %q\n' "$DEMO_DIR/settings.env"
+printf 'Restore settings in a new terminal: source %q\n' "$DEMO_DIR/settings.env"
+```
 
+### Run preflight checks
+
+```bash
 kubectl get nodes -l "kubernetes.azure.com/agentpool=$NODE_POOL" \
   -o wide -L kubernetes.io/hostname
 kubectl auth can-i create persistentvolumes
@@ -145,23 +144,18 @@ az storage container show --account-name "$STORAGE_ACCOUNT" \
 **Checkpoint:** both selected nodes are Ready and in the supported pool, the
 permission checks return `yes`, and the account/container lookup succeeds.
 Resolve any failures before continuing; these checks cover only part of the
-prerequisites. On reconnect, source the printed settings file rather than
-rerunning this block, which generates a new blob prefix.
+prerequisites. After a reconnect, source the printed settings file instead of
+rerunning the configuration block, which would generate a new blob prefix.
 
-The discovery endpoint assumes the standard `cluster.local` DNS domain.
-Adjust `DACS_ENDPOINT` before saving settings if your cluster uses another
-domain. The PV below explicitly uses your cluster DNS IP because the driver's
-default `10.0.0.10` is fixed, not automatically discovered.
-
-## 3. Install and verify the driver and DACS
+## 3. Verify the driver and install DACS
 
 ### Verify the AKS-managed Blob CSI add-on
 
-Confirm the add-on is enabled in your cluster's AKS configuration; see the
+Confirm the add-on is enabled on your cluster; see the
 [AKS driver documentation](https://learn.microsoft.com/azure/aks/azure-blob-csi)
-if it needs to be enabled. If you chose the
-[open-source alternative](#open-source-blob-csi-driver), install it first, then
-return to these verification commands:
+to enable it. If you use the
+[open-source driver](#a-open-source-blob-csi-driver) instead, install it first,
+then return here.
 
 ```bash
 kubectl rollout status daemonset/csi-blob-node -n kube-system --timeout=10m
@@ -169,58 +163,39 @@ kubectl get daemonset csi-blob-node -n kube-system \
   -o jsonpath='{range .spec.template.spec.containers[*]}{.name}{": "}{.image}{"\n"}{end}'
 ```
 
-**Checkpoint:** the node DaemonSet is ready on both reader nodes and its `blob`
-image meets the compatibility requirements in step 1. On **each reader
-node's host**, run the following using your approved node-access method in the
-[CSI debugging guide](./csi-debug.md):
+On **each reader node's host** (not a workstation or container, which don't
+verify the binary the proxy uses), run the following using your approved
+node-access method in the [CSI debugging guide](./csi-debug.md):
 
 ```bash
 blobfuse2 -v
 ```
 
-Expect `blobfuse2 version 2.5.6`. Checking a workstation or container binary
-does not verify the node-host binary used by the proxy. Stop if versions do
-not meet the requirements. If the node image lacks the required binary, use
+**Checkpoint:** the node DaemonSet is ready on both reader nodes, its `blob`
+image is 1.27.11 or later, and each host reports `blobfuse2 version 2.5.6`.
+Stop if any version is lower. If the node image lacks the required binary, use
 a supported image or wait for availability.
 
 ### Install two ephemeral DACS CacheServers
 
-Use a **dedicated evaluation cache** with no other readers during measurement.
-Do not resize a shared cache for this test.
-The model weights are about 2.64 GiB; the upstream quickstart's default 2 GiB
-single CacheServer is too small. Use **two CacheServers with the default 2 GiB
-each**, for 4 GiB total configured capacity. Keep this cache dedicated to the
-evaluation; the model and the quickstart's 1 GiB smoke-test data leave limited
-headroom, and data placement and eviction can affect warm-read results.
+The model weights are about 2.64 GiB, so the upstream quickstart's single 2 GiB
+CacheServer is too small. This guide uses **two CacheServers at the default
+2 GiB each** (4 GiB total). Keep the cache dedicated to this test: the model
+and the quickstart's 1 GiB smoke-test data leave limited headroom, and
+eviction can affect warm-read results.
 
-Follow these sections of the [DACS AKS quickstart](https://github.com/Azure/dacs/blob/main/docs/quickstart.md),
-in order:
+Complete the [DACS AKS quickstart](https://github.com/Azure/dacs/blob/main/docs/quickstart.md)
+unchanged through **Confirm success**, using its default namespace
+`dacs-system` and cache name `cache-sample`. **Skip its cleanup section.**
+Return here once both smoke-test Jobs report `All iterations succeeded: true`.
 
-1. **Set variables** and **Resolve matching chart and image versions**. Use
-   `dacs-system` as the namespace and retain the resolved chart/image versions.
-2. **Install DACS and an ephemeral cache**, with the change below.
-3. **Verify the deployment**.
-4. **Run the end-to-end smoke test** and **Confirm success**.
-
-In the standalone `Cache` manifest, set **`spec.scaling.static.numServers` to
-`2`** and retain the default **`spec.serverSizeInGB: 2`** before applying it:
-
-```yaml
-spec:
-  scaling:
-    static:
-      numServers: 2
-  serverSizeInGB: 2
-```
-
-This is a manifest fragment, not a complete resource. Do not substitute
-Helm `--set cache.*` values for these manifest changes: the quickstart creates
-its Cache separately from the controller chart.
-
-**Do not run the upstream cleanup yet.** Return here after both smoke-test
-Jobs complete successfully and report `All iterations succeeded: true`.
+Then scale the cache from one to two CacheServers:
 
 ```bash
+kubectl patch cache "$DACS_CACHE" -n "$DACS_NAMESPACE" \
+  --type=merge \
+  -p '{"spec":{"scaling":{"static":{"numServers":2}}}}'
+
 kubectl get cache "$DACS_CACHE" -n "$DACS_NAMESPACE" \
   -o jsonpath='{"servers="}{.spec.scaling.static.numServers}{" size-per-server-GiB="}{.spec.serverSizeInGB}{"\n"}'
 kubectl wait statefulset/"$DACS_CACHE" -n "$DACS_NAMESPACE" \
@@ -230,23 +205,33 @@ kubectl get pods -n "$DACS_NAMESPACE" \
 kubectl get service "$DACS_CACHE-discovery" -n "$DACS_NAMESPACE"
 ```
 
+The patch updates the standalone `Cache` resource. The DACS controller manages
+the StatefulSet, so do not scale it directly or change the Helm release. Keep
+the server count unchanged through the cold and warm reads in step 6.
+
 **Checkpoint:** the configuration reports `servers=2 size-per-server-GiB=2`,
 both CacheServers are Ready, the discovery service exists, and the smoke test
-passed. The inline metrics check in step 6 queries both CacheServers.
+passed.
 
 ## 4. Configure storage access and upload the sample
 
-### Create the mount credentials first
+This walkthrough uses fixed Kubernetes names: namespace `blob-dacs-demo`,
+Secret `azure-secret`, PV `pv-blob-dacs-demo`, and PVC `pvc-blob-dacs-demo`.
+
+### Create the mount credentials
 
 Use a new namespace dedicated to this walkthrough. If `blob-dacs-demo` already
 exists, stop and check its ownership rather than reusing unknown resources.
 Enter your storage account key at the prompt; do not paste it into this
-document or the saved settings file.
+document or the saved settings file, and do not enable shell tracing. The key
+is passed to the local `kubectl` process; follow your organization's
+credential-handling requirements, or use the
+[identity-based alternative](#b-identity-based-storage-access).
 
 ```bash
 read -r -s -p 'Storage account key: ' STORAGE_KEY
 printf '\n'
-test -n "$STORAGE_KEY"
+test -n "$STORAGE_KEY" || echo 'ERROR: no key entered.'
 AZURE_STORAGE_KEY="$STORAGE_KEY" az storage container show \
   --account-name "$STORAGE_ACCOUNT" \
   --name "$STORAGE_CONTAINER" --auth-mode key -o table
@@ -260,16 +245,13 @@ unset STORAGE_KEY
 
 **Checkpoint:** the account-key container lookup succeeds before any model
 transfer. If it fails, check the key, shared-key policy, and storage network
-access; do not continue to the download.
-
-Do not enable shell tracing while handling credentials. The key is passed to
-the local `kubectl` process; follow your organization's credential-handling
-requirements or use an identity-based alternative.
+access, and do not continue to the download.
 
 ### Download and upload Phi-1.5
 
 Review the model's [model card and MIT license](https://huggingface.co/microsoft/phi-1_5)
-before use. The revision and checksum pin identical bytes for both reads.
+before use. The pinned revision and checksum guarantee both reads use identical
+bytes.
 
 ```bash
 hf download microsoft/phi-1_5 \
@@ -296,8 +278,9 @@ The upload pattern excludes hidden download metadata, such as `.cache`.
 
 ### Create the PersistentVolume and claim
 
-Run this Bash block in terminal B. It expands the saved configuration into
-the manifest; there are no additional placeholders to replace.
+The block expands your saved configuration into the manifest, including the
+discovery endpoint and cluster DNS IP from step 2. There are no additional
+placeholders to replace.
 
 ```bash
 kubectl apply -f - <<YAML
@@ -349,14 +332,14 @@ kubectl wait pvc/pvc-blob-dacs-demo -n blob-dacs-demo \
   --for=jsonpath='{.status.phase}'=Bound --timeout=2m
 ```
 
-The empty storage class and explicit `volumeName` select static binding.
-The PV's capacity is for Kubernetes binding; it does not size DACS or impose
-a Blob container quota. The discovery endpoint enables the distributed-cache
-pipeline. Do not add file-cache or streaming options.
+The empty storage class and explicit `volumeName` select static binding. The
+PV's capacity is for Kubernetes binding only; it does not size DACS or impose
+a Blob quota. The discovery endpoint enables the distributed-cache pipeline, so
+do not add file-cache or streaming options.
 
 ### Create readers on different nodes
 
-The helper below creates both pods from the same manifest.
+The helper creates both pods from the same manifest.
 
 ```bash
 create_reader() {
@@ -399,177 +382,120 @@ kubectl exec -n blob-dacs-demo blob-dacs-reader -- ls /mnt/blob
 **Checkpoint:** the PVC is Bound and both pods are Ready on **different nodes**.
 Listing directories is fine; **do not read the weights yet**.
 
-## 6. Verify cold and warm reads
+## 6. Read the model and confirm DACS was used
 
-Use two terminals with the same Kubernetes context:
+The reader on the first node reads the model through the mount, which
+populates the DACS cache (cold read). The reader on the second node then reads
+the same file (warm read) and should be served from DACS. A successful mount
+doesn't show whether DACS was used, so you'll check DACS request counters
+before and after each read.
 
-| Terminal | Purpose | Preparation |
-| --- | --- | --- |
-| A | Sample DACS metrics | Source the `settings.env` path printed in step 2 |
-| B | Read and checksum the model | Keep the setup shell, or source the same settings file |
-
-The metrics are **cache-wide**, not per-workload. Keep this dedicated cache
-free of other readers and wait for the smoke-test Jobs to finish. Otherwise,
-hits cannot reliably be attributed to your test.
-
-Use a **new blob prefix for each cold test**, and keep it unchanged for the
-corresponding warm test. Do not overwrite the blobs or clear a shared cache.
-A successful mount alone does not establish DACS usage; use the checks below.
-
-### Define the inline metrics check
-
-In **terminal A**, source the settings file, then paste this helper. It queries
-`http://localhost:9096/metrics` inside **each of the two CacheServers**; no
-Prometheus installation or repository checkout is needed.
+Run everything in the same shell with the step 2 settings loaded, because the
+steps below keep values in shell variables. First define a small helper that
+sums one DACS request counter across both CacheServers:
 
 ```bash
-set -euo pipefail
-
-cache_metrics() (
+dacs_count() (   # usage: dacs_count <Download|Upload> <Success|InvalidTransition>
   set -euo pipefail
   pods=$(kubectl get pods -n "$DACS_NAMESPACE" \
-    -l "dacs.azure.com/cache-name=$DACS_CACHE" \
-    -o 'jsonpath={range .items[*]}{.metadata.name}{" uid="}{.metadata.uid}{" restarts="}{range .status.containerStatuses[*]}{.name}{":"}{.restartCount}{","}{end}{"\n"}{end}' \
-    | sort)
-  if [[ $(printf '%s\n' "$pods" | awk 'NF { n++ } END { print n+0 }') != 2 ]]; then
-    echo "ERROR: Expected two CacheServer pods; check cache readiness." >&2
-    exit 1
-  fi
-  while read -r pod identity; do
-    printf '\n%s %s\n' "$pod" "$identity"
+    -l "dacs.azure.com/cache-name=$DACS_CACHE" -o name)
+  [[ $(wc -w <<< "$pods") == 2 ]] || { echo "ERROR: expected two CacheServer pods." >&2; exit 1; }
+  for pod in $pods; do
     kubectl exec -n "$DACS_NAMESPACE" "$pod" -c cacheserver -- \
-      curl --fail --silent --show-error --max-time 10 \
-      http://localhost:9096/metrics |
-      awk '
-        /^cache_server_request_counter\{/ && /request_type="(Download|Upload)"/ {
-          print; requests++; next
-        }
-        /^cache_server_cache_size_bytes(\{|[ \t])/ { print; size++ }
-        END {
-          if (!requests || !size) {
-            print "ERROR: Required cache metrics missing." > "/dev/stderr"
-            exit 1
-          }
-        }'
-  done <<< "$pods"
+      curl --fail --silent --show-error --max-time 10 http://localhost:9096/metrics
+  done | awk -v type="$1" -v status="$2" '
+    /^cache_server_request_counter\{/ &&
+      index($0, "request_type=\"" type "\"") && index($0, "status=\"" status "\"") { n += $2 }
+    END { printf "%.0f\n", n }'
 )
 ```
 
-The output keeps each server's metrics separate. Counters are **cumulative
-since server startup**, not per-read results. Save snapshots before and after
-each read, compare matching metric labels on each server, then sum the
-increases across both servers. Do not compare only one server or treat an
-existing nonzero counter as proof of activity during this test.
-
-Each snapshot includes pod names, UIDs, and container restart counts. If these
-change between snapshots, or a counter decreases, discard the comparison and
-repeat with stable servers. The helper checks scraping and metric presence;
-it does not automatically calculate deltas or detect restarts.
+The counters are cumulative since server startup and cache-wide, so each step
+records a baseline first and reports the increase. Keep the cache free of other
+readers, or the increase can't be attributed to your test.
 
 ### Cold read: populate the cache
 
-In **terminal A**, save a baseline and wait for the command to finish:
+Record the current upload count, then read the model from the first node. The
+read computes the file's checksum, which pulls every byte through the mount:
 
 ```bash
-cache_metrics | tee "$DEMO_DIR/cold-before.txt"
-```
+UPLOADS_BEFORE=$(dacs_count Upload Success)
 
-Then run in **terminal B**:
-
-```bash
 kubectl exec -n blob-dacs-demo blob-dacs-reader -- \
-  sh -c 'set -eu; time sha256sum "$1"' sh "$MODEL_PATH" \
-  | awk -v expected="$MODEL_SHA256" '
-      { print; if ($1 == expected) matched = 1 }
-      END {
-        if (!matched) {
-          print "ERROR: Model checksum did not match." > "/dev/stderr"
-          exit 1
-        }
-      }'
+  sh -c 'set -eu; sha256sum "$1"' sh "$MODEL_PATH" \
+  | tee /dev/stderr | grep -q "^$MODEL_SHA256" \
+  && echo 'Checksum OK' || echo 'Checksum MISMATCH'
 ```
 
-After the read completes, save another snapshot in **terminal A**:
+Cache uploads are asynchronous. Check that DACS accepted them, waiting up to
+5 minutes:
 
 ```bash
-cache_metrics | tee "$DEMO_DIR/cold-after.txt"
+uploads=0
+for i in $(seq 30); do
+  now=$(dacs_count Upload Success) || break
+  uploads=$((now - UPLOADS_BEFORE))
+  (( uploads > 0 )) && break
+  sleep 10
+done
+(( uploads > 0 )) && echo "PASS: DACS accepted $uploads upload requests." \
+  || echo "INCONCLUSIVE: no uploads observed; see step 7."
 ```
 
-**Checkpoint:** the checksum matches. Across both servers, the counters for
-`request_type="Download", status="InvalidTransition"` (misses) and
-`request_type="Upload", status="Success"` (cache population) increase, without
-request error increases. Some cold-read hits are possible. See
-[metric interpretation](#interpret-the-cache-metrics) for the status mappings.
-Keep both readers running for asynchronous uploads. If uploads have not yet
-been observed, wait and collect another `cold-after.txt` snapshot before
-starting the warm read.
+**Checkpoint:** the checksum is OK and the result is `PASS`, which means the
+cold read populated the cache.
 
 ### Warm read: reuse data from the second node
 
-After uploads have been observed, save a fresh baseline in **terminal A**:
+Record the current download count, then read the same blob from the second node:
 
 ```bash
-cache_metrics | tee "$DEMO_DIR/warm-before.txt"
-```
+DOWNLOADS_BEFORE=$(dacs_count Download Success)
 
-After that command finishes, read the unchanged blob in **terminal B**:
-
-```bash
 kubectl exec -n blob-dacs-demo blob-dacs-reader-warm -- \
-  sh -c 'set -eu; time sha256sum "$1"' sh "$MODEL_PATH" \
-  | awk -v expected="$MODEL_SHA256" '
-      { print; if ($1 == expected) matched = 1 }
-      END {
-        if (!matched) {
-          print "ERROR: Model checksum did not match." > "/dev/stderr"
-          exit 1
-        }
-      }'
+  sh -c 'set -eu; sha256sum "$1"' sh "$MODEL_PATH" \
+  | tee /dev/stderr | grep -q "^$MODEL_SHA256" \
+  && echo 'Checksum OK' || echo 'Checksum MISMATCH'
 ```
 
-After the read completes, save the ending snapshot in **terminal A**:
+Confirm that DACS served the read:
 
 ```bash
-cache_metrics | tee "$DEMO_DIR/warm-after.txt"
+served=0
+now=$(dacs_count Download Success) && served=$((now - DOWNLOADS_BEFORE))
+(( served > 0 )) && echo "PASS: DACS served $served download requests." \
+  || echo "INCONCLUSIVE: no downloads served by DACS; see step 7."
 ```
 
-Compare against `warm-before.txt`, not the cold baseline. Successful
-`Download` counters should increase across the two servers. A higher request
-hit rate and fewer misses than the cold read are expected once population
-completes. Do not require 100% hits: eviction and incomplete population can
-cause misses.
+**Checkpoint:** the checksum is OK and the result is `PASS`, which means a
+reader on a different node was served from the shared cache. Don't expect
+100% of requests to be hits: eviction and incomplete population can cause
+misses.
 
-### Success checklist
+### What the counts mean
 
-- Both reads complete and match the pinned model checksum.
-- The reader pods are on different nodes.
-- The sum of increases in `request_type="Download", status="Success"` across
-  both servers is positive between the warm snapshots.
-- There are no request errors or capability/discovery fallback warnings.
+| Counter (`cache_server_request_counter`) | Meaning |
+| --- | --- |
+| `Upload`, `Success` | Cache population from a miss |
+| `Download`, `Success` | Request served by DACS |
+| `Download`, `InvalidTransition` | Not found in DACS (a miss) |
 
-This demonstrates cross-node cache reuse, not that every byte was served by
-DACS or that the full file is resident. The `time` output includes checksum
-CPU work. Treat read times as supporting evidence only, not a controlled
-performance benchmark.
+These mappings follow [DACS's scenario-test checks](https://github.com/Azure/dacs/blob/main/test/pkg/scenario/cache_metrics.go).
+Counts are requests, not files or bytes, and a pass doesn't show that the whole
+file is resident.
 
-### If the warm result is inconclusive
+## 7. Troubleshoot
 
-Do not repeatedly read the same warm mount: node-local caching can hide DACS
-activity. Use this bounded recovery procedure:
-
-1. Inspect errors and discovery diagnostics using the next section.
-2. If the cold snapshot was taken before population completed, keep the cold
-   reader alive, wait up to five minutes, and collect another snapshot to
-   check for successful uploads.
-3. If there are no upload errors and capacity is sufficient, retry once from
-   a fresh reader mount on a supported node that has no active mount of this
-   PV. Deleting a pod alone does not guarantee its node's CSI mount is gone.
-   Stop the old warm reader and confirm unmount in CSI logs before recreating
-   it; rerun the `create_reader` definition if you changed shells.
-4. If hits are still absent or misses remain high, stop and investigate cache
-   capacity, discovery, and upload failures rather than declaring success.
-
-## 7. Troubleshoot before repeating the test
+| Symptom | Next action |
+| --- | --- |
+| Pod stays Pending | Inspect pod events, PVC binding, hostname/pool labels, taints, and available node resources. |
+| Mount fails | Check host BlobFuse2 version, `fuse2`, read-only settings, Secret namespace/name, shared-key policy, and storage network access. |
+| Discovery fails | Verify the discovery service and its endpoints, cluster DNS IP/domain, port 9065, and node-to-cache connectivity. |
+| Helper cannot read metrics | Check that both CacheServers are Ready, `pods/exec` permissions, container `curl`, metrics port 9096, and the reported error. |
+| `Checksum MISMATCH` | Confirm the step 4 upload succeeded and that `MODEL_PATH` points at the uploaded prefix. |
+| `INCONCLUSIVE`, or misses remain high | [Recover from an inconclusive result](#recover-from-an-inconclusive-result). |
+| `INCONCLUSIVE` and a CacheServer restarted | A restart resets its counters. Check restart counts with `kubectl get pods -n "$DACS_NAMESPACE"`, wait for stable pods, then repeat the read. |
 
 ### Check pod events, DACS health, and CSI logs
 
@@ -595,42 +521,45 @@ kubectl logs -n kube-system <csi-blob-node-pod-on-reader-node> \
 If the driver cannot verify distributed-cache support, it removes those mount
 options and selects local block cache. A warning beginning
 `BlobFuse2 distributed-cache support could not be verified` means that mount
-is **not using DACS**. Correct the host binary/capability issue and remount.
+is **not using DACS**. Correct the host binary or capability issue and remount.
 
 ### Check host BlobFuse2 and proxy diagnostics
 
 BlobFuse2 2.5.6 can mount successfully without discovering any DACS servers and
-fall back to Azure Storage. CSI container logs are not the same as host
-BlobFuse2 logs. On the affected reader node, use your approved node-access
-method and inspect:
+fall back to Azure Storage, and CSI container logs are not host BlobFuse2 logs.
+On the affected reader node, use your approved node-access method and inspect:
 
 ```bash
 blobfuse2 -v
 journalctl -u blobfuse-proxy --since "15 minutes ago" --no-pager
 ```
 
-Check `/var/log/blobfuse2.log` if that is the configured BlobFuse2 log path,
-and `/var/log/syslog` for syslog-based logging. Log routing depends on your
-installation. See the [CSI debugging guide](./csi-debug.md) for host log
-collection.
+Also check `/var/log/blobfuse2.log` if that is the configured BlobFuse2 log
+path, and `/var/log/syslog` for syslog-based logging. Log routing depends on
+your installation; see the [CSI debugging guide](./csi-debug.md).
 
-| Symptom | Next action |
-| --- | --- |
-| Pod stays Pending | Inspect pod events, PVC binding, hostname/pool labels, taints, and available node resources. |
-| Mount fails | Check host BlobFuse2 version, `fuse2`, read-only settings, Secret namespace/name, shared-key policy, and storage network access. |
-| Discovery fails | Verify the discovery service and its endpoints, cluster DNS IP/domain, port 9065, and node-to-cache connectivity. |
-| Reads succeed without hits, or misses remain high | Follow [the warm-test recovery procedure](#if-the-warm-result-is-inconclusive). |
-| Inline metrics check fails | Check that both CacheServers are Ready, `pods/exec` permissions, container `curl`, metrics port 9096, and the reported error. |
-| Measured reads are slow | Check CPU used by checksumming, network throughput, cache resources, and workload access patterns. |
+### Recover from an inconclusive result
 
-Do not use partial output from a failed metrics check. Resolve the cause and
-collect a new baseline. Compare the pod identities and restart counts in both
-snapshots; if they change or counters decrease, repeat with stable pods.
+Don't repeatedly read the same warm mount: node-local caching can hide DACS
+activity. Use this bounded procedure instead:
+
+1. Inspect errors and discovery diagnostics using the checks above.
+2. If a cold read finished before uploads appeared, keep its reader running,
+   wait up to five minutes, and rerun the cold read's upload check. It reuses
+   `UPLOADS_BEFORE`, so run it in the same shell.
+3. If there are no upload errors and capacity is sufficient, retry the warm
+   read once from a fresh mount on a supported node that has no active mount
+   of this PV. Deleting a pod alone doesn't guarantee its node's CSI mount is
+   gone, so stop the old warm reader and confirm the unmount in the CSI logs
+   before recreating it with `create_reader` (re-paste its definition if you
+   changed shells).
+4. If hits are still absent or misses remain high, stop and investigate cache
+   capacity, discovery, and upload failures rather than declaring success.
 
 ## 8. Clean up evaluation resources
 
-Delete only resources created for this walkthrough. Stop all reader pods
-before deleting the claim or the cache:
+Delete only resources created for this walkthrough. Stop the reader pods before
+deleting the claim:
 
 ```bash
 kubectl delete pod blob-dacs-reader blob-dacs-reader-warm -n blob-dacs-demo
@@ -640,39 +569,41 @@ kubectl delete secret azure-secret -n blob-dacs-demo
 kubectl delete namespace blob-dacs-demo
 ```
 
-The PV uses `Retain`: this does **not** delete the source container or blobs.
-The uploaded prefix is printed below. Review it before deleting only that
-prefix with your normal storage-management tools:
+Then clean up what remains, as applicable:
 
-```bash
-printf 'Retained Blob prefix: %s/%s/%s\n' \
-  "$STORAGE_ACCOUNT" "$STORAGE_CONTAINER" "$BLOB_PREFIX"
-printf 'Retained local working directory: %s\n' "$DEMO_DIR"
-```
+- **Blob data and local files.** The PV uses `Retain`, so the commands above
+  do **not** delete your container or blobs. Review the uploaded prefix, then
+  delete only that prefix with your normal storage-management tools. Remove
+  the local model download and settings when you no longer need them. Don't
+  delete a shared container, other model versions, or unrelated local files.
 
-Remove the local model download and settings when no longer needed. Do not
-delete a shared container, other model versions, or unrelated local files.
+  ```bash
+  printf 'Retained Blob prefix: %s/%s/%s\n' \
+    "$STORAGE_ACCOUNT" "$STORAGE_CONTAINER" "$BLOB_PREFIX"
+  printf 'Retained local working directory: %s\n' "$DEMO_DIR"
+  ```
 
-If DACS was installed only for this evaluation, delete its Cache resource,
-then follow the [upstream quickstart cleanup](https://github.com/Azure/dacs/blob/main/docs/quickstart.md#clean-up)
-for smoke-test Jobs, the Helm release, and its dedicated namespace:
+- **DACS**, if you installed it only for this evaluation. Delete the Cache
+  resource, then follow the
+  [upstream quickstart cleanup](https://github.com/Azure/dacs/blob/main/docs/quickstart.md#clean-up)
+  for the smoke-test Jobs, the Helm release, and its namespace.
 
-```bash
-kubectl delete cache "$DACS_CACHE" -n "$DACS_NAMESPACE"
-```
+  ```bash
+  kubectl delete cache "$DACS_CACHE" -n "$DACS_NAMESPACE"
+  ```
 
-Leave the managed Blob CSI add-on enabled. For the open-source alternative,
-see its conditional cleanup below.
+- **Blob CSI driver.** Leave the managed add-on enabled. For the open-source
+  driver, see [its cleanup](#a-open-source-blob-csi-driver).
 
-## Advanced details and alternatives
+## Appendix: alternatives
 
-### Open-source Blob CSI driver
+### A. Open-source Blob CSI driver
 
-Use a cluster where the managed Blob CSI add-on is **not enabled**. Never install
-this Helm release alongside the managed add-on. Review the
+Use a cluster where the managed Blob CSI add-on is **not enabled**, and never
+install this Helm release alongside the managed add-on. Review the
 [open-source driver's identity prerequisites](./install-driver-on-aks.md)
-and [Helm installation guidance](../charts/README.md) before proceeding.
-If an open-source driver already exists, verify its version and configuration
+and [Helm installation guidance](../charts/README.md) first. If an
+open-source driver already exists, verify its version and configuration
 instead of installing a second release.
 
 Install driver **1.27.11**, explicitly enabling installation of BlobFuse2
@@ -692,56 +623,25 @@ helm install blob-csi-driver blob-csi-driver/blob-csi-driver \
 
 These values configure the `install-blobfuse-proxy` init container to install
 the pinned binary, independent of the version bundled in the node image.
-Return to the driver verification commands in step 3, then continue with the
-same DACS, storage, read-only volume, and reader steps.
+Return to [step 3](#verify-the-aks-managed-blob-csi-add-on) to verify the
+driver, then continue with the same DACS, storage, volume, and reader steps.
 
-After completing step 8, uninstall this Helm release **only if you installed
-it solely for this evaluation and no other workloads use it**:
+After step 8, uninstall this Helm release **only if you installed it solely for
+this evaluation and no other workloads use it**:
 
 ```bash
 helm uninstall blob-csi-driver -n kube-system
 ```
 
-### Identity-based storage access
+### B. Identity-based storage access
 
 If shared-key authentication is disabled or unsuitable, adapt the
 [workload identity example](./workload-identity-static-pv-mount.md) or
 [managed identity example](../deploy/example/blobfuse-mi/README.md)
 before uploading the model. Configure its identity, role assignments, and
-volume authentication instead of the account-key Secret.
-Retain `protocol: fuse2`, all read-only settings, and the distributed-cache
-mount options.
-
-### Interpret the cache metrics
-
-For each request category below, subtract the baseline from the ending value
-for matching metric labels on each server, then sum those increases across
-both servers. For example, 30 additional successful downloads on one server
-and 50 on the other means DACS served 80 download requests during the read.
-
-| Output | Interpretation |
-| --- | --- |
-| Downloads served by DACS | `cache_server_request_counter` with `request_type="Download", status="Success"` |
-| Downloads not found in DACS | The same counter with `request_type="Download", status="InvalidTransition"` |
-| Successful uploads | The same counter with `request_type="Upload", status="Success"` |
-| Duplicate uploads | The same counter with `request_type="Upload", status="InvalidTransition"` |
-| Download/upload errors | Other statuses for the corresponding request type |
-| Cache size at end | Sum of the ending `cache_server_cache_size_bytes` values across both servers, not a counter increase, limit, or per-workload measurement |
-| Download request hit rate | `hits / (hits + misses)`; `N/A` when neither is observed |
-
-These mappings follow [DACS's scenario-test checks](https://github.com/Azure/dacs/blob/main/test/pkg/scenario/cache_metrics.go).
-Requests are not equivalent to files or bytes, and retries can affect counts.
-
-An increase in successful downloads confirms DACS served requests during the
-comparison interval. Misses without successful downloads mean DACS was queried
-but did not serve downloads. No increase in either is **inconclusive**, not proof
-that DACS is disabled. Follow [the recovery procedure](#if-the-warm-result-is-inconclusive);
-for request errors, inspect the logs in step 7.
-
-Duplicate uploads do not add more data. Calculate the download request hit rate
-from the summed increases: `hits / (hits + misses)`, excluding errors. It is
-undefined if there were no hits or misses, and is not the percentage of
-application bytes served or cache capacity utilization.
+volume authentication instead of the account-key Secret. Retain
+`protocol: fuse2`, all read-only settings, and the distributed-cache mount
+options.
 
 ## References
 
