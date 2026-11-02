@@ -16,9 +16,10 @@ You will:
 1. Check eligibility and prerequisites.
 2. Choose two reader nodes and save your configuration.
 3. Verify the Blob CSI driver and install a two-server DACS cache.
-4. Upload the model (about 2.64 GiB) to your Blob container.
+4. Grant the mount identity access and upload the model (about 2.64 GiB) to
+   your Blob container.
 5. Create a read-only volume and two reader pods on different nodes.
-6. Read the model from each node and measure cache activity.
+6. Read the model from each node and confirm DACS was used.
 7. Troubleshoot if the result is not a pass.
 8. Clean up.
 
@@ -62,16 +63,20 @@ or pin the binary. Without the managed add-on, use the
   (the DACS charts and images at `dacstest.azurecr.io` are publicly readable),
   reach Blob Storage, and reach the DACS CacheServers.
 - **Kubernetes permissions:** install cluster-scoped resources (including DACS
-  CRDs); create namespaces, Secrets, PVs, PVCs, and pods; list CacheServer pods;
-  and run commands in their `cacheserver` containers. The metrics check needs
-  `curl` in those containers, not Prometheus.
+  CRDs); create namespaces, PVs, PVCs, and pods (and Secrets, for the
+  account-key fallback); list CacheServer pods; and run commands in their
+  `cacheserver` containers. The metrics check needs `curl` in those containers,
+  not Prometheus.
 - **Storage:** an existing storage account and Blob container, and an upload
   identity with **Storage Blob Data Contributor** or equivalent.
-- **Shared-key authentication** enabled on the storage account, with its
-  account key available. The key authenticates the mount separately from your
-  upload identity, and the read-only mount does not reduce its permissions. If
-  account keys are prohibited, use the
-  [identity-based alternative](#b-identity-based-storage-access) in step 4.
+- **Mount identity:** an AKS cluster with a managed kubelet identity, and
+  permission to create role assignments on the storage account (for example,
+  **Owner**, **User Access Administrator**, or **Role Based Access Control
+  Administrator**). Step 4 grants that identity **Storage Blob Data Reader** on
+  the container only; it is separate from your upload identity. If you can't
+  use a managed identity, use the
+  [account-key fallback](#b-account-key-authentication-fallback), which needs
+  shared-key authentication enabled on the storage account.
 
 ## 2. Choose nodes and set shared configuration
 
@@ -89,9 +94,10 @@ kubectl get nodes -o wide -L kubernetes.azure.com/agentpool,kubernetes.io/hostna
 
 ### Set the configuration
 
-Replace the five placeholders. `COLD_NODE` and `WARM_NODE` must be different
-nodes in `NODE_POOL`. The commands save the non-secret settings to a local
-working directory so you can reuse them in other terminals.
+Replace the seven placeholders. `COLD_NODE` and `WARM_NODE` must be different
+nodes in `NODE_POOL`; `AKS_RESOURCE_GROUP` and `AKS_CLUSTER` identify your
+cluster and are used by the managed-identity step. The commands save the
+non-secret settings to a local working directory so you can reuse them.
 
 ```bash
 export STORAGE_ACCOUNT='<storage-account-name>'
@@ -99,6 +105,8 @@ export STORAGE_CONTAINER='<container-name>'
 export NODE_POOL='<supported-ubuntu-node-pool>'
 export COLD_NODE='<first-node-hostname-label>'
 export WARM_NODE='<second-node-hostname-label>'
+export AKS_RESOURCE_GROUP='<aks-cluster-resource-group>'
+export AKS_CLUSTER='<aks-cluster-name>'
 export DACS_NAMESPACE='dacs-system'
 export DACS_CACHE='cache-sample'
 # Assumes the standard cluster.local DNS domain; change it if yours differs.
@@ -119,10 +127,10 @@ CLUSTER_DNS=$(kubectl get service kube-dns -n kube-system \
 test -n "$CLUSTER_DNS" || echo 'ERROR: CLUSTER_DNS is empty; set it manually.'
 test "$COLD_NODE" != "$WARM_NODE" || echo 'ERROR: COLD_NODE and WARM_NODE must differ.'
 
-declare -p STORAGE_ACCOUNT STORAGE_CONTAINER NODE_POOL \
-  COLD_NODE WARM_NODE DACS_NAMESPACE DACS_CACHE DACS_ENDPOINT DEMO_DIR \
-  MODEL_REVISION MODEL_SHA256 MODEL_DIR BLOB_PREFIX MODEL_PATH CLUSTER_DNS \
-  > "$DEMO_DIR/settings.env"
+declare -p STORAGE_ACCOUNT STORAGE_CONTAINER NODE_POOL COLD_NODE WARM_NODE \
+  AKS_RESOURCE_GROUP AKS_CLUSTER DACS_NAMESPACE DACS_CACHE DACS_ENDPOINT \
+  DEMO_DIR MODEL_REVISION MODEL_SHA256 MODEL_DIR BLOB_PREFIX MODEL_PATH \
+  CLUSTER_DNS > "$DEMO_DIR/settings.env"
 printf 'Restore settings in a new terminal: source %q\n' "$DEMO_DIR/settings.env"
 ```
 
@@ -144,7 +152,7 @@ az storage container show --account-name "$STORAGE_ACCOUNT" \
 **Checkpoint:** both selected nodes are Ready and in the supported pool, the
 permission checks return `yes`, and the account/container lookup succeeds.
 Resolve any failures before continuing; these checks cover only part of the
-prerequisites. After a reconnect, source the printed settings file instead of
+prerequisites. In a new terminal, source the printed settings file instead of
 rerunning the configuration block, which would generate a new blob prefix.
 
 ## 3. Verify the driver and install DACS
@@ -186,8 +194,19 @@ eviction can affect warm-read results.
 
 Complete the [DACS AKS quickstart](https://github.com/Azure/dacs/blob/main/docs/quickstart.md)
 unchanged through **Confirm success**, using its default namespace
-`dacs-system` and cache name `cache-sample`. **Skip its cleanup section.**
-Return here once both smoke-test Jobs report `All iterations succeeded: true`.
+`dacs-system` and cache name `cache-sample`. Once both smoke-test Jobs report
+`All iterations succeeded: true`, clean up the resources created by the smoke
+test:
+
+```bash
+kubectl delete job dacs-smoke-upload dacs-smoke-download \
+  -n "$DACS_NAMESPACE" --ignore-not-found
+```
+
+Delete **only the smoke-test Jobs**. Don't run the rest of the quickstart's
+cleanup section: this guide still uses the DACS Helm release, the
+`cache-sample` cache, and the `dacs-system` namespace. Deleting the Jobs
+doesn't evict their 1 GiB of test data from the cache.
 
 Then scale the cache from one to two CacheServers:
 
@@ -205,47 +224,66 @@ kubectl get pods -n "$DACS_NAMESPACE" \
 kubectl get service "$DACS_CACHE-discovery" -n "$DACS_NAMESPACE"
 ```
 
-The patch updates the standalone `Cache` resource. The DACS controller manages
-the StatefulSet, so do not scale it directly or change the Helm release. Keep
+The patch updates the standalone `Cache` resource. Keep
 the server count unchanged through the cold and warm reads in step 6.
 
 **Checkpoint:** the configuration reports `servers=2 size-per-server-GiB=2`,
-both CacheServers are Ready, the discovery service exists, and the smoke test
-passed.
+both CacheServers are Ready, the discovery service exists, the smoke test
+passed, and its Jobs have been deleted.
 
 ## 4. Configure storage access and upload the sample
 
 This walkthrough uses fixed Kubernetes names: namespace `blob-dacs-demo`,
-Secret `azure-secret`, PV `pv-blob-dacs-demo`, and PVC `pvc-blob-dacs-demo`.
+PV `pv-blob-dacs-demo`, and PVC `pvc-blob-dacs-demo`.
 
-### Create the mount credentials
+### Grant the mount identity access
 
-Use a new namespace dedicated to this walkthrough. If `blob-dacs-demo` already
-exists, stop and check its ownership rather than reusing unknown resources.
-Enter your storage account key at the prompt; do not paste it into this
-document or the saved settings file, and do not enable shell tracing. The key
-is passed to the local `kubectl` process; follow your organization's
-credential-handling requirements, or use the
-[identity-based alternative](#b-identity-based-storage-access).
+The recommended mount authentication is a managed identity, so no storage
+account key is needed. This block looks up your cluster's kubelet identity
+(already assigned to the reader nodes), grants it read-only data access to the
+container unless it already has it, and saves the details for later steps and
+cleanup. To use an account key instead, follow the
+[fallback](#b-account-key-authentication-fallback) in place of this section.
 
 ```bash
-read -r -s -p 'Storage account key: ' STORAGE_KEY
-printf '\n'
-test -n "$STORAGE_KEY" || echo 'ERROR: no key entered.'
-AZURE_STORAGE_KEY="$STORAGE_KEY" az storage container show \
-  --account-name "$STORAGE_ACCOUNT" \
-  --name "$STORAGE_CONTAINER" --auth-mode key -o table
+(
+set -eu
+MOUNT_IDENTITY_CLIENT_ID=$(az aks show -g "$AKS_RESOURCE_GROUP" -n "$AKS_CLUSTER" \
+  --query identityProfile.kubeletidentity.clientId -o tsv)
+MOUNT_IDENTITY_OBJECT_ID=$(az aks show -g "$AKS_RESOURCE_GROUP" -n "$AKS_CLUSTER" \
+  --query identityProfile.kubeletidentity.objectId -o tsv)
+if [ -z "$MOUNT_IDENTITY_CLIENT_ID" ] || [ -z "$MOUNT_IDENTITY_OBJECT_ID" ]; then
+  echo 'ERROR: no kubelet managed identity found; use the account-key fallback.' >&2
+  exit 1
+fi
+CONTAINER_SCOPE="$(az storage account show --name "$STORAGE_ACCOUNT" \
+  --query id -o tsv)/blobServices/default/containers/$STORAGE_CONTAINER"
+
+# Record whether this guide created the assignment so cleanup removes only that.
+ROLE_CREATED=false
+if [ "$(az role assignment list --assignee "$MOUNT_IDENTITY_OBJECT_ID" \
+  --role 'Storage Blob Data Reader' --scope "$CONTAINER_SCOPE" \
+  --query 'length(@)' -o tsv)" = 0 ]; then
+  az role assignment create \
+    --assignee-object-id "$MOUNT_IDENTITY_OBJECT_ID" \
+    --assignee-principal-type ServicePrincipal \
+    --role 'Storage Blob Data Reader' \
+    --scope "$CONTAINER_SCOPE" -o table
+  ROLE_CREATED=true
+else
+  echo 'Role assignment already exists; leaving it in place.'
+fi
+
+declare -p MOUNT_IDENTITY_CLIENT_ID MOUNT_IDENTITY_OBJECT_ID CONTAINER_SCOPE \
+  ROLE_CREATED >> "$DEMO_DIR/settings.env"
+) && source "$DEMO_DIR/settings.env"
+
 kubectl create namespace blob-dacs-demo
-kubectl create secret generic azure-secret \
-  --namespace blob-dacs-demo \
-  --from-literal=azurestorageaccountname="$STORAGE_ACCOUNT" \
-  --from-literal=azurestorageaccountkey="$STORAGE_KEY"
-unset STORAGE_KEY
 ```
 
-**Checkpoint:** the account-key container lookup succeeds before any model
-transfer. If it fails, check the key, shared-key policy, and storage network
-access, and do not continue to the download.
+**Checkpoint:** `Storage Blob Data Reader` is assigned on the container scope
+(created now or already present) and the namespace exists. Role assignments can
+take several minutes to propagate; the upload below usually covers that time.
 
 ### Download and upload Phi-1.5
 
@@ -279,8 +317,10 @@ The upload pattern excludes hidden download metadata, such as `.cache`.
 ### Create the PersistentVolume and claim
 
 The block expands your saved configuration into the manifest, including the
-discovery endpoint and cluster DNS IP from step 2. There are no additional
-placeholders to replace.
+discovery endpoint, cluster DNS IP, and mount identity from steps 2 and 4.
+There are no additional placeholders to replace. If you use the
+[account-key fallback](#b-account-key-authentication-fallback), make the
+manifest change it describes before applying.
 
 ```bash
 kubectl apply -f - <<YAML
@@ -309,9 +349,8 @@ spec:
       protocol: fuse2
       storageAccount: "$STORAGE_ACCOUNT"
       containerName: "$STORAGE_CONTAINER"
-    nodeStageSecretRef:
-      name: azure-secret
-      namespace: blob-dacs-demo
+      AzureStorageAuthType: MSI
+      AzureStorageIdentityClientID: "$MOUNT_IDENTITY_CLIENT_ID"
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -339,7 +378,22 @@ do not add file-cache or streaming options.
 
 ### Create readers on different nodes
 
-The helper creates both pods from the same manifest.
+First confirm the model blob exists. This uses your upload identity and reads
+only metadata, so it does not warm DACS:
+
+```bash
+az storage blob show \
+  --account-name "$STORAGE_ACCOUNT" \
+  --container-name "$STORAGE_CONTAINER" \
+  --name "$BLOB_PREFIX/model.safetensors" \
+  --auth-mode login --query '{name:name,size:properties.contentLength}' -o table
+```
+
+If the lookup fails, don't create the readers. Check that the settings are
+loaded and that the step 4 upload, your login, and your storage access are
+correct.
+
+The helper below creates both pods from the same manifest:
 
 ```bash
 create_reader() {
@@ -391,7 +445,8 @@ doesn't show whether DACS was used, so you'll check DACS request counters
 before and after each read.
 
 Run everything in the same shell with the step 2 settings loaded, because the
-steps below keep values in shell variables. First define a small helper that
+steps below keep values in shell variables. (In a new shell, source the
+settings file and paste the helper again.) First define a small helper that
 sums one DACS request counter across both CacheServers:
 
 ```bash
@@ -490,12 +545,14 @@ file is resident.
 | Symptom | Next action |
 | --- | --- |
 | Pod stays Pending | Inspect pod events, PVC binding, hostname/pool labels, taints, and available node resources. |
-| Mount fails | Check host BlobFuse2 version, `fuse2`, read-only settings, Secret namespace/name, shared-key policy, and storage network access. |
+| Mount fails | Check host BlobFuse2 version, `fuse2`, read-only settings, and storage network access. |
+| Mount fails with authorization errors (managed identity) | Confirm the role assignment on the container scope and that `MOUNT_IDENTITY_CLIENT_ID` belongs to an identity assigned to the reader nodes. Allow time for role propagation. The [managed identity example](../deploy/example/blobfuse-mi/README.md) uses **Storage Blob Data Contributor**; try it if Reader isn't sufficient. |
+| Mount fails (account-key fallback) | Check the Secret namespace and name, and the shared-key policy. |
 | Discovery fails | Verify the discovery service and its endpoints, cluster DNS IP/domain, port 9065, and node-to-cache connectivity. |
 | Helper cannot read metrics | Check that both CacheServers are Ready, `pods/exec` permissions, container `curl`, metrics port 9096, and the reported error. |
 | `Checksum MISMATCH` | Confirm the step 4 upload succeeded and that `MODEL_PATH` points at the uploaded prefix. |
 | `INCONCLUSIVE`, or misses remain high | [Recover from an inconclusive result](#recover-from-an-inconclusive-result). |
-| `INCONCLUSIVE` and a CacheServer restarted | A restart resets its counters. Check restart counts with `kubectl get pods -n "$DACS_NAMESPACE"`, wait for stable pods, then repeat the read. |
+| `INCONCLUSIVE` and a CacheServer restarted | A restart resets its counters. Check restart counts with `kubectl get pods -n "$DACS_NAMESPACE"`, wait for stable pods, then [repeat the test](#repeat-the-test-from-the-start). |
 
 ### Check pod events, DACS health, and CSI logs
 
@@ -556,6 +613,20 @@ activity. Use this bounded procedure instead:
 4. If hits are still absent or misses remain high, stop and investigate cache
    capacity, discovery, and upload failures rather than declaring success.
 
+### Repeat the test from the start
+
+A cold read only works once per blob: afterwards DACS already holds the data,
+so a repeated cold read can't show new uploads. To run the cold and warm test
+again, for example after a CacheServer restart:
+
+1. Run the first block of [step 8](#8-clean-up-evaluation-resources) to delete
+   the Kubernetes resources, whose names are fixed.
+2. Rerun the step 2 configuration block, which generates a new working
+   directory and blob prefix.
+3. Repeat steps 4 through 6. Step 4 detects the existing role assignment and
+   leaves it in place; to remove it later, use the first run's `settings.env`,
+   which recorded that this guide created it.
+
 ## 8. Clean up evaluation resources
 
 Delete only resources created for this walkthrough. Stop the reader pods before
@@ -565,11 +636,24 @@ deleting the claim:
 kubectl delete pod blob-dacs-reader blob-dacs-reader-warm -n blob-dacs-demo
 kubectl delete pvc pvc-blob-dacs-demo -n blob-dacs-demo
 kubectl delete pv pv-blob-dacs-demo
-kubectl delete secret azure-secret -n blob-dacs-demo
+# Only exists if you used the account-key fallback.
+kubectl delete secret azure-secret -n blob-dacs-demo --ignore-not-found
 kubectl delete namespace blob-dacs-demo
 ```
 
 Then clean up what remains, as applicable:
+
+- **Mount identity role assignment** (managed identity path). Remove it only
+  if this guide created it, which step 4 recorded in `ROLE_CREATED`:
+
+  ```bash
+  if [ "${ROLE_CREATED:-false}" = true ]; then
+    az role assignment delete \
+      --assignee "$MOUNT_IDENTITY_OBJECT_ID" \
+      --role 'Storage Blob Data Reader' \
+      --scope "$CONTAINER_SCOPE"
+  fi
+  ```
 
 - **Blob data and local files.** The PV uses `Retain`, so the commands above
   do **not** delete your container or blobs. Review the uploaded prefix, then
@@ -586,7 +670,8 @@ Then clean up what remains, as applicable:
 - **DACS**, if you installed it only for this evaluation. Delete the Cache
   resource, then follow the
   [upstream quickstart cleanup](https://github.com/Azure/dacs/blob/main/docs/quickstart.md#clean-up)
-  for the smoke-test Jobs, the Helm release, and its namespace.
+  for the Helm release and its namespace. The smoke-test Jobs were already
+  deleted in step 3.
 
   ```bash
   kubectl delete cache "$DACS_CACHE" -n "$DACS_NAMESPACE"
@@ -633,15 +718,52 @@ this evaluation and no other workloads use it**:
 helm uninstall blob-csi-driver -n kube-system
 ```
 
-### B. Identity-based storage access
+### B. Account-key authentication (fallback)
 
-If shared-key authentication is disabled or unsuitable, adapt the
-[workload identity example](./workload-identity-static-pv-mount.md) or
-[managed identity example](../deploy/example/blobfuse-mi/README.md)
-before uploading the model. Configure its identity, role assignments, and
-volume authentication instead of the account-key Secret. Retain
-`protocol: fuse2`, all read-only settings, and the distributed-cache mount
-options.
+Use this only if you can't use a managed identity for the mount. It requires
+shared-key authentication enabled on the storage account, and the key grants
+full account access even though the mount is read-only.
+
+Instead of granting the mount identity access in step 4, create the namespace
+and a Secret. Enter your storage account key at the prompt; do not paste it
+into this document or the saved settings file, and do not enable shell
+tracing. The key is passed to the local `kubectl` process; follow your
+organization's credential-handling requirements.
+
+```bash
+read -r -s -p 'Storage account key: ' STORAGE_KEY
+printf '\n'
+test -n "$STORAGE_KEY" || echo 'ERROR: no key entered.'
+AZURE_STORAGE_KEY="$STORAGE_KEY" az storage container show \
+  --account-name "$STORAGE_ACCOUNT" \
+  --name "$STORAGE_CONTAINER" --auth-mode key -o table
+kubectl create namespace blob-dacs-demo
+kubectl create secret generic azure-secret \
+  --namespace blob-dacs-demo \
+  --from-literal=azurestorageaccountname="$STORAGE_ACCOUNT" \
+  --from-literal=azurestorageaccountkey="$STORAGE_KEY"
+unset STORAGE_KEY
+```
+
+**Checkpoint:** the account-key container lookup succeeds before any model
+transfer. If it fails, check the key, shared-key policy, and storage network
+access, and do not continue to the download.
+
+Then, in the step 5 PersistentVolume, replace the two `AzureStorage*`
+attributes with a reference to the Secret, keeping `protocol: fuse2`, all
+read-only settings, and the distributed-cache mount options:
+
+```yaml
+    volumeAttributes:
+      protocol: fuse2
+      storageAccount: "$STORAGE_ACCOUNT"
+      containerName: "$STORAGE_CONTAINER"
+    nodeStageSecretRef:
+      name: azure-secret
+      namespace: blob-dacs-demo
+```
+
+Step 8 deletes the Secret; there is no role assignment to clean up.
 
 ## References
 
