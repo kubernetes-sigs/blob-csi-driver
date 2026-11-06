@@ -41,3 +41,7 @@ CVE-2026-116587
 # Remove these exceptions when azcopy is updated with the fixes.
 CVE-2026-116585
 CVE-2026-116586
+
+# x/crypto v0.57.0 remains reported by the image scan; this suppresses the finding, not the vulnerability.
+# Remove this exception when affected image components use the fixed version.
+GO-2026-5932
