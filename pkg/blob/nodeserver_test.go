@@ -1472,7 +1472,7 @@ func TestNodeStageVolume(t *testing.T) {
 						ephemeralField:        "true",
 						containerNameField:    "container",
 						mountPermissionsField: "0755",
-						protocolField:         "nfs",
+						protocolField:         "fuse2",
 						serverNameField: "acc.z22.privatelink." +
 							"blob.storage.azure.net",
 						storageEndpointSuffixField: ".CORE.WINDOWS.NET.",
@@ -1573,7 +1573,11 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "[Error] inline NFS volume with invalid containerName is rejected",
+			// NFS protocol is blocked entirely for inline volumes (see the
+			// "[Error] ephemeral volume with nfs protocol is rejected" case
+			// in TestNodeStageVolume), so containerName validation is never
+			// reached for this combination; that blocking check fires first.
+			name: "[Error] inline NFS volume is rejected before containerName validation",
 			testFunc: func(t *testing.T) {
 				req := &csi.NodeStageVolumeRequest{
 					VolumeId:          "rg#acc#cont#ns",
@@ -1597,14 +1601,9 @@ func TestNodeStageVolume(t *testing.T) {
 				}
 
 				_, err := d.NodeStageVolume(context.TODO(), req)
-				if err == nil {
-					t.Fatal("expected InvalidArgument error for inline NFS volume with invalid containerName, got nil")
-				}
-				if status.Code(err) != codes.InvalidArgument {
-					t.Fatalf("expected codes.InvalidArgument, got: %v", err)
-				}
-				if !strings.Contains(err.Error(), "invalid containerName") {
-					t.Fatalf("expected error to mention invalid containerName, got: %v", err)
+				expectedErr := status.Error(codes.InvalidArgument, "NodeStageVolume: NFS protocol is not supported for inline (ephemeral) volumes")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
 				}
 			},
 		},
@@ -1739,6 +1738,93 @@ func TestNodeStageVolume(t *testing.T) {
 				expectedErr := status.Error(codes.InvalidArgument, "NodeStageVolume: containerName must be specified for ephemeral volumes")
 				if !reflect.DeepEqual(err, expectedErr) {
 					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "[Error] ephemeral volume with nfs protocol is rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc##ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						"csi.storage.k8s.io/ephemeral": "true",
+						"containerName":                "ctn",
+						"protocol":                     "nfs",
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "NodeStageVolume: NFS protocol is not supported for inline (ephemeral) volumes")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "[Error] ephemeral volume with aznfs protocol is rejected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc##ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						"csi.storage.k8s.io/ephemeral": "true",
+						"containerName":                "ctn",
+						"protocol":                     "aznfs",
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				expectedErr := status.Error(codes.InvalidArgument, "NodeStageVolume: NFS protocol is not supported for inline (ephemeral) volumes")
+				if !reflect.DeepEqual(err, expectedErr) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, expectedErr)
+				}
+			},
+		},
+		{
+			name: "[Success] non-ephemeral (PV) nfs protocol is unaffected",
+			testFunc: func(t *testing.T) {
+				req := &csi.NodeStageVolumeRequest{
+					VolumeId:          "rg#acc#ctn##ns",
+					StagingTargetPath: targetTest,
+					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+					VolumeContext: map[string]string{
+						"containerName": "ctn",
+						"protocol":      "nfs",
+						"server":        "acc.blob.core.windows.net",
+					},
+					Secrets: map[string]string{},
+				}
+				d := NewFakeDriver()
+				d.cloud.ResourceGroup = "rg"
+				d.enableBlobMockMount = true
+				fakeMounter := &fakeMounter{}
+				fakeExec := &testingexec.FakeExec{}
+				d.mounter = &mount.SafeFormatAndMount{
+					Interface: fakeMounter,
+					Exec:      fakeExec,
+				}
+				_, err := d.NodeStageVolume(context.TODO(), req)
+				if !reflect.DeepEqual(err, nil) {
+					t.Errorf("actualErr: (%v), expectedErr: (%v)", err, nil)
 				}
 			},
 		},
