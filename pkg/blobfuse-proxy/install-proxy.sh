@@ -30,8 +30,11 @@ then
   if [ "$(expr "$release" \< "22.04")" -eq 1 ]
   then
     cp /blobfuse-proxy/packages-microsoft-prod-18.04.deb /host/etc/packages-microsoft-prod.deb
-  else
+  elif [ "$(expr "$release" \< "24.04")" -eq 1 ]
+  then
     cp /blobfuse-proxy/packages-microsoft-prod-22.04.deb /host/etc/packages-microsoft-prod.deb
+  else
+    cp /blobfuse-proxy/packages-microsoft-prod-24.04.deb /host/etc/packages-microsoft-prod.deb
   fi
 
   if [ "${MIGRATE_K8S_REPO}" = "true" ]
@@ -45,7 +48,15 @@ then
   # refer to https://stackoverflow.com/questions/45349571/how-to-install-deb-with-dpkg-non-interactively
   # set HTTP/HTTPS timeouts to avoid hanging indefinitely when the package server is unreachable
   APT_HTTP_TIMEOUT=${APT_HTTP_TIMEOUT:-300}
-  yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
+  # on Ubuntu 24.04 and newer, keep the repository package if it is already installed on the host,
+  # so that dpkg does not replace it with the bundled file (which can be an older version)
+  if [ "$(expr "$release" \< "24.04")" -eq 0 ] && $HOST_CMD dpkg -s packages-microsoft-prod 2>/dev/null | grep -q "^Status: install ok installed"
+  then
+    echo "packages-microsoft-prod is already installed, skip installing it"
+    $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
+  else
+    yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
+  fi
 
   pkg_list=""
   # blobfuse
