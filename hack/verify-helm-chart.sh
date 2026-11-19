@@ -60,6 +60,41 @@ fi
 # jq-equivalent for yaml
 pip install yq --break-system-packages --ignore-installed PyYAML
 
+echo "Validating installer timeout rendering"
+
+function validate_installer_command() {
+  local expected="${1}"
+  shift
+  local actual
+  actual="$(helm template test "${PKG_ROOT}/charts/latest/blob-csi-driver" \
+    --show-only templates/csi-blob-node.yaml "$@" | \
+    yq -c '.spec.template.spec.initContainers[] | select(.name == "install-blobfuse-proxy") | .command')"
+  if [[ "${actual}" != "${expected}" ]]; then
+    echo "Expected installer command ${expected}, got ${actual}"
+    exit 1
+  fi
+}
+
+validate_installer_command '["/blobfuse-proxy/init.sh"]'
+validate_installer_command '["/blobfuse-proxy/init.sh"]' --set-string node.blobfuseProxy.installerTimeout=
+for duration in 600 10m 1.5h .5s 1d 0; do
+  expected="$(jq -cn --arg duration "${duration}" \
+    '["timeout", "--verbose", "--kill-after=30", "--", $duration, "/blobfuse-proxy/init.sh"]')"
+  validate_installer_command "${expected}" --set-string "node.blobfuseProxy.installerTimeout=${duration}"
+done
+
+for duration in -1 invalid 1ms 1.2.3s; do
+  if output="$(helm template test "${PKG_ROOT}/charts/latest/blob-csi-driver" \
+    --set-string "node.blobfuseProxy.installerTimeout=${duration}" 2>&1)"; then
+    echo "Expected invalid installer timeout ${duration} to fail rendering"
+    exit 1
+  fi
+  if [[ "${output}" != *"installerTimeout must be empty or a non-negative duration"* ]]; then
+    echo "Unexpected rendering failure: ${output}"
+    exit 1
+  fi
+done
+
 # Extract images from csi-blob-controller.yaml
 expected_csi_provisioner_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[0].image | head -n 1)"
 expected_liveness_probe_image="$(cat ${PKG_ROOT}/deploy/csi-blob-controller.yaml | yq -r .spec.template.spec.containers[1].image | head -n 1)"
