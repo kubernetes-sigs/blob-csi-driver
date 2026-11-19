@@ -154,6 +154,11 @@ node:
     setReadAheadSize: true
     allowPackageInstallDowngrade: true
     aptHttpTimeout: 300
+    # Optional GNU timeout duration for init, plus a 30s termination grace period.
+    # Examples: "600", "10m", "1.5h". Units: s (default), m, h, d.
+    # Empty runs init directly; "0" disables the GNU timeout deadline.
+    # Helm validates decimal durations; GNU timeout performs final validation at startup.
+    installerTimeout: ""
   blobfuseCachePath: /mnt
   appendTimeStampInCacheDir: false
   mountPermissions: 0777
