@@ -1408,8 +1408,10 @@ func parseInlineVolumeServer(server string) (string, error) {
 	if parsed.User != nil {
 		return "", fmt.Errorf("invalid server %q: user information is not allowed", server)
 	}
-	if parsed.Port() != "" {
-		return "", fmt.Errorf("invalid server %q: explicit ports are not allowed", server)
+	// The HTTPS default port is accepted for compatibility and dropped from the
+	// returned hostname.
+	if port := parsed.Port(); port != "" && port != "443" {
+		return "", fmt.Errorf("invalid server %q: only the default HTTPS port 443 is allowed", server)
 	}
 	if parsed.Path != "" && parsed.Path != "/" {
 		return "", fmt.Errorf("invalid server %q: paths are not allowed", server)

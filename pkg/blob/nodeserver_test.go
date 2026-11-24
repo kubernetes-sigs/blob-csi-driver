@@ -436,7 +436,10 @@ func TestNodePublishVolume(t *testing.T) {
 					storageAccountNameField: "compatibility-account",
 				},
 			},
-			expectedErr: nil,
+			// With both account fields cleared and no Secret, the inline
+			// server cannot be validated, so the mount fails closed.
+			expectedErr: status.Error(codes.InvalidArgument,
+				`NodeStageVolume: cannot validate server ".blob.core.windows.net" without a storage account and endpoint suffix`),
 			postCheck: func(t *testing.T, req *csi.NodePublishVolumeRequest) {
 				if value := getValueInMap(req.VolumeContext, storageAccountField); value != "" {
 					t.Errorf("expected storageAccount to be cleared, got %q", value)
@@ -1499,38 +1502,70 @@ func TestNodeStageVolume(t *testing.T) {
 			},
 		},
 		{
-			name: "inline shared-key volume preserves custom server and suffix",
+			name: "[Error] inline volume rejects untrusted server and suffix for every auth type",
 			testFunc: func(t *testing.T) {
-				req := &csi.NodeStageVolumeRequest{
-					VolumeId:          "rg#acc#cont#ns",
-					StagingTargetPath: targetTest,
-					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
-					VolumeContext: map[string]string{
-						ephemeralField:             "true",
-						containerNameField:         "container",
-						mountPermissionsField:      "0755",
-						protocolField:              "fuse2",
-						serverNameField:            "192.0.2.10",
-						storageEndpointSuffixField: "example.com",
-						storageAuthTypeField:       "key",
+				// An omitted or non-canonical auth type still lets blobfuse2
+				// select MSI, so validation must not depend on it.
+				// "" means AzureStorageAuthType is omitted.
+				authTypes := []string{"", "4", storageAuthTypeMSI, "key", "SAS", "spn"}
+				overrides := map[string]struct {
+					attrib      map[string]string
+					errFragment string
+				}{
+					"server": {
+						attrib: map[string]string{
+							serverNameField: "https://other.example.com/",
+						},
+						errFragment: "hostname must match storage account",
 					},
-					Secrets: map[string]string{
-						accountKeyField: "fakeKey",
+					"storageEndpointSuffix": {
+						attrib: map[string]string{
+							storageEndpointSuffixField: "example.com",
+						},
+						errFragment: "configured Azure cloud",
 					},
 				}
-				d := NewFakeDriver()
-				d.cloud.ResourceGroup = "rg"
-				d.enableBlobMockMount = true
-				fakeMounter := &fakeMounter{}
-				fakeExec := &testingexec.FakeExec{}
-				d.mounter = &mount.SafeFormatAndMount{
-					Interface: fakeMounter,
-					Exec:      fakeExec,
-				}
+				for _, authType := range authTypes {
+					for overrideName, override := range overrides {
+						t.Run(fmt.Sprintf("authType=%q/%s", authType, overrideName), func(t *testing.T) {
+							volumeContext := map[string]string{
+								ephemeralField:        "true",
+								containerNameField:    "container",
+								mountPermissionsField: "0755",
+								protocolField:         "fuse2",
+							}
+							if authType != "" {
+								volumeContext[storageAuthTypeField] = authType
+							}
+							for k, v := range override.attrib {
+								volumeContext[k] = v
+							}
+							req := &csi.NodeStageVolumeRequest{
+								VolumeId:          "rg#acc#cont#ns",
+								StagingTargetPath: targetTest,
+								VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
+								VolumeContext:     volumeContext,
+								Secrets: map[string]string{
+									accountKeyField: "fakeKey",
+								},
+							}
+							d := NewFakeDriver()
+							d.cloud.ResourceGroup = "rg"
+							d.enableBlobMockMount = true
+							d.mounter = &mount.SafeFormatAndMount{
+								Interface: &fakeMounter{},
+								Exec:      &testingexec.FakeExec{},
+							}
 
-				_, err := d.NodeStageVolume(context.TODO(), req)
-				if err != nil {
-					t.Fatalf("expected inline shared-key custom endpoint to remain supported, got: %v", err)
+							_, err := d.NodeStageVolume(context.TODO(), req)
+							if status.Code(err) != codes.InvalidArgument {
+								t.Fatalf("expected codes.InvalidArgument, got: %v", err)
+							}
+							if !strings.Contains(err.Error(), override.errFragment) {
+								t.Fatalf("expected error containing %q, got: %v", override.errFragment, err)
+							}
+						})
+					}
 				}
 			},
 		},

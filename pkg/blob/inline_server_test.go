@@ -151,8 +151,28 @@ func TestNormalizeInlineVolumeServerValidation(t *testing.T) {
 			suffix:  "core.windows.net",
 		},
 		{
-			name:    "explicit port",
-			server:  "https://account.blob.core.windows.net:443",
+			name:     "explicit default HTTPS port",
+			server:   "https://account.blob.core.windows.net:443",
+			account:  "account",
+			suffix:   "core.windows.net",
+			expected: true,
+		},
+		{
+			name:     "explicit default HTTPS port without scheme",
+			server:   "account.blob.core.windows.net:443",
+			account:  "account",
+			suffix:   "core.windows.net",
+			expected: true,
+		},
+		{
+			name:    "non-default port",
+			server:  "https://account.blob.core.windows.net:8443",
+			account: "account",
+			suffix:  "core.windows.net",
+		},
+		{
+			name:    "other host on default port",
+			server:  "https://example.com:443",
 			account: "account",
 			suffix:  "core.windows.net",
 		},
@@ -209,7 +229,7 @@ func TestNormalizeInlineVolumeServerValidation(t *testing.T) {
 
 func TestNormalizeInlineVolumeServer(t *testing.T) {
 	server, err := normalizeInlineVolumeServer(
-		"https://ACCOUNT.blob.core.windows.net/",
+		"https://ACCOUNT.blob.core.windows.net:443/",
 		"account",
 		"core.windows.net",
 	)
