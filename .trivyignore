@@ -1,55 +1,20 @@
-CVE-2026-33818
-CVE-2026-39821
-CVE-2026-39822
-CVE-2026-42505
-CVE-2026-46600
-CVE-2026-56851
-CVE-2026-56852
-CVE-2026-56853
-CVE-2026-56854
-CVE-2026-56855
-CVE-2026-56858
-CVE-2026-56859
-CVE-2026-56860
-CVE-2026-56862
-CVE-2026-56866
-CVE-2026-78659
-CVE-2026-78660
-CVE-2026-78662
-CVE-2026-78663
-CVE-2026-78667
-CVE-2026-78669
-CVE-2026-94439
-CVE-2026-94440
-CVE-2026-94448
-CVE-2026-97030
-CVE-2026-97031
-CVE-2026-97032
-CVE-2026-111943
+# Plain IDs apply globally; component comments describe the supplied scan findings.
+# These exceptions suppress findings, not the underlying vulnerabilities.
 
-# Embedded blobfuse2 (x/net v0.61.0) and azcopy (x/net v0.60.0); fixed in v0.62.0.
-# Remove these exceptions when both binaries are updated with the fixes.
-# Plain .trivyignore IDs apply globally; comments identify the dependency origins.
-CVE-2026-78661
-CVE-2026-97045
-
-# Embedded azcopy go-jose/v4 v4.1.4; fixed in v4.1.6.
-# Remove this exception when azcopy is updated with the fix.
-CVE-2026-116587
-
-# Embedded azcopy go-jose/v4 v4.1.4; fixed in v4.1.5.
-# Remove these exceptions when azcopy is updated with the fixes.
-CVE-2026-116585
-CVE-2026-116586
-
-# x/crypto v0.57.0 remains reported by the image scan; this suppresses the finding, not the vulnerability.
-# Remove this exception when affected image components use the fixed version.
-GO-2026-5932
-
-# OpenTelemetry sdk/trace in blobfuse-proxy, blobplugin, and embedded azcopy; fixed in v1.47.0.
-# Remove this exception when all affected image components use fixed versions.
+# OpenTelemetry sdk/trace in blobfuse-proxy and blobplugin (v1.45.0); fixed in v1.47.0.
+# Remove when affected image components use fixed dependencies.
 CVE-2026-128085
 
-# Go stdlib in embedded bfusemon, blobfuse2, and azcopy; fixed in Go 1.26.11 / 1.27.4.
-# Remove this exception when all affected binaries are rebuilt with fixed Go releases.
+# Go stdlib in embedded bfusemon and blobfuse2 (Go 1.26.10); fixed in Go 1.26.11 / 1.27.4.
+# Remove when affected binaries are rebuilt with fixed Go releases.
 CVE-2026-97054
+
+# Embedded blobfuse2: golang.org/x/crypto v0.58.0, openpgp advisory.
+# The supplied scan lists 0.58.1-0.20261009181718-2f1f834330b2 as fixed.
+# Remove when the affected component no longer reports this advisory.
+GO-2026-5932
+
+# Embedded blobfuse2: golang.org/x/net v0.61.0; fixed in v0.62.0.
+# Remove when the affected binary uses the fixed dependency.
+CVE-2026-78661
+CVE-2026-97045
