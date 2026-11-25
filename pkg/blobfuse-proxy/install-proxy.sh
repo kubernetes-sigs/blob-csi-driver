@@ -66,6 +66,22 @@ then
   then
     dpkg_options="--force-confmiss --force-confnew"
   fi
+  # a package of another release that is on hold stops the script, in every state of dpkg ("hold ok installed",
+  # "hold reinstreq half-installed" and the others): the hold is the choice of the owner of the host, and the bundled
+  # file would replace the package
+  if [ "$(expr "$release" \< "26.04")" -eq 0 ] && echo "$pkg_info" | grep -q "^Status: hold "
+  then
+    pkg_version=$(echo "$pkg_info" | sed -n 's/^Version: //p')
+    case "$pkg_version" in
+      ""|*-ubuntu"${release}"|*-ubuntu26.04)
+        ;;
+      *)
+        echo "ERROR: packages-microsoft-prod ${pkg_version} is not for Ubuntu ${release} and it is on hold. Release the hold and start this installer again." >&2
+        $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
+        exit 1
+        ;;
+    esac
+  fi
   if [ "$(expr "$release" \< "24.04")" -eq 0 ] && echo "$pkg_info" | grep -Eq "^Status: (install ok|hold [a-z]*) installed"
   then
     skip_pkg_install=true
