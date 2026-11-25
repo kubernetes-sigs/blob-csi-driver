@@ -132,17 +132,20 @@ then
 
     if [ -z "${BLOBFUSE2_VERSION}" ]; then
       echo "install blobfuse2 with latest version"
+      blobfuse2_pkg="blobfuse2"
       pkg_list="${pkg_list} blobfuse2"
     else
       if echo "${BLOBFUSE2_VERSION}" | grep -q "preview"; then
         if $HOST_CMD dpkg -l | grep -q blobfuse2; then
           $HOST_CMD apt-get remove -y blobfuse2
         fi
+        blobfuse2_pkg="blobfuse2-preview=${BLOBFUSE2_VERSION}"
         pkg_list="${pkg_list} blobfuse2-preview=${BLOBFUSE2_VERSION}"
       else
         if $HOST_CMD dpkg -l | grep -q blobfuse2-preview; then
           $HOST_CMD apt-get remove -y blobfuse2-preview
         fi
+        blobfuse2_pkg="blobfuse2=${BLOBFUSE2_VERSION}"
         pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
       fi
     fi
@@ -155,6 +158,17 @@ then
 
   echo "begin to install ${pkg_list}"
   $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" install -y $pkg_list
+
+  # on Ubuntu 26.04 and newer, a blobfuse2 that was built for another release (a host upgraded from Ubuntu 24.04 has the
+  # build for 24.04, which needs libfuse3.so.3, and 26.04 has libfuse3.so.4) does not start. If the binary does not start
+  # after the install, reinstall the package from the repository of this release. If it still does not start, stop with
+  # the error of the binary.
+  if [ "${INSTALL_BLOBFUSE2}" = "true" ] && [ "$(expr "$release" \< "26.04")" -eq 0 ] && ! $HOST_CMD blobfuse2 --version > /dev/null 2>&1
+  then
+    echo "blobfuse2 does not start, reinstall it from the repository of Ubuntu ${release}"
+    $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" install -y --reinstall $blobfuse2_pkg
+    $HOST_CMD blobfuse2 --version
+  fi
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
