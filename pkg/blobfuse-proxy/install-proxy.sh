@@ -33,8 +33,11 @@ then
   elif [ "$(expr "$release" \< "24.04")" -eq 1 ]
   then
     cp /blobfuse-proxy/packages-microsoft-prod-22.04.deb /host/etc/packages-microsoft-prod.deb
-  else
+  elif [ "$(expr "$release" \< "26.04")" -eq 1 ]
+  then
     cp /blobfuse-proxy/packages-microsoft-prod-24.04.deb /host/etc/packages-microsoft-prod.deb
+  else
+    cp /blobfuse-proxy/packages-microsoft-prod-26.04.deb /host/etc/packages-microsoft-prod.deb
   fi
 
   if [ "${MIGRATE_K8S_REPO}" = "true" ]

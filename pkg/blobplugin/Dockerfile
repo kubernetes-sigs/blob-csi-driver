@@ -43,6 +43,7 @@ RUN mkdir /blobfuse-proxy/
 RUN curl -Lso /blobfuse-proxy/packages-microsoft-prod-18.04.deb https://packages.microsoft.com/config/ubuntu/18.04/packages-microsoft-prod.deb
 RUN curl -Lso /blobfuse-proxy/packages-microsoft-prod-22.04.deb https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
 RUN curl -Lso /blobfuse-proxy/packages-microsoft-prod-24.04.deb https://packages.microsoft.com/config/ubuntu/24.04/packages-microsoft-prod.deb
+RUN curl -Lso /blobfuse-proxy/packages-microsoft-prod-26.04.deb https://packages.microsoft.com/config/ubuntu/26.04/packages-microsoft-prod.deb
 FROM base
 
 ARG ARCH
