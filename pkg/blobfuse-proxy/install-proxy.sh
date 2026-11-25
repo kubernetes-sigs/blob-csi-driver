@@ -54,12 +54,40 @@ then
   # on Ubuntu 24.04 and newer, keep the repository package if it is already installed on the host,
   # so that dpkg does not replace it with the bundled file (which can be an older version).
   # a package on hold (apt-mark hold) has "Status: hold ok installed", so it counts as installed too
-  if [ "$(expr "$release" \< "24.04")" -eq 0 ] && $HOST_CMD dpkg -s packages-microsoft-prod 2>/dev/null | grep -Eq "^Status: (install ok|hold [a-z]*) installed"
+  # on Ubuntu 26.04 and newer, keep it only if it is for this release or for 26.04. A host that was upgraded from
+  # Ubuntu 24.04 still has the package for 24.04, and apt 3.2 cannot verify the repository of 26.04 with the key file of
+  # that package. The bundled file replaces it. The release upgrade also renames microsoft-prod.list to
+  # microsoft-prod.list.disabled, so --force-confmiss puts the source file back, and --force-confnew takes the new key
+  # and source file without a question.
+  pkg_info=$($HOST_CMD dpkg -s packages-microsoft-prod 2>/dev/null || true)
+  skip_pkg_install=false
+  dpkg_options=""
+  if [ "$(expr "$release" \< "26.04")" -eq 0 ]
+  then
+    dpkg_options="--force-confmiss --force-confnew"
+  fi
+  if [ "$(expr "$release" \< "24.04")" -eq 0 ] && echo "$pkg_info" | grep -Eq "^Status: (install ok|hold [a-z]*) installed"
+  then
+    skip_pkg_install=true
+    if [ "$(expr "$release" \< "26.04")" -eq 0 ]
+    then
+      pkg_version=$(echo "$pkg_info" | sed -n 's/^Version: //p')
+      case "$pkg_version" in
+        *-ubuntu"${release}"|*-ubuntu26.04)
+          ;;
+        *)
+          echo "packages-microsoft-prod ${pkg_version} is not for Ubuntu ${release}, replace it"
+          skip_pkg_install=false
+          ;;
+      esac
+    fi
+  fi
+  if [ "$skip_pkg_install" = "true" ]
   then
     echo "packages-microsoft-prod is already installed, skip installing it"
     $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
   else
-    yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
+    yes | $HOST_CMD dpkg -i $dpkg_options /etc/packages-microsoft-prod.deb && $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
   fi
 
   pkg_list=""
