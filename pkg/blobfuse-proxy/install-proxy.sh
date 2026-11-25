@@ -49,8 +49,9 @@ then
   # set HTTP/HTTPS timeouts to avoid hanging indefinitely when the package server is unreachable
   APT_HTTP_TIMEOUT=${APT_HTTP_TIMEOUT:-300}
   # on Ubuntu 24.04 and newer, keep the repository package if it is already installed on the host,
-  # so that dpkg does not replace it with the bundled file (which can be an older version)
-  if [ "$(expr "$release" \< "24.04")" -eq 0 ] && $HOST_CMD dpkg -s packages-microsoft-prod 2>/dev/null | grep -q "^Status: install ok installed"
+  # so that dpkg does not replace it with the bundled file (which can be an older version).
+  # a package on hold (apt-mark hold) has "Status: hold ok installed", so it counts as installed too
+  if [ "$(expr "$release" \< "24.04")" -eq 0 ] && $HOST_CMD dpkg -s packages-microsoft-prod 2>/dev/null | grep -Eq "^Status: (install ok|hold [a-z]*) installed"
   then
     echo "packages-microsoft-prod is already installed, skip installing it"
     $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
