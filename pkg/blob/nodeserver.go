@@ -330,6 +330,12 @@ func (d *Driver) NodeUnpublishVolume(_ context.Context, req *csi.NodeUnpublishVo
 		return nil, status.Error(codes.InvalidArgument, "Target path missing in request")
 	}
 
+	lockKey := fmt.Sprintf("%s-%s", volumeID, targetPath)
+	if acquired := d.volumeLocks.TryAcquire(lockKey); !acquired {
+		return nil, status.Errorf(codes.Aborted, volumeOperationAlreadyExistsFmt, volumeID)
+	}
+	defer d.volumeLocks.Release(lockKey)
+
 	mc := csiMetrics.NewCSIMetricContext("node_unpublish_volume")
 	isOperationSucceeded := false
 	defer func() {
@@ -340,6 +346,9 @@ func (d *Driver) NodeUnpublishVolume(_ context.Context, req *csi.NodeUnpublishVo
 	err := mount.CleanupMountPoint(targetPath, d.mounter, true /*extensiveMountPointCheck*/)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to unmount target %q: %v", targetPath, err)
+	}
+	if err := removeWorkloadIdentityToken(volumeID, targetPath); err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to remove workload identity token: %v", err)
 	}
 	klog.V(2).Infof("NodeUnpublishVolume: unmount volume %s on %s successfully", volumeID, targetPath)
 
@@ -494,8 +503,9 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Errorf(codes.Internal, "Could not mount target %q: %v", targetPath, err)
 	}
 
-	_, accountName, _, containerName, authEnv, err := d.GetAuthEnv(ctx, volumeID, protocol, attrib, secrets)
-	if err != nil && !mnt {
+	_, accountName, _, containerName, authEnv, err := d.getAuthEnv(ctx, volumeID, protocol, attrib, secrets, targetPath)
+	mountWithWIToken, _ := strconv.ParseBool(getValueInMap(attrib, mountWithWITokenField))
+	if err != nil && (!mnt || mountWithWIToken) {
 		return nil, status.Errorf(codes.Internal, "%v", err)
 	}
 

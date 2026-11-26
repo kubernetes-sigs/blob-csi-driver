@@ -25,7 +25,6 @@ import (
 	"net"
 	"net/url"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -106,6 +105,7 @@ const (
 	requireInfraEncryptionField    = "requireinfraencryption"
 	ephemeralField                 = "csi.storage.k8s.io/ephemeral"
 	podNamespaceField              = "csi.storage.k8s.io/pod.namespace"
+	podUIDField                    = "csi.storage.k8s.io/pod.uid"
 	serviceAccountTokenField       = "csi.storage.k8s.io/serviceAccount.tokens"
 	clientIDField                  = "clientid"
 	mountWithWITokenField          = "mountwithworkloadidentitytoken"
@@ -639,6 +639,10 @@ func isSASToken(key string) bool {
 
 // GetAuthEnv return <accountName, containerName, authEnv, error>
 func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string) (string, string, string, string, []string, error) {
+	return d.getAuthEnv(ctx, volumeID, protocol, attrib, secrets, "")
+}
+
+func (d *Driver) getAuthEnv(ctx context.Context, volumeID, protocol string, attrib, secrets map[string]string, targetPath string) (string, string, string, string, []string, error) {
 	rgName, accountName, containerName, secretNamespace, subsID, err := GetContainerInfo(volumeID)
 	if err != nil {
 		// ignore volumeID parsing error
@@ -763,20 +767,12 @@ func (d *Driver) GetAuthEnv(ctx context.Context, volumeID, protocol string, attr
 		if err != nil {
 			return rgName, accountName, accountKey, containerName, authEnv, err
 		}
-		tokenFileName := clientID + "-" + accountName
-		if !isValidTokenFileName(tokenFileName) {
-			return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("the generated token file name %s is invalid", tokenFileName)
+		azureOAuthTokenFile, err := podWorkloadIdentityTokenPath(volumeID, targetPath, getValueInMap(attrib, podUIDField))
+		if err != nil {
+			return rgName, accountName, accountKey, containerName, authEnv, err
 		}
-		azureOAuthTokenFile := filepath.Join(defaultAzureOAuthTokenDir, tokenFileName)
-		// check whether token value is the same as the one in the token file
-		existingToken, readErr := os.ReadFile(azureOAuthTokenFile)
-		if readErr == nil && string(existingToken) == workloadIdentityToken {
-			klog.V(6).Infof("the existing workload identity token file %s is up-to-date, no need to rewrite", azureOAuthTokenFile)
-		} else {
-			// write the token to a file
-			if err := os.WriteFile(azureOAuthTokenFile, []byte(workloadIdentityToken), 0600); err != nil {
-				return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("failed to write workload identity token file %s: %v", azureOAuthTokenFile, err)
-			}
+		if err := writeWorkloadIdentityToken(azureOAuthTokenFile, workloadIdentityToken); err != nil {
+			return rgName, accountName, accountKey, containerName, authEnv, fmt.Errorf("failed to write workload identity token file: %w", err)
 		}
 
 		authEnv = append(authEnv, "AZURE_STORAGE_SPN_CLIENT_ID="+clientID)
