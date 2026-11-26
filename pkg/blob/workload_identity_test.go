@@ -87,6 +87,45 @@ func TestWorkloadIdentityMountIsolation(t *testing.T) {
 		filepath.Join(root, "pods", "pod-a", "volumes", "kubernetes.io~csi", "shared", "mount")))
 }
 
+func TestWorkloadIdentityTokenPathNormalization(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		suffix string
+	}{
+		{name: "plain"},
+		{name: "trailing separator", suffix: string(filepath.Separator)},
+		{name: "trailing dot", suffix: string(filepath.Separator) + "."},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			target := filepath.Join(t.TempDir(), "pods", "pod-a", "volumes", "kubernetes.io~csi", "volume", "mount")
+			require.NoError(t, os.MkdirAll(target, 0750))
+			variant := target + test.suffix
+			canonical, err := podWorkloadIdentityTokenPath("volume", target, "pod-a")
+			require.NoError(t, err)
+			path, err := podWorkloadIdentityTokenPath("volume", variant, "pod-a")
+			require.NoError(t, err)
+			require.Equal(t, filepath.Dir(target), filepath.Dir(path))
+			require.Equal(t, canonical, path)
+
+			require.NoError(t, writeWorkloadIdentityToken(path, "assertion"))
+			data, err := os.ReadFile(canonical)
+			require.NoError(t, err)
+			require.Equal(t, "assertion", string(data))
+			files, err := os.ReadDir(target)
+			require.NoError(t, err)
+			require.Empty(t, files)
+			require.NoError(t, removeWorkloadIdentityToken("volume", target))
+			_, err = os.Stat(path)
+			require.ErrorIs(t, err, os.ErrNotExist)
+
+			require.NoError(t, writeWorkloadIdentityToken(canonical, "refreshed-assertion"))
+			require.NoError(t, removeWorkloadIdentityToken("volume", variant))
+			_, err = os.Stat(canonical)
+			require.ErrorIs(t, err, os.ErrNotExist)
+		})
+	}
+}
+
 func TestWorkloadIdentityRequiresMatchingPodMount(t *testing.T) {
 	target := filepath.Join(t.TempDir(), "pods", "pod-a", "volumes", "kubernetes.io~csi", "volume", "mount")
 	for _, test := range []struct {

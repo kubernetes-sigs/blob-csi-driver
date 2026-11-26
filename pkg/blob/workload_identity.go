@@ -27,7 +27,8 @@ import (
 )
 
 func workloadIdentityTokenPath(volumeID, targetPath string) string {
-	scope := sha256.Sum256([]byte(volumeID + "\x00" + filepath.Clean(targetPath)))
+	targetPath = filepath.Clean(targetPath)
+	scope := sha256.Sum256([]byte(volumeID + "\x00" + targetPath))
 	return filepath.Join(filepath.Dir(targetPath), fmt.Sprintf(".blob-csi-wi-%x.token", scope))
 }
 
