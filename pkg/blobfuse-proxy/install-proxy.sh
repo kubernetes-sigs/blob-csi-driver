@@ -33,8 +33,11 @@ then
   elif [ "$(expr "$release" \< "24.04")" -eq 1 ]
   then
     cp /blobfuse-proxy/packages-microsoft-prod-22.04.deb /host/etc/packages-microsoft-prod.deb
-  else
+  elif [ "$(expr "$release" \< "26.04")" -eq 1 ]
+  then
     cp /blobfuse-proxy/packages-microsoft-prod-24.04.deb /host/etc/packages-microsoft-prod.deb
+  else
+    cp /blobfuse-proxy/packages-microsoft-prod-26.04.deb /host/etc/packages-microsoft-prod.deb
   fi
 
   if [ "${MIGRATE_K8S_REPO}" = "true" ]
@@ -51,12 +54,56 @@ then
   # on Ubuntu 24.04 and newer, keep the repository package if it is already installed on the host,
   # so that dpkg does not replace it with the bundled file (which can be an older version).
   # a package on hold (apt-mark hold) has "Status: hold ok installed", so it counts as installed too
-  if [ "$(expr "$release" \< "24.04")" -eq 0 ] && $HOST_CMD dpkg -s packages-microsoft-prod 2>/dev/null | grep -Eq "^Status: (install ok|hold [a-z]*) installed"
+  # on Ubuntu 26.04 and newer, keep it only if it is for this release or for 26.04. A host that was upgraded from
+  # Ubuntu 24.04 still has the package for 24.04, and apt 3.2 cannot verify the repository of 26.04 with the key file of
+  # that package. The bundled file replaces it. The release upgrade also renames microsoft-prod.list to
+  # microsoft-prod.list.disabled, so --force-confmiss puts the source file back, and --force-confnew takes the new key
+  # and source file without a question.
+  pkg_info=$($HOST_CMD dpkg -s packages-microsoft-prod 2>/dev/null || true)
+  skip_pkg_install=false
+  dpkg_options=""
+  if [ "$(expr "$release" \< "26.04")" -eq 0 ]
+  then
+    dpkg_options="--force-confmiss --force-confnew"
+  fi
+  # a package of another release that is on hold stops the script, in every state of dpkg ("hold ok installed",
+  # "hold reinstreq half-installed" and the others): the hold is the choice of the owner of the host, and the bundled
+  # file would replace the package
+  if [ "$(expr "$release" \< "26.04")" -eq 0 ] && echo "$pkg_info" | grep -q "^Status: hold "
+  then
+    pkg_version=$(echo "$pkg_info" | sed -n 's/^Version: //p')
+    case "$pkg_version" in
+      ""|*-ubuntu"${release}"|*-ubuntu26.04)
+        ;;
+      *)
+        echo "ERROR: packages-microsoft-prod ${pkg_version} is not for Ubuntu ${release} and it is on hold. Release the hold and start this installer again." >&2
+        $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
+        exit 1
+        ;;
+    esac
+  fi
+  if [ "$(expr "$release" \< "24.04")" -eq 0 ] && echo "$pkg_info" | grep -Eq "^Status: (install ok|hold [a-z]*) installed"
+  then
+    skip_pkg_install=true
+    if [ "$(expr "$release" \< "26.04")" -eq 0 ]
+    then
+      pkg_version=$(echo "$pkg_info" | sed -n 's/^Version: //p')
+      case "$pkg_version" in
+        *-ubuntu"${release}"|*-ubuntu26.04)
+          ;;
+        *)
+          echo "packages-microsoft-prod ${pkg_version} is not for Ubuntu ${release}, replace it"
+          skip_pkg_install=false
+          ;;
+      esac
+    fi
+  fi
+  if [ "$skip_pkg_install" = "true" ]
   then
     echo "packages-microsoft-prod is already installed, skip installing it"
     $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
   else
-    yes | $HOST_CMD dpkg -i /etc/packages-microsoft-prod.deb && $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
+    yes | $HOST_CMD dpkg -i $dpkg_options /etc/packages-microsoft-prod.deb && $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" update
   fi
 
   pkg_list=""
@@ -85,17 +132,20 @@ then
 
     if [ -z "${BLOBFUSE2_VERSION}" ]; then
       echo "install blobfuse2 with latest version"
+      blobfuse2_pkg="blobfuse2"
       pkg_list="${pkg_list} blobfuse2"
     else
       if echo "${BLOBFUSE2_VERSION}" | grep -q "preview"; then
         if $HOST_CMD dpkg -l | grep -q blobfuse2; then
           $HOST_CMD apt-get remove -y blobfuse2
         fi
+        blobfuse2_pkg="blobfuse2-preview=${BLOBFUSE2_VERSION}"
         pkg_list="${pkg_list} blobfuse2-preview=${BLOBFUSE2_VERSION}"
       else
         if $HOST_CMD dpkg -l | grep -q blobfuse2-preview; then
           $HOST_CMD apt-get remove -y blobfuse2-preview
         fi
+        blobfuse2_pkg="blobfuse2=${BLOBFUSE2_VERSION}"
         pkg_list="${pkg_list} blobfuse2=${BLOBFUSE2_VERSION}"
       fi
     fi
@@ -108,6 +158,17 @@ then
 
   echo "begin to install ${pkg_list}"
   $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" install -y $pkg_list
+
+  # on Ubuntu 26.04 and newer, a blobfuse2 that was built for another release (a host upgraded from Ubuntu 24.04 has the
+  # build for 24.04, which needs libfuse3.so.3, and 26.04 has libfuse3.so.4) does not start. If the binary does not start
+  # after the install, reinstall the package from the repository of this release. If it still does not start, stop with
+  # the error of the binary.
+  if [ "${INSTALL_BLOBFUSE2}" = "true" ] && [ "$(expr "$release" \< "26.04")" -eq 0 ] && ! $HOST_CMD blobfuse2 --version > /dev/null 2>&1
+  then
+    echo "blobfuse2 does not start, reinstall it from the repository of Ubuntu ${release}"
+    $HOST_CMD apt-get -o Acquire::http::Timeout="${APT_HTTP_TIMEOUT}" -o Acquire::https::Timeout="${APT_HTTP_TIMEOUT}" install -y --reinstall $blobfuse2_pkg
+    $HOST_CMD blobfuse2 --version
+  fi
   $HOST_CMD rm -f /etc/packages-microsoft-prod.deb
 fi
 
