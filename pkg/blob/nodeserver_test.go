@@ -241,6 +241,8 @@ func TestNewMountClient(t *testing.T) {
 
 func TestNodePublishVolume(t *testing.T) {
 	volumeCap := csi.VolumeCapability_AccessMode{Mode: csi.VolumeCapability_AccessMode_MULTI_NODE_MULTI_WRITER}
+	wiTarget := filepath.Join(t.TempDir(), "pods", "test-pod", "volumes", "kubernetes.io~csi", "volume", "mount")
+	assert.NoError(t, os.MkdirAll(wiTarget, 0750))
 	createDirError := status.Errorf(codes.Internal,
 		"Could not mount target \"./azure.go\": mkdir ./azure.go: not a directory")
 	if runtime.GOOS == "windows" {
@@ -334,24 +336,18 @@ func TestNodePublishVolume(t *testing.T) {
 		{
 			desc: "Valid request with service account token and clientID",
 			setup: func(d *Driver) {
-				// Mock NodeStageVolume to return success
 				d.cloud.ResourceGroup = "rg"
 				d.enableBlobMockMount = true
-				// Create the directory for token file
-				defaultAzureOAuthTokenDir = "./blob.csi.azure.com/"
-				_ = makeDir(defaultAzureOAuthTokenDir)
-			},
-			cleanup: func(_ *Driver) {
-				_ = os.RemoveAll(defaultAzureOAuthTokenDir)
 			},
 			req: &csi.NodePublishVolumeRequest{
 				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
 				VolumeId:          "vol_1",
-				TargetPath:        targetTest,
+				TargetPath:        wiTarget,
 				StagingTargetPath: sourceTest,
 				VolumeContext: map[string]string{
 					serviceAccountTokenField: `{"api://AzureADTokenExchange":{"token":"test-token","expirationTimestamp":"2023-01-01T00:00:00Z"}}`,
 					mountWithWITokenField:    "true",
+					podUIDField:              "test-pod",
 					clientIDField:            "client-id-value",
 					storageAccountNameField:  "test-account",
 				},
@@ -363,19 +359,15 @@ func TestNodePublishVolume(t *testing.T) {
 			setup: func(d *Driver) {
 				d.cloud.ResourceGroup = "rg"
 				d.enableBlobMockMount = true
-				defaultAzureOAuthTokenDir = "./blob.csi.azure.com/"
-				_ = makeDir(defaultAzureOAuthTokenDir)
-			},
-			cleanup: func(_ *Driver) {
-				_ = os.RemoveAll(defaultAzureOAuthTokenDir)
 			},
 			req: &csi.NodePublishVolumeRequest{
 				VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
 				VolumeId:          "vol_1",
-				TargetPath:        targetTest,
+				TargetPath:        wiTarget,
 				StagingTargetPath: sourceTest,
 				VolumeContext: map[string]string{
 					mountWithWITokenField:   "true",
+					podUIDField:             "test-pod",
 					clientIDField:           "client-id-value",
 					storageAccountNameField: "test-account",
 				},
@@ -1681,16 +1673,16 @@ func TestNodeStageVolume(t *testing.T) {
 		{
 			name: "service account token from secrets is propagated to attrib",
 			testFunc: func(t *testing.T) {
-				defaultAzureOAuthTokenDir = "./blob.csi.azure.com/"
-				_ = makeDir(defaultAzureOAuthTokenDir)
-				defer func() { _ = os.RemoveAll(defaultAzureOAuthTokenDir) }()
+				target := filepath.Join(t.TempDir(), "pods", "test-pod", "volumes", "kubernetes.io~csi", "volume", "mount")
+				assert.NoError(t, os.MkdirAll(target, 0750))
 
 				req := &csi.NodeStageVolumeRequest{
 					VolumeId:          "rg#acc#cont#ns",
-					StagingTargetPath: targetTest,
+					StagingTargetPath: target,
 					VolumeCapability:  &csi.VolumeCapability{AccessMode: &volumeCap},
 					VolumeContext: map[string]string{
 						mountWithWITokenField:   "true",
+						podUIDField:             "test-pod",
 						clientIDField:           "client-id-value",
 						storageAccountNameField: "test-account",
 					},
