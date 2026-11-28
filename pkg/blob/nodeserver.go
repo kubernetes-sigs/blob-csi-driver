@@ -469,6 +469,19 @@ func (d *Driver) NodeStageVolume(ctx context.Context, req *csi.NodeStageVolumeRe
 		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: containerName must be specified for ephemeral volumes")
 	}
 
+	// NFS-family protocols (nfs/aznfs/nfsv3) build their mount source directly
+	// from the user-controlled "server" volume attribute on ephemeral inline
+	// volumes. That value is attacker-controlled and is never sanitized before
+	// being passed as an argument to the nfs/aznfs mount helper, which can
+	// allow argument/option injection into the node-level mount command.
+	// Reject NFS-family inline volumes outright instead of attempting to
+	// sanitize every possible injection vector; PV-based NFS volumes are
+	// unaffected since their server/account values come from a trusted
+	// StorageClass/PV, not pod-controlled attributes.
+	if ephemeralVol && isNFSProtocol(protocol) {
+		return nil, status.Errorf(codes.InvalidArgument, "NodeStageVolume: NFS protocol is not supported for inline (ephemeral) volumes")
+	}
+
 	isInlineMSI := ephemeralVol &&
 		strings.EqualFold(getValueInMap(attrib, storageAuthTypeField), storageAuthTypeMSI)
 	trustedStorageEndpointSuffix := d.getStorageEndPointSuffix()
