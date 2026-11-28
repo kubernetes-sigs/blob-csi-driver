@@ -102,7 +102,18 @@ spec:
           image: "{{ .Values.image.blob.repository }}:{{ .Values.image.blob.tag }}"
 {{- end }}
           imagePullPolicy: IfNotPresent
+          {{- $installerTimeout := get .Values.node.blobfuseProxy "installerTimeout" | toString }}
+          {{- if and (ne $installerTimeout "") (not (regexMatch `^([0-9]+(\.[0-9]*)?|\.[0-9]+)[smhd]?$` $installerTimeout)) }}
+          {{- fail "node.blobfuseProxy.installerTimeout must be empty or a non-negative duration with an optional s, m, h, or d suffix (e.g. 600, 10m, 1.5h). See the GNU timeout man page (man timeout) for duration details." }}
+          {{- end }}
           command:
+            {{- if ne $installerTimeout "" }}
+            - "timeout"
+            - "--verbose"
+            - "--kill-after=30"
+            - "--"
+            - {{ $installerTimeout | quote }}
+            {{- end }}
             - "/blobfuse-proxy/init.sh"
           securityContext:
             privileged: true
